@@ -267,3 +267,10 @@ its local browser session. Stop it with Ctrl-C when finished.
 
 Run `python3 Docs/VisualAssetPipeline/test_review_board.py` for persistence checks. Browser interaction
 checks use a separate synthetic record under the evidence directory, never the owner's live record.
+
+The owner delegated the first complete board selection to a book-based review on 2026-09-06.
+`book-based-review.json` retains the attached novel's SHA-256 identity, paragraph excerpts, individual
+reasons, game-authority references and unresolved conflicts. The resulting 34 choices are assistant
+judgments made under that delegation; they are not individual human approvals. Earlier owner choices,
+notes and history remain in `review-selections.json`. This review selects 5 Keep, 23 Rework and 6 Replace;
+Keep retains design identity for later development, not every painted detail or printed dimension.

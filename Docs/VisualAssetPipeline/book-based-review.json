@@ -1,0 +1,730 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "review_id": "EBS-VIS-BOOK-20260906",
+  "decision_method": "Assistant art-direction judgment under explicit owner delegation: Based off of the attached book select you decide. Not individual human approval or canon acceptance.",
+  "scope": "34 priority board objects, not all 162 concepts",
+  "book": {
+    "path": "/tmp/codex-remote-attachments/01a0772f-7d98-7cd2-8d56-2254d585cf17/2BB48137-4F38-414F-ADAB-EF82650C803A/1-Echoes_of_the_Broken_Sun_eBook_source.docx",
+    "sha256": "994e7df5d37a6ef1532c65a7b742d71e81b4ea7752311f5e5acc2e04c817ef83",
+    "locator_method": "One-based document-order w:p elements in word/document.xml; paragraph references are not page numbers.",
+    "paragraph_count": 3654
+  },
+  "created_utc": "2026-09-06T17:47:16.388923+00:00",
+  "baseline_review_revision": 8,
+  "baseline_review_sha256": "5a66b16324afe275a318e76ecbe38a7734063c4fd780ed43dbb7a94552ab2b3d",
+  "game_authority": [
+    {
+      "path": "Docs/Archive/DevelopmentBible.md",
+      "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+    },
+    {
+      "path": "Docs/ArtDirection.md",
+      "sha256": "82f4052be2952606bb2e8384d271839e61d130997dfb656118983154b70ba5f8"
+    },
+    {
+      "path": "Docs/Requirements.md",
+      "sha256": "467e263d65a4f33c07882631c7479401d75cce2447ae018859aa86a7d435100e"
+    }
+  ],
+  "unresolved_conflicts": [
+    "Book p139 says Relay Skiff could not fight; expanded Bible allows a small secondary weapon. No weapon removal authorized.",
+    "Book pp244-247 and expanded Bible use amber Harvest buildup and final collapse; REL-ART-014 specifies a cyan vertical geyser. Retain collapse semantics; color/effect reconciliation required before production.",
+    "Annotated sheet scales and labels do not override requirements: Kharuun 145/80/110 m labels, Waystone resource-node label, Interval Loom gateway/production label are not accepted.",
+    "Book p3328 describes no prior realized Reshape in this basin. This is the novel’s narrated history, not authority to remove playable Reshape from the game."
+  ],
+  "preserved_owner_input": {
+    "EBS-CON-MER-UNT-001": {
+      "concept_id": "EBS-CON-MER-UNT-001",
+      "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+      "choice": "KEEP",
+      "notes": "",
+      "updated_utc": "2026-09-06T16:52:41.737350+00:00"
+    },
+    "EBS-CON-MER-UNT-002": {
+      "concept_id": "EBS-CON-MER-UNT-002",
+      "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+      "choice": "REPLACE",
+      "notes": "Check out the book for the lancer make sure it makes sense we need to rework this i think",
+      "updated_utc": "2026-09-06T16:53:28.276228+00:00"
+    },
+    "EBS-CON-MER-UNT-003": {
+      "concept_id": "EBS-CON-MER-UNT-003",
+      "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+      "choice": "KEEP",
+      "notes": "",
+      "updated_utc": "2026-09-06T16:53:35.863130+00:00"
+    },
+    "EBS-CON-MER-UNT-004": {
+      "concept_id": "EBS-CON-MER-UNT-004",
+      "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+      "choice": "REPLACE",
+      "notes": "Read the book make sure this make sense. ",
+      "updated_utc": "2026-09-06T16:54:00.500801+00:00"
+    }
+  },
+  "evidence_excerpts": [
+    {
+      "paragraph": 135,
+      "text": "Beyond the deck's observation slit, a maintenance crew was stripping a damaged Power Link, one of the slender pylons that carried reserve current out from the city to wherever the city needed to work. The pylon's ceramic skin lay on the ground in numbered panels. One worker held a conduit clear while another loosened the load collar. Neither looked toward the broken star. The warm core stood low above the ridgeline; across the other half of the sky the Crownfall threw its colder light over their shoulders. Each worker had a gold-edged shadow and an indigo one, and the two disagreed about where the fallen pylon ended."
+    },
+    {
+      "paragraph": 136,
+      "text": "Mara placed the recovery site on her board. The southern withdrawal route remained connected to the Anchor, the field station from which every worker, frame, and pylon on her board drew its power, but the link through the loading court was dark. Her available reserve was enough to maintain the receiving threshold and the field network for the operation already authorized. It was not enough to sustain a search of unknown duration."
+    },
+    {
+      "paragraph": 139,
+      "text": "A light Relay Skiff came onto the board, a fast, thin-hulled carrier with a sensor mast taller than its hull and an empty archive rack strapped across the deck. It could see a long way and carry a little. It could not fight, which was why she liked sending it first. Its operator reported a serviceable drive and a relay collar that would need replacing after this duty window."
+    },
+    {
+      "paragraph": 143,
+      "text": "The operator paused, then acknowledged. Mara shifted a Surveyor, one of the walking worker frames that did the network's building and carrying, from salvage to the skiff bay. The change cost her one returning load of Matter, the ceramic feedstock every collar, pylon, and patch on the board was made from. She recorded the cost herself, because the officer beside her had already opened his mouth to suggest that readiness work could be charged to the next window."
+    },
+    {
+      "paragraph": 169,
+      "text": "The new relay collar seated with a faint click. On the board, the skiff's readiness band steadied."
+    },
+    {
+      "paragraph": 172,
+      "text": "Her mother would take her through the service galleries under Transit, where the pale ceramic decks rested on dark coffers and the city's weight could be followed from one bracket to the next. A child who stood quietly could hear carts passing overhead, their loads translated into different notes by the spans. A full cistern cart made one note. An empty one made another. The sound of an unbalanced axle traveled farther than either."
+    },
+    {
+      "paragraph": 173,
+      "text": "Her mother never called the galleries beautiful. She pointed out repairs instead: a knee brace older than the wall around it, a sleeve fitted over a scored conduit, a plate whose bolt spacing recorded an earlier tool standard. People who had never met had made these things understandable to one another."
+    },
+    {
+      "paragraph": 178,
+      "text": "She sent the skiff as far as the first observation sill, not directly to the transmitter. Two Lancers moved with it, pale two-legged frames with their rail-lances held low, the shape most people in the basin meant when they said the Compact. A Bulwark Team followed more slowly, a broad walking shield with a crew behind it, and the heavy chassis would not keep pace, and she did not ask it to. Its job was to cover the part of the route where the skiff would have to slow."
+    },
+    {
+      "paragraph": 181,
+      "text": "A line of shivergrass bent along the edge of the skiff's view. A moment later, a lean Kharuun warform crossed an opening between two glass shelves, a Riftstalker, all legs and shard-caster, the kind that never stood still long enough to be hit. It fired once while moving. The shot struck the outer shoulder of a Lancer, chipping pale ceramic from the cowl."
+    },
+    {
+      "paragraph": 187,
+      "text": "She moved the Bulwark's shield face toward the exposed shelf and gave the damaged Lancer room behind it. Then she sent the skiff to the next point."
+    },
+    {
+      "paragraph": 191,
+      "text": "The Well lay beneath the broken transit span. Its core spire occupied the center of a vitrified bowl, and the light around it had the peculiar layered quality that survey crews learned not to stare at. A handrail on the far side of the bowl continued across a gap from one viewing angle. From another it ended cleanly at the fracture."
+    },
+    {
+      "paragraph": 196,
+      "text": "Future Wells were the larger deposits, places where several branches remained locally coherent. That was why a handrail could complete itself from one approach and end from another. People on Soryn had built whole sciences around using such places, and whole institutions around deciding who was entitled to use them. No institution had made the unused possibility available again merely by regretting an extraction."
+    },
+    {
+      "paragraph": 198,
+      "text": "Mara had read all three procedures. She had run their costs before the evacuation began and again when the southern reserve fell. Harvest would deliver the immediate Dawn the receiving network needed. Preserve would keep the Well intact and yield slowly while a force held it. Reshape would spend Dawn to bring a temporary crossing into agreement with the road on either side."
+    },
+    {
+      "paragraph": 244,
+      "text": "Amber light began to climb the core spire."
+    },
+    {
+      "paragraph": 245,
+      "text": "During the telegraph, everyone who could see the Well could see the decision becoming difficult to stop. Mara kept the carrier at the recovery site and the Surveyor within control range. She pulled a Lancer back from a tempting shot to close the gap beside the worker's approach. Nothing about the exchange felt like an assault on an enemy position. It felt like holding open a door while a machine behind it completed an operation she would never be able to call back."
+    },
+    {
+      "paragraph": 246,
+      "text": "The spire folded into the bowl."
+    },
+    {
+      "paragraph": 247,
+      "text": "Its light did not go out gently. The rising harmonic ended so abruptly that Mara heard the command deck's ventilation for the first time that day. Along the basin floor, a strip of fractured ground gave way. The western cut remained, raw and irregular, while the other possibilities withdrew from the survey."
+    },
+    {
+      "paragraph": 446,
+      "text": "At the eastern margin of the Glass Scar, the assembly's Waystone was preparing to uproot. The monolith was the assembly's hearth, granary, and anchor in one grown body: it fed the workers who tended it, held the carried stone that let them repair and build, and rooted wherever the assembly needed to stay. When it moved, the assembly moved. When it stood, they could work."
+    },
+    {
+      "paragraph": 447,
+      "text": "A ring of mineral roots withdrew into the monolith's base. The roots did not simply tear free. Tenders, the ordinary workers of the assembly, loosened each contact in sequence, working their resonance staffs around the circumference until the structure could lift without carrying half the hillside with it. Dark strata parted from dark strata. The polished docking hollows beneath became visible, their shapes recording the last time this moving settlement had rested here."
+    },
+    {
+      "paragraph": 454,
+      "text": "The young bearer looked up just as the Waystone's supporting frame extended into the space where her shoulder had been. She withdrew to a sensible distance with an expression Oruun recognized: the offended attention of someone who had expected danger to look more dramatic."
+    },
+    {
+      "paragraph": 455,
+      "text": "Her name was Kesh. It was a working name, one syllable, the kind a Tender carried until the assembly gave her a relation to add to it, and she had begun to suspect that this route was where the relation would be decided. She carried a wrapped recall-stone in a sling. She was an ordinary Tender, broad in the forearms, her working strata still comparatively smooth. Choosing her had caused less argument than Oruun expected. The assembly had enough illustrious custodians. It needed someone who would return with an account of the route rather than an account of having led it."
+    },
+    {
+      "paragraph": 496,
+      "text": "While they faced the pressure, a Cairnback advanced along the inner cut, a slow, heavy-shouldered warform whose whole purpose was to stand where something needed standing. Its broad back carried heat-dark strata, chipped at one shoulder from an older exchange. It stopped where Oruun had marked the gap and heaved, leaving a short barrier of grown mineral behind it."
+    },
+    {
+      "paragraph": 566,
+      "text": "The Assembly gathered in a chamber grown around the outer roots of Understone, where the ceiling ribs carried heat from the deeper birthing matrices and the walls held the soft amber pulse of living mineral. Nothing in the chamber was decorative in the Compact sense. Every surface had been shaped by use. Steps had been grown smooth where generations had placed their feet. Resonance hollows had been widened where too many voices once tried to occupy them at the same time."
+    },
+    {
+      "paragraph": 1060,
+      "text": "The skirmishers took fire while reversing their movement. One returned with a carapace seam split along the shoulder. The grown armor held, but not well enough for another exposed crossing."
+    },
+    {
+      "paragraph": 1061,
+      "text": "Kesh had already lifted her staff toward the damaged warform."
+    },
+    {
+      "paragraph": 1066,
+      "text": "They changed the approach. A Cairnback moved to the near end of the span and grew mineral cover where the second Lancer's line crossed it. The skirmishers did not resume the same arc. One stayed where the first line could see it, forcing attention without offering a frontal exchange; the others moved only when the scout confirmed the far frame had turned."
+    },
+    {
+      "paragraph": 1083,
+      "text": "The Listening Spine grew at a survey place where three chambers answered one another."
+    },
+    {
+      "paragraph": 1084,
+      "text": "It began as a rooted curve under the Tender's staff and rose in banded strata, amber nodules finding their spacing along its length. Oruun watched the work from a prepared observation hollow. No ancestor had remembered this exact instrument. Its makers had learned to change how the stone listened, just as Compact engineers changed the collars on an old conduit. Continuity was not the preservation of every method."
+    },
+    {
+      "paragraph": 1536,
+      "text": "A Surveyor cleared the fill in careful passes. Its drill was too powerful for the last layer, so the operator used the gripper to lift fragments by hand. The census face emerged beneath the dirt: pale ceramic, a narrow service seam, and a strip where an earlier index plate had been removed."
+    },
+    {
+      "paragraph": 1551,
+      "text": "This was the first moment when he understood why Mara looked at workers more often than at weapons. The line teams could hold an approach and the skiff could see it, but nothing he had found could become a usable record until a worker put a connection in the ground and another load arrived to finish it."
+    },
+    {
+      "paragraph": 1607,
+      "text": "Talar returned with the last carrying case and found that the ordinary worker who had finished the link had stayed to keep its approach clear. A fresh patch covered the Surveyor's chipped shoulder. The worker's cargo cradle was empty because the Matter it carried had become the structure on which Talar's discovery depended."
+    },
+    {
+      "paragraph": 1689,
+      "text": "The first was a Resonant whose sensor fins had been repaired along one edge. The second had served on migration routes far from this basin and carried fewer local assumptions. Neither was being asked to declare the ancestral accounts authentic. They would stand at separated sites, listen to the prepared geometry, and give an account of what reached them."
+    },
+    {
+      "paragraph": 1695,
+      "text": "Talar remained at the serviced platform. The Kharuun force would carry the census comparison into the hollow without making him its interpreter or commander. He watched the Waystone lift onto its carriage and began asking questions about how the growth could leave its roots behind without losing itself."
+    },
+    {
+      "paragraph": 1721,
+      "text": "The Listening Spine rose through a sequence of low tones. Amber nodules settled along its curve. When the last contact steadied, the instrument began carrying movement from the ridge shoulders into the force's shared picture."
+    },
+    {
+      "paragraph": 1909,
+      "text": "At the Confluence verge, an unfinished frame stood on a terrace of dark glass. From the first approach it had four corners. From the second, the surveyor stationed beside Talar could see five."
+    },
+    {
+      "paragraph": 1941,
+      "text": "Talar sent a Relay Skiff forward under an observe order. The skiff's mast passed behind one side of the frame and appeared beside the other. Its own position report described an ordinary path around the structure. The contradiction belonged to the visible surroundings, not to a secret journey the machine had taken."
+    },
+    {
+      "paragraph": 1966,
+      "text": "Behind them a Lancer halted and braced its recoil strut. The field supervisor had confirmed armed movement along the southern ledge. Talar checked the sight line before authorizing fire. The contact was a Kharuun skirmisher, visible and moving, not an indistinct shape to which fear had supplied a weapon."
+    },
+    {
+      "paragraph": 1967,
+      "text": "The skirmisher withdrew when the Bulwark unfolded across its approach. Another remained below the terrace, threatening the material route. Talar could chase it, perhaps remove the immediate threat, and send his screen out of sight of the relay. He kept the screen where it was and diverted the next load around the longer route."
+    },
+    {
+      "paragraph": 2434,
+      "text": "The western approach led past a damaged service apron to a public contact site. Beyond it stood the first offset panes. Their edges retained a steady magenta light beside the dark Archive conduits. The juxtaposition was so exact that Oruun's first thought was resentment: something unknown could maintain a presence where the city had failed to sustain its own."
+    },
+    {
+      "paragraph": 2435,
+      "text": "Then they listened to the interval between the panes' tones. The pattern was being held by continual effort. The light was no more free than the warmth of a rooted Waystone."
+    },
+    {
+      "paragraph": 2436,
+      "text": "A Resonant advanced to the contact approach, sensor fins inclined toward the nearest pane. Oruun followed with a Tender and a light screen. The Waystone remained back until the approach had been observed."
+    },
+    {
+      "paragraph": 2467,
+      "text": "Oruun moved the nearest Tender back behind the service shoulder. The shot struck the edge of the grown cover a Cairnback had left on the approach. Chips of warm mineral flew against the ceramic paving."
+    },
+    {
+      "paragraph": 2468,
+      "text": "The Resonant confirmed the attacker's position. A second Lancer remained outside the confirmed sight line."
+    },
+    {
+      "paragraph": 2474,
+      "text": "They sent the Riftstalkers along the observed side approach. The skirmishers kept moving between shots, forcing the forward Lancer to turn while the Tenders completed the first Spine. The defensive objective was modest and difficult: enough room for the workers, no pursuit beyond the known perimeter."
+    },
+    {
+      "paragraph": 2475,
+      "text": "One Riftstalker took a direct hit before it cleared the Lancer's arc. Its shoulder strata split around the caster mount. It withdrew toward the Waystone, still mobile. Oruun reassigned another to the screen. A Cairnback could hold the frontal pressure for a while, but leaving it unsupported would turn its endurance into a delayed loss."
+    },
+    {
+      "paragraph": 2499,
+      "text": "The Well offered what Wells offered. Spend it now and end the burden of guarding it, with the old Scar record beside the commitment as a reminder that a closed Well granted no one permission to close the next. Reshape the ground for a published interval and then lose it, which would change the fight and answer nothing about what they meant to keep. Or keep the Well, slowly, and accept that keeping was a thing somebody would have to keep doing after the force withdrew."
+    },
+    {
+      "paragraph": 2510,
+      "text": "Oruun entered Preserve."
+    },
+    {
+      "paragraph": 2511,
+      "text": "The commitment was made in the open. The core spire steadied, its near outlines drawing into one readable form. A slow ring of custody light held around the bowl. The sound did not end in the hard drop Oruun remembered from the Glass Scar. It continued."
+    },
+    {
+      "paragraph": 2515,
+      "text": "The quarantine position had shifted during the commitment. A powered Aegis Post, one of the Compact's fixed gun emplacements, covered part of the direct approach, supported by a narrow connection running behind the Lancers. Oruun could send the force against it and perhaps break the connection. The fight would draw the workers away from the maintained positions and expose the Waystone route."
+    },
+    {
+      "paragraph": 2516,
+      "text": "Instead they used the observation already obtained from the second Spine. The side passage was longer and narrow enough to require the Cairnback to turn carefully. The Resonant checked its exit. The Riftstalkers kept the nearest Lancer facing the frontal cover while Oruun moved through the side passage with the witness detail."
+    },
+    {
+      "paragraph": 2626,
+      "text": "The connections were the real labor. At the Life Support interface the fittings did not match: a ceramic conductor collar had no reason to accept the porosity of grown stone, and a resonance surface did not become a wire because someone called the work cooperation. The supplied adapter sat between them, showing both construction methods, and Oruun required that it stay visible from the witness approach. Through it came the district's contribution, a functioning input and the record of the allocation that sustained it. The signal said nothing about the welfare of everyone who depended on it."
+    },
+    {
+      "paragraph": 2627,
+      "text": "Transit took a second defended approach and a second afternoon. A service passage that looked clear on the older plan contained a displaced maintenance cradle. Rel noted the obstruction. A Tender moved it before the carried Matter could pass."
+    },
+    {
+      "paragraph": 3037,
+      "text": "The Choir's root in the basin stood behind the approach: paired panes surrounding a tone deep enough to be felt through the glass ground. The living called it the Concordance because the survey teams had needed a word. Its workers moved through the true gap between the panes carrying Matter against their chests. Their filaments brightened where they touched the deposits. Each return had a route and a cost. The structures beyond the Concordance required coherence to remain, and the obligation continued whether anyone was speaking about it or not."
+    },
+    {
+      "paragraph": 3041,
+      "text": "The structures that held the basin for the Choir had names the living found either beautiful or ridiculous: looms, anchors, a concordance. Neme did not care what the living called them. Each was a place where Dawn was being spent so that something could go on being present. None of them had been raised yet at the crisis site. Each would have its own expense."
+    },
+    {
+      "paragraph": 3047,
+      "text": "The Soldier asked for the first preparation, and the looms began the slow work of learning which states the basin would let the two of them hold."
+    },
+    {
+      "paragraph": 3078,
+      "text": "A hostile Meridian frame on the outer ledge shifted to acquire the route. Its long rail-lance came level."
+    },
+    {
+      "paragraph": 3105,
+      "text": "An ordinary worker began the anchor at the crisis site. Fine filaments crossed in a luminous lattice, defining a spire that would stand in exact register, without the offset that made every other Choir structure look like a thing seen through water."
+    },
+    {
+      "paragraph": 3112,
+      "text": "Its steady field eased the strain on the structures around it. It did not cancel the next cost. Neme checked the reserve against the whole obligation before beginning the hold."
+    },
+    {
+      "paragraph": 3328,
+      "text": "\"Some of us wanted to open the Crownfall entirely: to let what is held here become whatever it becomes, with no guard and no return. We cannot. Nobody in this basin has ever spent Dawn to reshape ground rather than to take it or keep it. The Choir learns what is possible from what has been done. There is no account of that, so there is no way to hold it. A name for it exists. A way does not.\""
+    },
+    {
+      "paragraph": 3630,
+      "text": "The three Well protocols. Harvest spends the held potential for immediate yield and permanently closes the Well. Preserve maintains custody and yields slowly while held. Reshape spends Dawn to manifest a particular, temporary possibility whose expiry is part of the commitment."
+    }
+  ],
+  "decisions": [
+    {
+      "concept_id": "EBS-CON-MER-UNT-001",
+      "name": "Surveyor — original sheet",
+      "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+      "choice": "KEEP",
+      "book_paragraphs": [
+        143,
+        1536,
+        1607
+      ],
+      "reason": "Retain the compact worker frame, paired working arms and visible cargo. The drill/gripper and repaired ceramic shoulder match the story. Simplify the decorative mast panel and make loaded/unloaded cargo readable during later production; this remains a worker, not an armed robot."
+    },
+    {
+      "concept_id": "EBS-CON-MER-UNT-002",
+      "name": "Lancer — original sheet",
+      "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+      "choice": "REPLACE",
+      "book_paragraphs": [
+        178,
+        181,
+        1966,
+        3078
+      ],
+      "reason": "Replace this upright armored hero silhouette. Retain pale ceramic, charcoal underframe and cyan rail technology in a new narrow two-legged line-fire frame: low cowl, lance held low, exposed thin flanks and a visible rear-leg recoil strut. The book explicitly describes frames and bracing; it does not call for a human infantry redesign. Preserve the owner replacement choice."
+    },
+    {
+      "concept_id": "EBS-CON-MER-UNT-003",
+      "name": "Bulwark Team — original sheet",
+      "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+      "choice": "KEEP",
+      "book_paragraphs": [
+        178,
+        187,
+        1967
+      ],
+      "reason": "Retain the broad two-operator shield chassis and articulated barrier wings. The book supports the slow heavy screen and unfolding shield face. Production must show one directional front, vulnerable rear and a packed state; the luminous panels cannot imply all-round invulnerability."
+    },
+    {
+      "concept_id": "EBS-CON-MER-UNT-004",
+      "name": "Relay Skiff — original sheet",
+      "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+      "choice": "REPLACE",
+      "book_paragraphs": [
+        139,
+        169,
+        1941
+      ],
+      "reason": "Replace the fighter-like pointed canopy and ornamental ring assembly with a thin-hulled utility skimmer, dominant mast/dish and an exposed strapped archive cradle. Retain the maintained ceramic equipment language. The book says it could not fight; game canon gives a small secondary weapon. Flag that conflict and retain game capability pending reconciliation. Preserve the owner replacement choice."
+    },
+    {
+      "concept_id": "EBS-CON-KHA-UNT-001",
+      "name": "Tender — original sheet",
+      "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+      "choice": "REPLACE",
+      "book_paragraphs": [
+        447,
+        455,
+        1061,
+        2627
+      ],
+      "reason": "Replace the spider-like machine with hose manipulators. The story shows an ordinary cultivator using a staff, carrying a sling, and working with broad forearms; expanded game canon identifies a stocky humanoid Kharuun. Design living strata, amber wrist nodules, staff and carried Matter. Avoid turning an ordinary person into a generic insect worker."
+    },
+    {
+      "concept_id": "EBS-CON-KHA-UNT-002",
+      "name": "Riftstalker — original sheet",
+      "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        181,
+        1060,
+        2474,
+        2475
+      ],
+      "reason": "Retain the low, lean, long-legged moving skirmisher. Rework the smooth cream shell, conspicuous purple crystals and manufactured-looking cannon into grown charcoal strata, amber seams and a shoulder shard-caster whose attachment can split with damage. Do not infer exact limb count from the prose."
+    },
+    {
+      "concept_id": "EBS-CON-KHA-UNT-003",
+      "name": "Cairnback — original sheet",
+      "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+      "choice": "KEEP",
+      "book_paragraphs": [
+        496,
+        1066,
+        2467,
+        2516
+      ],
+      "reason": "Retain the broad, low layered back and protected head as the assault-screen identity. The book supports grown mineral cover and bulk that must turn carefully in a narrow passage. Later production must show strata heaving into cover, mineral fracture and warm material detail; avoid mechanical joints or a giant ornamental gem becoming its defining feature."
+    },
+    {
+      "concept_id": "EBS-CON-KHA-UNT-004",
+      "name": "Resonant — original sheet",
+      "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        1689,
+        2436,
+        2468
+      ],
+      "reason": "Retain the tall delicate scout silhouette. Replace the prominent purple jewel and cable-like appendages with translucent amber sensor fins along head/spine and grounded mineral-organic anatomy. The story describes repaired and inclined fins; sensing should be visible as listening, not a spell or weapon."
+    },
+    {
+      "concept_id": "EBS-CON-MER-BLD-001",
+      "name": "Anchor — original sheet",
+      "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        136,
+        172,
+        173
+      ],
+      "reason": "Retain radial network-root organization and delivery approaches, but reduce the monumental reactor-spire emphasis. Make a field station with serviceable rails, redundant conduits, work entrances and a modest command/sensor core. The book establishes function and maintenance, not this ornate exact massing."
+    },
+    {
+      "concept_id": "EBS-CON-MER-BLD-002",
+      "name": "Power Link — original sheet",
+      "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        135,
+        169
+      ],
+      "reason": "Retain the vertical pylon and physical connection points. Slim its oversized reactor base, remove exposed trophy-crystal emphasis, and show removable numbered ceramic panels, load collar and accessible conduit couplings. It should read as maintained distribution equipment."
+    },
+    {
+      "concept_id": "EBS-CON-MER-BLD-003",
+      "name": "Array Foundry — original sheet",
+      "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+      "choice": "KEEP",
+      "book_paragraphs": [
+        143,
+        1536,
+        1551
+      ],
+      "reason": "Retain the long open fabrication hall, structural rails and visible work-to-output sequence. This follows the story’s repairable frame economy and the Bible’s explicit Array Foundry brief; the novel does not establish this exact building design. Production still needs intelligible intake/output and research gantry states."
+    },
+    {
+      "concept_id": "EBS-CON-MER-BLD-004",
+      "name": "Aegis Post — original sheet",
+      "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        2515
+      ],
+      "reason": "Retain the readable rotating gun and obvious power connection. Rework the large single ornamental barrel and circular pedestal to the Bible’s three-legged ceramic mount and twin-emitter head. Supply/offline status must be visible. The novel establishes a fixed powered emplacement, not emitter count."
+    },
+    {
+      "concept_id": "EBS-CON-KHA-BLD-001",
+      "name": "Memory Hearth — original sheet",
+      "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+      "choice": "REPLACE",
+      "book_paragraphs": [
+        447,
+        455,
+        2626,
+        566
+      ],
+      "reason": "Replace this armored shrine-like headquarters as the production direction. Retain warm communal center only. Prefer the annotated grown-dome study: inhabited hollows, intake cleft, banded strata and adaptation crown. The novel supports cultivated, maintained material; the specific Memory Hearth form comes from the Bible, not a named book scene."
+    },
+    {
+      "concept_id": "EBS-CON-KHA-BLD-002",
+      "name": "Waystone — original sheet",
+      "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        446,
+        447,
+        454,
+        1695
+      ],
+      "reason": "Retain the monolith that can migrate. Replace insect-robot legs and polished armor with a grown carriage, retracting mineral root ring, worn docking hollows and dark layered strata. Show both rooted and mobile states; it is infrastructure, not a combat creature."
+    },
+    {
+      "concept_id": "EBS-CON-KHA-BLD-003",
+      "name": "Growth Basin — original sheet",
+      "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        447,
+        2626
+      ],
+      "reason": "Retain the bowl and surrounding niches. Lower the fortress-like ribs, expose a shallow amber matrix pool and make molt niches accessible to warforms and cultivators. Grown texture and use should dominate ornament. The specific basin and niche form is from game canon; the book does not supply a named Growth Basin description."
+    },
+    {
+      "concept_id": "EBS-CON-KHA-BLD-004",
+      "name": "Listening Spine — original sheet",
+      "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        1083,
+        1084,
+        1721
+      ],
+      "reason": "Retain the single tall listening rib, but soften the assembled antenna impression into a rooted curve of banded strata with amber nodules spaced along it. The book explicitly describes this growth sequence. Show sensor sequence and rooted socket; no weapon styling."
+    },
+    {
+      "concept_id": "EBS-CON-MER-BLD-005",
+      "name": "Anchor — annotated architecture study",
+      "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        136,
+        172,
+        173
+      ],
+      "reason": "Use the repairable civic shell, ramp and status bands as the stronger architectural direction; lower the bunker-like dome, expose useful load paths and separate worker intake from exit. Combine its service clarity with the original study’s network-root organization. Do not adopt printed scale or doorway proportions as approved dimensions."
+    },
+    {
+      "concept_id": "EBS-CON-MER-BLD-006",
+      "name": "Power Link — annotated architecture study",
+      "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        135
+      ],
+      "reason": "Retain the slender ceramic pylon: closer to the book than the original oversized reactor. Replace airborne lightning webs with physically legible conduits and restrained status illumination; show the numbered panels and service collar the maintenance crew can remove."
+    },
+    {
+      "concept_id": "EBS-CON-MER-BLD-007",
+      "name": "Array Foundry — annotated architecture study",
+      "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        143,
+        1551
+      ],
+      "reason": "Retain overhead gantries, service access and visible fabrication work. Reorganize the stacked workshop into the Bible’s long intake/work/output hall, with a separate readable roof research gantry. Reduce sparks and tiny machinery that conceal the principal unit-production path. Exact architecture is a game-canon design judgment, not a novel quotation."
+    },
+    {
+      "concept_id": "EBS-CON-MER-BLD-008",
+      "name": "Aegis Post — annotated architecture study",
+      "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        2515
+      ],
+      "reason": "Retain twin emitters and a readable turret head. Replace the massive bunker and decorative shield bubble with the canonical three-legged mount and heavy supply coupling. No new shielding mechanic follows from this painting. Make loss of power obvious."
+    },
+    {
+      "concept_id": "EBS-CON-KHA-BLD-005",
+      "name": "Memory Hearth — annotated architecture study",
+      "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+      "choice": "KEEP",
+      "book_paragraphs": [
+        447,
+        455,
+        2626,
+        566
+      ],
+      "reason": "Retain the grown dome, inhabited worker hollows and layered communal interior as the Memory Hearth direction. These align with the Bible’s explicit headquarters brief and the novel’s maintained mineral-organic culture. The printed 145 m scale is rejected as production guidance; volcanic brightness and scale are not approved by keeping the silhouette."
+    },
+    {
+      "concept_id": "EBS-CON-KHA-BLD-006",
+      "name": "Waystone — annotated architecture study",
+      "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        446,
+        447,
+        454,
+        1695
+      ],
+      "reason": "Retain banded monolith, amber nodules and visible roots. Add the grown carriage and root-retraction sequence essential to the story. Reject the sheet’s resource-node label and 80 m annotation as authority: this is mobile logistical infrastructure, not a static mineral deposit."
+    },
+    {
+      "concept_id": "EBS-CON-KHA-BLD-007",
+      "name": "Growth Basin — annotated architecture study",
+      "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        447,
+        2626
+      ],
+      "reason": "Retain terraced mineral bowl, pool and emergence access. Replace rainbow/geothermal-resort coloring with restrained amber matrix light and make the molt niches unmistakable. Scale and production footprint come from game requirements, not the scene’s human figures. The novel informs material culture; the Bible supplies this asset’s role."
+    },
+    {
+      "concept_id": "EBS-CON-KHA-BLD-008",
+      "name": "Listening Spine — annotated architecture study",
+      "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        1084,
+        1721
+      ],
+      "reason": "Retain the slender rooted curve. Replace the near-invisible whisker-only identity with clearly spaced amber sensor nodules and a stronger rib silhouette at RTS distance. Discard the printed 110 m height. The book supplies the banded growth and nodules, not a skyscraper scale."
+    },
+    {
+      "concept_id": "EBS-CON-HOL-BLD-001",
+      "name": "Concordance — annotated architecture study",
+      "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+      "choice": "REPLACE",
+      "book_paragraphs": [
+        2434,
+        2435,
+        3037
+      ],
+      "reason": "Replace the glowing armored cathedral with an open ring of paired, offset charcoal-glass panes surrounding a held tone. Provide one true intake gap and worker passages. The book explicitly describes paired panes and the true gap; solid ribbed armor and a blazing magical core obscure both function and maintained possibility."
+    },
+    {
+      "concept_id": "EBS-CON-HOL-BLD-002",
+      "name": "Interval Loom — annotated architecture study",
+      "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        1909,
+        2434,
+        3041
+      ],
+      "reason": "Retain crossed spans and conflicting shadows. Reduce the solid portal-machine casing, add the small drop-pane beneath and make the structure connective rather than a large gateway/production facility. The sheet’s label conflicts with the game roster. Exact Interval Loom form comes from the Bible; prose supplies conditional geometry and upkeep."
+    },
+    {
+      "concept_id": "EBS-CON-HOL-BLD-003",
+      "name": "Chorus Loom — annotated architecture study",
+      "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        3037,
+        3041,
+        3047
+      ],
+      "reason": "Retain the visible weaving space and parallel threads. Replace armored cradle rails with two charcoal-glass pylons and maintained luminous filaments; distinguish the research pane from unit formation. Avoid constant lightning. The novel supports costly weaving/learning; exact pylon geometry is game canon."
+    },
+    {
+      "concept_id": "EBS-CON-HOL-BLD-004",
+      "name": "Phase Anchor — annotated architecture study",
+      "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        3105,
+        3112
+      ],
+      "reason": "Retain the single slender glass-spire direction. Remove root-like magical tendrils and excessive bloom; show a perfectly registered silhouette and restrained field ring. The book explicitly describes a luminous-lattice spire in exact register and its steady field easing nearby upkeep. Stable alignment must distinguish it from offset Choir neighbors."
+    },
+    {
+      "concept_id": "EBS-CON-FWL-SYS-001",
+      "name": "Future Well — Dormant",
+      "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        191,
+        196
+      ],
+      "reason": "Retain courtyard-scale bowl and central spire as the family base. Rework the ceremonial stone machinery into vitrified charcoal glass with quiet fracture seams and doubled outline/shadows. Lower the gold glow and floating spectacle so Dormant reads as held potential. Existing rings are a design proposal, not textually established engineering."
+    },
+    {
+      "concept_id": "EBS-CON-FWL-SYS-002",
+      "name": "Future Well — Harvest",
+      "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        244,
+        245,
+        246,
+        247
+      ],
+      "reason": "Retain the collapse direction, but make this a transition reference rather than an enduring geyser state: telegraph climbs the spire, then spire folds into bowl, light cuts off and a dark cracked spent site remains. Book/Bible amber conflicts with REL-ART-014 cyan geyser; color reconciliation remains open and no requirement is changed."
+    },
+    {
+      "concept_id": "EBS-CON-FWL-SYS-003",
+      "name": "Future Well — Preserve",
+      "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        2510,
+        2511
+      ],
+      "reason": "Retain intact core and custody ring. Reduce the spraying fragments and active energy column: the novel says the spire steadies into one outline and a slow ring holds around the bowl. Show ongoing custody and continued cost through restrained motion, not a more powerful Harvest."
+    },
+    {
+      "concept_id": "EBS-CON-FWL-SYS-004",
+      "name": "Future Well — Reshape",
+      "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        198,
+        2499,
+        3630,
+        3328
+      ],
+      "reason": "Retain magenta transformation identity and the shared bowl/spire. Make the effect point to an actual temporary crossing or other authorized terrain feature, with readable duration and expiry. Orbiting rings alone do not communicate Reshape’s spatial consequence. The prose supports temporary manifested ground, not this exact machine. Chapter 24 explicitly says this novel’s basin has no realized Reshape precedent; the new state design therefore requires the game’s authored reference, not a claimed book scene."
+    },
+    {
+      "concept_id": "EBS-CON-FWL-SYS-005",
+      "name": "Future Well — celestial battle landmark variant",
+      "source_sha256": "262ecb70ca9cb970bd6feba4cba1546c2f1b2d31297b3d476eafa2d94f205c78",
+      "choice": "REPLACE",
+      "book_paragraphs": [
+        191,
+        246,
+        247,
+        2511
+      ],
+      "reason": "Replace the giant luminous tornado as the Future Well production reference. It obscures the bowl/core, turns sustained custody into spectacle and fails to explain permanent exhaustion or temporary terrain. Preserve the image in visual history; it must not define the state family."
+    },
+    {
+      "concept_id": "EBS-CON-FWL-SYS-007",
+      "name": "Future Well — composed target",
+      "source_sha256": "04ec9daa608ee6d5f15268b8fa7aa412d7eafe132dac5811681daa2ce105e62f",
+      "choice": "REWORK",
+      "book_paragraphs": [
+        191,
+        196
+      ],
+      "reason": "Retain the central landmark’s relationship to the route and opposing forces as composition reference. Rework the polished gold plinth and floating collectible appearance into a vitrified bowl with embedded core identity. This choice applies to the Well region only; it does not approve the surrounding skiff, units, sky or map geometry."
+    }
+  ],
+  "family_direction": "Rework one bowl-and-core-spire family. Dormant: quiet fractured glass and doubled outline. Harvest: visible commitment followed by irreversible collapse and a dark spent site. Preserve: stabilized core and slow custody ring. Reshape: temporary authored terrain with expiry cues. Reject the giant tornado as the family definition. Resolve the amber-versus-cyan Harvest conflict before production; no game rule or canon status changes.",
+  "review_coverage": "All 3654 extracted paragraphs processed in a read-only evidence review; parent inspected all 10 original image sheets/scenes used by the 34 objects and verified cited relevant passages. No book layout or publication QA performed.",
+  "counts": {
+    "KEEP": 5,
+    "REPLACE": 6,
+    "REWORK": 23
+  },
+  "application": {
+    "applied_utc": "2026-09-06T17:48:22.559752+00:00",
+    "from_revision": 8,
+    "to_revision": 43,
+    "all_34_choices_verified": true,
+    "prior_history_preserved": true,
+    "prior_owner_notes_preserved": true,
+    "review_selections_sha256": "a935b35ae52981c9b403338635b7488f82e5e78bd9a8ef2727e99db59e3b1325"
+  }
+}
