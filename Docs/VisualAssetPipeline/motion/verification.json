@@ -3,11 +3,11 @@
   "creator": "Angelis Pseftis",
   "created_utc": "2026-09-06T20:29:28.045038+00:00",
   "packages": 21,
-  "open_gap_records": 63,
+  "open_gap_records": 53,
   "tests": {
-    "audit_tests": 5,
-    "motion_studies": 8,
-    "sample_executions": 96,
+    "audit_and_decision_tests": 10,
+    "motion_studies": 11,
+    "sample_executions": 132,
     "candidate_records": 21,
     "control_checks": 4
   },
@@ -23,6 +23,38 @@
   "image_corrections": {
     "growth_basin": "Image-level state contrast improved; RTS recognition open",
     "chorus_loom": "Image-level state contrast improved; RTS recognition open",
-    "aegis_post": "Partial mount supplement; complete matched-view geometry open"
-  }
+    "aegis_post": "Partial mount supplement; complete matched-view geometry open",
+    "power_link": "Missing panel03 restored beside02; loose connector present; routing remains unverified",
+    "phase_anchor": "Magenta ground ring visually inspected; final material and coverage measurement remain open"
+  },
+  "history": [
+    {
+      "tests": {
+        "audit_tests": 5,
+        "motion_studies": 8,
+        "sample_executions": 96,
+        "candidate_records": 21,
+        "control_checks": 4
+      },
+      "open_gap_records": 63,
+      "image_corrections": {
+        "growth_basin": "Image-level state contrast improved; RTS recognition open",
+        "chorus_loom": "Image-level state contrast improved; RTS recognition open",
+        "aegis_post": "Partial mount supplement; complete matched-view geometry open",
+        "power_link": "Missing panel03 restored beside02; loose connector present; routing remains unverified",
+        "phase_anchor": "Magenta ground ring visually inspected; final material and coverage measurement remain open"
+      }
+    }
+  ],
+  "updated_utc": "2026-09-06T20:47:36.444487+00:00",
+  "gap_dispositions": {
+    "REFERENCE_REQUIRED": 25,
+    "AUTHORITY_DEPENDENCY": 2,
+    "CORRECTED_REFERENCE": 2,
+    "INTEGRATION_DEPENDENCY": 19,
+    "DESIGN_DECIDED": 8,
+    "MOTION_REFERENCE_REQUIRED": 7
+  },
+  "original_gap_records": 63,
+  "open_gap_definition": "Excludes2 corrected reference defects and8 decided design questions; none implies owner acceptance or full asset completion"
 }

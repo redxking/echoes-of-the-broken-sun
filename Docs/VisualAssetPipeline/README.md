@@ -346,4 +346,4 @@ validate from another workspace location.
 
 ## Candidate correction and motion references
 
-The [motion handoff](motion/README.md) consolidates the 21 generated candidate receipts, open gaps and animation interfaces. The [interactive review](motion/motion-review.html) contains eight schematic motion studies; these are reference proposals, not Unreal animations or acceptance evidence.
+The [motion handoff](motion/README.md) consolidates the 21 generated candidate receipts, open gaps and animation interfaces. The [interactive review](motion/motion-review.html) contains eleven schematic motion studies; these are reference proposals, not Unreal animations or acceptance evidence.
