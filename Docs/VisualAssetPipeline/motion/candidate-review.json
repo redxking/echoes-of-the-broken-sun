@@ -16,7 +16,7 @@
       "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/lancer-review/lancer-candidate.png",
       "candidate_sha256": "b5c85d32390c8f4c7777b91c80cec71149f9d20bf96d0d2de550a2bcc92a40b2",
       "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/lancer-review/generation-record.json",
-      "receipt_sha256": "fa2b36d34d54d34437e910ae972d5a0cfb75f99700cd03876c8250fe975af37d",
+      "receipt_sha256": "02b186450f4dcaf2a46d622d8110209cd3017b03594031a00b40e9e2bc2201f1",
       "canon_status": "CANDIDATE",
       "production_maturity": "NOT_STARTED",
       "review_status": "OPEN",
@@ -52,7 +52,14 @@
           "decision": "Keep two locomotor legs; recoil strut terminates on rear leg, never a third foot. Fix hip-lance axis across four views.",
           "next_evidence": "Matched front/side/rear/top views with two feet and strut endpoints annotated.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Matched front/side/rear/top views with two feet and strut endpoints annotated.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -102,7 +109,14 @@
           "decision": "Keep mast/dish and sealed archive cradle. Put the secondary emitter at the front centerline, visibly separate from lift pods; remove misleading leader.",
           "next_evidence": "Matched attachment detail and underside view; cradle stays unchanged across all motion unless an authoritative event replaces it.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Matched attachment detail and underside view; cradle stays unchanged across all motion unless an authoritative event replaces it.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -175,7 +189,14 @@
           "decision": "Keep one bowl/spire family. Use amber-collapse as a labeled candidate study only; do not resolve contradictory REL-ART-014 wording by changing runtime.",
           "next_evidence": "Reconcile Harvest authority; then source-driven Dormant/telegraph/commit/spent and Preserve/Reshape timelines with interrupt/expiry cases.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BLOCKED_BY_AUTHORITY",
+            "scope": "Conflict identified; no conflicting behavior implemented.",
+            "evidence": [],
+            "remaining": "Reconcile Harvest authority; then source-driven Dormant/telegraph/commit/spent and Preserve/Reshape timelines with interrupt/expiry cases.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -189,7 +210,7 @@
       "candidate_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/surveyor-review/surveyor-reference.png",
       "candidate_sha256": "98c3a0ef2300178942d30e0f2ff8d725ef94a51d38877639638c3cd90b6fd913",
       "receipt_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/surveyor-review/generation-record.json",
-      "receipt_sha256": "0a3aabe6ee81d4144bdb11238963e546a1ad605ca4c7b0657fa202c0c8f51089",
+      "receipt_sha256": "c82af5b90d1a09bab7a2f2962640c5c21cd1cafbbc996efffb7fec4dc017eb53",
       "canon_status": "CANDIDATE",
       "production_maturity": "NOT_STARTED",
       "review_status": "OPEN",
@@ -225,7 +246,14 @@
           "decision": "Keep exactly three visible cargo canisters as packaging choice, never as capacity. Drill arm and gripper/welder arm keep their sides; active tool follows action state.",
           "next_evidence": "Four-view cradle and tool head sheet; planted gait and stop/cancel tool shutdown study.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Four-view cradle and tool head sheet; planted gait and stop/cancel tool shutdown study.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -275,7 +303,14 @@
           "decision": "Preserve owner-approved centered six panes, 01\u201303 left and04\u201306 right. No center seventh pane. Pack by three-panel linked chains with fields off.",
           "next_evidence": "Matched packed/deployed plan and side clearances; six persistent panel identities throughout motion.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Matched packed/deployed plan and side clearances; six persistent panel identities throughout motion.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -325,7 +360,14 @@
           "decision": "Retain current mineral cultivator, finished work apron, forked resonance staff and woven sling. Same clothing pattern and tool in every pose; no new character canon.",
           "next_evidence": "Four-view turn sheet plus gather/kneel/stand/grow/carry cycle preserving attire and staff length.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Four-view turn sheet plus gather/kneel/stand/grow/carry cycle preserving attire and staff length.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -376,7 +418,14 @@
           "decision": "Retain three worker bays and separate intake. Use the main-view mast proportions as reference target; locate all access on a common overhead plan.",
           "next_evidence": "Single geometry source yielding front/side/rear/top with clear bay/intake paths; later fit to authoritative footprint.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Single geometry source yielding front/side/rear/top with clear bay/intake paths; later fit to authoritative footprint.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -427,7 +476,30 @@
           "decision": "Four numbered ceramic access panels, one collar assembly, low base and physical paired conduits define the component inventory.",
           "next_evidence": "Matched orthographic views from a single geometry source.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "PARTIAL_REFERENCE",
+            "scope": "Four panels, collar and paired conduits share one projection source.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/component-geometry.json",
+                "sha256": "fcec87e723886479c08cec0c653513be8960267110d7c8bc7e07a1cf3875554c",
+                "scope": "Shared dimensionless component vertices"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/power-link.svg",
+                "sha256": "c8abc04a65a0dee8d97f40c18ebd10ae8c2b203af7b2898afc9273796c1bbc7c",
+                "scope": "Front/side/top construction projections"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/power-link.png",
+                "sha256": "b2004910219f4deb3a51698da6d42e17f818b0b4ab2e29a4008ab165e131222f",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "Matched orthographic views from a single geometry source.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-MC-POWER-LINK-GAP-02",
@@ -442,6 +514,20 @@
             "sha256": "b3816b9e6ec6f56629fc73c29f461187df4274b8f3514d637f9c9d48a883bf20",
             "class": "GENERATED_IMAGE_VISUALLY_INSPECTED",
             "scope": "Specific image-level defect only; not production acceptance"
+          },
+          "preparation": {
+            "status": "ARTIFACT_READY",
+            "scope": "Specific image defect corrected only; mechanical and gameplay acceptance remain open.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/power-link-review/power-link-maintenance-complete.png",
+                "sha256": "b3816b9e6ec6f56629fc73c29f461187df4274b8f3514d637f9c9d48a883bf20",
+                "class": "GENERATED_IMAGE_VISUALLY_INSPECTED",
+                "scope": "Image-level correction already visually inspected."
+              }
+            ],
+            "remaining": "Corrected image inspected; does not certify coupling mechanics.",
+            "acceptance": "NOT_ACCEPTED"
           }
         },
         {
@@ -452,7 +538,14 @@
           "decision": "Keep two paired conduit routes as visual connections; do not infer network radius from painted cable length.",
           "next_evidence": "Dimensioned couplings and RTS/performance evidence after authorized blockout/import.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Dimensioned couplings and RTS/performance evidence after authorized blockout/import.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -503,7 +596,14 @@
           "decision": "Interrupted means stopped rail and dim research activity; separate permanent service accents from active fabrication lights.",
           "next_evidence": "Matched three-state emissive mask sheet and state transition test.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Matched three-state emissive mask sheet and state transition test.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-MC-ARRAY-FOUNDRY-GAP-02",
@@ -513,7 +613,14 @@
           "decision": "The painted assembly is a reference volume only. Future production shots use the selected existing Meridian unit family, not a new roster entry.",
           "next_evidence": "A selected approved unit model must replace the placeholder before final production acceptance.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "A selected approved unit model must replace the placeholder before final production acceptance.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-MC-ARRAY-FOUNDRY-GAP-03",
@@ -523,7 +630,14 @@
           "decision": "Keep authoritative 4x4 occupancy. Fit a rectangular visible hall inside it; approach aprons may not create new collision or navigation authority.",
           "next_evidence": "Scaled top-down fit and entity path sweep on approved blockout.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Scaled top-down fit and entity path sweep on approved blockout.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-MC-ARRAY-FOUNDRY-GAP-04",
@@ -533,7 +647,14 @@
           "decision": "Keep all three acceptance gates open. Candidate art is not a gate result.",
           "next_evidence": "Art fidelity, gameplay camera and technical performance evidence.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Art fidelity, gameplay camera and technical performance evidence.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-MC-ARRAY-FOUNDRY-GAP-05",
@@ -543,7 +664,30 @@
           "decision": "Opposite short-end openings lie on the same longitudinal rail axis. No side exit.",
           "next_evidence": "True plan and end elevation with continuous track and clearance envelope.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "PARTIAL_REFERENCE",
+            "scope": "Common longitudinal rail and opposite end portals. Real clearance not proven.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/component-geometry.json",
+                "sha256": "fcec87e723886479c08cec0c653513be8960267110d7c8bc7e07a1cf3875554c",
+                "scope": "Shared dimensionless component vertices"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/array-foundry.svg",
+                "sha256": "6064739e57db28b9324c62b31919abd65c7211a9ad4535d472d76ca13e8b58bc",
+                "scope": "Front/side/top construction projections"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/array-foundry.png",
+                "sha256": "f82ba5482b8f304b7768ceff1c32ab2e80a1b0879de8309b77e1c2ae668ec143",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "True plan and end elevation with continuous track and clearance envelope.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -594,7 +738,30 @@
           "decision": "Three radial supports only. Top-down mount supplement sets a candidate 120-degree topology; it does not prove hidden leg geometry.",
           "next_evidence": "Single geometry source produces all views with three feet.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "PARTIAL_REFERENCE",
+            "scope": "Three stationary legs and feet at 120 degrees; dimensionless.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/component-geometry.json",
+                "sha256": "fcec87e723886479c08cec0c653513be8960267110d7c8bc7e07a1cf3875554c",
+                "scope": "Shared dimensionless component vertices"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/aegis-post.svg",
+                "sha256": "b23f33e51203c63ed8e2daf7743678e4e838d3725f9936fe35b6eb9adb430d48",
+                "scope": "Front/side/top construction projections"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/aegis-post.png",
+                "sha256": "f7f3ec9ec3a6ee901d07d431d215b834c9eced409eeb3bddaadb8ac4c60b7ccb",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "Single geometry source produces all views with three feet.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-MC-AEGIS-POST-GAP-02",
@@ -604,7 +771,30 @@
           "decision": "All legs attach below azimuth bearing to stationary hub; elevation cradle and head carry no ground leg.",
           "next_evidence": "360-degree azimuth and elevation clearance study, with fixed support attachment inventory.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "PARTIAL_REFERENCE",
+            "scope": "Attachments below bearing only; no full azimuth/elevation sweep performed.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/component-geometry.json",
+                "sha256": "fcec87e723886479c08cec0c653513be8960267110d7c8bc7e07a1cf3875554c",
+                "scope": "Shared dimensionless component vertices"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/aegis-post.svg",
+                "sha256": "b23f33e51203c63ed8e2daf7743678e4e838d3725f9936fe35b6eb9adb430d48",
+                "scope": "Front/side/top construction projections"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/aegis-post.png",
+                "sha256": "f7f3ec9ec3a6ee901d07d431d215b834c9eced409eeb3bddaadb8ac4c60b7ccb",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "360-degree azimuth and elevation clearance study, with fixed support attachment inventory.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-MC-AEGIS-POST-GAP-03",
@@ -614,7 +804,14 @@
           "decision": "Offline emissive output is zero for band and muzzles. A blue material tint is not an active light. Stop tracking/firing/audio on power loss independently of droop completion.",
           "next_evidence": "Offline material mask and authoritative power-loss test still required.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Offline material mask and authoritative power-loss test still required.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-MC-AEGIS-POST-GAP-04",
@@ -624,7 +821,14 @@
           "decision": "Retain 2x2 authoritative footprint; neither feet nor cables may silently expand navigation collision.",
           "next_evidence": "Scaled mount, rotation envelopes and tactical camera tests in authorized integration lane.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Scaled mount, rotation envelopes and tactical camera tests in authorized integration lane.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -675,7 +879,14 @@
           "decision": "Keep inhabited hollows but treat furniture as optional set dressing. Crown/hollow counts must follow one selected main-view layout; no claim those counts came from the novel.",
           "next_evidence": "Freeze a plan before modeling; omit unapproved interior dressing from required silhouette.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Freeze a plan before modeling; omit unapproved interior dressing from required silhouette.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-MEMORY-HEARTH-GAP-02",
@@ -685,7 +896,14 @@
           "decision": "Use the healthy dome as geometry source for damage. Keep intact portions identical and frame the complete structure.",
           "next_evidence": "Matched full-frame healthy/damaged views from one fixed camera.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Matched full-frame healthy/damaged views from one fixed camera.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-MEMORY-HEARTH-GAP-03",
@@ -695,7 +913,14 @@
           "decision": "Designate one crown spire for damage: extinguish its amber seam and visibly break its tip; fracture only a bounded adjacent shell region.",
           "next_evidence": "Side-by-side damage mask and localized fracture study.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Side-by-side damage mask and localized fracture study.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-MEMORY-HEARTH-GAP-04",
@@ -705,7 +930,14 @@
           "decision": "Fit shell/hollows/cleft inside the 5x5 authority and establish entrance clearances before detailing.",
           "next_evidence": "Scaled blockout, construction/collapse sequence and gameplay acceptance.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Scaled blockout, construction/collapse sequence and gameplay acceptance.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -756,7 +988,14 @@
           "decision": "Retain distinct anchoring roots and broad carriage pads. Roots clear ground before translation; carriage stays supported; no floating or sliding support feet.",
           "next_evidence": "Contact-phase gait and measured root conservation across a full uproot/root cycle.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Contact-phase gait and measured root conservation across a full uproot/root cycle.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-WAYSTONE-GAP-02",
@@ -766,7 +1005,14 @@
           "decision": "Retracted root tips terminate above the carriage contact plane; no tip drags while migrating.",
           "next_evidence": "Orthographic side view with ground plane and positive clearance measurement.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Orthographic side view with ground plane and positive clearance measurement.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-WAYSTONE-GAP-03",
@@ -776,7 +1022,14 @@
           "decision": "Keep mobile form within the authoritative movement contract; root-only logistics/drop-off cannot persist while migrating.",
           "next_evidence": "2x2 rooted fit, mobile clearance and state-bound logistics tests.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "2x2 rooted fit, mobile clearance and state-bound logistics tests.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-WAYSTONE-GAP-04",
@@ -786,7 +1039,14 @@
           "decision": "Keep NOT_STARTED production maturity and unaccepted gate states until separately authorized production evidence exists.",
           "next_evidence": "Stage evidence and owner acceptance; never infer from this audit.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Stage evidence and owner acceptance; never infer from this audit.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -836,7 +1096,14 @@
           "decision": "Use four locomotor limbs as delegated candidate design choice. It is not a prose-derived anatomical fact.",
           "next_evidence": "Consistent four-limb turn sheet before rigging.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Consistent four-limb turn sheet before rigging.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-RIFTSTALKER-GAP-02",
@@ -846,7 +1113,14 @@
           "decision": "One caster on anatomical left shoulder; preserve that side through turns. It attaches through grown saddle/tendon, not a mechanical turret.",
           "next_evidence": "Left/right elevations with identified body axes and attachment detail.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Left/right elevations with identified body axes and attachment detail.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-RIFTSTALKER-GAP-03",
@@ -856,7 +1130,14 @@
           "decision": "Separate caster mouth from head/brow silhouette with a clear notch and negative space; preserve light skirmisher frame.",
           "next_evidence": "Small tactical silhouette comparison at equivalent scale.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Small tactical silhouette comparison at equivalent scale.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-RIFTSTALKER-GAP-04",
@@ -866,7 +1147,14 @@
           "decision": "Localized saddle split is damage; firing sidestep is cosmetic and cannot alter simulation position. Molt variants retain body identity.",
           "next_evidence": "Bounded damage detail, side-step pose sequence and carapace/striker variants tied to authoritative events.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Bounded damage detail, side-step pose sequence and carapace/striker variants tied to authoritative events.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -916,7 +1204,14 @@
           "decision": "Use four short load-bearing limbs and low protected head. Keep broad layered back identity, no giant jewel or gun.",
           "next_evidence": "Matched anatomy views; no assertion of canonical limb count.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Matched anatomy views; no assertion of canonical limb count.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-CAIRNBACK-GAP-02",
@@ -926,7 +1221,14 @@
           "decision": "Cover action has brace/heave/recovery. A detached terrain barrier remains behind; no tail-wall or permanent body extrusion.",
           "next_evidence": "Side sequence with visible ground gap after release; barrier creation follows authoritative event.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Side sequence with visible ground gap after release; barrier creation follows authoritative event.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-CAIRNBACK-GAP-03",
@@ -936,7 +1238,14 @@
           "decision": "Barrier silhouette must fit actual mineral_cover geometry and duration, never derive coverage from illustration.",
           "next_evidence": "Source-bound barrier dimensions, footprint and placement tests.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Source-bound barrier dimensions, footprint and placement tests.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-CAIRNBACK-GAP-04",
@@ -946,7 +1255,14 @@
           "decision": "Mass and slow turn are visual language, not permission to change speed or combat.",
           "next_evidence": "Rig, attack presentation, slump/debris, navigation and RTS validation.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Rig, attack presentation, slump/debris, navigation and RTS validation.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -996,7 +1312,14 @@
           "decision": "Keep four delicate grounded limbs, small inclined head and thin amber fins. Freeze fin positions on one anatomical spine before further poses.",
           "next_evidence": "Matched anatomy and fin inventory; gait support study.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Matched anatomy and fin inventory; gait support study.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-RESONANT-GAP-02",
@@ -1006,7 +1329,30 @@
           "decision": "A localized brightness wave travels along fins; reduced motion uses a stable highlighted group. No flashing whole-body effect.",
           "next_evidence": "Event-driven sequence/recovery study; no target identity revelation.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "ARTIFACT_READY",
+            "scope": "State specification and static schematic storyboard prepared and rendered. Runtime animation, listening, timing and adapter execution are unverified.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/motion-packages.json",
+                "sha256": "35c12c8cfc6f2d4938aebc30d17a517e5a15c067118d2eccb8530df713b3b1da",
+                "scope": "Event, accessibility and audio specification"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/storyboards/EBS-PKG-KA-RESONANT-GAP-02.svg",
+                "sha256": "cefe16c2e033acd0109e5cb42edb62bce350e8e2c0887dd6aa90eac6fc1ff209",
+                "scope": "Derived state board"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-KA-RESONANT-GAP-02.png",
+                "sha256": "fdd6cc0c153a2bb6aeca6dcc2d2ca6ed0fcc648fe7a6afc0fe9af055c2866b0e",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "Event-driven sequence/recovery study; no target identity revelation.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-RESONANT-GAP-03",
@@ -1016,7 +1362,14 @@
           "decision": "Preserve authored anti-scout attack capability. Do not add a visible cannon merely to explain stats; weapon form remains a canon/requirements reconciliation.",
           "next_evidence": "Resolve SPEC-UNIT-008 combat presentation against Bible language, then author acquire/attack/recovery.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BLOCKED_BY_AUTHORITY",
+            "scope": "Conflict identified; no conflicting behavior implemented.",
+            "evidence": [],
+            "remaining": "Resolve SPEC-UNIT-008 combat presentation against Bible language, then author acquire/attack/recovery.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-RESONANT-GAP-04",
@@ -1026,7 +1379,14 @@
           "decision": "Transparent fins must remain legible without excessive overdraw or high-frequency motion.",
           "next_evidence": "Scale, material budget and target-device gameplay-camera test.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Scale, material budget and target-device gameplay-camera test.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -1077,7 +1437,14 @@
           "decision": "Keep corrected dark resting pool versus bright growing pool; test shape/occupancy cues as color redundancy.",
           "next_evidence": "Gameplay-camera state recognition and reduced-motion checks.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Gameplay-camera state recognition and reduced-motion checks.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-GROWTH-BASIN-GAP-02",
@@ -1087,7 +1454,30 @@
           "decision": "Matrix is liquid-mineral: slow traveling surface ripples and subsurface lattice, no rigid cracked crust.",
           "next_evidence": "Loop study with uninterrupted fluid surface and paused/rest state.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "ARTIFACT_READY",
+            "scope": "State specification and static schematic storyboard prepared and rendered. Runtime animation, listening, timing and adapter execution are unverified.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/motion-packages.json",
+                "sha256": "35c12c8cfc6f2d4938aebc30d17a517e5a15c067118d2eccb8530df713b3b1da",
+                "scope": "Event, accessibility and audio specification"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/storyboards/EBS-PKG-KA-GROWTH-BASIN-GAP-02.svg",
+                "sha256": "7d84ad1839122dab8eadf3bce69300bf834bd3aa3a519bea6b1b9a8e20a1a1e9",
+                "scope": "Derived state board"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-KA-GROWTH-BASIN-GAP-02.png",
+                "sha256": "1e5842fd8cdef9b797a76cda84d4008f973bc32d736b0d64d0edb805e903d7f6",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "Loop study with uninterrupted fluid surface and paused/rest state.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-GROWTH-BASIN-GAP-03",
@@ -1097,7 +1487,14 @@
           "decision": "Four drawn niches are visual arrangement only; they do not create parallel jobs, slots or capacity.",
           "next_evidence": "Use authoritative producer/adaptation events; no gameplay additions.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Use authoritative producer/adaptation events; no gameplay additions.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-GROWTH-BASIN-GAP-04",
@@ -1107,7 +1504,14 @@
           "decision": "Use the same approved Riftstalker anatomy in niche. Old outer plates separate while replacement layers settle; do not transform species or add limbs.",
           "next_evidence": "Matched pre/mid/post molt body inventory and niche clearance.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Matched pre/mid/post molt body inventory and niche clearance.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-GROWTH-BASIN-GAP-05",
@@ -1117,7 +1521,14 @@
           "decision": "Keep circulation and emergence clear inside 4x4 fit; ground collision remains authoritative.",
           "next_evidence": "Scaled basin, ingress/egress, 80-tick molt and damage tests.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Scaled basin, ingress/egress, 80-tick molt and damage tests.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -1168,7 +1579,30 @@
           "decision": "Animate localized nodule activation and recovery; do not encode precise enemy identity or unsupported bearing.",
           "next_evidence": "Anonymous signature-driven sequence with interruption and reduced-motion poses.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "ARTIFACT_READY",
+            "scope": "State specification and static schematic storyboard prepared and rendered. Runtime animation, listening, timing and adapter execution are unverified.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/motion-packages.json",
+                "sha256": "35c12c8cfc6f2d4938aebc30d17a517e5a15c067118d2eccb8530df713b3b1da",
+                "scope": "Event, accessibility and audio specification"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/storyboards/EBS-PKG-KA-LISTENING-SPINE-GAP-01.svg",
+                "sha256": "cdb85ad5bb043152bbdc39b05207d44259672c49eafc300b01345d6134508718",
+                "scope": "Derived state board"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-KA-LISTENING-SPINE-GAP-01.png",
+                "sha256": "13c27640695a625d2501a3d5978525aa70aac4fd5da1f306d545da207fddc3bc",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "Anonymous signature-driven sequence with interruption and reduced-motion poses.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-LISTENING-SPINE-GAP-02",
@@ -1178,7 +1612,14 @@
           "decision": "Freeze a single curved rib and nodule inventory from the main candidate before orthographics.",
           "next_evidence": "One source yields all views with identical nodule positions.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "One source yields all views with identical nodule positions.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-KA-LISTENING-SPINE-GAP-03",
@@ -1188,7 +1629,14 @@
           "decision": "Keep rooted support inside2x2; the thin silhouette must survive tactical zoom.",
           "next_evidence": "Construction/damage, scale and performance tests.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Construction/damage, scale and performance tests.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -1238,7 +1686,30 @@
           "decision": "Choose a candidate layout of six offset pane pairs around a ring, one broad front intake gap, five narrower worker gaps. This is delegated geometry direction, not canon-derived count.",
           "next_evidence": "Generate every view from one12-pane layout; validate paths and ring dimensions later.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "PARTIAL_REFERENCE",
+            "scope": "Six candidate pane pairs from one geometry source; paths and scale unverified.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/component-geometry.json",
+                "sha256": "fcec87e723886479c08cec0c653513be8960267110d7c8bc7e07a1cf3875554c",
+                "scope": "Shared dimensionless component vertices"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/concordance.svg",
+                "sha256": "24ad38821d761002497147d7da07cf9cbb9ba5704a5f2336fe8dba43021fe6d9",
+                "scope": "Front/side/top construction projections"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/concordance.png",
+                "sha256": "cd51426b5b4b1b4441b46d413184ae85ce6d2c09463177af6a0d30e06e093099",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "Generate every view from one12-pane layout; validate paths and ring dimensions later.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-HC-CONCORDANCE-GAP-02",
@@ -1248,7 +1719,14 @@
           "decision": "Retain faint interference traces as held-tone visualization; no solid core, magical orb or extra gameplay entity.",
           "next_evidence": "VFX remains a presentation proposal requiring art review.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "VFX remains a presentation proposal requiring art review.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-HC-CONCORDANCE-GAP-03",
@@ -1258,7 +1736,30 @@
           "decision": "Pane pair converges into register and dims. Whole ring destruction repeats alignment coherently before extinguishing.",
           "next_evidence": "All pane identities preserved through state timeline; no accidental deletion or duplication.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "ARTIFACT_READY",
+            "scope": "State specification and static schematic storyboard prepared and rendered. Runtime animation, listening, timing and adapter execution are unverified.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/motion-packages.json",
+                "sha256": "35c12c8cfc6f2d4938aebc30d17a517e5a15c067118d2eccb8530df713b3b1da",
+                "scope": "Event, accessibility and audio specification"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/storyboards/EBS-PKG-HC-CONCORDANCE-GAP-03.svg",
+                "sha256": "38d6e404429355ce244e45c48dc142063eec11f8861a5178f94be99a26b53c18",
+                "scope": "Derived state board"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-CONCORDANCE-GAP-03.png",
+                "sha256": "d74d44c1516036054e199fdda1503f81fdcd6fbf28b29eb4002d1a2c46e2f94a",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "All pane identities preserved through state timeline; no accidental deletion or duplication.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-HC-CONCORDANCE-GAP-04",
@@ -1268,7 +1769,14 @@
           "decision": "Coherence ledger requires state/UI binding beyond edge glow. Keep5x5 authority.",
           "next_evidence": "Layout, ledger, accessibility and technical validation.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Layout, ledger, accessibility and technical validation.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -1318,7 +1826,30 @@
           "decision": "Show two differently directed shadow solutions for the same span arrangement, deliberately unlike ordinary single-light shadows. Avoid extra solid spans.",
           "next_evidence": "Single fixed camera/light diagram with shadow alternatives identified as Choir effect.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "ARTIFACT_READY",
+            "scope": "State specification and static schematic storyboard prepared and rendered. Runtime animation, listening, timing and adapter execution are unverified.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/motion-packages.json",
+                "sha256": "35c12c8cfc6f2d4938aebc30d17a517e5a15c067118d2eccb8530df713b3b1da",
+                "scope": "Event, accessibility and audio specification"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/storyboards/EBS-PKG-HC-INTERVAL-LOOM-GAP-01.svg",
+                "sha256": "ce7f270b2a355fa20b676feda80d43b4980811ac03daa067f1c53a1d822c76be",
+                "scope": "Derived state board"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-INTERVAL-LOOM-GAP-01.png",
+                "sha256": "d35b45cbe4a58017524f76fff0db192bd1047c47bbd224a398763bb0472c62d0",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "Single fixed camera/light diagram with shadow alternatives identified as Choir effect.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-HC-INTERVAL-LOOM-GAP-02",
@@ -1328,7 +1859,30 @@
           "decision": "Exactly two spans cross at different heights with small positive clearance; drop-pane is separate and accessible.",
           "next_evidence": "Orthographic crossing detail and2x2 fit.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "PARTIAL_REFERENCE",
+            "scope": "Two grounded spans with positive crown clearance; 2x2 fit unverified.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/component-geometry.json",
+                "sha256": "fcec87e723886479c08cec0c653513be8960267110d7c8bc7e07a1cf3875554c",
+                "scope": "Shared dimensionless component vertices"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/interval-loom.svg",
+                "sha256": "62593962df1908eeb626d920e9f6721b0dc1c3a543a3ca10a7ecd2ba4d9cdc56",
+                "scope": "Front/side/top construction projections"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/interval-loom.png",
+                "sha256": "3d9c1c81620766452a6945bfc80bbc7f0bbe5ca5617fae036dcc361a5d03d611",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "Orthographic crossing detail and2x2 fit.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-HC-INTERVAL-LOOM-GAP-03",
@@ -1338,7 +1892,30 @@
           "decision": "Upkeep flash follows payment event, not free-running clock. Warning/dimming and collapse follow authoritative insolvency tiers.",
           "next_evidence": "Source-bound lifecycle sequence plus accessible reduced-flash version.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "ARTIFACT_READY",
+            "scope": "State specification and static schematic storyboard prepared and rendered. Runtime animation, listening, timing and adapter execution are unverified.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/motion-packages.json",
+                "sha256": "35c12c8cfc6f2d4938aebc30d17a517e5a15c067118d2eccb8530df713b3b1da",
+                "scope": "Event, accessibility and audio specification"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/storyboards/EBS-PKG-HC-INTERVAL-LOOM-GAP-03.svg",
+                "sha256": "a8736026de8d972b278fd7b8538086f3dc89d9030296d4d86b64e74508ef390e",
+                "scope": "Derived state board"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-INTERVAL-LOOM-GAP-03.png",
+                "sha256": "1ff8a52bec997e99d802d74cda239dc1e1e049b259666ef4072c8ffcf8fcd0c6",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "Source-bound lifecycle sequence plus accessible reduced-flash version.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-HC-INTERVAL-LOOM-GAP-04",
@@ -1348,7 +1925,14 @@
           "decision": "Keep art/gameplay/technical acceptance open; a shadow diagram is not a runtime shader test.",
           "next_evidence": "Full acceptance evidence.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Full acceptance evidence.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -1398,7 +1982,14 @@
           "decision": "Keep abstract formation placeholder until a specific Choir unit concept is approved. Do not silently establish a new unit anatomy.",
           "next_evidence": "Replace formation volume with selected approved family during later production.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Replace formation volume with selected approved family during later production.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-HC-CHORUS-LOOM-GAP-02",
@@ -1408,7 +1999,14 @@
           "decision": "Retain corrected bright research pane and subdued threads; production/research must remain mutually legible at zoom.",
           "next_evidence": "Gameplay-camera recognition and non-color state cues.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Gameplay-camera recognition and non-color state cues.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-HC-CHORUS-LOOM-GAP-03",
@@ -1418,7 +2016,14 @@
           "decision": "Frame the entire ground platform and derive its footprint from the same pylon geometry.",
           "next_evidence": "Full uncropped top/front/side source views.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "BRIEF_READY",
+            "scope": "Selected direction and exact next evidence recorded; requested final reference is not yet available.",
+            "evidence": [],
+            "remaining": "Full uncropped top/front/side source views.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-HC-CHORUS-LOOM-GAP-04",
@@ -1428,7 +2033,14 @@
           "decision": "Two pylons and one research pane only; thread formation is VFX driven by job progress, not resource authority.",
           "next_evidence": "4x4 fit, VFX performance, interruption/research transitions and acceptance.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "4x4 fit, VFX performance, interruption/research transitions and acceptance.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     },
@@ -1478,7 +2090,14 @@
           "decision": "Keep700cm documented coverage; artwork ring size is illustrative. Use exact radius only in future runtime overlay binding.",
           "next_evidence": "Measured scale and authoritative coverage comparison.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Measured scale and authoritative coverage comparison.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-HC-PHASE-ANCHOR-GAP-02",
@@ -1493,6 +2112,20 @@
             "sha256": "7c71ffc61f788e0c57f3de5896ba0158525550064c05e2dc2b22f0751c83135f",
             "class": "GENERATED_IMAGE_VISUALLY_INSPECTED",
             "scope": "Specific image-level defect only; not production acceptance"
+          },
+          "preparation": {
+            "status": "ARTIFACT_READY",
+            "scope": "Specific image defect corrected only; mechanical and gameplay acceptance remain open.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/phase-anchor-review/phase-anchor-magenta-field.png",
+                "sha256": "7c71ffc61f788e0c57f3de5896ba0158525550064c05e2dc2b22f0751c83135f",
+                "class": "GENERATED_IMAGE_VISUALLY_INSPECTED",
+                "scope": "Image-level correction already visually inspected."
+              }
+            ],
+            "remaining": "Corrected image inspected; final material/RTS check remains a technical gate.",
+            "acceptance": "NOT_ACCEPTED"
           }
         },
         {
@@ -1503,7 +2136,30 @@
           "decision": "On field loss collapse the ring and flicker affected neighbors once. Neighbor upkeep values follow simulation, never VFX overlap counting.",
           "next_evidence": "Boundary-entry/exit, overlapping anchors, field loss and reduced-flash studies.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "ARTIFACT_READY",
+            "scope": "State specification and static schematic storyboard prepared and rendered. Runtime animation, listening, timing and adapter execution are unverified.",
+            "evidence": [
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/motion-packages.json",
+                "sha256": "35c12c8cfc6f2d4938aebc30d17a517e5a15c067118d2eccb8530df713b3b1da",
+                "scope": "Event, accessibility and audio specification"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/storyboards/EBS-PKG-HC-PHASE-ANCHOR-GAP-03.svg",
+                "sha256": "68820775924f91d3f924b0bbcb933b411f5d1865c6aa0c262458f1a6ce8015de",
+                "scope": "Derived state board"
+              },
+              {
+                "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-PHASE-ANCHOR-GAP-03.png",
+                "sha256": "7d52128361089e854f6a754b0aadb435c4cda89c27dc48b6d526a8ffeb8b47dc",
+                "scope": "Visually reviewed vector render"
+              }
+            ],
+            "remaining": "Boundary-entry/exit, overlapping anchors, field loss and reduced-flash studies. Reconcile SPEC-BLD-017.HC.ANCHOR no-stacking wording against REL-FAC-013 overlap floor 3 before value-specific acceptance.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         },
         {
           "id": "EBS-PKG-HC-PHASE-ANCHOR-GAP-04",
@@ -1513,7 +2169,14 @@
           "decision": "Single registered spire remains inside2x2; no afterimage offsets even during active field.",
           "next_evidence": "Scale, destruction and art/gameplay/technical evidence.",
           "acceptance": "NOT_ACCEPTED",
-          "evidence": null
+          "evidence": null,
+          "preparation": {
+            "status": "DEFERRED_TO_INTEGRATION",
+            "scope": "Handoff gate specified; execution requires separately authorized Unreal production work.",
+            "evidence": [],
+            "remaining": "Scale, destruction and art/gameplay/technical evidence.",
+            "acceptance": "NOT_ACCEPTED"
+          }
         }
       ]
     }

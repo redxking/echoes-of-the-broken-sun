@@ -42,7 +42,22 @@ def apply_decisions(packages, path):
         if e['status']=='CORRECTED_REFERENCE':
             proof=e.get('evidence',{}); f=pathlib.Path(proof.get('path',''))
             if not f.is_file() or digest(f)!=proof.get('sha256'): raise ValueError('Correction evidence missing or changed')
-        g.update(status=e['status'],decision=e['decision'],next_evidence=e['next_evidence'],acceptance='NOT_ACCEPTED',evidence=e.get('evidence'))
+        if e.get('acceptance','NOT_ACCEPTED')!='NOT_ACCEPTED':
+            raise ValueError('Reference decisions cannot promote acceptance')
+        prep=e.get('preparation')
+        if prep is not None:
+            if prep.get('status') not in {'BRIEF_READY','PARTIAL_REFERENCE','ARTIFACT_READY','DEFERRED_TO_INTEGRATION','BLOCKED_BY_AUTHORITY'}:
+                raise ValueError('Invalid preparation status')
+            if not prep.get('scope') or not prep.get('remaining') or prep.get('acceptance')!='NOT_ACCEPTED':
+                raise ValueError('Preparation needs scope, remaining evidence and unaccepted boundary')
+            if prep['status'] in {'PARTIAL_REFERENCE','ARTIFACT_READY'} and not prep.get('evidence'):
+                raise ValueError('Prepared artifact lacks evidence')
+            for proof in prep.get('evidence',[]):
+                f=pathlib.Path(proof.get('path',''))
+                if not f.is_absolute(): f=path.parent/f
+                if not proof.get('scope') or not f.is_file() or digest(f)!=proof.get('sha256'):
+                    raise ValueError('Preparation evidence missing or changed')
+        g.update(status=e['status'],decision=e['decision'],next_evidence=e['next_evidence'],acceptance='NOT_ACCEPTED',evidence=e.get('evidence'),preparation=prep)
 if __name__=='__main__':
     ap=argparse.ArgumentParser();ap.add_argument('--packages',type=pathlib.Path,required=True);ap.add_argument('--evidence',type=pathlib.Path,required=True);ap.add_argument('--decisions',type=pathlib.Path,default=pathlib.Path(__file__).with_name('gap-decisions.json'));a=ap.parse_args()
     print(json.dumps(build(a.packages,a.evidence,a.decisions),indent=2))

@@ -35,4 +35,20 @@ class AuditTests(unittest.TestCase):
   with self.assertRaises(ValueError):apply_decisions(ps,f)
  def test_bound_correction_allowed(self):
   ps,e,f=self.decision_fixture('CORRECTED_REFERENCE');e['evidence']={'path':str(self.img),'sha256':digest(self.img)};f.write_text(json.dumps({'items':[e]}));apply_decisions(ps,f);self.assertEqual(ps[0]['gaps'][0]['status'],'CORRECTED_REFERENCE')
+ def prep_fixture(self):
+  ps,e,f=self.decision_fixture();e['preparation']=dict(status='ARTIFACT_READY',scope='Fixture only',remaining='Runtime evidence',acceptance='NOT_ACCEPTED',evidence=[dict(path=str(self.img),sha256=digest(self.img),scope='Fixture')]);return ps,e,f
+ def test_preparation_cannot_promote_asset(self):
+  ps,e,f=self.prep_fixture();f.write_text(json.dumps({'items':[e]}));apply_decisions(ps,f);self.assertEqual(ps[0]['production_maturity'],'NOT_STARTED');self.assertEqual(ps[0]['canon_status'],'CANDIDATE');self.assertEqual(ps[0]['gaps'][0]['acceptance'],'NOT_ACCEPTED')
+ def test_preparation_modified_evidence_refused(self):
+  ps,e,f=self.prep_fixture();self.img.write_bytes(b'changed');f.write_text(json.dumps({'items':[e]}))
+  with self.assertRaises(ValueError):apply_decisions(ps,f)
+ def test_preparation_missing_evidence_refused(self):
+  ps,e,f=self.prep_fixture();e['preparation']['evidence']=[];f.write_text(json.dumps({'items':[e]}))
+  with self.assertRaises(ValueError):apply_decisions(ps,f)
+ def test_preparation_acceptance_promotion_refused(self):
+  ps,e,f=self.prep_fixture();e['preparation']['acceptance']='ACCEPTED';f.write_text(json.dumps({'items':[e]}))
+  with self.assertRaises(ValueError):apply_decisions(ps,f)
+ def test_direct_acceptance_promotion_refused(self):
+  ps,e,f=self.decision_fixture();e['acceptance']='ACCEPTED';f.write_text(json.dumps({'items':[e]}))
+  with self.assertRaises(ValueError):apply_decisions(ps,f)
 if __name__=='__main__':unittest.main()
