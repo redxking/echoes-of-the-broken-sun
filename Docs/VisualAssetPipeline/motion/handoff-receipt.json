@@ -1,14 +1,14 @@
 {
   "valid": true,
-  "files": 409,
-  "bytes": 265566035,
+  "files": 414,
+  "bytes": 266300708,
   "author": "Angelis Pseftis",
   "creator": "Angelis Pseftis",
-  "archive": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-handoff-20260906/concept-pipeline-handoff-reviewed.zip",
-  "sha256": "5ee49ee60813cec1980b78e65aad6c7d024e50bb737dbe48ffa11e03c77f5d47",
+  "archive": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-handoff-20260906/concept-pipeline-decisions.zip",
+  "sha256": "966ef161c79d3a3453e9b7c3f99d50c1ef82ae70de90e052d163e819ebe4a282",
   "inventory_paths": 244,
-  "source_commit": "ce3c36c",
-  "verified_utc": "2026-09-06T21:21:56.617404+00:00",
+  "source_commit": "156a846a832da4ff8a544abd21d01aaf7ea724e3",
+  "verified_utc": "2026-09-06T21:49:54.201304+00:00",
   "history": [
     {
       "valid": true,
@@ -20,7 +20,21 @@
       "sha256": "ec3eb7f49e8d4dbb385f5103b8a08e0e058be65a8e1426f824d9c367223423b4",
       "inventory_paths": 244,
       "status": "HISTORICAL_PRE_FINAL_QA_EXPORT"
+    },
+    {
+      "valid": true,
+      "files": 409,
+      "bytes": 265566035,
+      "author": "Angelis Pseftis",
+      "creator": "Angelis Pseftis",
+      "archive": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-handoff-20260906/concept-pipeline-handoff-reviewed.zip",
+      "sha256": "5ee49ee60813cec1980b78e65aad6c7d024e50bb737dbe48ffa11e03c77f5d47",
+      "inventory_paths": 244,
+      "source_commit": "ce3c36c",
+      "verified_utc": "2026-09-06T21:21:56.617404+00:00",
+      "boundary": "Local preservation export, not off-device backup, rights clearance, source-faithful modeling completion or Unreal acceptance",
+      "status": "HISTORICAL_BEFORE_53_DECISION_CLOSURE"
     }
   ],
-  "boundary": "Local preservation export, not off-device backup, rights clearance, source-faithful modeling completion or Unreal acceptance"
+  "boundary": "Local verified preservation export. All 53 delegated design decisions recorded; reference/model/animation/integration execution and owner acceptance remain pending. No off-device backup or rights-clearance claim."
 }
