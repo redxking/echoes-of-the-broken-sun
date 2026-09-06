@@ -1,4 +1,5 @@
 #include "EchoesPlayerController.h"
+#include "EchoesCinematicSubsystem.h"
 #include "EchoesShellWidget.h"
 #include "EchoesFieldHudWidget.h"
 
@@ -69,6 +70,7 @@ namespace
 constexpr float DragSelectionThresholdPixels = 8.0f;
 constexpr float FormationSpacingWorldUnits = 150.0f;
 constexpr int32 ControlGroupCount = 10;
+constexpr double ControlGroupDoubleTapSeconds = 0.300;
 constexpr float NetworkTileWorldSize = 200.0f;
 
 [[nodiscard]] FString FactionDisplayName(echoes::sim::Faction Faction)
@@ -516,6 +518,9 @@ AEchoesPlayerController::AEchoesPlayerController()
 
 void AEchoesPlayerController::BeginPlay()
 {
+    if (auto* Bridge = GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>())
+        Bridge->OnFixedStepObserved.AddUObject(this, &AEchoesPlayerController::TickTutorialObservation);
+
     Super::BeginPlay();
     InitializeTacticalInputPresentation();
 
@@ -729,6 +734,8 @@ void AEchoesPlayerController::BeginPlay()
 void AEchoesPlayerController::EndPlay(
     const EEndPlayReason::Type EndPlayReason)
 {
+    if (auto* Bridge = GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>())
+        Bridge->OnFixedStepObserved.RemoveAll(this);
     ClearNetworkConnectionTimeouts();
     GetWorldTimerManager().ClearTimer(NetworkResultAcknowledgementTimer);
     DestroyNetworkPresentation();
@@ -748,8 +755,35 @@ bool AEchoesPlayerController::IsReplayInputActive() const
 
 bool AEchoesPlayerController::InputKey(const FInputKeyEventArgs& Params)
 {
+    if (bM01OpeningPending)
+    {
+        if (Params.Key == EKeys::Pause && Params.Event == IE_Pressed)
+        {
+            if (auto* Cinematic = GetWorld()->GetSubsystem<UEchoesCinematicSubsystem>())
+                Cinematic->SetSequencePaused(!Cinematic->IsSequencePaused());
+        }
+        if (Params.Key == EKeys::Escape && Params.Event == IE_Pressed)
+        {
+            if (auto* Cinematic = GetWorld()->GetSubsystem<UEchoesCinematicSubsystem>()) Cinematic->SkipActiveSequence();
+        }
+        if (Params.Key == EKeys::SpaceBar)
+        {
+            if (Params.Event == IE_Pressed) OpeningSpacePressedAt = GetWorld()->GetRealTimeSeconds();
+            else if (Params.Event == IE_Released) OpeningSpacePressedAt = -1.0;
+        }
+        return true;
+    }
+
     if (bBuildPlacementActive && Params.Key == EKeys::Escape && Params.Event == IE_Pressed)
     { CancelBuildPlacement(); return true; }
+    if (PendingProductionCancellation.bVisible &&
+        Params.Key == EKeys::Escape && Params.Event == IE_Pressed)
+    {
+        CloseProductionCancellationConfirmation(true);
+        SetStatusMessage(TEXT("Production cancellation closed."));
+        RefreshFieldHud();
+        return true;
+    }
     // UMG receives modal input first. Unhandled keys/buttons cannot leak into
     // the legacy Canvas hit targets or battlefield while this shell owns focus.
     if (UsesShellWidget())
@@ -768,7 +802,22 @@ bool AEchoesPlayerController::InputKey(const FInputKeyEventArgs& Params)
         }
         if (Params.Key == EKeys::LeftMouseButton && Params.Event == IE_Pressed)
         {
-            SelectionPressed();
+            FVector2D PointerPosition = FVector2D::ZeroVector;
+            FVector2D ViewportSize = FVector2D::ZeroVector;
+            if (ResolvePointerScreenPosition(PointerPosition, &ViewportSize))
+            {
+                if (ShellWidget->ActivateButtonUnderLocation(PointerPosition))
+                {
+                    return true;
+                }
+            }
+            if (FSlateApplication::IsInitialized())
+            {
+                if (ShellWidget->ActivateButtonUnderLocation(FSlateApplication::Get().GetCursorPos()))
+                {
+                    return true;
+                }
+            }
             return true;
         }
         return true;
@@ -851,6 +900,23 @@ bool AEchoesPlayerController::InputKey(const FInputKeyEventArgs& Params)
                 return true;
             }
         }
+    }
+    if (Params.Key == EKeys::Tab && Params.Event == IE_Pressed &&
+        !IsModalOverlayVisible())
+    {
+        const bool bPrevious =
+            IsInputKeyDown(EKeys::LeftShift) ||
+            IsInputKeyDown(EKeys::RightShift);
+        PruneSelection();
+        if (GetSelectionSubgroupTypes().Num() >= 2)
+        {
+            CycleSelectionSubgroup(bPrevious);
+        }
+        else
+        {
+            CycleOwnedEntity(bPrevious ? -1 : 1);
+        }
+        return true;
     }
     return Super::InputKey(Params);
 }
@@ -5217,8 +5283,11 @@ void AEchoesPlayerController::PresentDeploymentAudio()
     {
         // Mission index 1..15 in declaration order; acts break 5/10/15.
         const int32 MissionIndex =
-            static_cast<int32>(Operation) -
-            static_cast<int32>(EEchoesOperationMode::CampaignPrologue) + 1;
+            Operation == EEchoesOperationMode::TrainingReadiness
+                ? 1
+                : static_cast<int32>(Operation) -
+                      static_cast<int32>(
+                          EEchoesOperationMode::CampaignPrologue) + 1;
         const int32 ActIndex =
             MissionIndex <= 5 ? 1 : MissionIndex <= 10 ? 2 : 3;
         // Sites the Bible pins to a bed: the ark-city grid missions, Lume
@@ -5357,6 +5426,9 @@ void AEchoesPlayerController::PresentTitleScreen()
         SetStatusMessage(TEXT("[TITLE_SIM_NOT_READY] The operation is unavailable."));
         return;
     }
+    if (TutorialPractice.IsActive()) TutorialPractice.Reset();
+    if (Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness)
+        bTutorialOperationAuthorized = false;
     if (IsSkirmishDeploymentSummaryVisible())
     {
         PendingSkirmishSetup = Bridge->GetActiveSkirmishSetup();
@@ -5387,6 +5459,7 @@ void AEchoesPlayerController::PresentTitleScreen()
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
     Bridge->SetScenarioPaused(true);
+    SetNarrativePlaybackPausedOutsideCinematic(true);
     PresentTitleAudio();
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
@@ -5564,10 +5637,14 @@ void AEchoesPlayerController::PresentMissionBriefing()
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
     PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, true);
     Bridge->SetScenarioPaused(true);
+    SetNarrativePlaybackPausedOutsideCinematic(true);
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
+    const bool bTrainingReadiness =
+        Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness;
     const bool bPrologue =
-        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
+        (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue ||
+            Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness);
     const bool bSevenAccounts =
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignSevenAccounts;
@@ -5611,7 +5688,9 @@ void AEchoesPlayerController::PresentMissionBriefing()
         Bridge->GetOperationMode() ==
         EEchoesOperationMode::CampaignTheBrokenSun;
     SetStatusMessage(
-        bPrologue
+        bTrainingReadiness
+            ? TEXT("TRAINING READINESS — complete each field lesson, then defeat the passive opposing Command Core. Enter deploys the Meridian training force.")
+        : bPrologue
             ? NSLOCTEXT("EchoesM01", "BriefStatus", "WHAT THE LEDGER KEEPS — recover the archive, decide the Well, and withdraw. Enter deploys the Meridian force.").ToString()
         : bSevenAccounts
             ? TEXT("SEVEN ACCOUNTS OF RAIN — migrate the Waystone, then bring Oruun to the inherited account. Enter deploys.")
@@ -5658,7 +5737,8 @@ void AEchoesPlayerController::PresentMissionBriefing()
         LogEchoes,
         Display,
         TEXT("[ECHOES_BRIEFING_READY] operation=%s paused=true keyboardStart=true factionChoice=%s"),
-        bPrologue ? TEXT("WhatTheLedgerKeeps")
+        bTrainingReadiness ? TEXT("TrainingReadiness")
+        : bPrologue ? TEXT("WhatTheLedgerKeeps")
         : bSevenAccounts ? TEXT("SevenAccountsOfRain")
         : bCityReserve ? TEXT("ACityOnReserve")
         : bUnburiedRoad ? TEXT("TheUnburiedRoad")
@@ -5674,7 +5754,7 @@ void AEchoesPlayerController::PresentMissionBriefing()
         : bSeveralVoicesOneCommand ? TEXT("SeveralVoicesOneCommand")
         : bBrokenSun ? TEXT("TheBrokenSun")
         : TEXT("GlassScar"),
-        (bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad ||
+        (bTrainingReadiness || bPrologue || bSevenAccounts || bCityReserve || bUnburiedRoad ||
          bTermsOfContinuance || bNamesWithoutBirths || bShapeOfSilence ||
          bShapeBesideUs || bReserveAuthority || bChoirAtLumeReach ||
          bNoNeutralLedger || bFutureThatWon || bAssemblyOfTheMissing ||
@@ -5722,21 +5802,63 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
     {
         InterfaceAudio->PlayInterfaceCue(EEchoesInterfaceCue::BriefAdvance);
     }
+    const bool bM01Opening =
+        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue ||
+        Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness;
+    if (bM01Opening)
+    {
+        auto* Cinematic = GetWorld()->GetSubsystem<UEchoesCinematicSubsystem>();
+        if (!Cinematic || !Cinematic->PlaySequence(EEchoesCinematicSequence::M01Opening))
+        {
+            PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, true);
+            SetStatusMessage(NSLOCTEXT("EchoesM01", "OpeningUnavailable", "The opening could not start. Deployment remains paused; try Deploy again.").ToString(), 15.0f);
+            return;
+        }
+        if (auto* Narrative = GetGameInstance() ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>() : nullptr)
+        {
+            Narrative->ClearSubtitleQueue();
+            Narrative->EnqueueOperationStart(EEchoesOperationMode::CampaignPrologue, GetWorld()->GetRealTimeSeconds());
+        }
+        bM01OpeningPending = true;
+        OpeningSpacePressedAt = -1.0;
+        return;
+    }
+    FinishMissionDeployment();
+}
+
+void AEchoesPlayerController::FinishMissionDeployment()
+{
+    auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    if (!Bridge || !Bridge->IsScenarioReady()) return;
     Bridge->SetScenarioPaused(false);
+    SetNarrativePlaybackPausedOutsideCinematic(false);
     PresentDeploymentAudio();
     if (UEchoesNarrativeSubsystem* Narrative =
             GetGameInstance() != nullptr
                 ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
                 : nullptr)
     {
-        Narrative->ClearSubtitleQueue();
-        Narrative->EnqueueOperationStart(
-            Bridge->GetOperationMode(),
-            GetWorld()->GetRealTimeSeconds());
+        if (Bridge->GetOperationMode() != EEchoesOperationMode::CampaignPrologue &&
+            Bridge->GetOperationMode() != EEchoesOperationMode::TrainingReadiness)
+        {
+            Narrative->ClearSubtitleQueue();
+            Narrative->EnqueueOperationStart(Bridge->GetOperationMode(), GetWorld()->GetRealTimeSeconds());
+        }
+        else if (auto* Cinematic = GetWorld()->GetSubsystem<UEchoesCinematicSubsystem>();
+            Cinematic && Cinematic->GetLastCompletion() == EEchoesCinematicCompletion::Skipped)
+        {
+            Narrative->ClearSubtitleQueue();
+        }
     }
     SetIgnoreMoveInput(false);
     SetIgnoreLookInput(false);
-    if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
+    if (Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness)
+    {
+        SetStatusMessage(
+            TEXT("TRAINING READINESS DEPLOYED — complete the active field lesson; the passive opposing Command Core remains the final Corefall check."),
+            8.0f);
+    }
+    else if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
     {
         SetStatusMessage(NSLOCTEXT("EchoesM01", "DeploymentStatus", "DEPLOYED — select the archive carrier and recover the archive at tile 22,18.").ToString(), 8.0f);
     }
@@ -7191,6 +7313,47 @@ void AEchoesPlayerController::NotifyRuntimeFailure(const FString& FailureCode)
 void AEchoesPlayerController::NotifyMatchFinished(
     echoes::sim::MatchOutcome Outcome)
 {
+    UEchoesSimulationSubsystem* ResultBridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    const echoes::sim::Simulation* ResultSimulation =
+        ResultBridge != nullptr ? ResultBridge->GetSimulation() : nullptr;
+    const bool bTrainingReadinessResult =
+        ResultBridge != nullptr && ResultSimulation != nullptr &&
+        ResultBridge->GetOperationMode() ==
+            EEchoesOperationMode::TrainingReadiness;
+    bool bReadinessProofCommitted = false;
+    bool bReadinessProofSaveFailed = false;
+    if (bTrainingReadinessResult && IsLocalController() &&
+        GetNetMode() != NM_Client && !ResultBridge->IsReplayPlaybackActive() &&
+        Outcome == echoes::sim::MatchOutcome::Player0Victory &&
+        ResultSimulation->Outcome() ==
+            echoes::sim::MatchOutcome::Player0Victory &&
+        bPlayerProfileInitialized && bPlayerProfileAvailable &&
+        (PlayerProfile.TutorialVerifiedMask &
+            FEchoesPlayerProfile::AllTutorialLessonsMask) ==
+            FEchoesPlayerProfile::AllTutorialLessonsMask)
+    {
+        if (PlayerProfile.bReadinessOperationVerified)
+        {
+            bReadinessProofCommitted = true;
+        }
+        else
+        {
+            const FEchoesPlayerProfile PriorProfile = PlayerProfile;
+            PlayerProfile.bReadinessOperationVerified = true;
+            if (CommitPlayerProfile())
+            {
+                bReadinessProofCommitted = true;
+            }
+            else
+            {
+                PlayerProfile = PriorProfile;
+                bReadinessProofSaveFailed = true;
+            }
+        }
+    }
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
@@ -7201,7 +7364,9 @@ void AEchoesPlayerController::NotifyMatchFinished(
     bTechnologyPanelVisible = false;
     PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = false;
-    PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
+    PresentedCampaignOperation = bTrainingReadinessResult
+        ? EEchoesOperationMode::TrainingReadiness
+        : EEchoesOperationMode::Skirmish;
     PresentedMatchOutcome = Outcome;
     if (GetNetMode() != NM_Client)
     {
@@ -7239,6 +7404,21 @@ void AEchoesPlayerController::NotifyMatchFinished(
     else if (Outcome != echoes::sim::MatchOutcome::Draw)
     {
         Message = TEXT("DEFEAT — your Command Core has fallen.");
+    }
+    if (bTrainingReadinessResult)
+    {
+        if (bReadinessProofCommitted)
+        {
+            Message += TEXT(" Training readiness was saved; Campaign Map and Skirmish are now available.");
+        }
+        else if (bReadinessProofSaveFailed)
+        {
+            Message += TEXT(" Readiness proof could not be saved; no unlock was recorded.");
+        }
+        else if (Outcome == echoes::sim::MatchOutcome::Player0Victory)
+        {
+            Message += TEXT(" Readiness proof was not recorded because all ten lesson predicates were not durably verified.");
+        }
     }
     const bool bOnlineResult = IsOnlineMatchResult();
     if (bOnlineResult && GetNetMode() == NM_ListenServer)
@@ -8315,9 +8495,36 @@ void AEchoesPlayerController::NotifyBrokenSunFinished(
         static_cast<uint8>(CommitStatus));
 }
 
+void AEchoesPlayerController::SetNarrativePlaybackPausedOutsideCinematic(
+    bool bPaused)
+{
+    UWorld* World = GetWorld();
+    if (!World) return;
+    const auto* Cinematic = World->GetSubsystem<UEchoesCinematicSubsystem>();
+    if (Cinematic && Cinematic->IsSequenceActive()) return;
+    if (auto* Narrative = GetGameInstance()
+            ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
+            : nullptr)
+    {
+        Narrative->SetSubtitlePlaybackPaused(
+            bPaused, World->GetRealTimeSeconds());
+    }
+}
+
 void AEchoesPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
+    ValidateProductionCancellationConfirmation();
+    TickM01Opening();
+    if (GetWorld())
+    {
+        const auto* Bridge = GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>();
+        const auto* Viewport = GetWorld()->GetGameViewport();
+        const bool bFocusPaused = Viewport && Viewport->Viewport &&
+            !Viewport->Viewport->IsForegroundWindow();
+        SetNarrativePlaybackPausedOutsideCinematic(
+            (Bridge && Bridge->IsScenarioPaused()) || bFocusPaused);
+    }
     PollReplayBrowser();
     RefreshShell();
     RefreshFieldHud();
@@ -9323,6 +9530,12 @@ void AEchoesPlayerController::SelectAtCursor(bool bAdditive)
         if (!bAdditive)
         {
             ClearSelection();
+            if (View == nullptr && HitResult.bBlockingHit)
+            {
+                ObserveTutorialSelection(0, true);
+                ObserveTutorialSelectionEvent(
+                    EEchoesTutorialSelectionInputEvent::TerrainClear);
+            }
         }
         return;
     }
@@ -9343,6 +9556,12 @@ void AEchoesPlayerController::SelectAtCursor(bool bAdditive)
         SelectedEntityIds.Add(EntityId);
         SetEntitySelected(EntityId, true);
     }
+    NormalizeSelectionSubgroup();
+    ObserveTutorialSelection(EntityId, false);
+    ObserveTutorialSelectionEvent(
+        bAdditive
+            ? EEchoesTutorialSelectionInputEvent::SelectionModified
+            : EEchoesTutorialSelectionInputEvent::SingleClickSelection);
 
     SetStatusMessage(
         FString::Printf(
@@ -9424,6 +9643,11 @@ void AEchoesPlayerController::SelectInScreenRectangle(bool bAdditive)
                 SelectedEntityIds.Num(),
                 SelectedEntityIds.Num() == 1 ? TEXT("y") : TEXT("ies")),
             2.0f);
+        NormalizeSelectionSubgroup();
+        ObserveTutorialSelectionEvent(
+            bAdditive
+                ? EEchoesTutorialSelectionInputEvent::SelectionModified
+                : EEchoesTutorialSelectionInputEvent::DragSelection);
         return;
     }
 
@@ -9489,6 +9713,11 @@ void AEchoesPlayerController::SelectInScreenRectangle(bool bAdditive)
             SelectedEntityIds.Num(),
             SelectedEntityIds.Num() == 1 ? TEXT("y") : TEXT("ies")),
         2.0f);
+    NormalizeSelectionSubgroup();
+    ObserveTutorialSelectionEvent(
+        bAdditive
+            ? EEchoesTutorialSelectionInputEvent::SelectionModified
+            : EEchoesTutorialSelectionInputEvent::DragSelection);
 }
 
 void AEchoesPlayerController::ContextOrderPressed()
@@ -9729,6 +9958,71 @@ void AEchoesPlayerController::IssueContextOrder(
             ? Bridge->FindEntity(TargetView->GetEntityId())
             : nullptr;
 
+    // A single selected local producer gives context order its authored rally
+    // meaning. The bridge validates ground, allied Guard, and resource Gather
+    // targets; the controller does not infer an order for the future unit.
+    if (SelectedEntityIds.Num() == 1)
+    {
+        echoes::sim::ProducerQueueState ProducerState;
+        const uint32 ProducerId = SelectedEntityIds[0];
+        if (Bridge->GetLocalProducerQueueState(ProducerId, ProducerState))
+        {
+            const uint32 RallyTargetId =
+                TargetEntity != nullptr ? TargetEntity->id : 0;
+            const FVector RallyDestination = TargetEntity != nullptr
+                ? Bridge->SimToWorld(TargetEntity->position)
+                : FVector(HitResult.Location);
+            const bool bAppend = IsInputKeyDown(EKeys::LeftShift) ||
+                IsInputKeyDown(EKeys::RightShift);
+            FString Feedback;
+            if (Bridge->IssueRallyCommand(
+                    ProducerId,
+                    RallyTargetId,
+                    RallyDestination,
+                    bAppend,
+                    Feedback))
+            {
+                SetStatusMessage(
+                    bAppend
+                        ? NSLOCTEXT(
+                              "EchoesPlayer", "RallyExtended", "Rally route extended.")
+                              .ToString()
+                        : NSLOCTEXT(
+                              "EchoesPlayer", "RallySet", "Rally point set.")
+                              .ToString());
+                ShowAcceptedCommandMarker(
+                    RallyDestination,
+                    RallyTargetId == 0
+                        ? EEchoesCommandMarkerType::Move
+                        : EEchoesCommandMarkerType::Interact,
+                    1);
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_RALLY_COMMAND] source=%s producer=%u target=%u append=%s"),
+                    bPointerSource ? TEXT("pointer") : TEXT("keyboard_reticle"),
+                    ProducerId,
+                    RallyTargetId,
+                    bAppend ? TEXT("true") : TEXT("false"));
+            }
+            else
+            {
+                SetStatusMessage(NSLOCTEXT(
+                    "EchoesPlayer", "RallyRefused", "Choose open ground, an allied unit, or a Matter node.")
+                    .ToString());
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_RALLY_COMMAND_REFUSED] source=%s producer=%u target=%u reason=%s"),
+                    bPointerSource ? TEXT("pointer") : TEXT("keyboard_reticle"),
+                    ProducerId,
+                    RallyTargetId,
+                    *Feedback);
+            }
+            return;
+        }
+    }
+
     echoes::sim::CommandType CommandType = echoes::sim::CommandType::Move;
     uint32 TargetId = 0;
     FVector Destination = HitResult.Location;
@@ -9800,6 +10094,8 @@ void AEchoesPlayerController::IssueContextOrder(
         }
 
         FString Feedback;
+        const TOptional<uint64> SequenceBefore =
+            Bridge->GetLastAcceptedLocalCommandSequence();
         if (Bridge->IssueCommand(
                 ActorCommandType,
                 ActorId,
@@ -9811,6 +10107,10 @@ void AEchoesPlayerController::IssueContextOrder(
                         ? echoes::sim::FutureWellChoice::Preserve : FutureWellChoice,
                 Feedback))
         {
+            CaptureTutorialAcceptedCommand(
+                Bridge,
+                SequenceBefore,
+                EEchoesTutorialOrderCommandOrigin::ContextAction);
             if (bCannotCarry)
             {
                 ++Outcome.MovedCannotCarryCount;
@@ -9830,6 +10130,12 @@ void AEchoesPlayerController::IssueContextOrder(
         }
         else
         {
+            FEchoesTutorialExpectedCommand RejectedAttempt;
+            RejectedAttempt.Type = ActorCommandType;
+            RejectedAttempt.Actor = ActorId;
+            RejectedAttempt.Target = ActorTargetId;
+            RejectedAttempt.Position = Bridge->WorldToSim(UnitDestination);
+            (void)ObserveTutorialRejectedCommandAttempt(RejectedAttempt);
             Outcome.RecordRejection(ActorId, Feedback);
         }
     }
@@ -9928,6 +10234,23 @@ void AEchoesPlayerController::SetEntitySelected(uint32 EntityId, bool bSelected)
     }
 }
 
+void AEchoesPlayerController::CaptureTutorialAcceptedCommand(
+    UEchoesSimulationSubsystem* Bridge,
+    const TOptional<uint64>& SequenceBefore,
+    EEchoesTutorialOrderCommandOrigin Origin)
+{
+    if (Bridge == nullptr || IsReplayInputActive()) return;
+    const TOptional<uint64> SequenceAfter =
+        Bridge->GetLastAcceptedLocalCommandSequence();
+    if (!SequenceAfter.IsSet() ||
+        (SequenceBefore.IsSet() &&
+            SequenceBefore.GetValue() == SequenceAfter.GetValue()))
+    {
+        return;
+    }
+    ObserveTutorialAcceptedCommand(SequenceAfter.GetValue(), Origin);
+}
+
 void AEchoesPlayerController::ClearSelection()
 {
     CancelBuildPlacement(false);
@@ -9936,11 +10259,106 @@ void AEchoesPlayerController::ClearSelection()
         SetEntitySelected(EntityId, false);
     }
     SelectedEntityIds.Reset();
+    ActiveSelectionSubgroupIndex = INDEX_NONE;
     // An armed deck order is meaningless without a selection, so losing the
     // selection disarms it. Every scenario end, restart, load, match finish,
     // and menu return clears the selection, so no armed order can survive a
     // transition and fire into the next context.
     ArmedDeckAction = EEchoesCommandDeckAction::None;
+}
+
+TArray<echoes::sim::EntityType>
+AEchoesPlayerController::GetSelectionSubgroupTypes() const
+{
+    TArray<echoes::sim::EntityType> Types;
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    for (const uint32 EntityId : SelectedEntityIds)
+    {
+        const echoes::sim::net::ScopedEntityState* NetworkEntity =
+            GetNetMode() == NM_Client ? FindNetworkEntity(EntityId) : nullptr;
+        const echoes::sim::Entity* Entity =
+            GetNetMode() != NM_Client && Bridge != nullptr
+                ? Bridge->FindEntity(EntityId)
+                : nullptr;
+        if (NetworkEntity != nullptr && NetworkEntity->owner == NetworkSeat &&
+            NetworkEntity->hitPoints > 0)
+        {
+            Types.AddUnique(NetworkEntity->type);
+        }
+        else if (Entity != nullptr &&
+                 Entity->owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                 Entity->hitPoints > 0)
+        {
+            Types.AddUnique(Entity->type);
+        }
+    }
+    Types.Sort([](echoes::sim::EntityType Left,
+                  echoes::sim::EntityType Right)
+    {
+        return static_cast<uint8>(Left) < static_cast<uint8>(Right);
+    });
+    return Types;
+}
+
+void AEchoesPlayerController::NormalizeSelectionSubgroup()
+{
+    const TArray<echoes::sim::EntityType> Types = GetSelectionSubgroupTypes();
+    if (Types.IsEmpty())
+    {
+        ActiveSelectionSubgroupIndex = INDEX_NONE;
+        return;
+    }
+    if (!Types.IsValidIndex(ActiveSelectionSubgroupIndex))
+    {
+        ActiveSelectionSubgroupIndex = 0;
+    }
+}
+
+void AEchoesPlayerController::CycleSelectionSubgroup(bool bPrevious)
+{
+    if (IsReplayInputActive() || IsModalOverlayVisible()) return;
+    PruneSelection();
+    const TArray<echoes::sim::EntityType> Types = GetSelectionSubgroupTypes();
+    if (Types.Num() < 2)
+    {
+        NormalizeSelectionSubgroup();
+        SetStatusMessage(
+            TEXT("[SUBGROUP_UNAVAILABLE] Select a mixed force to cycle subgroups."),
+            2.0f);
+        return;
+    }
+    if (!Types.IsValidIndex(ActiveSelectionSubgroupIndex))
+    {
+        ActiveSelectionSubgroupIndex = 0;
+    }
+    const echoes::sim::EntityType Previous =
+        Types[ActiveSelectionSubgroupIndex];
+    ActiveSelectionSubgroupIndex =
+        (ActiveSelectionSubgroupIndex + (bPrevious ? Types.Num() - 1 : 1)) %
+        Types.Num();
+    const echoes::sim::EntityType Active =
+        Types[ActiveSelectionSubgroupIndex];
+    ObserveTutorialSelectionEvent(
+        EEchoesTutorialSelectionInputEvent::SubgroupChanged,
+        INDEX_NONE,
+        Previous,
+        Active);
+    SetStatusMessage(FString::Printf(
+        TEXT("ACTIVE SUBGROUP %d OF %d."),
+        ActiveSelectionSubgroupIndex + 1,
+        Types.Num()), 2.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_SELECTION_SUBGROUP] direction=%s previousType=%d activeType=%d subgroup=%d total=%d"),
+        bPrevious ? TEXT("previous") : TEXT("next"),
+        static_cast<int32>(Previous),
+        static_cast<int32>(Active),
+        ActiveSelectionSubgroupIndex,
+        Types.Num());
 }
 
 bool AEchoesPlayerController::SetControlGroup(
@@ -10035,9 +10453,10 @@ int32 AEchoesPlayerController::ControlGroupDisplayNumber(int32 GroupIndex)
 
 void AEchoesPlayerController::ClearControlGroups()
 {
-    for (TArray<uint32>& Group : ControlGroups)
+    for (int32 GroupIndex = 0; GroupIndex < ControlGroupCount; ++GroupIndex)
     {
-        Group.Reset();
+        ControlGroups[GroupIndex].Reset();
+        LastControlGroupRecallRealTime[GroupIndex] = 0.0;
     }
 }
 
@@ -10046,7 +10465,12 @@ void AEchoesPlayerController::AssignControlGroupFromSelection(int32 GroupIndex)
     if (IsReplayInputActive()) return;
     PruneSelection();
     FString Feedback;
-    SetControlGroup(GroupIndex, SelectedEntityIds, Feedback);
+    if (SetControlGroup(GroupIndex, SelectedEntityIds, Feedback))
+    {
+        ObserveTutorialSelectionEvent(
+            EEchoesTutorialSelectionInputEvent::ControlGroupAssigned,
+            GroupIndex);
+    }
     SetStatusMessage(Feedback);
 }
 
@@ -10072,10 +10496,35 @@ void AEchoesPlayerController::RecallControlGroup(int32 GroupIndex)
     {
         return;
     }
-    if (bControlGroupAssignmentArmed)
+    const bool bControlDown =
+        IsInputKeyDown(EKeys::LeftControl) ||
+        IsInputKeyDown(EKeys::RightControl);
+    const bool bShiftDown =
+        IsInputKeyDown(EKeys::LeftShift) ||
+        IsInputKeyDown(EKeys::RightShift);
+    if (bControlGroupAssignmentArmed || bControlDown)
     {
         bControlGroupAssignmentArmed = false;
-        AssignControlGroupFromSelection(GroupIndex);
+        if (!bShiftDown)
+        {
+            AssignControlGroupFromSelection(GroupIndex);
+            return;
+        }
+
+        PruneSelection();
+        TArray<uint32> Combined = GetValidControlGroup(GroupIndex);
+        for (const uint32 EntityId : SelectedEntityIds)
+        {
+            Combined.AddUnique(EntityId);
+        }
+        FString Feedback;
+        if (SetControlGroup(GroupIndex, Combined, Feedback))
+        {
+            ObserveTutorialSelectionEvent(
+                EEchoesTutorialSelectionInputEvent::ControlGroupAssigned,
+                GroupIndex);
+        }
+        SetStatusMessage(Feedback);
         return;
     }
     TArray<uint32> ValidIds = GetValidControlGroup(GroupIndex);
@@ -10088,17 +10537,39 @@ void AEchoesPlayerController::RecallControlGroup(int32 GroupIndex)
         return;
     }
     ControlGroups[GroupIndex] = ValidIds;
-    ClearSelection();
+    if (!bShiftDown)
+    {
+        ClearSelection();
+    }
     for (const uint32 EntityId : ValidIds)
     {
-        SelectedEntityIds.Add(EntityId);
+        SelectedEntityIds.AddUnique(EntityId);
         SetEntitySelected(EntityId, true);
     }
+    NormalizeSelectionSubgroup();
+    ObserveTutorialSelectionEvent(
+        EEchoesTutorialSelectionInputEvent::ControlGroupRecalled,
+        GroupIndex);
+
+    bool bCentered = false;
+    if (!bShiftDown && GetWorld() != nullptr)
+    {
+        const double Now = GetWorld()->GetRealTimeSeconds();
+        const double Previous = LastControlGroupRecallRealTime[GroupIndex];
+        bCentered = Previous > 0.0 && Now >= Previous &&
+            Now - Previous <= ControlGroupDoubleTapSeconds;
+        LastControlGroupRecallRealTime[GroupIndex] = bCentered ? 0.0 : Now;
+        if (bCentered)
+        {
+            SnapKeyboardTargetToSelection();
+        }
+    }
     SetStatusMessage(FString::Printf(
-        TEXT("CONTROL GROUP %d: %d entit%s selected."),
+        TEXT("CONTROL GROUP %d: %d entit%s selected.%s"),
         ControlGroupDisplayNumber(GroupIndex),
         ValidIds.Num(),
-        ValidIds.Num() == 1 ? TEXT("y") : TEXT("ies")));
+        ValidIds.Num() == 1 ? TEXT("y") : TEXT("ies"),
+        bCentered ? TEXT(" Camera centered.") : TEXT("")));
 }
 
 #define DEFINE_CONTROL_GROUP_HANDLER(DisplayNumber, GroupIndex)              \
@@ -10149,6 +10620,7 @@ void AEchoesPlayerController::PruneSelection()
             SelectedEntityIds.RemoveAtSwap(Index, 1, EAllowShrinking::No);
         }
     }
+    NormalizeSelectionSubgroup();
 }
 
 bool AEchoesPlayerController::TraceCursor(FHitResult& OutHitResult)
@@ -10792,6 +11264,8 @@ void AEchoesPlayerController::PatrolAtCursor()
     {
         const FVector UnitDestination = FormationDestinations[Index];
         FString Feedback;
+        const TOptional<uint64> SequenceBefore =
+            Bridge->GetLastAcceptedLocalCommandSequence();
         if (Bridge->IssueCommand(
                 echoes::sim::CommandType::Patrol,
                 SelectedEntityIds[Index],
@@ -10800,6 +11274,10 @@ void AEchoesPlayerController::PatrolAtCursor()
                 FutureWellChoice,
                 Feedback))
         {
+            CaptureTutorialAcceptedCommand(
+                Bridge,
+                SequenceBefore,
+                EEchoesTutorialOrderCommandOrigin::DirectPlayerCommand);
             ++AcceptedCount;
         }
         else
@@ -10893,6 +11371,8 @@ void AEchoesPlayerController::StopSelectedUnits()
     {
         const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
         FString Feedback;
+        const TOptional<uint64> SequenceBefore =
+            Bridge->GetLastAcceptedLocalCommandSequence();
         if (Entity != nullptr && Bridge->IssueCommand(
                 echoes::sim::CommandType::Stop,
                 EntityId,
@@ -10901,6 +11381,10 @@ void AEchoesPlayerController::StopSelectedUnits()
                 FutureWellChoice,
                 Feedback))
         {
+            CaptureTutorialAcceptedCommand(
+                Bridge,
+                SequenceBefore,
+                EEchoesTutorialOrderCommandOrigin::DirectPlayerCommand);
             ++AcceptedCount;
         }
         else
@@ -11769,6 +12253,8 @@ void AEchoesPlayerController::GuardAtCursor()
     for (const uint32 EntityId : SelectedEntityIds)
     {
         FString Feedback;
+        const TOptional<uint64> SequenceBefore =
+            Bridge->GetLastAcceptedLocalCommandSequence();
         if (Bridge->IssueCommand(
                 echoes::sim::CommandType::Guard,
                 EntityId,
@@ -11777,6 +12263,10 @@ void AEchoesPlayerController::GuardAtCursor()
                 FutureWellChoice,
                 Feedback))
         {
+            CaptureTutorialAcceptedCommand(
+                Bridge,
+                SequenceBefore,
+                EEchoesTutorialOrderCommandOrigin::DirectPlayerCommand);
             ++AcceptedCount;
         }
         else
@@ -11878,8 +12368,8 @@ void AEchoesPlayerController::QuickLoadScenario()
     {
         ClearSelection();
         bControlGroupAssignmentArmed = false;
-        if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
-            bTutorialOperationAuthorized = true;
+        ResetTutorialObservation();
+        bTutorialOperationAuthorized = Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness;
         if (!RequireOperationMastery(Bridge->GetOperationMode()))
         {
             PresentMissionBriefing();
@@ -11898,7 +12388,8 @@ void AEchoesPlayerController::CycleHudScale()
         return;
     }
     const auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
-    const bool bM01 = Bridge && Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
+    const bool bM01 = Bridge && (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue ||
+            Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness);
     const float CurrentScale = Settings->GetHudScale();
     const float NewScale =
         CurrentScale < 0.99f ? 1.0f
@@ -12353,6 +12844,7 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
 void AEchoesPlayerController::ToggleTechnologyPanel()
 {
     if (IsReplayInputActive()) return;
+    if (PendingProductionCancellation.bVisible) return;
     if (IsActiveOnlineNetworkMatch() ||
         IsOpponentReconnectGraceActive())
     {
@@ -12385,6 +12877,8 @@ void AEchoesPlayerController::ToggleTechnologyPanel()
     {
         bTechnologyPanelVisible = false;
         Bridge->SetScenarioPaused(bTechnologyPanelWasScenarioPaused);
+        SetNarrativePlaybackPausedOutsideCinematic(
+            bTechnologyPanelWasScenarioPaused);
         SetIgnoreMoveInput(bTechnologyPanelWasScenarioPaused);
         SetIgnoreLookInput(bTechnologyPanelWasScenarioPaused);
         SetStatusMessage(TEXT("TECHNOLOGY ARCHIVE CLOSED."));
@@ -12414,6 +12908,7 @@ void AEchoesPlayerController::ToggleTechnologyPanel()
         }
         bSelectionButtonDown = false;
         Bridge->SetScenarioPaused(true);
+        SetNarrativePlaybackPausedOutsideCinematic(true);
         SetIgnoreMoveInput(true);
         SetIgnoreLookInput(true);
         SetStatusMessage(
@@ -12604,7 +13099,8 @@ AEchoesPlayerController::BuildCommandDeckProfile() const
         return Profile;
     }
     Profile.bUseM01RoleNames =
-        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
+        (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue ||
+            Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness);
     for (const uint32 EntityId : SelectedEntityIds)
     {
         const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
@@ -12799,7 +13295,6 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
         {
             return true;
         }
-        return true;
     }
 
     if (PlayerFlow.Is(EEchoesShellScreen::Title) &&
@@ -13018,6 +13513,13 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
 void AEchoesPlayerController::TogglePauseMenu()
 {
     if (IsReplayInputActive()) return;
+    if (PendingProductionCancellation.bVisible)
+    {
+        CloseProductionCancellationConfirmation(true);
+        SetStatusMessage(TEXT("Production cancellation closed."));
+        RefreshFieldHud();
+        return;
+    }
     if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
         EchoesGameInstance != nullptr &&
         EchoesGameInstance->GetOnlineState() !=
@@ -13101,6 +13603,7 @@ void AEchoesPlayerController::TogglePauseMenu()
     bReturnToOperationsConfirmationArmed = false;
     ReturnToOperationsConfirmationExpiresAt = 0.0;
     Bridge->SetScenarioPaused(PlayerFlow.Is(EEchoesShellScreen::Pause) || bTacticalPaused);
+    SetNarrativePlaybackPausedOutsideCinematic(Bridge->IsScenarioPaused());
     SetIgnoreMoveInput(PlayerFlow.Is(EEchoesShellScreen::Pause));
     SetIgnoreLookInput(PlayerFlow.Is(EEchoesShellScreen::Pause));
     SetStatusMessage(
@@ -13168,6 +13671,7 @@ void AEchoesPlayerController::RestartScenario()
     if (Bridge != nullptr && !RequireOperationMastery(Bridge->GetOperationMode())) return;
     if (Bridge != nullptr && Bridge->RestartPrototypeScenario())
     {
+        ResetTutorialObservation();
         SynchronizeBoundCampaignProtocol();
         bRuntimeStateKnown = true;
         PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
@@ -13441,6 +13945,16 @@ const TArray<uint32>& AEchoesPlayerController::GetSelectedEntityIds() const
     return SelectedEntityIds;
 }
 
+TOptional<echoes::sim::EntityType>
+AEchoesPlayerController::GetActiveSelectionSubgroupType() const
+{
+    const TArray<echoes::sim::EntityType> Types = GetSelectionSubgroupTypes();
+    return Types.IsValidIndex(ActiveSelectionSubgroupIndex)
+        ? TOptional<echoes::sim::EntityType>(
+              Types[ActiveSelectionSubgroupIndex])
+        : TOptional<echoes::sim::EntityType>();
+}
+
 echoes::sim::FutureWellChoice AEchoesPlayerController::GetFutureWellChoice() const
 {
     return FutureWellChoice;
@@ -13516,6 +14030,12 @@ FString AEchoesPlayerController::CommandLabel(
             return TEXT("RECONCILE TO MANIFEST");
         case echoes::sim::CommandType::ReconcileToPossible:
             return TEXT("RECONCILE TO POSSIBLE");
+        case echoes::sim::CommandType::CancelProduction:
+            return NSLOCTEXT("EchoesCommands", "CancelProduction", "CANCEL PRODUCTION").ToString();
+        case echoes::sim::CommandType::ReorderProduction:
+            return NSLOCTEXT("EchoesCommands", "ReorderProduction", "REORDER QUEUE").ToString();
+        case echoes::sim::CommandType::SetRallyRoute:
+            return NSLOCTEXT("EchoesCommands", "SetRallyRoute", "SET RALLY").ToString();
     }
     return TEXT("ORDER");
 }

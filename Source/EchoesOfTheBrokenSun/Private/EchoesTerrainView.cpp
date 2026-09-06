@@ -332,7 +332,8 @@ bool AEchoesTerrainView::InitializeTerrain(
         ComposeGlassScarChasm(
             [&Simulation, MapPreset, OperationMode, ScopedPlayer](int32 X, int32 Y)
             {
-                if (OperationMode == EEchoesOperationMode::CampaignPrologue)
+                if (OperationMode == EEchoesOperationMode::CampaignPrologue ||
+                    OperationMode == EEchoesOperationMode::TrainingReadiness)
                     return echoes::world::IsCampaignTerrainPassable(1,
                         echoes::sim::FutureWellChoice::Preserve, X, Y)
                         ? echoes::sim::Terrain::Open : echoes::sim::Terrain::Blocked;
@@ -665,7 +666,8 @@ bool AEchoesTerrainView::ConfigureWorldKit()
     M01ExteriorSkirt->ClearInstances();
     M01ExteriorSkirt->SetStaticMesh(SurfaceMesh);
     M01RouteActors.Reset();
-    if (ActiveOperationMode == EEchoesOperationMode::CampaignPrologue)
+    if (ActiveOperationMode == EEchoesOperationMode::CampaignPrologue ||
+        ActiveOperationMode == EEchoesOperationMode::TrainingReadiness)
         for (TActorIterator<AActor> It(GetWorld()); It; ++It)
             if (EchoesBattlefieldPresentation::IsGlassScarRoute(It->Tags)) M01RouteActors.Add(*It);
     M01ExteriorBanks->ClearAllMeshSections();
@@ -674,7 +676,11 @@ bool AEchoesTerrainView::ConfigureWorldKit()
     // Fixed distant scenery lies entirely outside the playable rectangle. It
     // describes the public setting, never hidden terrain or live game state.
     const float Radius = FMath::Max(MapWidthTiles, MapHeightTiles) * WorldUnitsPerTile * 1.1f;
-    for (int32 Index = 0; ActiveOperationMode != EEchoesOperationMode::CampaignPrologue && Index < 20; ++Index)
+    for (int32 Index = 0;
+         ActiveOperationMode != EEchoesOperationMode::CampaignPrologue &&
+             ActiveOperationMode != EEchoesOperationMode::TrainingReadiness &&
+         Index < 20;
+         ++Index)
     {
         const float Angle = Index * 2.0f * PI / 20.0f;
         const float Width = 20.0f + (Index * 7 % 5);
@@ -688,7 +694,9 @@ bool AEchoesTerrainView::ConfigureWorldKit()
     // boundary without crossing it; other sites retain their prior clearance.
     const float HalfX = MapWidthTiles * WorldUnitsPerTile * .5f;
     const float HalfY = MapHeightTiles * WorldUnitsPerTile * .5f;
-    const bool bM01 = ActiveOperationMode == EEchoesOperationMode::CampaignPrologue;
+    const bool bM01 =
+        ActiveOperationMode == EEchoesOperationMode::CampaignPrologue ||
+        ActiveOperationMode == EEchoesOperationMode::TrainingReadiness;
     if (bM01)
     {
         // Four abutting strips support the public basalt banks. They never
@@ -790,7 +798,11 @@ bool AEchoesTerrainView::ConfigureWorldKit()
         for (UMaterialInstanceDynamic* Material : {BlockedMaterials[Slot].Get(), ScarredMaterials[Slot].Get()})
         {
             Material->SetScalarParameterValue(TEXT("WorldUVScale"),
-                ActiveOperationMode == EEchoesOperationMode::CampaignPrologue ? .0004f : .0012f);
+                ActiveOperationMode == EEchoesOperationMode::CampaignPrologue ||
+                        ActiveOperationMode ==
+                            EEchoesOperationMode::TrainingReadiness
+                    ? .0004f
+                    : .0012f);
             Material->SetTextureParameterValue(TEXT("GroundBaseColorMap"),SiteTextures[0]);
             Material->SetTextureParameterValue(TEXT("GroundMREMap"),SiteTextures[1]);
             Material->SetTextureParameterValue(TEXT("GroundNormalMap"),SiteTextures[2]);
@@ -857,6 +869,7 @@ bool AEchoesTerrainView::InitializeDressing()
         switch (*ActiveOperationMode)
         {
             case EEchoesOperationMode::CampaignPrologue:
+            case EEchoesOperationMode::TrainingReadiness:
                 ActiveDressingProfile = EDressingSiteProfile::GlassScar;
                 break;
             case EEchoesOperationMode::CampaignSevenAccounts:
@@ -1622,8 +1635,12 @@ void AEchoesTerrainView::SyncChasmVisibility()
     for (FChasmInstance& Instance : ChasmInstances)
     {
         const FBox Bounds = Instance.Layer->GetStaticMesh()->GetBoundingBox().TransformBy(Instance.Transform);
-        const bool bVisible = ActiveOperationMode == EEchoesOperationMode::CampaignPrologue &&
-            Instance.Layer == ChasmBed ? IsWorldBoundsKnown(Bounds) : KnownBounds(Bounds);
+        const bool bM01 =
+            ActiveOperationMode == EEchoesOperationMode::CampaignPrologue ||
+            ActiveOperationMode == EEchoesOperationMode::TrainingReadiness;
+        const bool bVisible = bM01 && Instance.Layer == ChasmBed
+            ? IsWorldBoundsKnown(Bounds)
+            : KnownBounds(Bounds);
         if (bVisible != Instance.bVisible)
         {
             Instance.Layer->UpdateInstanceTransform(Instance.Index, bVisible ? Instance.Transform : HiddenTransform(), false, true, true);
@@ -1771,7 +1788,9 @@ bool AEchoesTerrainView::ComposeGlassScarChasm(
     // The plate takes the retired collision floor's albedo exactly: under the
     // A1 exposure rig that albedo is what gate 3 accepted as charcoal
     // vitrified ground, and anything brighter reads as pale at gameplay pitch.
-    const bool bM01 = ActiveOperationMode == EEchoesOperationMode::CampaignPrologue;
+    const bool bM01 =
+        ActiveOperationMode == EEchoesOperationMode::CampaignPrologue ||
+        ActiveOperationMode == EEchoesOperationMode::TrainingReadiness;
     const FLinearColor BankColor(0.008f, 0.010f, 0.013f);
     const FLinearColor TerraceColor(0.006f, 0.009f, 0.012f);
     const FLinearColor BedColor(0.030f, 0.026f, 0.024f);

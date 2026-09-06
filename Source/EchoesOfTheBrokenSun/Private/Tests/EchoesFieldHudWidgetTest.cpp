@@ -69,6 +69,38 @@ FEchoesFieldHudView BattlefieldView(float Scale)
     Selection.bOwned = true;
     View.Selection.Entries.Add(Selection);
 
+    View.Production.bVisible = true;
+    View.Production.ProducerId = 12;
+    View.Production.bSpawnBlocked = true;
+    View.Production.RallyWaypointCount = 2;
+    FEchoesFieldHudProductionItem Active;
+    Active.Slot = 0;
+    Active.ItemId = 9001;
+    Active.Unit = FText::FromString(TEXT("Surveyor"));
+    Active.ProgressPercent = 45;
+    Active.InvestedMatter = 50;
+    Active.InvestedDawn = 0;
+    Active.Logistics = 1;
+    Active.bActive = true;
+    View.Production.Items.Add(Active);
+    FEchoesFieldHudProductionItem Waiting;
+    Waiting.Slot = 1;
+    Waiting.ItemId = 9002;
+    Waiting.Unit = FText::FromString(TEXT("Civic Lancer"));
+    Waiting.ConfiguredMatter = 85;
+    Waiting.ConfiguredDawn = 20;
+    Waiting.Logistics = 2;
+    View.Production.Items.Add(Waiting);
+    View.Production.Controls = {
+        FieldControl(TEXT("REVIEW ACTIVE CANCELLATION"),
+            EEchoesFieldHudAction::ProductionCancel, 0),
+        FieldControl(TEXT("REVIEW CANCEL 1"),
+            EEchoesFieldHudAction::ProductionCancel, 1),
+        FieldControl(TEXT("MOVE 1 UP"),
+            EEchoesFieldHudAction::ProductionMoveUp, 1, false),
+        FieldControl(TEXT("MOVE 1 DOWN"),
+            EEchoesFieldHudAction::ProductionMoveDown, 1, false)};
+
     View.Commands.bVisible = true;
     View.Commands.Formation = FText::FromString(TEXT("LINE"));
     for (int32 Index = 0; Index < 9; ++Index)
@@ -194,6 +226,66 @@ bool FEchoesFieldHudWidgetTest::RunTest(const FString& Parameters)
         Widget->GetSection(EEchoesFieldHudSection::CommandCard)
             ->GetActionButtonCount(),
         9);
+    UEchoesFieldHudSectionWidget* SelectionPanel =
+        Widget->GetSection(EEchoesFieldHudSection::Selection);
+    TestEqual(TEXT("Selected producer exposes every typed queue control"),
+        SelectionPanel->GetActionButtonCount(), 4);
+    UEchoesFieldHudActionButton* CancelWaiting =
+        SelectionPanel->GetActionButton(1);
+    TestTrue(TEXT("Queue cancellation is a focusable semantic button"),
+        CancelWaiting != nullptr && CancelWaiting->GetIsEnabled() &&
+        CancelWaiting->TakeWidget()->SupportsKeyboardFocus() &&
+        CancelWaiting->GetAction() ==
+            EEchoesFieldHudAction::ProductionCancel &&
+        CancelWaiting->GetArgument() == 1);
+    UEchoesFieldHudActionButton* MoveUp = SelectionPanel->GetActionButton(2);
+    UEchoesFieldHudActionButton* MoveDown = SelectionPanel->GetActionButton(3);
+    TestTrue(TEXT("One-item reorder directions remain present for keyboard discovery"),
+        MoveUp != nullptr && MoveDown != nullptr);
+    TestTrue(TEXT("Impossible one-item reorder directions stay disabled"),
+        MoveUp != nullptr && MoveDown != nullptr &&
+        !MoveUp->GetIsEnabled() && !MoveDown->GetIsEnabled());
+
+    FEchoesFieldHudView Cancellation = BattlefieldView(0.8f);
+    Cancellation.Commands = {};
+    Cancellation.Production.Items.Reset();
+    Cancellation.Production.Cancellation.bVisible = true;
+    Cancellation.Production.Cancellation.ProducerId = 12;
+    Cancellation.Production.Cancellation.ItemId = 9001;
+    Cancellation.Production.Cancellation.Unit =
+        FText::FromString(TEXT("Surveyor"));
+    Cancellation.Production.Cancellation.ProgressPercent = 45;
+    Cancellation.Production.Cancellation.RefundPercent = 75;
+    Cancellation.Production.Cancellation.InvestedMatter = 50;
+    Cancellation.Production.Cancellation.InvestedDawn = 20;
+    Cancellation.Production.Cancellation.RefundMatter = 37;
+    Cancellation.Production.Cancellation.RefundDawn = 15;
+    Cancellation.Production.Cancellation.bActive = true;
+    Cancellation.Production.Controls = {
+        FieldControl(TEXT("BACK"),
+            EEchoesFieldHudAction::ProductionCancelBack, 0),
+        FieldControl(TEXT("CONFIRM CANCELLATION"),
+            EEchoesFieldHudAction::ProductionCancelConfirm, 0)};
+    Cancellation.Production.Controls[0].bPrimary = true;
+    Widget->SetView(Cancellation);
+    SelectionPanel = Widget->GetSection(EEchoesFieldHudSection::Selection);
+    TestEqual(TEXT("Cancellation review exposes only Back and Confirm"),
+        SelectionPanel->GetActionButtonCount(), 2);
+    UEchoesFieldHudActionButton* Back = SelectionPanel->GetActionButton(0);
+    UEchoesFieldHudActionButton* Confirm = SelectionPanel->GetActionButton(1);
+    TestTrue(TEXT("Cancellation actions remain pointer and keyboard focusable"),
+        Back != nullptr && Confirm != nullptr &&
+        Back->TakeWidget()->SupportsKeyboardFocus() &&
+        Confirm->TakeWidget()->SupportsKeyboardFocus() &&
+        Back->GetAction() == EEchoesFieldHudAction::ProductionCancelBack &&
+        Confirm->GetAction() ==
+            EEchoesFieldHudAction::ProductionCancelConfirm);
+    TestTrue(TEXT("Cancellation review chooses safe Back as default focus"),
+        Widget->FocusDefaultAction() &&
+        Widget->GetFocusedAction() ==
+            EEchoesFieldHudAction::ProductionCancelBack);
+    Widget->SetView(BattlefieldView(0.8f));
+    SelectionPanel = Widget->GetSection(EEchoesFieldHudSection::Selection);
     UEchoesFieldHudActionButton* FirstCommand =
         Widget->GetSection(EEchoesFieldHudSection::CommandCard)
             ->GetActionButton(0);

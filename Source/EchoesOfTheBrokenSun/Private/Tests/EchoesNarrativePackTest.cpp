@@ -5,6 +5,9 @@
 #include "EchoesNarrativeSubsystem.h"
 #include "EchoesGameInstance.h"
 #include "Engine/GameInstance.h"
+#include "GameFramework/InputSettings.h"
+#include "Dom/JsonObject.h"
+#include "Serialization/JsonSerializer.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FEchoesNarrativePackTest,
@@ -16,6 +19,25 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+    UInputSettings* InputSettings = GetMutableDefault<UInputSettings>();
+    TArray<FInputActionKeyMapping> PriorRecenter;
+    InputSettings->GetActionMappingByName(TEXT("SnapKeyboardTargetToSelection"), PriorRecenter);
+    for (const auto& Mapping : PriorRecenter) InputSettings->RemoveActionMapping(Mapping, false);
+    const FInputActionKeyMapping TestMapping(TEXT("SnapKeyboardTargetToSelection"), EKeys::K, true, true);
+    InputSettings->AddActionMapping(TestMapping, false);
+    const FString ResolvedControl = UEchoesNarrativeSubsystem::ResolveInputTokens(TEXT("{recenter_key} brings you home."));
+#if PLATFORM_MAC
+    const TCHAR* ExpectedPhysicalChord = TEXT("Command+Shift+K");
+#else
+    const TCHAR* ExpectedPhysicalChord = TEXT("Ctrl+Shift+K");
+#endif
+    TestTrue(TEXT("Subtitle control tokens use the current physical platform key binding"),
+        ResolvedControl.Contains(ExpectedPhysicalChord) && !ResolvedControl.Contains(TEXT("{")));
+    TestTrue(TEXT("Unknown authored control tokens refuse display"),
+        UEchoesNarrativeSubsystem::ResolveInputTokens(TEXT("{unknown_key}" )).IsEmpty());
+    InputSettings->RemoveActionMapping(TestMapping, false);
+    for (const auto& Mapping : PriorRecenter) InputSettings->AddActionMapping(Mapping, false);
+
 
     UGameInstance* GameInstance = NewObject<UGameInstance>(GEngine);
     GameInstance->InitializeStandalone();
@@ -48,6 +70,71 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
              Narrative->GetLinesForSignal(
                  EEchoesOperationMode::Skirmish,
                  TEXT("tutorial_lesson_opened:survey")).Num() > 0);
+
+    Narrative->ClearSubtitleQueue();
+    Narrative->EnqueueSignal(EEchoesOperationMode::Skirmish,
+        TEXT("tutorial_lesson_opened:survey"), 10.0);
+    double SurveyTime = 10.0;
+    bool bObservedResolvedRecenter = false;
+    const int32 SurveyLines = Narrative->GetQueuedLineCountForTest();
+    for (int32 Index = 0; Index < SurveyLines; ++Index)
+    {
+        FString SurveySpeaker, SurveyText;
+        TestTrue(TEXT("Authored Survey line reaches the actual subtitle lane"),
+            Narrative->GetActiveSubtitle(SurveyTime, SurveySpeaker, SurveyText));
+        TestFalse(TEXT("Subtitle lane never publishes an unresolved control token"),
+            SurveyText.Contains(TEXT("{")) || SurveyText.Contains(TEXT("}")));
+        bObservedResolvedRecenter |= SurveyText.Contains(TEXT("with your Anchor selected"));
+        SurveyTime += UEchoesNarrativeSubsystem::SubtitleDurationSeconds(SurveyText) + 0.1;
+    }
+    TestTrue(TEXT("Survey publishes the recenter control precondition"), bObservedResolvedRecenter);
+    Narrative->SetSubtitlePlaybackPaused(true, SurveyTime);
+    Narrative->ClearSubtitleQueue();
+    TestFalse(TEXT("Changing scenario cannot retain the previous paused subtitle clock"),
+        Narrative->IsSubtitlePlaybackPaused());
+
+    TSharedRef<FJsonObject> VoiceManifest = MakeShared<FJsonObject>();
+    VoiceManifest->SetNumberField(TEXT("schema_version"), 1);
+    VoiceManifest->SetStringField(TEXT("pack_sha256"), Narrative->GetPackDigest());
+    TArray<TSharedPtr<FJsonValue>> VoiceRows;
+    const auto* M01Lines = Narrative->GetLines(EEchoesOperationMode::CampaignPrologue);
+    if (!TestNotNull(TEXT("M01 voice validation has canonical source"), M01Lines))
+    {
+        GameInstance->Shutdown();
+        return false;
+    }
+    for (const auto& Line : *M01Lines)
+    {
+        auto Row = MakeShared<FJsonObject>();
+        Row->SetStringField(TEXT("line_id"), Line.Id);
+        Row->SetStringField(TEXT("speaker"), Line.Speaker);
+        Row->SetStringField(TEXT("text"), Line.Text);
+        Row->SetStringField(TEXT("runtime_signal"), Line.Signal);
+        const FString Hook = Line.Id.Replace(TEXT("nar_m01_line_"), TEXT("aud_m01_vo_"));
+        Row->SetStringField(TEXT("asset_path"), FString::Printf(TEXT("/Game/Audio/Voice/%s.%s"), *Hook, *Hook));
+        Row->SetNumberField(TEXT("duration_seconds"), 4.0);
+        VoiceRows.Add(MakeShared<FJsonValueObject>(Row));
+    }
+    VoiceManifest->SetArrayField(TEXT("lines"), VoiceRows);
+    TMap<FString, FString> ValidatedPaths;
+    const auto ValidateManifest = [&]()
+    {
+        FString Json;
+        FJsonSerializer::Serialize(VoiceManifest, TJsonWriterFactory<>::Create(&Json));
+        return Narrative->ValidateVoiceBindings(Json, ValidatedPaths);
+    };
+    TestTrue(TEXT("Current exact canonical voice mapping validates before loading assets"), ValidateManifest());
+    TestEqual(TEXT("All M01 mappings validate together"), ValidatedPaths.Num(), M01Lines->Num());
+    VoiceManifest->SetStringField(TEXT("pack_sha256"), TEXT("stale"));
+    TestFalse(TEXT("A stale compiled pack refuses all voice mappings"), ValidateManifest());
+    TestTrue(TEXT("Refused voice mapping exposes no partial binding"), ValidatedPaths.IsEmpty());
+    VoiceManifest->SetStringField(TEXT("pack_sha256"), Narrative->GetPackDigest());
+    const auto FirstVoiceRow = VoiceRows[0]->AsObject();
+    FirstVoiceRow->SetStringField(TEXT("runtime_signal"), TEXT("phase_entered:Withdraw"));
+    TestFalse(TEXT("Stale branch signals refuse voice binding"), ValidateManifest());
+    FirstVoiceRow->SetStringField(TEXT("runtime_signal"), (*M01Lines)[0].Signal);
+    FirstVoiceRow->SetStringField(TEXT("asset_path"), TEXT("/Game/Audio/Voice/aud_m01_vo_wrong.aud_m01_vo_wrong"));
+    TestFalse(TEXT("Another line's voice asset cannot replace this canonical hook"), ValidateManifest());
 
     // Every campaign operation with an authored contract binds completely.
     const EEchoesOperationMode Authored[] = {
@@ -103,6 +190,27 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
             *FString::Printf(TEXT("%s carries a generic failure"), *Key),
             Narrative->GetFailureCondition(Operation, TEXT("generic"))
                 .IsEmpty());
+        const FEchoesNarrativeCinematic* Cinematic =
+            Narrative->GetCinematic(Operation);
+        if (TestNotNull(
+                *FString::Printf(TEXT("%s carries a cinematic"), *Key),
+                Cinematic))
+        {
+            TestEqual(
+                *FString::Printf(
+                    TEXT("%s carries the authored four-shot storyboard"),
+                    *Key),
+                Cinematic->Shots.Num(),
+                4);
+            TestTrue(
+                *FString::Printf(
+                    TEXT("%s carries a positive editorial duration"), *Key),
+                Cinematic->GetEditorialDurationSeconds() > 0.0f);
+            TestFalse(
+                *FString::Printf(
+                    TEXT("%s does not invent named-character bodies"), *Key),
+                Cinematic->bNamedCharacterPhysicalPresenceAsserted);
+        }
         const TArray<FEchoesNarrativeLine>* Lines =
             Narrative->GetLines(Operation);
         if (!TestNotNull(
@@ -146,6 +254,50 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
             *FString::Printf(
                 TEXT("%s binds opening lines to its own start signal"), *Key),
             StartLines >= 1);
+    }
+
+    // M01's runtime contract is projected from the canonical source rather
+    // than duplicated in the cinematic implementation.
+    const FEchoesNarrativeCinematic* M01Cinematic = Narrative->GetCinematic(
+        EEchoesOperationMode::CampaignPrologue);
+    if (TestNotNull(TEXT("M01 opening cinematic is bound"), M01Cinematic))
+    {
+        TestEqual(TEXT("M01 cinematic keeps its canonical id"),
+                  M01Cinematic->Id,
+                  FString(TEXT("nar_m01_cin_opening")));
+        TestEqual(TEXT("M01 cinematic keeps its canonical trigger"),
+                  M01Cinematic->TriggerId,
+                  FString(TEXT("nar_m01_evt_operation_started")));
+        TestEqual(TEXT("M01 cinematic resolves its source trigger signal"),
+                  M01Cinematic->Signal,
+                  FString(TEXT(
+                      "operation_ready:CampaignPrologue:RecoverArchive")));
+        TestEqual(TEXT("M01 cinematic duration is source-authored"),
+                  M01Cinematic->GetEditorialDurationSeconds(),
+                  32.7f);
+        const float ExpectedShotSeconds[] = {10.7f, 6.7f, 9.9f, 5.4f};
+        for (int32 Index = 0;
+             Index < M01Cinematic->Shots.Num() && Index < 4;
+             ++Index)
+        {
+            const FEchoesNarrativeCinematicShot& Shot =
+                M01Cinematic->Shots[Index];
+            TestEqual(
+                *FString::Printf(TEXT("M01 shot %d preserves its id"), Index + 1),
+                Shot.Id,
+                FString::Printf(TEXT("nar_m01_shot_%03d"), Index + 1));
+            TestEqual(
+                *FString::Printf(
+                    TEXT("M01 shot %d preserves its duration"), Index + 1),
+                Shot.EditorialTargetSeconds,
+                ExpectedShotSeconds[Index]);
+            TestTrue(TEXT("Each M01 shot keeps line references"),
+                     !Shot.LineIds.IsEmpty());
+            TestTrue(TEXT("Each M01 shot keeps its visual hook"),
+                     !Shot.VisualHookIds.IsEmpty());
+            TestTrue(TEXT("Each M01 shot keeps its audio hook"),
+                     !Shot.AudioHookIds.IsEmpty());
+        }
     }
 
     // M01 withdrawal must never concatenate the three mutually exclusive
@@ -196,10 +348,28 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
         UEchoesNarrativeSubsystem::SubtitleDurationSeconds(Text);
     TestTrue(TEXT("Line durations scale with length within bounds"),
              FirstDuration >= 3.0 && FirstDuration <= 9.0);
+    Narrative->SetSubtitlePlaybackPaused(true, 101.0);
+    TestTrue(TEXT("Subtitle clock reports paused"),
+             Narrative->IsSubtitlePlaybackPaused());
+    FString PausedText;
+    TestTrue(TEXT("A long wall-clock pause retains the active subtitle"),
+             Narrative->GetActiveSubtitle(
+                 1001.0, Speaker, PausedText));
+    TestEqual(TEXT("Pause consumes no subtitle time"), PausedText, Text);
+    Narrative->SetSubtitlePlaybackPaused(false, 201.0);
+    TestFalse(TEXT("Subtitle clock reports resumed"),
+              Narrative->IsSubtitlePlaybackPaused());
+    FString ResumedText;
+    TestTrue(TEXT("Resume continues the same subtitle without a jump"),
+             Narrative->GetActiveSubtitle(
+                 201.1, Speaker, ResumedText));
+    TestEqual(TEXT("Resume preserves accumulated subtitle elapsed time"),
+              ResumedText,
+              Text);
     FString SecondText;
     TestTrue(TEXT("The lane advances after the first line's duration"),
              Narrative->GetActiveSubtitle(
-                 100.1 + FirstDuration + 0.1, Speaker, SecondText));
+                 200.1 + FirstDuration + 0.1, Speaker, SecondText));
     TestTrue(TEXT("The second line differs from the first"),
              SecondText != Text);
     Narrative->ClearSubtitleQueue();

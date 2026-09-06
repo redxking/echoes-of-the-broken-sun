@@ -2,13 +2,16 @@
 #include "Misc/AutomationTest.h"
 #include "EchoesTestSaveEnvironment.h"
 #include "EchoesPlayerController.h"
+#include "EchoesCinematicSubsystem.h"
 #include "EchoesPlayerProfile.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesShellWidget.h"
 #include "EchoesGameUserSettings.h"
+#include "EchoesNarrativeSubsystem.h"
 #include "Engine/World.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/Engine.h"
+#include "Components/InputComponent.h"
 #include "Misc/FileHelper.h"
 #include "Misc/App.h"
 #include "Misc/ConfigCacheIni.h"
@@ -119,6 +122,20 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     auto* Bridge = World->GetSubsystem<UEchoesSimulationSubsystem>();
     if (!TestTrue(TEXT("Scenario starts"), Bridge && Bridge->StartPrototypeScenario())) return false;
     auto* Controller = World->SpawnActor<AEchoesPlayerController>();
+    if (!TestNotNull(TEXT("Player shell controller exists"), Controller))
+    {
+        Bridge->StopPrototypeScenario();
+        Wrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    Controller->InitInputSystem();
+    if (!TestNotNull(TEXT("Player shell controller initializes input"),
+                     Controller->PlayerInput.Get()))
+    {
+        Bridge->StopPrototypeScenario();
+        Wrapper.ForwardErrorMessages(this);
+        return false;
+    }
     Controller->PresentTitleScreen();
     TestTrue(TEXT("Fresh isolated profile initializes"), Controller->InitializePlayerProfile());
     TestTrue(TEXT("Fresh primary action offers tutorial"), Controller->BuildShellView().Buttons[0].Action == EEchoesShellAction::Tutorial);
@@ -244,7 +261,7 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
         TestFalse(TEXT("Attaching a local player lazily loads the profile and denies full AI"),
             OwnershipController->RequireOperationMastery(EEchoesOperationMode::Skirmish));
         TestTrue(TEXT("M01 checkpoint preflight is permitted"),
-            OwnershipController->RequireOperationMastery(EEchoesOperationMode::CampaignPrologue, true));
+            OwnershipController->RequireOperationMastery(EEchoesOperationMode::TrainingReadiness, true));
         TestFalse(TEXT("Preflight alone cannot retain tutorial deployment authorization"),
             OwnershipController->RequireOperationMastery(EEchoesOperationMode::CampaignPrologue));
         OwnershipController->Player = nullptr;
@@ -277,14 +294,25 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     Controller->HandleShellAction(EEchoesShellAction::Back);
     Controller->HandleShellAction(EEchoesShellAction::Tutorial);
     Controller->HandleShellAction(EEchoesShellAction::Primary);
+    auto* Opening = World->GetSubsystem<UEchoesCinematicSubsystem>();
+    TestTrue(TEXT("M01 opening holds deployment and does not grant mastery"),
+        Opening && Opening->IsSequenceActive(EEchoesCinematicSequence::M01Opening) &&
+        Bridge->IsScenarioPaused() && !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
+    FInputKeyEventArgs SkipOpening;
+    SkipOpening.Key = EKeys::Escape;
+    SkipOpening.Event = IE_Pressed;
+    Controller->InputKey(SkipOpening);
+    Controller->PlayerTick(0.0f);
+    TestTrue(TEXT("Escape completes opening before tutorial deployment"),
+        Opening && Opening->HasSequenceCompleted(EEchoesCinematicSequence::M01Opening));
     TestTrue(TEXT("Explicit tutorial route remains playable without granting mastery"),
-        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue &&
+        Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness &&
         !Bridge->IsScenarioPaused() && !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
     TestTrue(TEXT("Learning operation checkpoint writes"), Bridge->QuickSaveScenario(Feedback));
     FEchoesRecoveryCandidate LearningRecovery;
     TestTrue(TEXT("Newest recovery candidate is the learning operation"),
         Bridge->CheckInterruptedSessionRecovery(LearningRecovery, Feedback) &&
-        LearningRecovery.OperationMode == EEchoesOperationMode::CampaignPrologue);
+        LearningRecovery.OperationMode == EEchoesOperationMode::TrainingReadiness);
     Controller->Destroy();
     Controller = World->SpawnActor<AEchoesPlayerController>();
     if (!TestNotNull(TEXT("Learning recovery uses a fresh controller"), Controller))
@@ -292,6 +320,7 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
         Bridge->StopPrototypeScenario();
         return false;
     }
+    Controller->InitInputSystem();
     Controller->PresentTitleScreen();
     if (!TestTrue(TEXT("Learning recovery reloads the unmastered profile"), Controller->InitializePlayerProfile()))
     {
@@ -301,10 +330,29 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     Controller->HandleShellAction(EEchoesShellAction::SaveLoad);
     Controller->HandleShellAction(EEchoesShellAction::Recover);
     Controller->HandleShellAction(EEchoesShellAction::Confirm);
-    TestTrue(TEXT("Successful M01 recovery admits learning without granting mastery"),
+    TestTrue(TEXT("Successful training recovery admits learning without granting mastery"),
         Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Gameplay &&
-        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue &&
+        Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness &&
         !Bridge->IsScenarioPaused() && !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
+    const uint64 BeforeHotkeyRestore = Bridge->GetScenarioAuthorityGeneration();
+    bool bQuickLoadBound = false;
+    if (Controller->InputComponent)
+    {
+        for (int32 Index = 0; Index < Controller->InputComponent->GetNumActionBindings(); ++Index)
+        {
+            const auto& Binding = Controller->InputComponent->GetActionBinding(Index);
+            if (Binding.GetActionName() == TEXT("QuickLoadScenario") && Binding.KeyEvent == IE_Pressed)
+            {
+                Binding.ActionDelegate.Execute(EKeys::L);
+                bQuickLoadBound = true;
+                break;
+            }
+        }
+    }
+    TestTrue(TEXT("Quick-load input binding restores the training authority"), bQuickLoadBound &&
+        Bridge->GetScenarioAuthorityGeneration() > BeforeHotkeyRestore &&
+        Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness &&
+        !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
     Controller->PresentTitleScreen();
     Controller->HandleShellAction(EEchoesShellAction::SaveLoad);
     Controller->HandleShellAction(EEchoesShellAction::SelectSlot, 2);
@@ -336,24 +384,76 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     FFileHelper::SaveArrayToFile(Corrupt, *UEchoesSimulationSubsystem::GetJourneySlotPath(2));
     TestFalse(TEXT("Corrupt slot refused without fallback fabrication"), Bridge->SelectJourneySlot(2, Feedback));
     TestEqual(TEXT("Corrupt slot preserves active journey"), Bridge->GetActiveJourneySlot(), 1);
-    // Separate fixture stage: seeded verified facts test profile admission and
-    // persistence, not completion of the P3 playable tutorial.
+    // Separate fixture stage: seeded curriculum and readiness facts test
+    // profile admission and persistence, not completion of the P3 tutorial.
     FEchoesPlayerProfile VerifiedProfile = Controller->GetPlayerProfile();
     VerifiedProfile.TutorialVerifiedMask = FEchoesPlayerProfile::AllTutorialLessonsMask;
+    VerifiedProfile.bReadinessOperationVerified = true;
     TestTrue(TEXT("Verified-profile fixture persists before controller restart"),
         FEchoesPlayerProfileStore::SaveAtomic(FEchoesPlayerProfileStore::GetDefaultPath(), VerifiedProfile, Feedback));
     Controller->Destroy();
     Controller = World->SpawnActor<AEchoesPlayerController>();
     if (!TestNotNull(TEXT("Restarted profile controller exists"), Controller)) return false;
+    Controller->InitInputSystem();
+    if (!TestNotNull(TEXT("Restarted profile controller initializes input"), Controller->PlayerInput.Get()))
+    {
+        Bridge->StopPrototypeScenario();
+        Wrapper.ForwardErrorMessages(this);
+        return false;
+    }
     TestTrue(TEXT("Restarted controller loads verified tutorial facts"),
         Controller->InitializePlayerProfile() && Controller->GetPlayerProfile().IsTutorialMasteryComplete());
     Controller->PresentTitleScreen();
+    Controller->HandleShellAction(EEchoesShellAction::Help);
+    const FEchoesShellView Help = Controller->BuildShellView();
+    TestTrue(TEXT("Help presents exactly ten authored lesson rows"),
+        Help.Screen == EEchoesShellScreen::Help &&
+        Help.Buttons.Num() == 11);
+    TestEqual(TEXT("Only the five implemented lessons are replayable"),
+        Help.Buttons.FilterByPredicate([](const FEchoesShellButton& Button)
+        {
+            return Button.Action == EEchoesShellAction::PracticeTutorialLesson &&
+                Button.bEnabled;
+        }).Num(), 5);
+    TestEqual(TEXT("Later lessons remain visibly unavailable"),
+        Help.Buttons.FilterByPredicate([](const FEchoesShellButton& Button)
+        {
+            return Button.Action == EEchoesShellAction::PracticeTutorialLesson &&
+                !Button.bEnabled && Button.Label.ToString().Contains(TEXT("unavailable"));
+        }).Num(), 5);
+    const uint16 DurableBeforePractice =
+        Controller->GetPlayerProfile().TutorialVerifiedMask;
+    const bool bReadinessBeforePractice =
+        Controller->GetPlayerProfile().bReadinessOperationVerified;
+    Controller->HandleShellAction(
+        EEchoesShellAction::PracticeTutorialLesson, 2);
+    TestTrue(TEXT("A mastered Roster lesson opens as a separate practice target"),
+        Controller->GetTutorialPracticeTargetBit() == 2 &&
+        Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Briefing);
+    FEchoesPlayerProfile PracticeReload;
+    TestTrue(TEXT("Choosing practice does not rewrite durable profile facts"),
+        Controller->GetPlayerProfile().TutorialVerifiedMask == DurableBeforePractice &&
+        Controller->GetPlayerProfile().bReadinessOperationVerified == bReadinessBeforePractice &&
+        FEchoesPlayerProfileStore::LoadWithBackup(
+            FEchoesPlayerProfileStore::GetDefaultPath(), PracticeReload,
+            bExists, Feedback) &&
+        PracticeReload.TutorialVerifiedMask == DurableBeforePractice &&
+        PracticeReload.bReadinessOperationVerified == bReadinessBeforePractice);
+    Controller->HandleShellAction(EEchoesShellAction::Back);
+    TestTrue(TEXT("Leaving practice returns to title and clears the transient target"),
+        Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Title &&
+        Controller->GetTutorialPracticeTargetBit() == 0);
     Controller->HandleShellAction(EEchoesShellAction::Modes);
     Controller->HandleShellAction(EEchoesShellAction::Primary);
     Controller->HandleShellAction(EEchoesShellAction::Primary);
     Bridge->Tick(.2f);
     Controller->TogglePauseMenu();
     TestTrue(TEXT("Pause owns single base surface"), Controller->IsPauseMenuVisible() && !Controller->IsTitleScreenVisible() && !Controller->IsMissionBriefingVisible());
+    const auto* Narrative = World->GetGameInstance()
+        ? World->GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
+        : nullptr;
+    TestTrue(TEXT("Normal field pause freezes subtitle and voice playback"),
+        Narrative && Narrative->IsSubtitlePlaybackPaused());
     const uint64 PauseTick = Bridge->GetSimulation()->CurrentTick();
     Bridge->Tick(1.0f);
     TestEqual(TEXT("Pause freezes authoritative clock"), Bridge->GetSimulation()->CurrentTick(), PauseTick);
@@ -430,6 +530,22 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     DamagedJourneyProfile.ActiveJourneySlot = 2;
     TestTrue(TEXT("Valid profile can reference a now-corrupt journey"), FEchoesPlayerProfileStore::SaveAtomic(ProfilePath, DamagedJourneyProfile, Feedback));
     auto* SlotRecoveryController = World->SpawnActor<AEchoesPlayerController>();
+    if (!TestNotNull(TEXT("Slot recovery controller exists"),
+                     SlotRecoveryController))
+    {
+        Bridge->StopPrototypeScenario();
+        Wrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    SlotRecoveryController->InitInputSystem();
+    if (!TestNotNull(TEXT("Slot recovery controller initializes input"),
+                     SlotRecoveryController->PlayerInput.Get()))
+    {
+        SlotRecoveryController->Destroy();
+        Bridge->StopPrototypeScenario();
+        Wrapper.ForwardErrorMessages(this);
+        return false;
+    }
     SlotRecoveryController->PresentTitleScreen();
     TestFalse(TEXT("Corrupt selected journey offers an error"), SlotRecoveryController->InitializePlayerProfile());
     SlotRecoveryController->HandleShellAction(EEchoesShellAction::Back);
@@ -441,6 +557,22 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     FFileHelper::SaveArrayToFile(Corrupt, *ProfilePath);
     FFileHelper::SaveArrayToFile(Corrupt, *(ProfilePath + TEXT(".bak")));
     auto* RecoveryController = World->SpawnActor<AEchoesPlayerController>();
+    if (!TestNotNull(TEXT("Profile recovery controller exists"),
+                     RecoveryController))
+    {
+        Bridge->StopPrototypeScenario();
+        Wrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    RecoveryController->InitInputSystem();
+    if (!TestNotNull(TEXT("Profile recovery controller initializes input"),
+                     RecoveryController->PlayerInput.Get()))
+    {
+        RecoveryController->Destroy();
+        Bridge->StopPrototypeScenario();
+        Wrapper.ForwardErrorMessages(this);
+        return false;
+    }
     RecoveryController->PresentTitleScreen();
     TestFalse(TEXT("Two corrupt generations show profile error"), RecoveryController->InitializePlayerProfile());
     RecoveryController->HandleShellAction(EEchoesShellAction::ResetProfile);

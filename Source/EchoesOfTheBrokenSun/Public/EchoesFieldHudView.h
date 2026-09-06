@@ -68,7 +68,14 @@ enum class EEchoesFieldHudAction : uint8
     OnlineRetry,
     NetworkReady,
     OnlineResume,
-    OnlineLeave
+    OnlineLeave,
+    ProductionCancel,          // Opens review for active slot 0 or a 1-based waiting slot.
+    ProductionCancelConfirm,   // Confirms only the controller-captured stable item.
+    ProductionCancelBack,
+    ProductionMoveUp,          // Argument is a 1-based waiting slot.
+    ProductionMoveDown,        // Argument is a 1-based waiting slot.
+    AcknowledgeTutorialRejection,
+    InspectTutorialReserve
 };
 
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudControl final
@@ -108,6 +115,8 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudSelectionEntry final
     uint32 EntityId = 0;
     FText Name;
     FText Faction;
+    /** Canonical mechanical role text for the selected roster element. */
+    FText Purpose;
     FText Order;
     int32 Count = 1;
     int32 HitPoints = 0;
@@ -126,6 +135,52 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudSelectionView final
 {
     bool bVisible = false;
     TArray<FEchoesFieldHudSelectionEntry> Entries;
+};
+
+struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudProductionItem final
+{
+    /** Slot 0 is active; waiting slots are 1-based. */
+    int32 Slot = 0;
+    uint64 ItemId = 0;
+    FText Unit;
+    int32 ProgressPercent = 0;
+    int32 RequiredTicks = 0;
+    int32 ConfiguredMatter = 0;
+    int32 ConfiguredDawn = 0;
+    int32 InvestedMatter = 0;
+    int32 InvestedDawn = 0;
+    int32 Logistics = 0;
+    bool bActive = false;
+};
+
+/** Read-only cancellation quote captured from one stable production item. */
+struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudProductionCancellationView final
+{
+    bool bVisible = false;
+    uint32 ProducerId = 0;
+    uint64 ItemId = 0;
+    int32 Slot = 0;
+    FText Unit;
+    int32 ProgressPercent = 0;
+    int32 RefundPercent = 0;
+    int32 InvestedMatter = 0;
+    int32 InvestedDawn = 0;
+    int32 RefundMatter = 0;
+    int32 RefundDawn = 0;
+    bool bActive = false;
+};
+
+/** Player-scoped queue for one exactly selected owned producer. */
+struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudProductionView final
+{
+    bool bVisible = false;
+    uint32 ProducerId = 0;
+    bool bSpawnBlocked = false;
+    bool bRallyNeedsAttention = false;
+    int32 RallyWaypointCount = 0;
+    TArray<FEchoesFieldHudProductionItem> Items;
+    TArray<FEchoesFieldHudControl> Controls;
+    FEchoesFieldHudProductionCancellationView Cancellation;
 };
 
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudCommandView final
@@ -264,11 +319,13 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudView final
     float HudScale = 1.0f;
     FEchoesFieldHudResourceView Resources;
     FEchoesFieldHudSelectionView Selection;
+    FEchoesFieldHudProductionView Production;
     FEchoesFieldHudCommandView Commands;
     /** Existing reconstructable mission model, copied only from live authority. */
     bool bObjectiveVisible = false;
     FEchoesObjectiveSnapshot Objective;
     TArray<FEchoesFieldHudLine> ObjectiveLines;
+    TArray<FEchoesFieldHudControl> ObjectiveControls;
     FText ObjectiveTitle;
     FText Status;
     FText SubtitleSpeaker;

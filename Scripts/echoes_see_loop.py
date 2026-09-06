@@ -57,7 +57,7 @@ WORKSPACE_ROOT = PROJECT_ROOT.parent
 
 # Default MCP Endpoint
 DEFAULT_UNREAL_MCP_URL = "http://127.0.0.1:8000/mcp"
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.6-flash"
 GEMINI_API_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
 
 # Evidence roots

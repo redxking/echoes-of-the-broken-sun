@@ -1,6 +1,14 @@
 #include "EchoesNarrativeSubsystem.h"
 
 #include "Dom/JsonObject.h"
+#include "Components/AudioComponent.h"
+#include "EchoesAudioMixSubsystem.h"
+#include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundWave.h"
+#include "Sound/SoundSubmix.h"
+#include "UObject/StrongObjectPtr.h"
+#include "GameFramework/InputSettings.h"
 #include "EchoesHashUtility.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "Misc/FileHelper.h"
@@ -10,12 +18,36 @@
 
 namespace
 {
-constexpr int32 NarrativePackVersion = 1;
+constexpr int32 NarrativePackVersion = 2;
 
 [[nodiscard]] FString NarrativePackPath()
 {
     return FPaths::ProjectContentDir() /
         TEXT("Narrative/Generated/EchoesNarrativePack.json");
+}
+
+[[nodiscard]] bool ReadRequiredStringArray(
+    const FJsonObject& Object,
+    const TCHAR* Field,
+    TArray<FString>& OutValues)
+{
+    const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+    if (!Object.TryGetArrayField(Field, Values) || Values == nullptr)
+    {
+        return false;
+    }
+    OutValues.Reset();
+    for (const TSharedPtr<FJsonValue>& Value : *Values)
+    {
+        FString Text;
+        if (!Value.IsValid() || !Value->TryGetString(Text) || Text.IsEmpty())
+        {
+            OutValues.Reset();
+            return false;
+        }
+        OutValues.Add(MoveTemp(Text));
+    }
+    return !OutValues.IsEmpty();
 }
 }
 
@@ -63,6 +95,7 @@ FString UEchoesNarrativeSubsystem::OperationPackKey(
 void UEchoesNarrativeSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
+    FWorldDelegates::OnWorldCleanup.AddUObject(this, &UEchoesNarrativeSubsystem::OnVoiceWorldCleanup);
     LoadPack();
     UE_LOG(
         LogEchoes,
@@ -153,6 +186,7 @@ void UEchoesNarrativeSubsystem::LoadPack()
         const TArray<TSharedPtr<FJsonValue>>* LineValues = nullptr;
         const TSharedPtr<FJsonObject>* ResultValues = nullptr;
         const TSharedPtr<FJsonObject>* FailureValues = nullptr;
+        const TSharedPtr<FJsonObject>* CinematicObject = nullptr;
         if (!(*Entry)->TryGetStringField(TEXT("title"), Narrative.Title) ||
             !(*Entry)->TryGetStringField(TEXT("briefing"), Narrative.Briefing) ||
             !(*Entry)->TryGetStringField(TEXT("retry"), Narrative.Retry) ||
@@ -160,14 +194,72 @@ void UEchoesNarrativeSubsystem::LoadPack()
             !(*Entry)->TryGetArrayField(TEXT("lines"), LineValues) ||
             !(*Entry)->TryGetObjectField(TEXT("results"), ResultValues) ||
             !(*Entry)->TryGetObjectField(TEXT("failures"), FailureValues) ||
+            !(*Entry)->TryGetObjectField(TEXT("cinematic"), CinematicObject) ||
             Narrative.Briefing.IsEmpty() || ObjectiveValues == nullptr ||
             LineValues == nullptr || ResultValues == nullptr ||
-            FailureValues == nullptr)
+            FailureValues == nullptr || CinematicObject == nullptr ||
+            !CinematicObject->IsValid())
         {
             LoadError = FString::Printf(
                 TEXT("NARRATIVE_OPERATION_INVALID:%s"), *Pair.Key);
             Operations.Reset();
             return;
+        }
+        bool bNamedCharacterPresence = false;
+        const TArray<TSharedPtr<FJsonValue>>* ShotValues = nullptr;
+        if (!(*CinematicObject)->TryGetStringField(
+                TEXT("id"), Narrative.Cinematic.Id) ||
+            !(*CinematicObject)->TryGetStringField(
+                TEXT("trigger_id"), Narrative.Cinematic.TriggerId) ||
+            !(*CinematicObject)->TryGetStringField(
+                TEXT("signal"), Narrative.Cinematic.Signal) ||
+            !(*CinematicObject)->TryGetStringField(
+                TEXT("format"), Narrative.Cinematic.Format) ||
+            !(*CinematicObject)->TryGetBoolField(
+                TEXT("named_character_physical_presence_asserted"),
+                bNamedCharacterPresence) ||
+            !(*CinematicObject)->TryGetArrayField(TEXT("shots"), ShotValues) ||
+            Narrative.Cinematic.Id.IsEmpty() ||
+            Narrative.Cinematic.TriggerId.IsEmpty() ||
+            Narrative.Cinematic.Signal.IsEmpty() ||
+            Narrative.Cinematic.Format != TEXT("in_engine_storyboard") ||
+            ShotValues == nullptr || ShotValues->IsEmpty())
+        {
+            LoadError = FString::Printf(
+                TEXT("NARRATIVE_CINEMATIC_INVALID:%s"), *Pair.Key);
+            Operations.Reset();
+            return;
+        }
+        Narrative.Cinematic.bNamedCharacterPhysicalPresenceAsserted =
+            bNamedCharacterPresence;
+        for (const TSharedPtr<FJsonValue>& ShotValue : *ShotValues)
+        {
+            const TSharedPtr<FJsonObject>* ShotObject = nullptr;
+            FEchoesNarrativeCinematicShot Shot;
+            double EditorialTargetSeconds = 0.0;
+            if (!ShotValue.IsValid() || !ShotValue->TryGetObject(ShotObject) ||
+                ShotObject == nullptr || !ShotObject->IsValid() ||
+                !(*ShotObject)->TryGetStringField(TEXT("id"), Shot.Id) ||
+                !(*ShotObject)->TryGetNumberField(
+                    TEXT("editorial_target_seconds"),
+                    EditorialTargetSeconds) ||
+                Shot.Id.IsEmpty() || EditorialTargetSeconds <= 0.0 ||
+                !FMath::IsFinite(EditorialTargetSeconds) ||
+                !ReadRequiredStringArray(
+                    **ShotObject, TEXT("line_ids"), Shot.LineIds) ||
+                !ReadRequiredStringArray(
+                    **ShotObject, TEXT("visual_hook_ids"), Shot.VisualHookIds) ||
+                !ReadRequiredStringArray(
+                    **ShotObject, TEXT("audio_hook_ids"), Shot.AudioHookIds))
+            {
+                LoadError = FString::Printf(
+                    TEXT("NARRATIVE_CINEMATIC_SHOT_INVALID:%s"), *Pair.Key);
+                Operations.Reset();
+                return;
+            }
+            Shot.EditorialTargetSeconds =
+                static_cast<float>(EditorialTargetSeconds);
+            Narrative.Cinematic.Shots.Add(MoveTemp(Shot));
         }
         for (const TSharedPtr<FJsonValue>& Objective : *ObjectiveValues)
         {
@@ -364,6 +456,14 @@ FString UEchoesNarrativeSubsystem::GetFailureCondition(
     return Condition != nullptr ? *Condition : FString();
 }
 
+const FEchoesNarrativeCinematic* UEchoesNarrativeSubsystem::GetCinematic(
+    EEchoesOperationMode Operation) const
+{
+    const FOperationNarrative* Found =
+        Operations.Find(OperationPackKey(Operation));
+    return Found != nullptr ? &Found->Cinematic : nullptr;
+}
+
 TArray<FEchoesNarrativeLine> UEchoesNarrativeSubsystem::GetLinesForSignal(
     EEchoesOperationMode Operation,
     const FString& Signal) const
@@ -428,7 +528,9 @@ void UEchoesNarrativeSubsystem::EnqueueOperationStart(
     }
     if (ActiveLineStartSeconds < 0.0 && !SubtitleQueue.IsEmpty())
     {
-        ActiveLineStartSeconds = NowSeconds;
+        ActiveLineStartSeconds = bSubtitlePlaybackPaused
+            ? SubtitlePauseStartedSeconds
+            : NowSeconds;
     }
 }
 
@@ -464,7 +566,9 @@ void UEchoesNarrativeSubsystem::EnqueueSignal(
     }
     if (ActiveLineStartSeconds < 0.0 && !SubtitleQueue.IsEmpty())
     {
-        ActiveLineStartSeconds = NowSeconds;
+        ActiveLineStartSeconds = bSubtitlePlaybackPaused
+            ? SubtitlePauseStartedSeconds
+            : NowSeconds;
     }
 }
 
@@ -495,11 +599,53 @@ void UEchoesNarrativeSubsystem::EnqueueFailureLine(
             SubtitleQueue.Add(Line);
             if (ActiveLineStartSeconds < 0.0)
             {
-                ActiveLineStartSeconds = NowSeconds;
+                ActiveLineStartSeconds = bSubtitlePlaybackPaused
+                    ? SubtitlePauseStartedSeconds
+                    : NowSeconds;
             }
             return;
         }
     }
+}
+
+FString UEchoesNarrativeSubsystem::ResolveInputTokens(const FString& Text)
+{
+    const auto Binding = [](const FName Action)
+    {
+        TArray<FInputActionKeyMapping> Mappings;
+        GetDefault<UInputSettings>()->GetActionMappingByName(Action, Mappings);
+        for (const auto& Mapping : Mappings)
+        {
+            if (!Mapping.Key.IsValid() || Mapping.Key.IsGamepadKey()) continue;
+            FString Label;
+            // FMacApplication exposes physical Command as the engine Control modifier.
+            // Display the physical key the player must press, not the internal flag name.
+#if PLATFORM_MAC
+            if (Mapping.bCtrl) Label += TEXT("Command+");
+            if (Mapping.bAlt) Label += TEXT("Option+");
+#else
+            if (Mapping.bCtrl) Label += TEXT("Ctrl+");
+            if (Mapping.bAlt) Label += TEXT("Alt+");
+#endif
+            if (Mapping.bShift) Label += TEXT("Shift+");
+#if PLATFORM_MAC
+            if (Mapping.bCmd) Label += TEXT("Control+");
+#else
+            if (Mapping.bCmd) Label += TEXT("Command+");
+#endif
+            return Label + Mapping.Key.GetDisplayName().ToString();
+        }
+        return NSLOCTEXT("EchoesNarrative", "ControlUnassigned", "unassigned control").ToString();
+    };
+    FString Resolved = Text;
+    // The current recenter action centers the selected entity. State this
+    // precondition so the authored Anchor instruction remains truthful.
+    Resolved.ReplaceInline(TEXT("{recenter_key}"), *FText::Format(
+        NSLOCTEXT("EchoesNarrative", "AnchorRecenterControl", "{0} (with your Anchor selected)"),
+        FText::FromString(Binding(TEXT("SnapKeyboardTargetToSelection")))).ToString());
+    Resolved.ReplaceInline(TEXT("{guard_key}"), *Binding(TEXT("GuardAtCursor")));
+    Resolved.ReplaceInline(TEXT("{alert_key}"), *Binding(TEXT("JumpToLatestAlert")));
+    return Resolved.Contains(TEXT("{")) || Resolved.Contains(TEXT("}")) ? FString() : Resolved;
 }
 
 bool UEchoesNarrativeSubsystem::GetActiveSubtitle(
@@ -507,28 +653,235 @@ bool UEchoesNarrativeSubsystem::GetActiveSubtitle(
     FString& OutSpeaker,
     FString& OutText)
 {
+    const double SubtitleNowSeconds = bSubtitlePlaybackPaused
+        ? SubtitlePauseStartedSeconds
+        : NowSeconds;
     while (!SubtitleQueue.IsEmpty())
     {
         const FEchoesNarrativeLine& Head = SubtitleQueue[0];
-        const double Duration = SubtitleDurationSeconds(Head.Text);
+        const FString ResolvedText = ResolveInputTokens(Head.Text);
+        if (ResolvedText.IsEmpty())
+        {
+            SubtitleQueue.RemoveAt(0);
+            ActiveLineStartSeconds = SubtitleQueue.IsEmpty() ? -1.0 : SubtitleNowSeconds;
+            continue;
+        }
+        if (ActiveVoiceLineId != Head.Id)
+        {
+            StopActiveVoice();
+            ActiveVoiceLineId = Head.Id;
+            ActiveVoiceDuration = StartVoiceForLine(Head);
+            // Voice and subtitle start together even if presentation was delayed.
+            if (ActiveVoiceDuration > 0.0) ActiveLineStartSeconds = SubtitleNowSeconds;
+        }
+        RefreshVoiceDucking();
+        const double Duration = FMath::Max(SubtitleDurationSeconds(ResolvedText), ActiveVoiceDuration);
         if (ActiveLineStartSeconds < 0.0)
         {
-            ActiveLineStartSeconds = NowSeconds;
+            ActiveLineStartSeconds = SubtitleNowSeconds;
         }
-        if (NowSeconds - ActiveLineStartSeconds < Duration)
+        if (SubtitleNowSeconds - ActiveLineStartSeconds < Duration)
         {
             OutSpeaker = Head.Speaker;
-            OutText = Head.Text;
+            OutText = ResolvedText;
             return true;
         }
+        StopActiveVoice();
         SubtitleQueue.RemoveAt(0);
-        ActiveLineStartSeconds = SubtitleQueue.IsEmpty() ? -1.0 : NowSeconds;
+        ActiveLineStartSeconds = SubtitleQueue.IsEmpty()
+            ? -1.0
+            : SubtitleNowSeconds;
     }
     return false;
 }
 
+void UEchoesNarrativeSubsystem::SetSubtitlePlaybackPaused(
+    const bool bPaused,
+    const double NowSeconds)
+{
+    if (bPaused == bSubtitlePlaybackPaused)
+    {
+        return;
+    }
+    if (bPaused)
+    {
+        SubtitlePauseStartedSeconds = NowSeconds;
+        bSubtitlePlaybackPaused = true;
+        if (ActiveVoice) ActiveVoice->SetPaused(true);
+        RefreshVoiceDucking();
+        return;
+    }
+
+    const double PausedDuration = FMath::Max(
+        0.0, NowSeconds - SubtitlePauseStartedSeconds);
+    if (ActiveLineStartSeconds >= 0.0)
+    {
+        ActiveLineStartSeconds += PausedDuration;
+    }
+    SubtitlePauseStartedSeconds = -1.0;
+    bSubtitlePlaybackPaused = false;
+    if (ActiveVoice) ActiveVoice->SetPaused(false);
+    RefreshVoiceDucking();
+}
+
 void UEchoesNarrativeSubsystem::ClearSubtitleQueue()
 {
+    StopActiveVoice();
     SubtitleQueue.Reset();
     ActiveLineStartSeconds = -1.0;
+    SubtitlePauseStartedSeconds = -1.0;
+    bSubtitlePlaybackPaused = false;
+}
+
+void UEchoesNarrativeSubsystem::Deinitialize()
+{
+    FWorldDelegates::OnWorldCleanup.RemoveAll(this);
+    ClearSubtitleQueue();
+    for (auto& Pair : VoiceWaves)
+        if (Pair.Value) Pair.Value->SoundSubmixObject = nullptr;
+    VoiceWaves.Reset();
+    Super::Deinitialize();
+}
+
+void UEchoesNarrativeSubsystem::LoadVoiceBindings()
+{
+    if (bVoiceBindingsLoaded) return;
+    bVoiceBindingsLoaded = true;
+    const FString Path = FPaths::ProjectContentDir() / TEXT("Audio/Source/Narrative/m01_voice_bindings.json");
+    TArray<uint8> Bytes;
+    FString RecordedDigest;
+    if (!FFileHelper::LoadFileToArray(Bytes, *Path) ||
+        !FFileHelper::LoadFileToString(RecordedDigest, *(Path + TEXT(".sha256")))) return;
+    if (Bytes.IsEmpty()) return;
+    RecordedDigest.TrimStartAndEndInline();
+    if (RecordedDigest != EchoesHash::ComputeSha256Hex(Bytes)) return;
+    const FUTF8ToTCHAR Converted(reinterpret_cast<const ANSICHAR*>(Bytes.GetData()), Bytes.Num());
+    const FString Json(Converted.Length(), Converted.Get());
+    TMap<FString, FString> Paths;
+    TMap<FString, double> Durations;
+    if (!ValidateVoiceBindings(Json, Paths, &Durations)) return;
+    // Validate the entire source mapping before loading any registered asset.
+    TMap<FString, TObjectPtr<USoundWave>> Loaded;
+    TArray<TStrongObjectPtr<USoundWave>> Retained;
+    for (const auto& Pair : Paths)
+    {
+        USoundWave* Wave = LoadObject<USoundWave>(nullptr, *Pair.Value);
+        if (!Wave || Wave->bLooping || !FMath::IsFinite(Wave->GetDuration()) ||
+            Wave->GetDuration() <= 0 ||
+            FMath::Abs(static_cast<double>(Wave->GetDuration()) - Durations.FindChecked(Pair.Key)) > 0.01)
+        {
+            UE_LOG(LogEchoes, Warning, TEXT("[ECHOES_NARRATIVE_VOICE_REFUSED] line=%s reason=asset_missing_or_duration_mismatch"), *Pair.Key);
+            return;
+        }
+        Retained.Emplace(Wave);
+        Loaded.Add(Pair.Key, Wave);
+    }
+    VoiceWaves = MoveTemp(Loaded);
+    UE_LOG(LogEchoes, Display, TEXT("[ECHOES_NARRATIVE_VOICE] registered=%d expected=%d listeningVerified=false"), VoiceWaves.Num(), Paths.Num());
+}
+
+double UEchoesNarrativeSubsystem::StartVoiceForLine(const FEchoesNarrativeLine& Line)
+{
+    UWorld* World = GetWorld();
+    if (!World || !World->IsGameWorld()) return 0.0;
+    LoadVoiceBindings();
+    const auto* Found = VoiceWaves.Find(Line.Id);
+    USoundWave* Wave = Found ? Found->Get() : nullptr;
+    auto* Mix = World->GetSubsystem<UEchoesAudioMixSubsystem>();
+    if (!Wave || !Mix || !Mix->GetCategorySubmix(EEchoesAudioCategory::Dialogue)) return 0.0;
+    VoiceRoutingWorld = World;
+    Wave->SoundSubmixObject = Mix->GetCategorySubmix(EEchoesAudioCategory::Dialogue);
+    ActiveVoice = UGameplayStatics::SpawnSound2D(World, Wave, 1.0f, 1.0f, 0.0f, nullptr, false, false);
+    if (!ActiveVoice) return 0.0;
+    ActiveVoice->OnAudioFinished.AddDynamic(this, &UEchoesNarrativeSubsystem::OnVoicePlaybackFinished);
+    ActiveVoice->SetPaused(bSubtitlePlaybackPaused);
+    RefreshVoiceDucking();
+    return Wave->GetDuration();
+}
+
+void UEchoesNarrativeSubsystem::RefreshVoiceDucking()
+{
+    if (UWorld* World = GetWorld())
+        if (auto* Mix = World->GetSubsystem<UEchoesAudioMixSubsystem>())
+            Mix->SetDialogueDuckingActive(ActiveVoice && ActiveVoice->IsPlaying() &&
+                !bSubtitlePlaybackPaused && Mix->GetAppliedCategoryGain(EEchoesAudioCategory::Dialogue) > 0.0f);
+}
+
+void UEchoesNarrativeSubsystem::StopActiveVoice()
+{
+    if (ActiveVoice)
+    {
+        ActiveVoice->OnAudioFinished.RemoveDynamic(this, &UEchoesNarrativeSubsystem::OnVoicePlaybackFinished);
+        ActiveVoice->Stop();
+        ActiveVoice->DestroyComponent();
+        ActiveVoice = nullptr;
+    }
+    ActiveVoiceLineId.Reset();
+    ActiveVoiceDuration = 0.0;
+    RefreshVoiceDucking();
+}
+
+void UEchoesNarrativeSubsystem::OnVoicePlaybackFinished()
+{
+    if (UWorld* World = GetWorld())
+        if (auto* Mix = World->GetSubsystem<UEchoesAudioMixSubsystem>())
+            Mix->SetDialogueDuckingActive(false);
+}
+
+bool UEchoesNarrativeSubsystem::ValidateVoiceBindings(
+    const FString& Json, TMap<FString, FString>& OutPaths,
+    TMap<FString, double>* OutDurations) const
+{
+    if (OutDurations) OutDurations->Reset();
+    TMap<FString, double> Durations;
+    OutPaths.Reset();
+    TSharedPtr<FJsonObject> Root;
+    if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Json), Root) || !Root.IsValid()) return false;
+    double Version = 0;
+    FString Digest;
+    const TArray<TSharedPtr<FJsonValue>>* Lines = nullptr;
+    if (!Root->TryGetNumberField(TEXT("schema_version"), Version) || Version != 1 ||
+        !Root->TryGetStringField(TEXT("pack_sha256"), Digest) || Digest != PackDigest ||
+        !Root->TryGetArrayField(TEXT("lines"), Lines) || !Lines) return false;
+    const TArray<FEchoesNarrativeLine>* Canonical = GetLines(EEchoesOperationMode::CampaignPrologue);
+    if (!Canonical || Lines->Num() != Canonical->Num()) return false;
+    OutPaths.Reset();
+    TMap<FString, FString> Paths;
+    TSet<FString> SeenAssets;
+    for (const auto& Value : *Lines)
+    {
+        const TSharedPtr<FJsonObject>* Row = nullptr;
+        if (!Value.IsValid() || !Value->TryGetObject(Row) || !Row || !Row->IsValid()) return false;
+        FString Id, Speaker, Text, Signal, Asset;
+        double Duration = 0;
+        if (!(*Row)->TryGetStringField(TEXT("line_id"), Id) ||
+            !(*Row)->TryGetStringField(TEXT("speaker"), Speaker) ||
+            !(*Row)->TryGetStringField(TEXT("text"), Text) ||
+            !(*Row)->TryGetStringField(TEXT("runtime_signal"), Signal) ||
+            !(*Row)->TryGetStringField(TEXT("asset_path"), Asset) ||
+            !(*Row)->TryGetNumberField(TEXT("duration_seconds"), Duration) ||
+            !FMath::IsFinite(Duration) || Duration <= 0 || Duration > 120 ||
+            !Asset.StartsWith(TEXT("/Game/Audio/Voice/aud_m01_vo_")) ||
+            Asset.Contains(TEXT("..")) || Paths.Contains(Id) || SeenAssets.Contains(Asset)) return false;
+        const FEchoesNarrativeLine* Match = Canonical->FindByPredicate(
+            [&Id](const FEchoesNarrativeLine& Line) { return Line.Id == Id; });
+        if (!Match || Match->Speaker != Speaker || Match->Text != Text || Match->Signal != Signal) return false;
+        const FString Hook = Id.Replace(TEXT("nar_m01_line_"), TEXT("aud_m01_vo_"));
+        if (Asset != FString::Printf(TEXT("/Game/Audio/Voice/%s.%s"), *Hook, *Hook)) return false;
+        Paths.Add(Id, Asset);
+        Durations.Add(Id, Duration);
+        SeenAssets.Add(Asset);
+    }
+    OutPaths = MoveTemp(Paths);
+    if (OutDurations) *OutDurations = MoveTemp(Durations);
+    return true;
+}
+
+void UEchoesNarrativeSubsystem::OnVoiceWorldCleanup(UWorld* World, bool, bool)
+{
+    if (VoiceRoutingWorld.Get() != World) return;
+    ClearSubtitleQueue();
+    for (auto& Pair : VoiceWaves)
+        if (Pair.Value) Pair.Value->SoundSubmixObject = nullptr;
+    VoiceRoutingWorld.Reset();
 }

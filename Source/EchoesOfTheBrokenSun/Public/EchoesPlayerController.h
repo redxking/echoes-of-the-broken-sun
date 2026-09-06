@@ -7,6 +7,9 @@
 #include "EchoesCampaignProgress.h"
 #include "EchoesPlayerFlow.h"
 #include "EchoesPlayerProfile.h"
+#include "EchoesTutorialOrderObservation.h"
+#include "EchoesTutorialSelectionObservation.h"
+#include "EchoesTutorialSurveyObservation.h"
 #include "EchoesMatchReplay.h"
 #include "EchoesCampaignMapLayout.h"
 #include "EchoesCommandDeckModel.h"
@@ -75,6 +78,7 @@ public:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void PlayerTick(float DeltaTime) override;
+    [[nodiscard]] FText GetTutorialInstruction() const { return TutorialInstruction; }
     virtual void SetupInputComponent() override;
     virtual bool InputKey(const FInputKeyEventArgs& Params) override;
 
@@ -114,6 +118,20 @@ public:
     [[nodiscard]] FVector2D GetSelectionStartScreenPosition() const;
     [[nodiscard]] FVector2D GetSelectionCurrentScreenPosition() const;
     [[nodiscard]] const TArray<uint32>& GetSelectedEntityIds() const;
+    [[nodiscard]] TOptional<echoes::sim::EntityType>
+        GetActiveSelectionSubgroupType() const;
+    [[nodiscard]] uint64 GetTutorialPendingRejectionAttempt() const
+    {
+        return TutorialPendingRejectionAttempt;
+    }
+    [[nodiscard]] uint16 GetTutorialPracticeTargetBit() const
+    {
+        return TutorialPractice.TargetLessonBit();
+    }
+    [[nodiscard]] uint16 GetTutorialPracticeAttemptMask() const
+    {
+        return TutorialPractice.VerifiedAttemptMask();
+    }
     [[nodiscard]] echoes::sim::FutureWellChoice GetFutureWellChoice() const;
     [[nodiscard]] FString GetFutureWellChoiceLabel() const;
     [[nodiscard]] FString GetStatusMessage() const;
@@ -389,6 +407,12 @@ public:
     {
         return bTechnologyPanelVisible;
     }
+    [[nodiscard]] bool IsProductionCancellationConfirmationVisible() const
+    {
+        return PendingProductionCancellation.bVisible;
+    }
+    [[nodiscard]] bool GetProductionCancellationConfirmation(
+        FEchoesFieldHudProductionCancellationView& OutView) const;
     [[nodiscard]] int32 GetTechnologyPanelFocusedTier() const
     {
         return TechnologyPanelFocusedTier;
@@ -404,8 +428,9 @@ public:
     [[nodiscard]] bool IsReplayInputActive() const;
     [[nodiscard]] bool IsModalOverlayVisible() const
     {
-        return PlayerFlow.HasOverlay() || PlayerFlow.Is(EEchoesShellScreen::Title) || PlayerFlow.Is(EEchoesShellScreen::Briefing) ||
+        return bM01OpeningPending || PlayerFlow.HasOverlay() || PlayerFlow.Is(EEchoesShellScreen::Title) || PlayerFlow.Is(EEchoesShellScreen::Briefing) ||
                PlayerFlow.Is(EEchoesShellScreen::Pause) || bTechnologyPanelVisible ||
+               PendingProductionCancellation.bVisible ||
                PlayerFlow.Is(EEchoesShellScreen::Results) || bOnlineLocalMenuVisible ||
                bCampaignOperationsMapVisible ||
                IsOpponentReconnectGraceActive() ||
@@ -481,6 +506,15 @@ public:
     }
 
 private:
+    bool OpenProductionCancellationConfirmation(
+        const FEchoesFieldHudProductionView& Production,
+        int32 Slot);
+    void ConfirmProductionCancellation();
+    void CloseProductionCancellationConfirmation(bool bRestoreScenarioPause);
+    void ValidateProductionCancellationConfirmation();
+    [[nodiscard]] bool IsProductionCancellationCurrent(
+        const UEchoesSimulationSubsystem& Bridge) const;
+
     void InitializeTacticalInputPresentation();
     void ShutdownTacticalInputPresentation();
     void UpdateTacticalInputPresentation();
@@ -721,6 +755,7 @@ private:
 
     /** Puts back the HUD scale the review overrode. */
     void RestorePointerReviewHudScale();
+    friend class AEchoesRTSCameraPawn;
     bool ResolvePointerScreenPosition(
         FVector2D& OutScreenPosition,
         FVector2D* OutViewportSize = nullptr);
@@ -801,6 +836,10 @@ private:
     void AssignControlGroupFromSelection(int32 GroupIndex);
     void RecallControlGroup(int32 GroupIndex);
     void ClearControlGroups();
+    void CycleSelectionSubgroup(bool bPrevious);
+    void NormalizeSelectionSubgroup();
+    [[nodiscard]] TArray<echoes::sim::EntityType>
+        GetSelectionSubgroupTypes() const;
     bool TraceCursor(FHitResult& OutHitResult);
     bool TraceKeyboardTarget(FHitResult& OutHitResult);
     bool TraceCommandTarget(FHitResult& OutHitResult);
@@ -830,6 +869,8 @@ private:
 
     TArray<uint32> SelectedEntityIds;
     TArray<uint32> ControlGroups[10];
+    int32 ActiveSelectionSubgroupIndex = INDEX_NONE;
+    double LastControlGroupRecallRealTime[10]{};
     FVector2D SelectionStartScreenPosition = FVector2D::ZeroVector;
     FVector2D SelectionCurrentScreenPosition = FVector2D::ZeroVector;
     echoes::sim::FutureWellChoice FutureWellChoice =
@@ -902,6 +943,61 @@ private:
     FEchoesPlayerProfile PlayerProfile;
     bool bPlayerProfileInitialized = false;
     bool bTutorialOperationAuthorized = false;
+    FEchoesTutorialPracticeState TutorialPractice;
+    void ResetTutorialObservation();
+    void TickTutorialObservation();
+    void TickM01Opening();
+    void FinishMissionDeployment();
+    void SetNarrativePlaybackPausedOutsideCinematic(bool bPaused);
+    bool bM01OpeningPending = false;
+    double OpeningSpacePressedAt = -1.0;
+    void ObserveTutorialSelection(uint32 ClickedEntity, bool bGroundClick);
+    void ObserveTutorialSelectionEvent(
+        EEchoesTutorialSelectionInputEvent Event,
+        int32 ControlGroupIndex = INDEX_NONE,
+        echoes::sim::EntityType PreviousSubgroupType =
+            echoes::sim::EntityType::Worker,
+        echoes::sim::EntityType ActiveSubgroupType =
+            echoes::sim::EntityType::Worker);
+    void ObserveTutorialRosterHudPublication(
+        const FEchoesFieldHudView& PublishedView,
+        uint64 PresentationFrame);
+    void ObserveTutorialAcceptedCommand(
+        uint64 Sequence,
+        EEchoesTutorialOrderCommandOrigin Origin);
+    void CaptureTutorialAcceptedCommand(
+        UEchoesSimulationSubsystem* Bridge,
+        const TOptional<uint64>& SequenceBefore,
+        EEchoesTutorialOrderCommandOrigin Origin);
+    uint64 ObserveTutorialRejectedCommandAttempt(
+        const FEchoesTutorialExpectedCommand& Attempt);
+    void ObserveTutorialRejectionAcknowledged(uint64 InputAttemptSequence);
+    bool CommitTutorialLesson(uint16 Bit, const TCHAR* LessonName);
+    FEchoesTutorialSurveyObservation TutorialSurvey;
+    FEchoesTutorialSelectionObservation TutorialSelection;
+    FEchoesTutorialOrderObservation TutorialOrders;
+    FText TutorialInstruction;
+    uint64 TutorialSession = 0;
+    uint64 TutorialSelectionSequence = 0;
+    uint64 TutorialRosterHudCandidateFrame = 0;
+    uint32 TutorialRosterHudCandidateEntity = 0;
+    uint64 TutorialAuthorityGeneration = 0;
+    uint64 TutorialLastAcceptedCommandSequence = 0;
+    TArray<TPair<uint64, EEchoesTutorialOrderCommandOrigin>>
+        TutorialAcceptedCommandSequences;
+    uint64 TutorialInputAttemptSequence = 0;
+    uint64 TutorialPendingRejectionAttempt = 0;
+    uint16 TutorialActiveLessonBit = 0;
+    uint16 TutorialPresentedLessonBit = 0;
+    uint64 TutorialLastTick = 0;
+    uint64 TutorialInitialNavigationRevision = 0;
+    bool bTutorialHasTick = false;
+    bool bTutorialCoreSelected = false;
+    bool bTutorialWorkerSelected = false;
+    bool bTutorialProgressSaveFailed = false;
+    bool bTutorialReserveMonitorInspected = false;
+    uint32 TutorialCoreId = 0;
+    uint32 TutorialWorkerId = 0;
     bool bPlayerProfileAvailable = false;
     bool bShellWasVisible = false;
     bool bMinimapDragging = false;
@@ -915,6 +1011,27 @@ private:
     double DisplayRevertDeadline = 0.0;
     bool bTechnologyPanelVisible = false;
     bool bTechnologyPanelWasScenarioPaused = false;
+    struct FEchoesPendingProductionCancellation final
+    {
+        bool bVisible = false;
+        bool bScenarioWasPaused = false;
+        uint64 AuthorityGeneration = 0;
+        uint32 ProducerId = 0;
+        uint64 ItemId = 0;
+        int32 Slot = 0;
+        echoes::sim::EntityType UnitType = echoes::sim::EntityType::Worker;
+        FText Unit;
+        int32 Progress = 0;
+        int32 RequiredTicks = 0;
+        int32 ConfiguredMatter = 0;
+        int32 ConfiguredDawn = 0;
+        int32 InvestedMatter = 0;
+        int32 InvestedDawn = 0;
+        int32 Logistics = 0;
+        int32 RefundPercent = 0;
+        int32 RefundMatter = 0;
+        int32 RefundDawn = 0;
+    } PendingProductionCancellation;
     bool bKeyboardTargetingEnabled = false;
     bool bNewCampaignConfirmationArmed = false;
     bool bCampaignRestoreConfirmationArmed = false;

@@ -4,6 +4,8 @@
 #include "EchoesFieldHudView.h"
 
 #include "EchoesCampaignRewards.h"
+#include "EchoesCinematicSubsystem.h"
+#include "Engine/World.h"
 #include "EchoesContactIndicatorLayout.h"
 #include "EchoesFactionPolicy.h"
 #include "EchoesGameInstance.h"
@@ -40,6 +42,17 @@ FText EntityName(EntityType Type)
         case EntityType::FutureWell: return LOCTEXT("EntityFutureWell", "Future Well");
     }
     return LOCTEXT("EntityUnknown", "Entity");
+}
+
+FText EntityPurpose(Faction FactionValue, EntityType Type)
+{
+    if (FactionValue == Faction::MeridianCompact &&
+        Type == EntityType::Worker)
+    {
+        return LOCTEXT("SurveyorPurpose",
+            "Core economic builder and logistics conduit. Gathers Matter, constructs Compact structures, operates Future Wells, and provides baseline maintenance. Keep its routes short and scouted: it is unarmed, and route pressure is the opponent's counterplay.");
+    }
+    return FText::GetEmpty();
 }
 
 FText OrderName(OrderType Type)
@@ -266,8 +279,12 @@ void AddSelectionEntry(
 {
     FEchoesFieldHudSelectionEntry Entry;
     Entry.EntityId = Entity.id;
-    Entry.Name = EntityName(Entity.type);
+    Entry.Name = Entity.faction == Faction::MeridianCompact &&
+        Entity.type == EntityType::Worker
+        ? LOCTEXT("EntitySurveyor", "Surveyor")
+        : EntityName(Entity.type);
     Entry.Faction = Text(echoes::presentation::FactionDisplayName(Entity.faction));
+    Entry.Purpose = EntityPurpose(Entity.faction, Entity.type);
     Entry.Order = OrderName(Entity.order.type);
     Entry.HitPoints = Entity.hitPoints;
     Entry.MaxHitPoints = Entity.maxHitPoints;
@@ -299,6 +316,146 @@ const Entity* FindVisibleEntity(const PlayerView& View, uint32 Id)
         }
     }
     return nullptr;
+}
+
+void AddProductionControl(
+    FEchoesFieldHudProductionView& Out,
+    const FText& Label,
+    const FText& Detail,
+    EEchoesFieldHudAction Action,
+    int32 Slot,
+    bool bEnabled = true)
+{
+    FEchoesFieldHudControl Control;
+    Control.Label = Label;
+    Control.Detail = Detail;
+    Control.Action = Action;
+    Control.Argument = Slot;
+    Control.bEnabled = bEnabled;
+    Out.Controls.Add(MoveTemp(Control));
+}
+
+void BuildProductionQueue(
+    const PlayerView& PlayerView,
+    const TArray<uint32>& SelectedEntityIds,
+    FEchoesFieldHudProductionView& Out)
+{
+    if (SelectedEntityIds.Num() != 1)
+    {
+        return;
+    }
+    const EntityId ProducerId = SelectedEntityIds[0];
+    const Entity* Producer = FindVisibleEntity(PlayerView, ProducerId);
+    if (Producer == nullptr || Producer->owner != PlayerView.Player().id)
+    {
+        return;
+    }
+
+    const ProducerQueueState* Queue = nullptr;
+    for (const ProducerQueueState& Candidate : PlayerView.ProducerQueues())
+    {
+        if (Candidate.producer == ProducerId)
+        {
+            Queue = &Candidate;
+            break;
+        }
+    }
+    if (Queue == nullptr)
+    {
+        return;
+    }
+
+    Out.bVisible = true;
+    Out.ProducerId = ProducerId;
+    Out.bSpawnBlocked = Queue->spawnBlockedAlert;
+    Out.bRallyNeedsAttention = Queue->rallyAlert;
+    Out.RallyWaypointCount = static_cast<int32>(Queue->rallyRoute.size());
+
+    if (Queue->active)
+    {
+        FEchoesFieldHudProductionItem Item;
+        Item.Slot = 0;
+        Item.ItemId = Queue->activeItem.itemId;
+        Item.Unit = EntityName(Queue->activeItem.unitType);
+        Item.ProgressPercent = static_cast<int32>(FMath::Clamp<int64>(
+            static_cast<int64>(Queue->activeProgress) * 100 /
+                FMath::Max(1, Queue->activeItem.requiredTicks),
+            0,
+            100));
+        Item.RequiredTicks = Queue->activeItem.requiredTicks;
+        Item.ConfiguredMatter = Queue->activeItem.configuredCost.material;
+        Item.ConfiguredDawn = Queue->activeItem.configuredCost.dawnshards;
+        Item.InvestedMatter = Queue->activeItem.investedCost.material;
+        Item.InvestedDawn = Queue->activeItem.investedCost.dawnshards;
+        Item.Logistics = Queue->activeItem.logisticsCost;
+        Item.bActive = true;
+        Out.Items.Add(Item);
+
+        const int32 RefundPercent =
+            static_cast<int64>(Queue->activeProgress) * 2 <
+                    Queue->activeItem.requiredTicks
+                ? 75
+                : 50;
+        const int32 RefundMatter = static_cast<int32>(
+            static_cast<int64>(Item.InvestedMatter) * RefundPercent / 100);
+        const int32 RefundDawn = static_cast<int32>(
+            static_cast<int64>(Item.InvestedDawn) * RefundPercent / 100);
+        AddProductionControl(
+            Out,
+            LOCTEXT("CancelActiveProduction", "REVIEW ACTIVE CANCELLATION"),
+            FText::Format(
+                LOCTEXT("CancelActiveRefund", "Refund {0} Matter / {1} Dawn"),
+                FText::AsNumber(RefundMatter),
+                FText::AsNumber(RefundDawn)),
+            EEchoesFieldHudAction::ProductionCancel,
+            0);
+    }
+
+    const int32 WaitingCount = static_cast<int32>(Queue->waiting.size());
+    for (int32 Index = 0; Index < WaitingCount; ++Index)
+    {
+        const ProductionQueueItem& Waiting = Queue->waiting[Index];
+        const int32 Slot = Index + 1;
+        FEchoesFieldHudProductionItem Item;
+        Item.Slot = Slot;
+        Item.ItemId = Waiting.itemId;
+        Item.Unit = EntityName(Waiting.unitType);
+        Item.RequiredTicks = Waiting.requiredTicks;
+        Item.ConfiguredMatter = Waiting.configuredCost.material;
+        Item.ConfiguredDawn = Waiting.configuredCost.dawnshards;
+        Item.InvestedMatter = Waiting.investedCost.material;
+        Item.InvestedDawn = Waiting.investedCost.dawnshards;
+        Item.Logistics = Waiting.logisticsCost;
+        Out.Items.Add(Item);
+
+        const FText SlotLabel = FText::AsNumber(Slot);
+        AddProductionControl(
+            Out,
+            FText::Format(
+                LOCTEXT("CancelWaitingProduction", "REVIEW CANCEL {0}"),
+                SlotLabel),
+            LOCTEXT("CancelWaitingUnpaid", "Refund 0 Matter / 0 Dawn"),
+            EEchoesFieldHudAction::ProductionCancel,
+            Slot);
+        AddProductionControl(
+            Out,
+            FText::Format(
+                LOCTEXT("MoveWaitingProductionUp", "MOVE {0} UP"),
+                SlotLabel),
+            LOCTEXT("WaitingSlotsOnly", "Waiting slots only"),
+            EEchoesFieldHudAction::ProductionMoveUp,
+            Slot,
+            Slot > 1);
+        AddProductionControl(
+            Out,
+            FText::Format(
+                LOCTEXT("MoveWaitingProductionDown", "MOVE {0} DOWN"),
+                SlotLabel),
+            LOCTEXT("WaitingSlotsOnly", "Waiting slots only"),
+            EEchoesFieldHudAction::ProductionMoveDown,
+            Slot,
+            Slot < WaitingCount);
+    }
 }
 
 const echoes::sim::net::ScopedEntityState* FindScopedEntity(
@@ -369,6 +526,11 @@ void BuildObjectiveView(
          Objective.Outcome != MatchOutcome::Player0Victory);
     switch (Objective.OperationMode)
     {
+        case EEchoesOperationMode::TrainingReadiness:
+            View.ObjectiveTitle = LOCTEXT("TrainingObjective", "READINESS CHECK");
+            AddObjectiveLine(View, LOCTEXT("TrainingCorefall", "COMPLETE THE CHECK, THEN DEFEAT THE OPPOSING CORE"),
+                Objective.Outcome == MatchOutcome::Player0Victory, bFailed);
+            break;
         case EEchoesOperationMode::CampaignPrologue:
             View.ObjectiveTitle = LOCTEXT("ObjectiveM01", "WHAT THE LEDGER KEEPS // MISSION 01");
             AddObjectiveLine(View, LOCTEXT("M01Archive", "ARCHIVE CARRIER"),
@@ -516,13 +678,20 @@ void BuildTechnology(
     const auto Profile = echoes::presentation::TechnologyProfile(Player.faction);
     const ResearchType Types[] = {Profile.TierOne, Profile.TierTwo};
     const TCHAR* Names[] = {Profile.TierOneContentId, Profile.TierTwoContentId};
-    bool bSelectedProducer = false;
+    const Entity* SelectedProducer = nullptr;
     for (uint32 Id : SelectedIds)
     {
         const Entity* Entity = FindVisibleEntity(PlayerView, Id);
-        bSelectedProducer |= Entity != nullptr && Entity->owner == Player.id &&
-            Entity->type == EntityType::Barracks;
+        if (Entity != nullptr && Entity->owner == Player.id &&
+            Entity->type == EntityType::Barracks)
+        {
+            SelectedProducer = Entity;
+            break;
+        }
     }
+    const bool bSelectedProducer = SelectedProducer != nullptr;
+    const bool bSelectedProducerBusy =
+        bSelectedProducer && SelectedProducer->productionRequired > 0;
     for (int32 Index = 0; Index < 2; ++Index)
     {
         FEchoesFieldHudTechnologyTier Tier;
@@ -576,6 +745,12 @@ void BuildTechnology(
         else if (Player.activeResearch != ResearchType::None)
         {
             Tier.State = LOCTEXT("TechBusy", "BUSY // ANOTHER PROJECT IS ACTIVE");
+            Tier.Tone = EEchoesFieldHudTone::Muted;
+        }
+        else if (bSelectedProducerBusy)
+        {
+            Tier.State = LOCTEXT(
+                "TechProductionBusy", "BUSY // PRODUCTION IS ACTIVE");
             Tier.Tone = EEchoesFieldHudTone::Muted;
         }
         else if (!bPrerequisite)
@@ -820,6 +995,7 @@ void BuildMissionMarkers(
     };
     switch (Objective.OperationMode)
     {
+        case EEchoesOperationMode::TrainingReadiness:
         case EEchoesOperationMode::CampaignPrologue:
             Add(UEchoesSimulationSubsystem::GetArchiveRecoverySite(), LOCTEXT("MapArchive", "A"), Objective.ProloguePhase != EEchoesProloguePhase::RecoverArchive);
             Add(UEchoesSimulationSubsystem::GetEvacuationSite(), LOCTEXT("MapEvac", "E"), Objective.ProloguePhase == EEchoesProloguePhase::Complete);
@@ -1008,6 +1184,7 @@ FEchoesFieldHudView FEchoesFieldHudModel::BuildPlayerScoped(
         }
     }
     View.Selection.bVisible = !View.Selection.Entries.IsEmpty();
+    BuildProductionQueue(PlayerView, SelectedEntityIds, View.Production);
     return View;
 }
 
@@ -1389,6 +1566,8 @@ bool FEchoesFieldHudModel::Build(
         BuildCommandControls(
             Controller.BuildCommandDeckProfile(), OutView.Commands);
     }
+    if (const auto Subgroup = Controller.GetActiveSelectionSubgroupType(); Subgroup.IsSet())
+        OutView.Commands.Formation = FText::Format(LOCTEXT("ActiveSubgroup", "Active subgroup: {0}"), EntityName(Subgroup.GetValue()));
     OutView.Targeting.bKeyboardTargetVisible = Controller.IsKeyboardTargetingEnabled();
     OutView.Targeting.KeyboardTargetNormalizedOffset = FVector2D(
         Controller.GetKeyboardTargetOffset().X /
@@ -1420,13 +1599,77 @@ bool FEchoesFieldHudModel::Build(
             if (OutView.Technology.bVisible)
             {
                 OutView.Selection = FEchoesFieldHudSelectionView{};
+                OutView.Production = FEchoesFieldHudProductionView{};
                 OutView.Commands = FEchoesFieldHudCommandView{};
                 OutView.Targeting = FEchoesFieldHudTargetingView{};
             }
         }
+        FEchoesFieldHudProductionCancellationView Cancellation;
+        if (Controller.GetProductionCancellationConfirmation(Cancellation) &&
+            OutView.Production.bVisible &&
+            OutView.Production.ProducerId == Cancellation.ProducerId)
+        {
+            OutView.Production.Cancellation = Cancellation;
+            OutView.Production.Items.Reset();
+            OutView.Production.Controls.Reset();
+
+            FEchoesFieldHudControl Back;
+            Back.Label = LOCTEXT("ProductionCancellationBack", "BACK");
+            Back.Detail = LOCTEXT(
+                "ProductionCancellationBackDetail",
+                "Keep this production order");
+            Back.Action = EEchoesFieldHudAction::ProductionCancelBack;
+            Back.bPrimary = true;
+            OutView.Production.Controls.Add(MoveTemp(Back));
+
+            FEchoesFieldHudControl Confirm;
+            Confirm.Label = LOCTEXT(
+                "ProductionCancellationConfirm", "CONFIRM CANCELLATION");
+            Confirm.Detail = FText::Format(
+                LOCTEXT(
+                    "ProductionCancellationConfirmDetail",
+                    "Refund {0} Matter / {1} Dawn"),
+                FText::AsNumber(Cancellation.RefundMatter),
+                FText::AsNumber(Cancellation.RefundDawn));
+            Confirm.Action = EEchoesFieldHudAction::ProductionCancelConfirm;
+            OutView.Production.Controls.Add(MoveTemp(Confirm));
+
+            OutView.Commands = FEchoesFieldHudCommandView{};
+            OutView.Targeting = FEchoesFieldHudTargetingView{};
+        }
         const FEchoesObjectiveSnapshot Objective = Bridge.GetLocalObjectiveSnapshot();
         BuildObjectiveView(Objective, OutView);
         BuildMissionMarkers(Bridge, Objective, OutView.Minimap);
+        if (Bridge.GetOperationMode() == EEchoesOperationMode::TrainingReadiness)
+        {
+            const uint16 PracticeTarget = Controller.GetTutorialPracticeTargetBit();
+            const uint16 Mask = PracticeTarget != 0
+                ? static_cast<uint16>(
+                    FEchoesTutorialPracticeState::ImplementedLessonMask &
+                    ~PracticeTarget)
+                : Controller.GetPlayerProfile().TutorialVerifiedMask;
+            if ((Mask & 7) == 7 && (Mask & 8) == 0)
+            {
+                OutView.Minimap.MissionMarkers.Add({Normalize(Vec2::FromTiles(14, 18), OutView.Minimap.Width, OutView.Minimap.Height), LOCTEXT("RouteMarker", "R"), EEchoesFieldHudTone::Accent});
+                OutView.Minimap.MissionMarkers.Add({Normalize(Vec2::FromTiles(14, 20), OutView.Minimap.Width, OutView.Minimap.Height), LOCTEXT("PatrolMarker", "P"), EEchoesFieldHudTone::Accent});
+                OutView.Minimap.MissionMarkers.Add({Normalize(Vec2::FromTiles(19, 10), OutView.Minimap.Width, OutView.Minimap.Height), LOCTEXT("RejectionMarker", "X"), EEchoesFieldHudTone::Warning});
+                if (Controller.GetTutorialPendingRejectionAttempt() != 0)
+                    OutView.ObjectiveControls.Add({LOCTEXT("ReadRejection", "Acknowledge blocked route"), FText::GetEmpty(), EEchoesFieldHudAction::AcknowledgeTutorialRejection});
+            }
+            if ((Mask & 15) == 15 && (Mask & 16) == 0)
+                OutView.ObjectiveControls.Add({LOCTEXT("InspectReserve", "Inspect reserve monitor"), FText::GetEmpty(), EEchoesFieldHudAction::InspectTutorialReserve});
+        }
+        const FText Tutorial = Controller.GetTutorialInstruction();
+        if (!Tutorial.IsEmpty())
+        {
+            OutView.ObjectiveTitle = LOCTEXT("TutorialReadinessTitle", "READINESS CHECK");
+            OutView.ObjectiveLines.Insert({FText::GetEmpty(), Tutorial, EEchoesFieldHudTone::Accent}, 0);
+            OutView.bObjectiveVisible = true;
+        }
+        if (OutView.Production.Cancellation.bVisible)
+        {
+            OutView.ObjectiveControls.Reset();
+        }
     }
     if (Context.Narrative != nullptr)
     {
@@ -1450,6 +1693,27 @@ bool FEchoesFieldHudModel::Build(
             Text(FString::Printf(TEXT("%02d"), Remaining % 60)));
     }
     AddSpatialPresentation(Context, OutView);
+    const auto* Cinematic = Controller.GetWorld()
+        ? Controller.GetWorld()->GetSubsystem<UEchoesCinematicSubsystem>() : nullptr;
+    if (Cinematic && Cinematic->IsSequenceActive(EEchoesCinematicSequence::M01Opening))
+    {
+        // The opening retains subtitles and its skip/pause instruction. The
+        // live command board returns when Sequencer releases control.
+        OutView.Resources = {};
+        OutView.Selection = {};
+        OutView.Commands = {};
+        OutView.Technology = {};
+        OutView.Minimap = {};
+        OutView.Targeting = {};
+        OutView.Status = FText::GetEmpty();
+        OutView.ObjectiveLines.Reset();
+        OutView.ObjectiveControls.Reset();
+        OutView.ObjectiveTitle = LOCTEXT("OpeningTitle", "WHAT THE LEDGER KEEPS");
+        const FText Instruction = Controller.GetTutorialInstruction();
+        OutView.bObjectiveVisible = !Instruction.IsEmpty();
+        if (!Instruction.IsEmpty())
+            OutView.ObjectiveLines.Add({FText::GetEmpty(), Instruction, EEchoesFieldHudTone::Muted});
+    }
     return true;
 }
 

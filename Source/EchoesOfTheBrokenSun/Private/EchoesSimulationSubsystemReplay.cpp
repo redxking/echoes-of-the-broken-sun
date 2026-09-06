@@ -43,6 +43,7 @@ FString OperationStableId(EEchoesOperationMode Operation)
         case EEchoesOperationMode::CampaignAssemblyOfTheMissing: return TEXT("m13-assembly-of-the-missing");
         case EEchoesOperationMode::CampaignSeveralVoicesOneCommand: return TEXT("m14-several-voices-one-command");
         case EEchoesOperationMode::CampaignTheBrokenSun: return TEXT("m15-the-broken-sun");
+        case EEchoesOperationMode::TrainingReadiness: return TEXT("training-readiness");
     }
     return TEXT("unknown-operation");
 }
@@ -61,7 +62,7 @@ FString SkirmishMapStableId(EEchoesSkirmishMapPreset Preset)
 EEchoesOperationMode OperationFromStableId(const FString& Id)
 {
     for (uint8 Raw = static_cast<uint8>(EEchoesOperationMode::Skirmish);
-         Raw <= static_cast<uint8>(EEchoesOperationMode::CampaignTheBrokenSun);
+         Raw <= static_cast<uint8>(EEchoesOperationMode::TrainingReadiness);
          ++Raw)
     {
         const EEchoesOperationMode Candidate =
@@ -79,8 +80,12 @@ FString CampaignMapId(
     const FEchoesCampaignProgress& Progress)
 {
     EEchoesCampaignMissionId Mission{};
-    if (!UEchoesSimulationSubsystem::GetMissionIdForOperation(
-            Operation, Mission))
+    if (Operation == EEchoesOperationMode::TrainingReadiness)
+    {
+        Mission = EEchoesCampaignMissionId::WhatTheLedgerKeeps;
+    }
+    else if (!UEchoesSimulationSubsystem::GetMissionIdForOperation(
+                 Operation, Mission))
     {
         return {};
     }
@@ -226,6 +231,15 @@ bool UEchoesSimulationSubsystem::BeginReplay(
             return false;
         }
     }
+    else if (CandidateOperation == EEchoesOperationMode::TrainingReadiness)
+    {
+        if (Candidate.Metadata.OperationType !=
+            EEchoesReplayOperationType::Training)
+        {
+            OutFeedback = TEXT("[REPLAY_OPERATION_INVALID] Replay operation type does not match its identity.");
+            return false;
+        }
+    }
     else if (Candidate.Metadata.OperationType !=
              EEchoesReplayOperationType::Campaign)
     {
@@ -263,6 +277,10 @@ bool UEchoesSimulationSubsystem::BeginReplay(
         return false;
     }
     SynchronizeSkirmishEnvironmentPresentation();
+    if (ScenarioAuthorityGeneration != MAX_uint64)
+    {
+        ++ScenarioAuthorityGeneration;
+    }
     OutFeedback = TEXT("Replay opened paused at its first authoritative tick.");
     return true;
 }
@@ -286,6 +304,10 @@ void UEchoesSimulationSubsystem::EndReplay()
         SpawnFogView();
         SynchronizeSkirmishEnvironmentPresentation();
         SyncEntityViews(true);
+    }
+    if (ScenarioAuthorityGeneration != MAX_uint64)
+    {
+        ++ScenarioAuthorityGeneration;
     }
 }
 
@@ -479,7 +501,9 @@ void UEchoesSimulationSubsystem::BeginReplayArchiveForCurrentResult()
     Metadata.OperationId = OperationStableId(SelectedOperation);
     Metadata.OperationType = SelectedOperation == EEchoesOperationMode::Skirmish
         ? EEchoesReplayOperationType::Skirmish
-        : EEchoesReplayOperationType::Campaign;
+        : SelectedOperation == EEchoesOperationMode::TrainingReadiness
+            ? EEchoesReplayOperationType::Training
+            : EEchoesReplayOperationType::Campaign;
     Metadata.MapId = SelectedOperation == EEchoesOperationMode::Skirmish
         ? SkirmishMapStableId(ActiveSkirmishSetup.MapPreset)
         : CampaignMapId(SelectedOperation, CampaignProgress);
@@ -514,6 +538,19 @@ void UEchoesSimulationSubsystem::BeginReplayArchiveForCurrentResult()
                     static_cast<unsigned long long>(Record->FinalStateChecksum));
             }
         }
+    }
+    else if (Metadata.OperationType == EEchoesReplayOperationType::Training)
+    {
+        const bool bSucceeded =
+            Simulation->Outcome() == echoes::sim::MatchOutcome::Player0Victory;
+        Metadata.OperationResult = bSucceeded
+            ? EEchoesReplayOperationResult::TrainingSuccess
+            : EEchoesReplayOperationResult::TrainingFailure;
+        Metadata.OutcomeCause = EEchoesReplayOutcomeCause::CommandCoreLoss;
+        Metadata.OutcomeReasonId = bSucceeded
+            ? TEXT("training_opponent_core_destroyed")
+            : TEXT("training_player_core_destroyed");
+        Metadata.IrreversibleRecordId.Reset();
     }
 
     const uint64 Generation = ReplayArchiveGeneration;

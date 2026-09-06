@@ -39,16 +39,46 @@ bool FEchoesFieldHudViewTest::RunTest(const FString& Parameters)
     const EntityId LocalProducer = SimulationValue.SpawnEntity(
         0, Faction::MeridianCompact, EntityType::Barracks,
         Vec2::FromTiles(3, 2));
+    const EntityId LocalSurveyor = SimulationValue.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker,
+        Vec2::FromTiles(4, 2));
     const EntityId HiddenEnemy = SimulationValue.SpawnEntity(
         1, Faction::KharuunAssemblies, EntityType::Soldier,
         Vec2::FromTiles(14, 14));
+    const EntityId HiddenEnemyProducer = SimulationValue.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Barracks,
+        Vec2::FromTiles(13, 14));
     TestTrue(TEXT("Fixture entities exist"),
-        LocalCore != 0 && LocalProducer != 0 && HiddenEnemy != 0);
+        LocalCore != 0 && LocalProducer != 0 && LocalSurveyor != 0 &&
+            HiddenEnemy != 0 && HiddenEnemyProducer != 0);
     if (Entity* Producer = SimulationValue.MutableEntityForTesting(LocalProducer))
     {
         Producer->productionType = EntityType::Worker;
+        Producer->activeProductionItemId = 7001;
         Producer->productionProgress = 9;
         Producer->productionRequired = 30;
+        Producer->productionInvestedCost = {60, 12};
+        Producer->productionLogisticsCost = 1;
+        Producer->productionSpawnBlockedAlert = true;
+        Producer->rallyRouteAlert = true;
+        Order Rally;
+        Rally.type = OrderType::Move;
+        Rally.destination = Vec2::FromTiles(5, 2);
+        Producer->rallyRoute.push_back(Rally);
+        ProductionQueueItem Soldier;
+        Soldier.itemId = 7002;
+        Soldier.unitType = EntityType::Soldier;
+        Soldier.configuredCost = {85, 20};
+        Soldier.requiredTicks = 100;
+        Soldier.logisticsCost = 2;
+        Producer->productionQueue.push_back(Soldier);
+        ProductionQueueItem Heavy;
+        Heavy.itemId = 7003;
+        Heavy.unitType = EntityType::HeavyUnit;
+        Heavy.configuredCost = {130, 25};
+        Heavy.requiredTicks = 140;
+        Heavy.logisticsCost = 3;
+        Producer->productionQueue.push_back(Heavy);
     }
 
     const std::optional<PlayerView> Player = SimulationValue.CreatePlayerView(0);
@@ -73,6 +103,95 @@ bool FEchoesFieldHudViewTest::RunTest(const FString& Parameters)
         TestEqual(TEXT("Production progress is semantic data"),
             Live.Selection.Entries[0].ProductionPercent, 30);
     }
+    TestFalse(TEXT("A stale mixed selection cannot publish producer controls"),
+        Live.Production.bVisible);
+    const FEchoesFieldHudView ProducerOnly =
+        FEchoesFieldHudModel::BuildPlayerScoped(*Player, {LocalProducer}, false);
+    TestTrue(TEXT("Exact owned producer publishes its player-scoped queue"),
+        ProducerOnly.Production.bVisible &&
+        ProducerOnly.Production.ProducerId == LocalProducer &&
+        ProducerOnly.Production.Items.Num() == 3);
+    if (ProducerOnly.Production.Items.Num() == 3)
+    {
+        const FEchoesFieldHudProductionItem& Active =
+            ProducerOnly.Production.Items[0];
+        const FEchoesFieldHudProductionItem& FirstWaiting =
+            ProducerOnly.Production.Items[1];
+        TestTrue(TEXT("Active queue item distinguishes progress, investment, and reserved Logistics"),
+            Active.bActive && Active.Slot == 0 &&
+            Active.ItemId == 7001 &&
+            Active.ProgressPercent == 30 &&
+            Active.InvestedMatter == 60 && Active.InvestedDawn == 12 &&
+            Active.Logistics == 1);
+        TestTrue(TEXT("Waiting queue item remains unpaid and reports activation cost"),
+            !FirstWaiting.bActive && FirstWaiting.Slot == 1 &&
+            FirstWaiting.ItemId == 7002 &&
+            FirstWaiting.ConfiguredMatter == 85 &&
+            FirstWaiting.ConfiguredDawn == 20 &&
+            FirstWaiting.InvestedMatter == 0 &&
+            FirstWaiting.InvestedDawn == 0 &&
+            FirstWaiting.Logistics == 2);
+    }
+    TestTrue(TEXT("Queue alerts and rally length come only from scoped producer state"),
+        ProducerOnly.Production.bSpawnBlocked &&
+        ProducerOnly.Production.bRallyNeedsAttention &&
+        ProducerOnly.Production.RallyWaypointCount == 1);
+    TestTrue(TEXT("Waiting queue exposes explicit cancel and enabled directional reorder controls"),
+        ProducerOnly.Production.Controls.ContainsByPredicate(
+            [](const FEchoesFieldHudControl& Control)
+            {
+                return Control.Action ==
+                        EEchoesFieldHudAction::ProductionCancel &&
+                    Control.Argument == 1 && Control.bEnabled;
+            }) &&
+        ProducerOnly.Production.Controls.ContainsByPredicate(
+            [](const FEchoesFieldHudControl& Control)
+            {
+                return Control.Action ==
+                        EEchoesFieldHudAction::ProductionMoveDown &&
+                    Control.Argument == 1 && Control.bEnabled;
+            }) &&
+        ProducerOnly.Production.Controls.ContainsByPredicate(
+            [](const FEchoesFieldHudControl& Control)
+            {
+                return Control.Action ==
+                        EEchoesFieldHudAction::ProductionMoveUp &&
+                    Control.Argument == 2 && Control.bEnabled;
+            }));
+    TestTrue(TEXT("Waiting cancellation displays its exact zero refund before review"),
+        ProducerOnly.Production.Controls.ContainsByPredicate(
+            [](const FEchoesFieldHudControl& Control)
+            {
+                return Control.Action ==
+                        EEchoesFieldHudAction::ProductionCancel &&
+                    Control.Argument == 1 &&
+                    Control.Detail.ToString().Contains(
+                        TEXT("0 Matter / 0 Dawn"));
+            }));
+    TestTrue(TEXT("Active cancellation presents the exact current refund before dispatch"),
+        ProducerOnly.Production.Controls.ContainsByPredicate(
+            [](const FEchoesFieldHudControl& Control)
+            {
+                return Control.Action ==
+                        EEchoesFieldHudAction::ProductionCancel &&
+                    Control.Argument == 0 &&
+                    Control.Detail.ToString().Contains(
+                        TEXT("45 Matter / 9 Dawn"));
+            }));
+    const FEchoesFieldHudView HiddenProducer =
+        FEchoesFieldHudModel::BuildPlayerScoped(
+            *Player, {HiddenEnemyProducer}, false);
+    TestFalse(TEXT("An enemy producer never publishes its queue"),
+        HiddenProducer.Production.bVisible);
+    const FEchoesFieldHudView Roster =
+        FEchoesFieldHudModel::BuildPlayerScoped(*Player, {LocalSurveyor}, false);
+    TestTrue(TEXT("Surveyor selection publishes canonical mechanical purpose"),
+        Roster.Selection.Entries.Num() == 1 &&
+        Roster.Selection.Entries[0].Name.ToString() == TEXT("Surveyor") &&
+        Roster.Selection.Entries[0].Purpose.ToString().Contains(
+            TEXT("Core economic builder and logistics conduit")) &&
+        Roster.Selection.Entries[0].MaxHitPoints > 0 &&
+        !Roster.Selection.Entries[0].Order.IsEmpty());
     TestFalse(TEXT("Hidden opponent does not leak onto scoped minimap"),
         Live.Minimap.Markers.ContainsByPredicate(
             [HiddenEnemy](const FEchoesFieldHudMapMarker& Marker)
@@ -92,6 +211,8 @@ bool FEchoesFieldHudViewTest::RunTest(const FString& Parameters)
         ReplayPlayer.Resources.bVisible);
     TestFalse(TEXT("Replay never inherits live selection"),
         ReplayPlayer.Selection.bVisible);
+    TestFalse(TEXT("Replay never inherits a live producer queue"),
+        ReplayPlayer.Production.bVisible);
     TestFalse(TEXT("Replay never inherits live commands"),
         ReplayPlayer.Commands.bVisible);
     TestFalse(TEXT("Replay never inherits live technology"),
@@ -145,6 +266,8 @@ bool FEchoesFieldHudViewTest::RunTest(const FString& Parameters)
         Network.Minimap.Tiles.Num(), 4);
     TestEqual(TEXT("Network minimap consumes keyframe entities only"),
         Network.Minimap.Markers.Num(), 1);
+    TestFalse(TEXT("Network keyframes without scoped queue data reveal no producer queue"),
+        Network.Production.bVisible);
     TestTrue(TEXT("Network commands derive from the owned scoped selection"),
         Network.Commands.bVisible &&
             Network.Commands.Controls.ContainsByPredicate(

@@ -16,17 +16,17 @@
     "ducked_categories": [
       {
         "category": "Music",
-        "attenuation_db": -9.0,
-        "attack_ms": 120,
-        "hold_ms": 150,
-        "release_ms": 400
+        "attenuation_db": -6.0,
+        "attack_ms": 150,
+        "hold_ms": 0,
+        "release_ms": 500
       },
       {
         "category": "Ambience",
-        "attenuation_db": -9.0,
-        "attack_ms": 120,
-        "hold_ms": 150,
-        "release_ms": 400
+        "attenuation_db": -4.0,
+        "attack_ms": 150,
+        "hold_ms": 0,
+        "release_ms": 500
       }
     ],
     "protected_categories": [
@@ -80,8 +80,8 @@
         "reverb_type": "none_direct_earpiece"
       },
       "tts_binding": {
-        "kokoro_voice_id": "af_bella",
-        "rate_adjustment": 1.04,
+        "kokoro_voice_id": "af_sarah",
+        "rate_adjustment": 1.0,
         "pitch_shift_semitones": -0.5
       }
     },
@@ -113,8 +113,8 @@
         "reverb_wet_dry_mix": 0.18
       },
       "tts_binding": {
-        "kokoro_voice_id": "am_adam",
-        "rate_adjustment": 0.88,
+        "kokoro_voice_id": "bm_george",
+        "rate_adjustment": 0.92,
         "pitch_shift_semitones": -1.5
       }
     },
@@ -148,7 +148,7 @@
       },
       "tts_binding": {
         "kokoro_voice_id": "am_michael",
-        "rate_adjustment": 0.98,
+        "rate_adjustment": 1.0,
         "pitch_shift_semitones": 0.0
       }
     },

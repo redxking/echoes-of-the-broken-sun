@@ -26,6 +26,40 @@ bool FEchoesM01SurveyorRigTest::RunTest(const FString& Parameters)
     FString Feedback;
     if (!Bridge || !Bridge->StartPrototypeScenario() || !Bridge->SelectOperationMode(
         EEchoesOperationMode::CampaignPrologue, Feedback)) return false;
+    const echoes::sim::Vec2 AuthoredWorkerPosition =
+        echoes::sim::Vec2::FromTiles(14, 12);
+    const echoes::sim::Vec2 AuthoredResourcePosition =
+        echoes::sim::Vec2::FromTiles(16, 16);
+    echoes::sim::EntityId AuthoredWorkerId = 0;
+    echoes::sim::EntityId AuthoredResourceId = 0;
+    if (const echoes::sim::Simulation* Simulation = Bridge->GetSimulation())
+    {
+        for (const echoes::sim::Entity& Entity : Simulation->Entities())
+        {
+            if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                Entity.faction == echoes::sim::Faction::MeridianCompact &&
+                Entity.type == echoes::sim::EntityType::Worker &&
+                Entity.position == AuthoredWorkerPosition)
+            {
+                AuthoredWorkerId = Entity.id;
+            }
+            else if (Entity.owner == echoes::sim::kNeutralPlayer &&
+                     Entity.type == echoes::sim::EntityType::ResourceNode &&
+                     Entity.position == AuthoredResourcePosition)
+            {
+                AuthoredResourceId = Entity.id;
+            }
+        }
+    }
+    if (!TestTrue(
+            TEXT("M01 live Gather regression resolves the authored local Surveyor"),
+            AuthoredWorkerId != 0) ||
+        !TestTrue(
+            TEXT("M01 live Gather regression resolves the authored neutral Matter node"),
+            AuthoredResourceId != 0))
+    {
+        return false;
+    }
     auto* Settings = UEchoesGameUserSettings::Get();
     const bool PriorMotion = Settings && Settings->IsReducedMotionEnabled();
     if (Settings) Settings->SetReducedMotionEnabled(false);
@@ -36,11 +70,12 @@ bool FEchoesM01SurveyorRigTest::RunTest(const FString& Parameters)
     State.type = echoes::sim::EntityType::Worker;
     // Mirrors the first live M01 gather departure: the worker begins at the
     // evacuation-margin service edge and leaves on the initial 63-degree
-    // diagonal toward resource 24,16 before its gather/delivery transition.
+    // diagonal toward the Matter node at 16,16 before its gather/delivery
+    // transition.
     State.position = Bridge->WorldToSim(FVector(-3600.0f, -4000.0f, 0.0f));
     State.hitPoints = State.maxHitPoints = 90; State.completed = true;
     State.order.type = echoes::sim::OrderType::Gather;
-    State.order.destination = echoes::sim::Vec2::FromTiles(24, 16);
+    State.order.destination = AuthoredResourcePosition;
     View->ActivateForEntity(State, true);
     TArray<UStaticMeshComponent*> Components;
     View->GetComponents(Components);
@@ -673,7 +708,7 @@ bool FEchoesM01SurveyorRigTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("Teleport resets foot anchors near the new root"), FVector::Dist2D(Feet[0]->GetComponentLocation(), View->GetActorLocation()) < 80);
         // SPEC-MOV-010 requires actual angular progress, not just an upper
         // bound that would also pass a frozen or exponentially slowed torso.
-        if (const auto* TurnSource = Bridge->FindEntity(6))
+        if (const auto* TurnSource = Bridge->FindEntity(AuthoredWorkerId))
         {
             auto* TurnView = World->SpawnActor<AEchoesEntityView>();
             TestNotNull(TEXT("M01 turn-rate fixture spawns a separate view"), TurnView);
@@ -714,25 +749,41 @@ bool FEchoesM01SurveyorRigTest::RunTest(const FString& Parameters)
         }
 
         // Durable ordinary-route regression: issue the actual campaign Gather
-        // command to worker 6 and resource 24, then drive authoritative
-        // simulation at 20 Hz while its real view receives both ordinary 60
-        // Hz presentation ticks and bounded 30 Hz frames. This is deliberately
-        // not a displayed-coordinate fixture.
-        const echoes::sim::Entity* LiveWorker = Bridge->FindEntity(6);
-        const echoes::sim::Entity* LiveResource = Bridge->FindEntity(24);
-        AEchoesEntityView* LiveWorkerView = Bridge->FindEntityView(6);
-        TestTrue(TEXT("M01 live Gather regression finds worker 6"), LiveWorker &&
-            LiveWorker->type == echoes::sim::EntityType::Worker);
-        TestTrue(TEXT("M01 live Gather regression finds resource 24"), LiveResource &&
-            LiveResource->type == echoes::sim::EntityType::ResourceNode);
-        TestTrue(TEXT("M01 live Gather regression finds worker 6 presentation"), LiveWorkerView != nullptr);
+        // command to the authored Surveyor and Matter node, then drive
+        // authoritative simulation at 20 Hz while its real view receives both
+        // ordinary 60 Hz presentation ticks and bounded 30 Hz frames. This is
+        // deliberately not a displayed-coordinate fixture.
+        const echoes::sim::Entity* LiveWorker =
+            Bridge->FindEntity(AuthoredWorkerId);
+        const echoes::sim::Entity* LiveResource =
+            Bridge->FindEntity(AuthoredResourceId);
+        AEchoesEntityView* LiveWorkerView =
+            Bridge->FindEntityView(AuthoredWorkerId);
+        TestTrue(TEXT("M01 live Gather regression retains the authored local Surveyor"),
+            LiveWorker &&
+            LiveWorker->owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+            LiveWorker->faction == echoes::sim::Faction::MeridianCompact &&
+            LiveWorker->type == echoes::sim::EntityType::Worker &&
+            LiveWorker->position == AuthoredWorkerPosition);
+        TestTrue(TEXT("M01 live Gather regression retains the authored neutral Matter node"),
+            LiveResource &&
+            LiveResource->owner == echoes::sim::kNeutralPlayer &&
+            LiveResource->type == echoes::sim::EntityType::ResourceNode &&
+            LiveResource->position == AuthoredResourcePosition);
+        TestTrue(TEXT("M01 live Gather regression finds the authored Surveyor presentation"),
+            LiveWorkerView != nullptr &&
+            LiveWorkerView->GetOwnerPlayerId() ==
+                UEchoesSimulationSubsystem::LocalPlayerId &&
+            LiveWorkerView->GetEntityType() ==
+                echoes::sim::EntityType::Worker);
         if (LiveWorker && LiveResource && LiveWorkerView)
         {
             const uint32 LiveOwner = LiveWorker->owner;
             Feedback.Reset();
             Bridge->SetScenarioPaused(false);
-            TestTrue(TEXT("M01 worker 6 accepts Gather on resource 24"),
-                Bridge->IssueCommand(echoes::sim::CommandType::Gather, 6, 24,
+            TestTrue(TEXT("M01 authored Surveyor accepts Gather on the authored Matter node"),
+                Bridge->IssueCommand(echoes::sim::CommandType::Gather,
+                    AuthoredWorkerId, AuthoredResourceId,
                     Bridge->SimToWorld(LiveResource->position),
                     echoes::sim::FutureWellChoice::Dormant, Feedback));
             const int32 LiveEmergencyBefore = LiveWorkerView->GetM01SurveyorEmergencyReplantCount();
@@ -781,8 +832,10 @@ bool FEchoesM01SurveyorRigTest::RunTest(const FString& Parameters)
             for (int32 SimulationTick = 0; SimulationTick < 1800; ++SimulationTick)
             {
                 Bridge->Tick(.05f);
-                const echoes::sim::Entity* LiveState = Bridge->FindEntity(6);
-                AEchoesEntityView* CurrentLiveWorkerView = Bridge->FindEntityView(6);
+                const echoes::sim::Entity* LiveState =
+                    Bridge->FindEntity(AuthoredWorkerId);
+                AEchoesEntityView* CurrentLiveWorkerView =
+                    Bridge->FindEntityView(AuthoredWorkerId);
                 if (!LiveState || !CurrentLiveWorkerView)
                 {
                     AddError(TEXT("M01 live Gather route lost its worker or presentation view"));

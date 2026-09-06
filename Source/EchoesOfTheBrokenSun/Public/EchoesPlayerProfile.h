@@ -12,7 +12,8 @@ class UEchoesGameUserSettings;
  */
 struct ECHOESOFTHEBROKENSUN_API FEchoesPlayerProfile final
 {
-    static constexpr uint16 SchemaVersion = 1;
+    static constexpr uint16 MinimumSupportedSchemaVersion = 1;
+    static constexpr uint16 SchemaVersion = 2;
     static constexpr uint16 AllTutorialLessonsMask = 0x03FF;
 
     uint8 ActiveJourneySlot = 1;
@@ -20,6 +21,8 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesPlayerProfile final
     bool bTutorialOptOut = false;
     /** Contiguous low bits for the ten curriculum lessons, in authored order. */
     uint16 TutorialVerifiedMask = 0;
+    /** Authoritative proof that the independent readiness operation ended in Corefall. */
+    bool bReadinessOperationVerified = false;
 
     FIntPoint Resolution = FIntPoint(1280, 720);
     EWindowMode::Type WindowMode = EWindowMode::Windowed;
@@ -46,7 +49,7 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesPlayerProfile final
         UEchoesGameUserSettings& Settings,
         FString& OutError) const;
 
-    /** Derives mastery through the curriculum reducer from verified facts. */
+    /** Requires all curriculum lessons plus the independent readiness operation. */
     [[nodiscard]] bool IsTutorialMasteryComplete() const;
 
     friend bool operator==(

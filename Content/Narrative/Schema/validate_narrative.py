@@ -2731,6 +2731,8 @@ def validate_schema_documents(schema_dir: Path) -> None:
 DEMO_CONTRACT_REGISTRY: dict[str, dict[str, Any]] = {
     "tutorial_readiness_check.json": {
         "content_id": "demo_tutorial_readiness_check",
+        "source_document": "Docs/OpeningAndTutorialScript.md",
+        "metadata_status": "partially_runtime_bound",
         "surface": "tutorial",
         "scope": "prologue_tutorial",
         # The venue this surface opens in. An owner ruling that moves a surface
@@ -2738,14 +2740,29 @@ DEMO_CONTRACT_REGISTRY: dict[str, dict[str, Any]] = {
         # retired venue then fails compilation until it is amended.
         "opens_after_signal": "operation_ready:CampaignPrologue:RecoverArchive",
         "speaker_ids": {"spk_mara_vey"},
+        "runtime_bound_trigger_ids": {
+            "nar_demo_evt_tut_survey_opened",
+            "nar_demo_evt_tut_survey_verified",
+            "nar_demo_evt_tut_roster_opened",
+            "nar_demo_evt_tut_roster_verified",
+            "nar_demo_evt_tut_muster_opened",
+            "nar_demo_evt_tut_muster_verified",
+            "nar_demo_evt_tut_route_opened",
+            "nar_demo_evt_tut_route_verified",
+            "nar_demo_evt_tut_reserve_opened",
+            "nar_demo_evt_tut_reserve_verified",
+        },
         "counts": {"triggers": 32, "lines": 43},
     },
     "system_voice_annunciator.json": {
         "content_id": "demo_system_voice_annunciator",
+        "source_document": "Docs/OpeningAndTutorialScript.md",
+        "metadata_status": "authored_unbound",
         "surface": "system_voice",
         "scope": "global",
         "opens_after_signal": "none",
         "speaker_ids": {"spk_annunciator"},
+        "runtime_bound_trigger_ids": set(),
         "counts": {"triggers": 12, "lines": 12},
     },
 }
@@ -2799,6 +2816,7 @@ def validate_demo_contract(
     value: dict[str, Any],
     entry: dict[str, Any],
     live_venue_signals: set[str] | None = None,
+    source_root: Path | None = None,
 ) -> dict[str, int]:
     """Validate one additive demo-surface contract.
 
@@ -2832,14 +2850,40 @@ def validate_demo_contract(
         "demo.metadata",
     )
     _expect_exact(metadata["author"], "Angelis Pseftis", "demo.metadata.author")
-    _expect_exact(metadata["status"], "authored_unbound", "demo.metadata.status")
-    _expect_string(metadata["source_document"], "demo.metadata.source_document")
-    if re.fullmatch(r"[0-9a-f]{64}", _expect_string(
+    _expect_exact(metadata["status"], entry["metadata_status"], "demo.metadata.status")
+    source_document = _expect_string(
+        metadata["source_document"], "demo.metadata.source_document"
+    )
+    _expect_exact(source_document, entry["source_document"], "demo.metadata.source_document")
+    claimed_source_digest = _expect_string(
         metadata["source_document_sha256"], "demo.metadata.source_document_sha256"
-    )) is None:
+    )
+    if re.fullmatch(r"[0-9a-f]{64}", claimed_source_digest) is None:
         raise NarrativeValidationError(
             "demo.metadata.source_document_sha256: expected a lowercase sha256 digest"
         )
+    if source_root is None:
+        raise NarrativeValidationError(
+            "demo.metadata.source_document: source root is required for authoritative digest validation"
+        )
+    resolved_root = source_root.resolve()
+    resolved_source = (resolved_root / source_document).resolve()
+    try:
+        resolved_source.relative_to(resolved_root)
+    except ValueError as exc:
+        raise NarrativeValidationError(
+            "demo.metadata.source_document: path escapes the authoritative source root"
+        ) from exc
+    if not resolved_source.is_file():
+        raise NarrativeValidationError(
+            f"demo.metadata.source_document: authoritative file is absent: {source_document!r}"
+        )
+    actual_source_digest = hashlib.sha256(resolved_source.read_bytes()).hexdigest()
+    _expect_exact(
+        claimed_source_digest,
+        actual_source_digest,
+        "demo.metadata.source_document_sha256",
+    )
 
     binding = _exact_keys(
         top["runtime_binding"],
@@ -2874,7 +2918,7 @@ def validate_demo_contract(
             f"demo.runtime_binding.opens_after_signal: {opens_after!r} names no live venue"
         )
     _expect_exact(
-        binding["binding_status"], "authored_unbound", "demo.runtime_binding.binding_status"
+        binding["binding_status"], entry["metadata_status"], "demo.runtime_binding.binding_status"
     )
 
     speakers = _expect_list(top["speakers"], "demo.speakers")
@@ -2911,6 +2955,8 @@ def validate_demo_contract(
             f"demo.triggers: expected exactly {entry['counts']['triggers']} triggers"
         )
     trigger_ids: set[str] = set()
+    trigger_binding_statuses: dict[str, str] = {}
+    runtime_bound_trigger_ids: set[str] = entry["runtime_bound_trigger_ids"]
     for index, item in enumerate(triggers):
         record = _exact_keys(
             item,
@@ -2938,10 +2984,19 @@ def validate_demo_contract(
             "reset_on_mission_retry",
             f"demo.triggers[{index}].reset_behavior",
         )
+        expected_trigger_binding = (
+            "runtime_signal_bound" if tid in runtime_bound_trigger_ids else "authored_unbound"
+        )
         _expect_exact(
             record["binding_status"],
-            "authored_unbound",
+            expected_trigger_binding,
             f"demo.triggers[{index}].binding_status",
+        )
+        trigger_binding_statuses[tid] = expected_trigger_binding
+    if not runtime_bound_trigger_ids.issubset(trigger_ids):
+        missing = sorted(runtime_bound_trigger_ids - trigger_ids)
+        raise NarrativeValidationError(
+            f"demo.triggers: runtime binding allowlist names absent triggers: {missing}"
         )
     for index, item in enumerate(triggers):
         for prerequisite in _expect_list(
@@ -3014,9 +3069,14 @@ def validate_demo_contract(
         _expect_exact(
             voice_hook["asset_status"], "absent", f"demo.lines[{index}].voice_hook.asset_status"
         )
+        expected_line_binding = (
+            "runtime_subtitle_bound"
+            if trigger_binding_statuses[record["trigger_id"]] == "runtime_signal_bound"
+            else "authored_unbound"
+        )
         _expect_exact(
             record["binding_status"],
-            "authored_unbound",
+            expected_line_binding,
             f"demo.lines[{index}].binding_status",
         )
 
@@ -3082,7 +3142,7 @@ def validate_source_tree(root: Path) -> dict[str, int]:
     for name in sorted(DEMO_CONTRACT_REGISTRY):
         document = load_json_document(demo_dir / name)
         counts = validate_demo_contract(
-            document, DEMO_CONTRACT_REGISTRY[name], live_venue_signals
+            document, DEMO_CONTRACT_REGISTRY[name], live_venue_signals, root
         )
         for key, count in counts.items():
             demo_totals[key] += count

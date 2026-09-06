@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 #include "EchoesCampaignLedgerProbe.h"
@@ -19,31 +20,7 @@
 
 namespace
 {
-struct FPreservedFutureThatWonFile final
-{
-    explicit FPreservedFutureThatWonFile(FString InPath)
-        : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedFutureThatWonFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedFutureThatWonFile = FEchoesPreservedTestFile;
 
 uint8 FutureThatWonChoiceMask(echoes::sim::FutureWellChoice Choice)
 {
@@ -343,19 +320,20 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
         TEXT("Campaign persistence uses the current schema"),
         FEchoesCampaignProgress::SchemaVersion,
         static_cast<uint16>(2));
-    // Schema 28 appends player-hostility masks after schema 27 lifecycle state.
-    // The replay envelope shape did not change and stays at 24; this assertion
-    // pins the native snapshot schema only.
+    // Schema 30 extends schema 29 with Link repair/construction identity.
     TestEqual(
         TEXT("Mission 12 accepts the current simulation snapshot schema"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(28));
+        static_cast<uint32>(30));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
     FPreservedFutureThatWonFile PreservedPrimary(CampaignPath);
+    if (!PreservedPrimary.IsReady()) return false;
     FPreservedFutureThatWonFile PreservedBackup(CampaignPath + TEXT(".bak"));
+    if (!PreservedBackup.IsReady()) return false;
     FPreservedFutureThatWonFile PreservedTemporary(CampaignPath + TEXT(".tmp"));
+    if (!PreservedTemporary.IsReady()) return false;
     IFileManager::Get().Delete(*CampaignPath, false, true, true);
     IFileManager::Get().Delete(
         *(CampaignPath + TEXT(".bak")), false, true, true);
@@ -504,16 +482,22 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
         !QuickSavePath.IsEmpty() && !AlternateQuickSavePath.IsEmpty() &&
             QuickSavePath != AlternateQuickSavePath);
     FPreservedFutureThatWonFile PreservedQuickSave(QuickSavePath);
+    if (!PreservedQuickSave.IsReady()) return false;
     FPreservedFutureThatWonFile PreservedQuickSaveBackup(
         QuickSavePath + TEXT(".bak"));
+    if (!PreservedQuickSaveBackup.IsReady()) return false;
     FPreservedFutureThatWonFile PreservedQuickSaveTemporary(
         QuickSavePath + TEXT(".tmp"));
+    if (!PreservedQuickSaveTemporary.IsReady()) return false;
     FPreservedFutureThatWonFile PreservedAlternateQuickSave(
         AlternateQuickSavePath);
+    if (!PreservedAlternateQuickSave.IsReady()) return false;
     FPreservedFutureThatWonFile PreservedAlternateQuickSaveBackup(
         AlternateQuickSavePath + TEXT(".bak"));
+    if (!PreservedAlternateQuickSaveBackup.IsReady()) return false;
     FPreservedFutureThatWonFile PreservedAlternateQuickSaveTemporary(
         AlternateQuickSavePath + TEXT(".tmp"));
+    if (!PreservedAlternateQuickSaveTemporary.IsReady()) return false;
     for (const FString& Path : {
              QuickSavePath,
              QuickSavePath + TEXT(".bak"),
@@ -1365,10 +1349,10 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
     const FEchoesCampaignDecisionRecord* MissionRecord =
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::TheFutureThatWon);
-    // The commit is written now, so it carries native schema-28 provenance.
+    // The commit is written now, so it carries native current snapshot provenance.
     // The replay envelope shape did not change and stays at 24.
     TestTrue(
-        TEXT("Mission 12 stores one recorded protocol, all eight facts, and schema-28 provenance"),
+        TEXT("Mission 12 stores one recorded protocol, all eight facts, and current snapshot provenance"),
         MissionRecord != nullptr &&
             MissionRecord->WellChoice == FutureWellChoice::Preserve &&
             MissionRecord->AvailableWellChoices ==

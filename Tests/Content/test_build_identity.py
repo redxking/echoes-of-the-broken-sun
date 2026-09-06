@@ -50,9 +50,13 @@ class BuildIdentityTests(unittest.TestCase):
         )
         self.assertIsNotNone(snapshot_match)
         snapshot_version = snapshot_match.group(1)
+        protocol_header = SIMULATION_HEADER.with_name("NetworkProtocol.h").read_text(encoding="utf-8")
+        protocol_match = re.search(r"kProtocolVersion\s*=\s*(\d+)\s*;", protocol_header)
+        self.assertIsNotNone(protocol_match)
+        protocol_version = protocol_match.group(1)
         self.assertEqual(
             material,
-            f"EchoesOfTheBrokenSun:{project_version}:protocol-3:"
+            f"EchoesOfTheBrokenSun:{project_version}:protocol-{protocol_version}:"
             f"snapshot-{snapshot_version}:view-2",
         )
 

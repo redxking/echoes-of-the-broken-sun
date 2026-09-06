@@ -1,0 +1,21 @@
+{
+  "snapshot_version": 29,
+  "replay_version": 26,
+  "final_tick": 0,
+  "final_checksum": 2870429037547598980,
+  "aegis_id": 3,
+  "self_verified": true,
+  "author": "Angelis Pseftis",
+  "utc": "2026-09-06T16:50:48.284816+00:00",
+  "source_identity": "BuildArtifacts/Evidence/p0-p3-readiness-20260906/source-identity-12.json",
+  "source_archive_sha256": "8d66e298d9148e7a482a80665a36b299af839ebf0c89343fc04d5c617a40cf4e",
+  "source_files": {
+    "Source/EchoesSimCore/Private/Simulation.cpp": "77671d04888089ff52125520dc9cbdf9c5c33b2510d884151ae769818b0a153f",
+    "Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h": "45c636fa269d29c3ddeed0ec30f918583814a9fdf75efaca46464e3e08abdc21"
+  },
+  "fixture_sha256": "9f2b219fec4366d38b7e81a45edc0d65cdd2b1ede3b7a24cc799fa99d565f540",
+  "driver_sha256": "630fee3b99b5b5b43d22cfb972352bb18234dc51cfc4f3de64de6ae2343b25c2",
+  "scope": "Original archived schema29/replay26 writer, no snapshot conversion; Barracks does not relay legacy Aegis power; terminal tick0 self-verified",
+  "production_fixture_sha256": "0c04b8ef61a8ef4cf6221d15c8cf1d373657a7aa8d0871a3545f355725358997",
+  "production_self_verified": true
+}

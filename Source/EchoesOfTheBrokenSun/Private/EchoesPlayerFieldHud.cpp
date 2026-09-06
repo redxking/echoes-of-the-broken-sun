@@ -12,6 +12,7 @@
 #include "Engine/GameInstance.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
+#include "EngineGlobals.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Misc/App.h"
 #include "UnrealClient.h"
@@ -54,6 +55,294 @@ FEchoesFieldHudView AEchoesPlayerController::BuildFieldHudView() const
     return View;
 }
 
+bool AEchoesPlayerController::IsProductionCancellationCurrent(
+    const UEchoesSimulationSubsystem& Bridge) const
+{
+    if (!PendingProductionCancellation.bVisible ||
+        GetNetMode() == NM_Client || IsReplayInputActive() ||
+        IsActiveOnlineNetworkMatch() || !Bridge.IsScenarioReady() ||
+        Bridge.GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing ||
+        Bridge.GetScenarioAuthorityGeneration() !=
+            PendingProductionCancellation.AuthorityGeneration ||
+        SelectedEntityIds.Num() != 1 ||
+        SelectedEntityIds[0] != PendingProductionCancellation.ProducerId)
+    {
+        return false;
+    }
+
+    echoes::sim::ProducerQueueState Queue;
+    if (!Bridge.GetLocalProducerQueueState(
+            PendingProductionCancellation.ProducerId, Queue))
+    {
+        return false;
+    }
+
+    const echoes::sim::ProductionQueueItem* Item = nullptr;
+    int32 Progress = 0;
+    if (PendingProductionCancellation.Slot == 0)
+    {
+        if (!Queue.active)
+        {
+            return false;
+        }
+        Item = &Queue.activeItem;
+        Progress = Queue.activeProgress;
+    }
+    else
+    {
+        const int32 WaitingIndex = PendingProductionCancellation.Slot - 1;
+        if (!Queue.waiting.empty() && WaitingIndex >= 0 &&
+            WaitingIndex < static_cast<int32>(Queue.waiting.size()))
+        {
+            Item = &Queue.waiting[static_cast<size_t>(WaitingIndex)];
+        }
+    }
+    if (Item == nullptr || Item->itemId == 0 ||
+        Item->itemId != PendingProductionCancellation.ItemId ||
+        Item->unitType != PendingProductionCancellation.UnitType ||
+        Item->requiredTicks != PendingProductionCancellation.RequiredTicks ||
+        Item->configuredCost.material !=
+            PendingProductionCancellation.ConfiguredMatter ||
+        Item->configuredCost.dawnshards !=
+            PendingProductionCancellation.ConfiguredDawn ||
+        Item->investedCost.material !=
+            PendingProductionCancellation.InvestedMatter ||
+        Item->investedCost.dawnshards !=
+            PendingProductionCancellation.InvestedDawn ||
+        Item->logisticsCost != PendingProductionCancellation.Logistics ||
+        Progress != PendingProductionCancellation.Progress)
+    {
+        return false;
+    }
+    return true;
+}
+
+bool AEchoesPlayerController::GetProductionCancellationConfirmation(
+    FEchoesFieldHudProductionCancellationView& OutView) const
+{
+    OutView = {};
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !IsProductionCancellationCurrent(*Bridge))
+    {
+        return false;
+    }
+    OutView.bVisible = true;
+    OutView.ProducerId = PendingProductionCancellation.ProducerId;
+    OutView.ItemId = PendingProductionCancellation.ItemId;
+    OutView.Slot = PendingProductionCancellation.Slot;
+    OutView.Unit = PendingProductionCancellation.Unit;
+    OutView.ProgressPercent = static_cast<int32>(FMath::Clamp<int64>(
+        static_cast<int64>(PendingProductionCancellation.Progress) * 100 /
+            FMath::Max(1, PendingProductionCancellation.RequiredTicks),
+        0,
+        100));
+    OutView.RefundPercent = PendingProductionCancellation.RefundPercent;
+    OutView.InvestedMatter = PendingProductionCancellation.InvestedMatter;
+    OutView.InvestedDawn = PendingProductionCancellation.InvestedDawn;
+    OutView.RefundMatter = PendingProductionCancellation.RefundMatter;
+    OutView.RefundDawn = PendingProductionCancellation.RefundDawn;
+    OutView.bActive = PendingProductionCancellation.Slot == 0;
+    return true;
+}
+
+bool AEchoesPlayerController::OpenProductionCancellationConfirmation(
+    const FEchoesFieldHudProductionView& Production,
+    int32 Slot)
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || PendingProductionCancellation.bVisible ||
+        Slot < 0 || Slot > 4 || GetNetMode() == NM_Client ||
+        IsReplayInputActive() || IsActiveOnlineNetworkMatch() ||
+        Production.ProducerId == 0 || SelectedEntityIds.Num() != 1 ||
+        SelectedEntityIds[0] != Production.ProducerId)
+    {
+        return false;
+    }
+
+    echoes::sim::ProducerQueueState Queue;
+    if (!Bridge->GetLocalProducerQueueState(Production.ProducerId, Queue))
+    {
+        return false;
+    }
+    const echoes::sim::ProductionQueueItem* Item = nullptr;
+    int32 Progress = 0;
+    if (Slot == 0)
+    {
+        if (Queue.active)
+        {
+            Item = &Queue.activeItem;
+            Progress = Queue.activeProgress;
+        }
+    }
+    else
+    {
+        const int32 WaitingIndex = Slot - 1;
+        if (WaitingIndex >= 0 &&
+            WaitingIndex < static_cast<int32>(Queue.waiting.size()))
+        {
+            Item = &Queue.waiting[static_cast<size_t>(WaitingIndex)];
+        }
+    }
+    if (Item == nullptr || Item->itemId == 0 ||
+        (Slot > 0 && (Item->investedCost.material != 0 ||
+                      Item->investedCost.dawnshards != 0)))
+    {
+        return false;
+    }
+
+    FEchoesPendingProductionCancellation Pending;
+    Pending.bVisible = true;
+    Pending.bScenarioWasPaused = Bridge->IsScenarioPaused();
+    Pending.AuthorityGeneration = Bridge->GetScenarioAuthorityGeneration();
+    Pending.ProducerId = Production.ProducerId;
+    Pending.ItemId = Item->itemId;
+    Pending.Slot = Slot;
+    Pending.UnitType = Item->unitType;
+    if (const FEchoesFieldHudProductionItem* PresentedItem =
+            Production.Items.FindByPredicate(
+                [Item](const FEchoesFieldHudProductionItem& Candidate)
+                {
+                    return Candidate.ItemId == Item->itemId;
+                }))
+    {
+        Pending.Unit = PresentedItem->Unit;
+    }
+    if (Pending.Unit.IsEmpty())
+    {
+        return false;
+    }
+    Pending.Progress = Progress;
+    Pending.RequiredTicks = Item->requiredTicks;
+    Pending.ConfiguredMatter = Item->configuredCost.material;
+    Pending.ConfiguredDawn = Item->configuredCost.dawnshards;
+    Pending.InvestedMatter = Item->investedCost.material;
+    Pending.InvestedDawn = Item->investedCost.dawnshards;
+    Pending.Logistics = Item->logisticsCost;
+    Pending.RefundPercent = Slot == 0
+        ? (static_cast<int64>(Progress) * 2 < Item->requiredTicks ? 75 : 50)
+        : 0;
+    Pending.RefundMatter = static_cast<int32>(
+        static_cast<int64>(Pending.InvestedMatter) * Pending.RefundPercent /
+        100);
+    Pending.RefundDawn = static_cast<int32>(
+        static_cast<int64>(Pending.InvestedDawn) * Pending.RefundPercent /
+        100);
+    PendingProductionCancellation = Pending;
+
+    bSelectionButtonDown = false;
+    Bridge->SetScenarioPaused(true);
+    SetNarrativePlaybackPausedOutsideCinematic(true);
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    SetStatusMessage(
+        Slot == 0
+            ? FString::Printf(
+                  TEXT("REVIEW CANCELLATION — refund %d Matter / %d Dawn."),
+                  Pending.RefundMatter,
+                  Pending.RefundDawn)
+            : TEXT("REVIEW CANCELLATION — this waiting order has not been charged; refund 0 Matter / 0 Dawn."),
+        3600.0f);
+    return true;
+}
+
+void AEchoesPlayerController::CloseProductionCancellationConfirmation(
+    bool bRestoreScenarioPause)
+{
+    if (!PendingProductionCancellation.bVisible)
+    {
+        return;
+    }
+    const bool bWasPaused = PendingProductionCancellation.bScenarioWasPaused;
+    PendingProductionCancellation = {};
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (bRestoreScenarioPause && Bridge != nullptr &&
+        Bridge->IsScenarioReady())
+    {
+        Bridge->SetScenarioPaused(bWasPaused);
+        SetNarrativePlaybackPausedOutsideCinematic(bWasPaused);
+    }
+    const bool bKeepInputHeld = IsModalOverlayVisible() ||
+        (bRestoreScenarioPause && bWasPaused);
+    SetIgnoreMoveInput(bKeepInputHeld);
+    SetIgnoreLookInput(bKeepInputHeld);
+}
+
+void AEchoesPlayerController::ConfirmProductionCancellation()
+{
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge == nullptr || !IsProductionCancellationCurrent(*Bridge))
+    {
+        const bool bSameAuthority = Bridge != nullptr &&
+            Bridge->IsScenarioReady() &&
+            Bridge->GetScenarioAuthorityGeneration() ==
+                PendingProductionCancellation.AuthorityGeneration;
+        CloseProductionCancellationConfirmation(bSameAuthority);
+        SetStatusMessage(TEXT("Production changed. Review the current queue before cancelling."));
+        return;
+    }
+
+    const uint32 ProducerId = PendingProductionCancellation.ProducerId;
+    const uint8 Slot = static_cast<uint8>(PendingProductionCancellation.Slot);
+    const uint64 ItemId = PendingProductionCancellation.ItemId;
+    FString Feedback;
+    const bool bAccepted = Bridge->IssueProductionCancellation(
+        ProducerId, Slot, ItemId, Feedback);
+    CloseProductionCancellationConfirmation(true);
+    if (bAccepted)
+    {
+        SetStatusMessage(NSLOCTEXT(
+            "EchoesFieldHud", "ProductionCancelled", "Production cancellation queued.")
+            .ToString());
+    }
+    else
+    {
+        SetStatusMessage(NSLOCTEXT(
+            "EchoesFieldHud", "ProductionChangeRefused", "Production queue unchanged.")
+            .ToString());
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_PRODUCTION_CANCELLATION_REFUSED] producer=%u slot=%u item=%llu reason=%s"),
+            ProducerId,
+            Slot,
+            static_cast<unsigned long long>(ItemId),
+            *Feedback);
+    }
+}
+
+void AEchoesPlayerController::ValidateProductionCancellationConfirmation()
+{
+    if (!PendingProductionCancellation.bVisible)
+    {
+        return;
+    }
+    UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    if (Bridge != nullptr && IsProductionCancellationCurrent(*Bridge))
+    {
+        return;
+    }
+    const bool bSameAuthority = Bridge != nullptr && Bridge->IsScenarioReady() &&
+        Bridge->GetScenarioAuthorityGeneration() ==
+            PendingProductionCancellation.AuthorityGeneration;
+    CloseProductionCancellationConfirmation(bSameAuthority);
+    SetStatusMessage(TEXT("Production changed. Cancellation review closed."));
+}
+
 void AEchoesPlayerController::RefreshFieldHud()
 {
     if (GetLocalPlayer() == nullptr || !IsLocalController() || FApp::IsUnattended()) return;
@@ -69,8 +358,39 @@ void AEchoesPlayerController::RefreshFieldHud()
     FieldHudWidget->SetView(View);
     FieldHudWidget->SetVisibility(View.Surface == EEchoesFieldHudSurface::Hidden
         ? ESlateVisibility::Collapsed : ESlateVisibility::SelfHitTestInvisible);
+    const uint64 PresentationFrame = GFrameCounter;
+    if (TutorialRosterHudCandidateEntity != 0 &&
+        PresentationFrame > TutorialRosterHudCandidateFrame)
+    {
+        ObserveTutorialRosterHudPublication(View, PresentationFrame);
+        TutorialRosterHudCandidateEntity = 0;
+        TutorialRosterHudCandidateFrame = 0;
+    }
+    const auto Roster = TutorialSelection.RosterProgress();
+    if (TutorialSelection.ActiveStage() ==
+            EEchoesTutorialSelectionStage::Roster &&
+        Roster.bSingleClickSelected && !Roster.bHudPublished &&
+        View.Authority == EEchoesFieldHudAuthority::LivePlayerView &&
+        View.Surface == EEchoesFieldHudSurface::Battlefield &&
+        View.Selection.bVisible && View.Selection.Entries.Num() == 1 &&
+        View.Selection.Entries[0].EntityId == TutorialWorkerId &&
+        !View.Selection.Entries[0].Purpose.IsEmpty() &&
+        View.Commands.bVisible && !View.Commands.Controls.IsEmpty())
+    {
+        if (TutorialRosterHudCandidateEntity == 0)
+        {
+            TutorialRosterHudCandidateEntity = TutorialWorkerId;
+            TutorialRosterHudCandidateFrame = PresentationFrame;
+        }
+    }
+    else
+    {
+        TutorialRosterHudCandidateEntity = 0;
+        TutorialRosterHudCandidateFrame = 0;
+    }
     const bool bModal = !UsesShellWidget() &&
         (View.Technology.bVisible ||
+         View.Production.Cancellation.bVisible ||
          View.Surface == EEchoesFieldHudSurface::CampaignOperations ||
          View.Surface == EEchoesFieldHudSurface::OnlineFrontDoor ||
          View.Surface == EEchoesFieldHudSurface::NetworkLobby ||
@@ -118,6 +438,7 @@ void AEchoesPlayerController::RefreshFieldHud()
 
 void AEchoesPlayerController::HandleFieldHudAction(EEchoesFieldHudAction Action, int32 Argument)
 {
+    ValidateProductionCancellationConfirmation();
     const auto View = BuildFieldHudView();
     if (View.Surface == EEchoesFieldHudSurface::Hidden || View.Surface == EEchoesFieldHudSurface::Replay) return;
     const auto Contains = [Action, Argument](const TArray<FEchoesFieldHudControl>& Controls)
@@ -129,6 +450,16 @@ void AEchoesPlayerController::HandleFieldHudAction(EEchoesFieldHudAction Action,
     };
     bool bAllowed = (View.Surface == EEchoesFieldHudSurface::Battlefield &&
         !IsModalOverlayVisible() && View.Commands.bVisible && Contains(View.Commands.Controls)) ||
+        (View.Surface == EEchoesFieldHudSurface::Battlefield &&
+            !IsModalOverlayVisible() && View.Production.bVisible &&
+            Contains(View.Production.Controls)) ||
+        (View.Surface == EEchoesFieldHudSurface::Battlefield &&
+            View.Production.Cancellation.bVisible &&
+            Contains(View.Production.Controls) &&
+            (Action == EEchoesFieldHudAction::ProductionCancelConfirm ||
+             Action == EEchoesFieldHudAction::ProductionCancelBack)) ||
+        (View.Surface == EEchoesFieldHudSurface::Battlefield && !IsModalOverlayVisible() &&
+            View.bObjectiveVisible && Contains(View.ObjectiveControls)) ||
         (View.Campaign.bVisible && Contains(View.Campaign.Controls)) ||
         (View.Online.bVisible && Contains(View.Online.Controls));
     if (View.Technology.bVisible)
@@ -169,6 +500,84 @@ void AEchoesPlayerController::HandleFieldHudAction(EEchoesFieldHudAction Action,
         case EEchoesFieldHudAction::NetworkReady: ConfirmPrimaryAction(); break;
         case EEchoesFieldHudAction::OnlineResume: TogglePauseMenu(); break;
         case EEchoesFieldHudAction::OnlineLeave: LeaveOnlineMatch(); break;
+        case EEchoesFieldHudAction::ProductionCancelConfirm:
+            ConfirmProductionCancellation();
+            break;
+        case EEchoesFieldHudAction::ProductionCancelBack:
+            CloseProductionCancellationConfirmation(true);
+            SetStatusMessage(TEXT("Production cancellation closed."));
+            break;
+        case EEchoesFieldHudAction::ProductionCancel:
+        case EEchoesFieldHudAction::ProductionMoveUp:
+        case EEchoesFieldHudAction::ProductionMoveDown:
+        {
+            UEchoesSimulationSubsystem* Bridge = GetWorld() != nullptr
+                ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+                : nullptr;
+            if (Bridge == nullptr || View.Production.ProducerId == 0 ||
+                Argument < 0 || Argument > 4)
+            {
+                return;
+            }
+            FString Feedback;
+            bool bAccepted = false;
+            if (Action == EEchoesFieldHudAction::ProductionCancel)
+            {
+                bAccepted = OpenProductionCancellationConfirmation(
+                    View.Production, Argument);
+            }
+            else
+            {
+                const int32 ToSlot =
+                    Action == EEchoesFieldHudAction::ProductionMoveUp
+                        ? Argument - 1
+                        : Argument + 1;
+                if (ToSlot <= 0 || ToSlot > 4)
+                {
+                    return;
+                }
+                bAccepted = Bridge->IssueProductionReorder(
+                    View.Production.ProducerId,
+                    static_cast<uint8>(Argument),
+                    static_cast<uint8>(ToSlot),
+                    Feedback);
+            }
+            if (bAccepted)
+            {
+                if (Action != EEchoesFieldHudAction::ProductionCancel)
+                {
+                    SetStatusMessage(NSLOCTEXT(
+                              "EchoesFieldHud", "ProductionReordered", "Waiting order moved.")
+                              .ToString());
+                }
+            }
+            else
+            {
+                SetStatusMessage(NSLOCTEXT(
+                    "EchoesFieldHud", "ProductionChangeRefused", "Production queue unchanged.")
+                    .ToString());
+                UE_LOG(
+                    LogEchoes,
+                    Display,
+                    TEXT("[ECHOES_PRODUCTION_QUEUE_ACTION_REFUSED] producer=%u slot=%d action=%d reason=%s"),
+                    View.Production.ProducerId,
+                    Argument,
+                    static_cast<int32>(Action),
+                    *Feedback);
+            }
+            break;
+        }
+        case EEchoesFieldHudAction::AcknowledgeTutorialRejection:
+            ObserveTutorialRejectionAcknowledged(TutorialPendingRejectionAttempt); break;
+        case EEchoesFieldHudAction::InspectTutorialReserve:
+        {
+            // This action expands the real current reserve observation in the
+            // readiness panel; it never supplies the economic success predicate.
+            bTutorialReserveMonitorInspected = true;
+            SetStatusMessage(FString::Printf(TEXT("RESERVE: %llu Matter credited by the staged Surveyor. Cargo is booked only on delivery to an operational drop-off; the route continues after unloading."),
+                static_cast<unsigned long long>(TutorialOrders.DeliveredMatterObserved())), 15.0f);
+            break;
+        }
         case EEchoesFieldHudAction::None: return;
     }
     RefreshShell();

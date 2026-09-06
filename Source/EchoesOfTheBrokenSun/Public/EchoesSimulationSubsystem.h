@@ -38,6 +38,7 @@ struct FEchoesCheckpointWriteResult;
 class FEchoesPrologueMissionTest;
 class FEchoesFreshCampaignJourneyTest;
 class FEchoesAutosaveRecoveryTest;
+class FEchoesTrainingReadinessOperationTest;
 #endif
 
 UENUM(BlueprintType)
@@ -86,6 +87,9 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesRecoveryCandidate final
     FString RecoveryStatusText;
     FString HonestLimitationNotice;
 };
+
+/** Presentation observers receive every completed fixed step, including catch-up steps. */
+DECLARE_MULTICAST_DELEGATE(FEchoesFixedStepObserved);
 
 /** Information the local presentation may use without exposing hidden state. */
 struct FEchoesObjectiveSnapshot final
@@ -393,6 +397,7 @@ class ECHOESOFTHEBROKENSUN_API UEchoesSimulationSubsystem final
 
 public:
     static constexpr float TileWorldSize = 200.0f;
+    FEchoesFixedStepObserved OnFixedStepObserved;
     static constexpr uint8 LocalPlayerId = 0;
     static constexpr uint8 OpponentPlayerId = 1;
 
@@ -521,6 +526,46 @@ public:
         echoes::sim::EntityType UnitType,
         FString& OutFeedback);
 
+    bool IssueProductionCancellation(
+        uint32 ProducerId,
+        uint8 Slot,
+        uint64 ExpectedProductionItemId,
+        FString& OutFeedback);
+
+    bool IssueProductionReorder(
+        uint32 ProducerId,
+        uint8 FromWaitingSlot,
+        uint8 ToWaitingSlot,
+        FString& OutFeedback);
+
+    bool IssueRallyCommand(
+        uint32 ProducerId,
+        uint32 TargetId,
+        const FVector& WorldPosition,
+        bool bAppend,
+        FString& OutFeedback);
+
+    [[nodiscard]] bool GetLocalProducerQueueState(
+        uint32 ProducerId,
+        echoes::sim::ProducerQueueState& OutState) const;
+
+    [[nodiscard]] echoes::sim::ProductionStartBlockReason
+    GetLocalProductionStartBlockReason(
+        uint32 ProducerId,
+        echoes::sim::EntityType UnitType) const;
+
+    [[nodiscard]] std::optional<echoes::sim::PlayerView>
+    GetLocalPlayerView() const;
+
+    bool IssueRepairCommand(
+        uint32 WorkerId,
+        uint32 TargetId,
+        FString& OutFeedback);
+
+    bool IssueConstructionCancellation(
+        uint32 StructureId,
+        FString& OutFeedback);
+
     bool IssueResearchCommand(
         uint32 ProducerId,
         echoes::sim::ResearchType ResearchType,
@@ -550,6 +595,15 @@ public:
     void SetScenarioPaused(bool bPaused);
     [[nodiscard]] bool IsScenarioPaused() const { return bSimulationPaused; }
     [[nodiscard]] echoes::sim::MatchOutcome GetMatchOutcome() const;
+    /**
+     * Last sequence accepted through a local Issue* command path. Observers
+     * compare before/after values around one concrete controller action; AI,
+     * replay, fixture, and rejected commands never advance this receipt.
+     */
+    [[nodiscard]] TOptional<uint64> GetLastAcceptedLocalCommandSequence() const
+    {
+        return LastAcceptedLocalCommandSequence;
+    }
     [[nodiscard]] FEchoesObjectiveSnapshot GetLocalObjectiveSnapshot() const;
 
     [[nodiscard]] const echoes::sim::Simulation* GetSimulation() const;
@@ -599,6 +653,15 @@ public:
     [[nodiscard]] FVector SimToWorld(const echoes::sim::Vec2& Position) const;
     [[nodiscard]] echoes::sim::Vec2 WorldToSim(const FVector& Position) const;
     [[nodiscard]] bool IsScenarioReady() const { return bScenarioReady; }
+    /**
+     * Process-local identity of the currently presented simulation authority.
+     * It changes on successful start, restore, replay replacement, and replay
+     * exit; it is observational and never enters snapshots or checksums.
+     */
+    [[nodiscard]] uint64 GetScenarioAuthorityGeneration() const
+    {
+        return ScenarioAuthorityGeneration;
+    }
     [[nodiscard]] bool IsStressScenario() const { return bStressScenario; }
     [[nodiscard]] bool IsSustainedStressScenario() const
     {
@@ -802,6 +865,7 @@ private:
     friend class FEchoesPresentationPoolingTest;
     friend class FEchoesCombatEffectsTest;
     friend class FEchoesAutosaveRecoveryTest;
+    friend class FEchoesTrainingReadinessOperationTest;
 #endif
     bool LoadScenarioFromPath(const FString& SavePath, FString& OutFeedback);
     bool ValidateCheckpointFileOnDisk(
@@ -899,7 +963,8 @@ private:
         const echoes::sim::Vec2& Position,
         echoes::sim::FutureWellChoice WellChoice,
         echoes::sim::EntityType BuildType,
-        FString& OutFeedback);
+        FString& OutFeedback,
+        bool bQueue = false);
     [[nodiscard]] echoes::sim::Tick ResolvePlayerExecuteTick(
         echoes::sim::Tick OfflineDelayTicks) const;
     void QueueOpponentCommands();
@@ -1049,6 +1114,8 @@ private:
     TWeakObjectPtr<AEchoesTerrainView> TerrainView;
     double FixedTimeAccumulator = 0.0;
     uint64 NextPlayerCommandSequence = 1;
+    TOptional<uint64> LastAcceptedLocalCommandSequence;
+    uint64 ScenarioAuthorityGeneration = 0;
     bool bScenarioReady = false;
     TSharedPtr<FEchoesCheckpointCoordinator, ESPMode::ThreadSafe> CheckpointCoordinator;
     FEchoesCheckpointSaveStatus LastCheckpointSaveStatus;

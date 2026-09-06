@@ -619,7 +619,7 @@ The persistent economy interface shall consume player-scoped visibility authorit
 * **SPEC-BLD-007 — Unit emergence obstruction loops:** Completed units shall emerge from the facility's exit vector at the nearest free legal tile, automatically executing their assigned rally route. If the emergence zone is physically blocked by obstructions or dense unit packing for 100 consecutive ticks, production pauses at 100% completion, retains the unit safely inside the facility framework, and emits a high-priority `[SPAWN BLOCKED]` alert.
 * **SPEC-BLD-008 — Rally path routing:** Facility controllers shall support a single rally coordinate or a Shift-queued command pipeline sequence. Rally trajectories may target explicit ground paths, an allied target entity to invoke automatic Guard behavior, or a valid resource node to initialize immediate worker gathering loops upon unit emergence. If the target coordinates become blocked or permanently unreachable, emerging units halt safely at the exit and emit an alert.
 * **SPEC-BLD-009 — Base building governance infrastructure:** Players may construct multiple production, logistics supply, defense outposts, and drop-off utility structures across pathable coordinates, restricted to a maximum cap of one active Command Core per match session. Completed structures cannot be sold, captured, garrisoned, abandoned, or converted. They may be eliminated entirely via direct combat damage or cancelled while incomplete.
-* **SPEC-BLD-010 — Maintenance repair resolution:** Friendly worker units issued a direct structural maintenance order shall execute Repair at an extraction cost of 5 Matter per second, restoring completed allied entity health at 20 HP per second. Repair actions continue until the target reaches maximum health, Matter balances drop to zero, or a combat attack interrupts the worker channel for a 1-second penalty window. Repair cannot resurrect eliminated entities, remove active status effects, or operate without Matter.
+* **SPEC-BLD-010 — Maintenance repair resolution:** Friendly worker units issued a direct structural maintenance order shall execute Repair at an extraction cost of 5 Matter per second, restoring completed allied entity health at 20 HP per second. Repair actions continue until the target reaches maximum health, Matter balances drop to zero, or a combat attack interrupts the worker channel for a 1-second penalty window. Repair cannot resurrect eliminated entities, remove active status effects, or operate without Matter. The Meridian Surveyor uses the explicit SPEC-UNIT-001 signature exception: 10 HP per second for 1 Matter per 10 HP, within 200 cm, with up to three Surveyors scaling at 100%, 60%, and 40%; its damage interruption remains 20 ticks. Other workers retain the generic rate and cost.
 
 ### §10.1 Technology model and strategic progression
 
@@ -1728,11 +1728,10 @@ Neme commands the local Hollow Choir through the Crownfall's final contract whil
 
 * **REL-AUD-019 — BS.1770-4 Loudness Compliance:** All audio submixes (music, dialogue, SFX) shall be mastered to a combined target integrated loudness of -16 LUFS (±1 LU), with a true peak no higher than -1 dBTP.
   * **REL-AUD-019.VERIF:** `PKG-AUTO` (BS.1770-4 programmatic meter measurement across a 30-minute standard match).
-The alternative dialogue-ducking policies `REL-AUD-022` and `REL-AUD-023` await the owner
-choice recorded under `TBR-DOC-003` in RequirementsState.md. Neither may be selected implicitly or
-claimed jointly satisfied while the routing/attack conflict remains unresolved.
+On 2026-09-06 Angelis selected `REL-AUD-023`: Music -6 dB, Ambience -4 dB, 150 ms attack /
+500 ms release, preserving combat and interface cues. `TBR-DOC-003` records this decision.
 
-* **REL-AUD-022 — Dynamic Side-Chain Vocal Ducking (Dumper Loops):** When critical narrative or Meridian Operations Annunciator dialogue is triggered, the engine shall apply a 300ms attack / 500ms release ducking loop, reducing the `SFX` and `Music` submixes by exactly -6 dB to guarantee vocal intelligibility without jarring drops.
+* **REL-AUD-022 — Dynamic Side-Chain Vocal Ducking (Dumper Loops): SUPERSEDED BY REL-AUD-023** by the owner choice on 2026-09-06. Historical alternative: critical dialogue ducked SFX/Music by -6 dB with 300 ms attack / 500 ms release. It is not an additional active ducking requirement.
 * **REL-AUD-021 — Low-Level PBR Audio Cue Parameters:** Physical combat and movement sounds shall use physically-based spatial attenuation. Sound radii must match the simulated unit footprint and decay logarithmically to 0% volume at 2,500 cm.
 
 ## 20. Interface, selection, controls, and player feedback
@@ -1766,7 +1765,7 @@ claimed jointly satisfied while the routing/attack conflict remains unresolved.
 | SPEC-CTL-005 | A / S / H / P / G | Attack-move / Stop / Hold / Patrol / Guard |
 | SPEC-CTL-006 | B / R | Worker build menu / Repair |
 | SPEC-CTL-007 | Q / W / E | Contextual ability grid; on a Well: Harvest / Preserve / Reshape |
-| SPEC-CTL-008 | F | Cycle Aggressive, Defensive, Return Fire, Hold Fire |
+| SPEC-CTL-008 | F | Cycle Aggressive, Defensive, Hold Position, Return Fire, Hold Fire; the separate Hold order remains available |
 | SPEC-CTL-009 | C | Cycle Box, Line, Wedge |
 | SPEC-CTL-010 | Ctrl + 1–0 | Assign control group; Shift + number adds selection; number recalls; double-tap centers |
 | SPEC-CTL-011 | Tab / Shift+Tab | Next/previous subgroup |
@@ -1798,6 +1797,9 @@ claimed jointly satisfied while the routing/attack conflict remains unresolved.
 * **SPEC-TUT-002 —** Hint ladder. After no relevant state change, first highlight the relevant UI, then restate the goal, then demonstrate the input without completing it. Hints adapt to remapped controls and may be disabled.
 * **SPEC-TUT-003 —** Mastery. A lesson completes only from authoritative player action, not elapsed time or opening a tooltip. It can be replayed individually from Help.
 * **SPEC-TUT-004 —** Reference. A searchable in-game archive defines units, buildings, resources, terrain, technologies, Wells, controls, objectives, status effects, counters, and campaign records using the same terms as the HUD.
+* **SPEC-TUT-005 —** Gated onboarding (owner direction, 2026-09-06). Present one small action at a time. Freeze unrelated gameplay and block untaught actions while allowing the current task, necessary learned controls, pause, accessibility and exit. Dim the surrounding UI, spotlight the actual target, and demonstrate the input with an animated indicator without performing it. Resolve current bindings, including platform modifier labels. Name destination sites plainly; acknowledge discovery and actual success visibly before advancing. Respect reduced-motion settings. Apply this standard to every guided lesson; independent readiness assessment remains unguided.
+* **SPEC-TUT-006 —** Intentional tutorial exit (owner direction, 2026-09-06). Provide a readable, low-emphasis top-right Hold to skip control outside the primary spotlight. Pointer or keyboard activation requires a continuous 1.5-second hold with a circular progress meter. Early release, loss of focus/capture, interruption or sequence replacement cancels the hold. A completed hold opens a modal with Skip this step only, End all tutorials, and a cancel path. The modal blocks gameplay. Skip this step advances the current instructional step and unlocks its dependent controls but records it as skipped, never as verified mastery or an earned completion reward. End all tutorials terminates guidance and restores control immediately after the choice. Neither action establishes readiness proof. Returning from cancel restores the same step and prior pause state.
+
 
 ## 22. Accessibility and localization
 
@@ -3495,8 +3497,8 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-BLD-005.VERIF:** `SRC` (construction site damage and destruction test).
   * **REL-BLD-005.LANE:** Core Gameplay (`EchoesSimCore`).
 
-* **REL-BLD-006 — Construction Cancellation & Refund Policy:** Cancelling a construction site prior to completion shall reclaim the footprint and refund exactly 75% of invested Matter, with 0% refund for invested Dawn.
-  * **REL-BLD-006.AUTH:** The remaining 25% Matter cost represents sunk site prep expense; cancellation immediately restores footprint passability.
+* **REL-BLD-006 — Construction Cancellation & Refund Policy:** Cancelling a construction site prior to completion shall reclaim the footprint and apply SPEC-BLD-005: refund 75% of invested Matter and Dawn below 50% assembly progress, and 50% of invested Matter and Dawn at or above 50% progress.
+  * **REL-BLD-006.AUTH:** The unrefunded balance is sunk site preparation cost; cancellation immediately restores footprint passability.
   * **REL-BLD-006.FAIL:** 100% full refund or negative balance exploits fail economic audit.
   * **REL-BLD-006.VERIF:** `SRC` (construction cancellation refund test).
   * **REL-BLD-006.LANE:** Core Gameplay (`EchoesSimCore`).
@@ -3514,12 +3516,12 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-BLD-008.LANE:** Core Gameplay & Player Experience.
 
 * **REL-BLD-009 — Unit Emergence, Rallying & Unblocking:** Completed units shall emerge from the structure's designated exit vector and automatically path to the authored Rally Point.
-  * **REL-BLD-009.AUTH:** If the emergence point is physically blocked by units or terrain, the producer shall hold the completed unit for up to 40 ticks while nudging obstacles. If still blocked, it fires `[SPAWN BLOCKED]` and pauses the queue.
+  * **REL-BLD-009.AUTH:** If the emergence point is physically blocked by units or terrain, the producer shall hold the completed unit for 100 consecutive blocked ticks while nudging obstacles. If still blocked, it fires `[SPAWN BLOCKED]` and pauses the queue.
   * **REL-BLD-009.FAIL:** Units spawning inside building geometry or stacking infinitely on exit fails acceptance.
   * **REL-BLD-009.VERIF:** `PKG-AUTO` (spawn exit obstruction and rally point test).
   * **REL-BLD-009.LANE:** Core Gameplay (`EchoesSimCore`).
 
-* **REL-BLD-010 — Production Queue Cancellation Invariant:** Cancelling a queued unit before its active production cycle begins shall refund 100% of invested resources. Cancelling an actively producing unit shall refund 50% of invested Matter and 0% Dawn.
+* **REL-BLD-010 — Production Queue Cancellation Invariant:** Queued units remain uncharged until activation under SPEC-BLD-002; cancelling an inactive entry returns only any actual investment and cannot create resources. Cancelling an actively producing unit applies SPEC-BLD-005: refund 75% of invested Matter and Dawn below 50% progress, and 50% of invested Matter and Dawn at or above 50% progress.
   * **REL-BLD-010.AUTH:** Cancellation clears the reserved Logistics slot immediately on the same tick.
   * **REL-BLD-010.FAIL:** Desynchronization between cancelled units and Logistics counters fails sim integrity.
   * **REL-BLD-010.VERIF:** `SRC` (queue cancellation and refund accounting test).
@@ -3537,7 +3539,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-BLD-012.VERIF:** `SRC` (tech cancellation forfeiture test).
   * **REL-BLD-012.LANE:** Core Gameplay & Player Experience.
 
-* **REL-BLD-013 — Structural Repair Resolution:** Friendly worker units ordered to damaged friendly structures shall execute Repair at an extraction cost of 5 Matter per second, restoring structure health at 20 HP per second (resolving C25/repair gaps).
+* **REL-BLD-013 — Structural Repair Resolution:** Friendly worker units ordered to damaged friendly structures shall execute Repair at an extraction cost of 5 Matter per second, restoring structure health at 20 HP per second, except that the Meridian Surveyor uses the SPEC-UNIT-001 signature rate of 10 HP per second for 1 Matter per 10 HP, 200 cm reach and 100%/60%/40% repair-assist scaling. The Surveyor signature retains its allied-unit and building targets; other workers use the generic structural-maintenance contract.
   * **REL-BLD-013.AUTH:** Repair continues until the structure reaches maximum health, Matter depletes, or the worker is attacked/redirected.
   * **REL-BLD-013.FAIL:** Repairing without consuming Matter or repairing through unpowered connections fails acceptance.
   * **REL-BLD-013.VERIF:** `SRC` (structure repair rate and resource consumption test).
@@ -6060,7 +6062,7 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `REL-AUD-019` | BS.1770-4 Loudness Compliance: | §19. Audio & Cinematic Mastering Contracts (`REL-AUD-*`) |
 | `REL-AUD-020` | Five-Category Submix Hierarchy: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
 | `REL-AUD-021` | Low-Level PBR Audio Cue Parameters: | §19. Audio & Cinematic Mastering Contracts (`REL-AUD-*`) |
-| `REL-AUD-022` | Dynamic Side-Chain Vocal Ducking (Dumper Loops): | §19. Audio & Cinematic Mastering Contracts (`REL-AUD-*`) |
+| `REL-AUD-022` | Dynamic Side-Chain Vocal Ducking (Dumper Loops): SUPERSEDED BY REL-AUD-023 REL-AUD-023 by the owner choice on 2026-09-06. Historical alternative: crit | §19. Audio & Cinematic Mastering Contracts (`REL-AUD-*`) |
 | `REL-AUD-023` | Dynamic Side-Chain Vocal Ducking: | §19 Audio, Voice, Music, and Cinematics (`REL-AUD-*`, `REL-CIN-*`) |
 | `REL-BLD-001` | Footprint Validation & Passability Enforcement: | §10 Construction, Production, and Research (`REL-BLD-*`) |
 | `REL-BLD-002` | Dynamic Placement Visual Blueprint Preview: | §10 Construction, Production, and Research (`REL-BLD-*`) |
@@ -6879,6 +6881,8 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `SPEC-TUT-002` | Hint ladder. After no relevant state change, first highlight the relevant UI, then restate the goal, then demonstrate the input without completing it. | 21. Onboarding, tutorial, manual, and learning |
 | `SPEC-TUT-003` | Mastery. A lesson completes only from authoritative player action, not elapsed time or opening a tooltip. It can be replayed individually from Help. | 21. Onboarding, tutorial, manual, and learning |
 | `SPEC-TUT-004` | Reference. A searchable in-game archive defines units, buildings, resources, terrain, technologies, Wells, controls, objectives, status effects, count | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-TUT-005` | Gated onboarding (owner direction, 2026-09-06). Present one small action at a time. Freeze unrelated gameplay and block untaught actions while allowin | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-TUT-006` | Intentional tutorial exit (owner direction, 2026-09-06). Provide a readable, low-emphasis top-right Hold to skip control outside the primary spotlight | 21. Onboarding, tutorial, manual, and learning |
 | `SPEC-UI-001` | Selection answer. Every selection answers: what is it, what is it doing, what can I order, what will that cost or require, why would I choose it, when | 20. Interface, selection, controls, and player feedback |
 | `SPEC-UI-002` | Selection fields. Show faction, name, role, owner, health, order, stance, target/route, cargo, control group, status, ability cost/cooldown, and every | 20. Interface, selection, controls, and player feedback |
 | `SPEC-UI-003` | Mixed selection. Show composition and deterministic subgroups. The command deck displays only commands legal for at least one selected unit and report | 20. Interface, selection, controls, and player feedback |

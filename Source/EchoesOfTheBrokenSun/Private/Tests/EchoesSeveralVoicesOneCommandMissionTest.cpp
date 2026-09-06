@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 
@@ -19,31 +20,7 @@
 
 namespace
 {
-struct FPreservedSeveralVoicesFile final
-{
-    explicit FPreservedSeveralVoicesFile(FString InPath)
-        : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedSeveralVoicesFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedSeveralVoicesFile = FEchoesPreservedTestFile;
 
 uint8 SeveralVoicesChoiceMask(echoes::sim::FutureWellChoice Choice)
 {
@@ -312,11 +289,10 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TestEqual(TEXT("Mission 14 uses the current campaign schema"),
               FEchoesCampaignProgress::SchemaVersion,
               static_cast<uint16>(2));
-    // Schema 28 appends player-hostility masks after schema 27 lifecycle state.
-    // The replay envelope shape did not change and stays at 24.
-    TestEqual(TEXT("Mission 14 writes native snapshot schema 28"),
+    // Schema 29 persists production queues, invested costs and rally routes.
+    TestEqual(TEXT("Mission 14 writes native snapshot schema 30"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(28));
+              static_cast<uint32>(30));
 
     FString Feedback;
     FEchoesCampaignProgress ThirteenRecords =
@@ -402,10 +378,13 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
     FPreservedSeveralVoicesFile PreservedCampaign(CampaignPath);
+    if (!PreservedCampaign.IsReady()) return false;
     FPreservedSeveralVoicesFile PreservedCampaignBackup(
         CampaignPath + TEXT(".bak"));
+    if (!PreservedCampaignBackup.IsReady()) return false;
     FPreservedSeveralVoicesFile PreservedCampaignTemporary(
         CampaignPath + TEXT(".tmp"));
+    if (!PreservedCampaignTemporary.IsReady()) return false;
     for (const FString& Path : {
              CampaignPath,
              CampaignPath + TEXT(".bak"),
@@ -450,12 +429,16 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     const FString QuickSavePath =
         SeveralVoicesQuickSavePath(ThirteenRecords);
     FPreservedSeveralVoicesFile PreservedQuickSave(QuickSavePath);
+    if (!PreservedQuickSave.IsReady()) return false;
     FPreservedSeveralVoicesFile PreservedQuickSaveBackup(
         QuickSavePath + TEXT(".bak"));
+    if (!PreservedQuickSaveBackup.IsReady()) return false;
     FPreservedSeveralVoicesFile PreservedQuickSaveStagedBackup(
         QuickSavePath + TEXT(".bak.tmp"));
+    if (!PreservedQuickSaveStagedBackup.IsReady()) return false;
     FPreservedSeveralVoicesFile PreservedQuickSaveTemporary(
         QuickSavePath + TEXT(".tmp"));
+    if (!PreservedQuickSaveTemporary.IsReady()) return false;
     for (const FString& Path : {
              QuickSavePath,
              QuickSavePath + TEXT(".bak"),
@@ -646,7 +629,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         Bridge->GetSimulation()->NextCommandSequence(
             UEchoesSimulationSubsystem::LocalPlayerId);
     TestTrue(
-        TEXT("The schema-28 reconciliation has a stable receipt sequence"),
+        TEXT("The schema-29 reconciliation has a stable receipt sequence"),
         NativeReconciliationSequence.has_value());
     TestTrue(
         TEXT("The protected Soldier accepts Possible resolution"),
@@ -673,12 +656,24 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
                 ChoirIdentityState::DualResolvePossible &&
             InitialResolveRemaining > 0 && InitialResolveRemaining <= 160);
     TestTrue(
-        TEXT("The native schema-28 source retains the reconciliation receipt"),
+        TEXT("The native schema-29 source retains the reconciliation receipt"),
         NativeReconciliationSequence.has_value() &&
             Bridge->GetSimulation()->FindCommandResolutionReceipt(
                 UEchoesSimulationSubsystem::LocalPlayerId,
                 *NativeReconciliationSequence)
                 .has_value());
+    const echoes::sim::Entity* NativeNeme =
+        Bridge->FindEntity(Objective.SeveralVoicesNemeId);
+    TestTrue(
+        TEXT("A pending repeat of the assigned route exercises schema-29 command-width migration"),
+        NativeNeme != nullptr &&
+            Bridge->IssueCommand(
+                CommandType::Move,
+                Objective.SeveralVoicesNemeId,
+                0,
+                Bridge->SimToWorld(Plan.NemeCommandSite),
+                FutureWellChoice::Dormant,
+                Feedback));
 
     TestTrue(
         TEXT("The resolving identity writes a native bound checkpoint"),
@@ -696,7 +691,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         NativeLayout;
     TestTrue(
-        TEXT("The Mission 14 schema-28 checkpoint exposes bounded receipt, lifecycle, and hostility blocks"),
+        TEXT("The Mission 14 schema-30 checkpoint exposes bounded receipt, lifecycle, hostility, and production blocks"),
         FFileHelper::LoadFileToArray(NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, NativeCheckpoint, MapFailure) &&
             ExtractReplayCheckpointPayloadForTest(NativeCheckpoint, Feedback) &&
@@ -717,7 +712,31 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             NativeLayout.Schema28AppendSize ==
                 static_cast<int32>(echoes::sim::kMaximumPlayers) &&
             NativeLayout.Schema28HostilityMasks ==
-                echoes::sim::kDefaultHostilityMasks);
+                echoes::sim::kDefaultHostilityMasks &&
+            NativeLayout.Schema29AppendOffset ==
+                NativeLayout.Schema28AppendOffset +
+                    NativeLayout.Schema28AppendSize &&
+            NativeLayout.Schema29AppendSize >= 4 &&
+            NativeLayout.Schema30AppendOffset == NativeLayout.Schema29AppendOffset + NativeLayout.Schema29AppendSize &&
+            NativeLayout.Schema30AppendSize >= 12 &&
+            NativeLayout.PendingCommandOffset != INDEX_NONE &&
+            NativeLayout.PendingCommandCount > 0U);
+    TArray<uint8> LosslessV28Projection = NativeCheckpoint;
+    TestTrue(
+        TEXT("Mission 14 production state is losslessly representable by schema 28"),
+        EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV30ToV29(
+            LosslessV28Projection, 19, 11, 15) &&
+        EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV29ToV28(
+            LosslessV28Projection,
+            19,
+            11,
+            15) &&
+            EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
+                LosslessV28Projection) == 28U &&
+            NativeCheckpoint.Num() - LosslessV28Projection.Num() ==
+                NativeLayout.Schema29AppendSize +
+                    NativeLayout.Schema30AppendSize +
+                    static_cast<int32>(NativeLayout.PendingCommandCount));
     // The schema-25 memory ledgers are measured against this mission's own map,
     // not taken on the inspector's word: four remembered-terrain grids of
     // exactly the live tile count, then one bounded object ledger per player.
@@ -769,6 +788,84 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             Candidate == Before;
     };
 
+    TArray<uint8> QueuedCommandSnapshot = NativeCheckpoint;
+    bool bQueuedCommandFixtureLoadable =
+        NativeLayout.PendingCommandCount > 0U &&
+        QueuedCommandSnapshot.IsValidIndex(
+            NativeLayout.PendingCommandOffset + 38);
+    if (bQueuedCommandFixtureLoadable)
+    {
+        QueuedCommandSnapshot[NativeLayout.PendingCommandOffset + 38] = 1U;
+        bQueuedCommandFixtureLoadable =
+            EchoesSnapshotMigrationTestHelpers::ResignEmbeddedSnapshot(
+                QueuedCommandSnapshot,
+                NativeLayout.SnapshotOffset,
+                NativeLayout.SnapshotLength);
+        if (bQueuedCommandFixtureLoadable)
+        {
+            EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
+                QueuedCommandSnapshot);
+            bQueuedCommandFixtureLoadable =
+                EchoesSnapshotMigrationTestHelpers::
+                    IsLoadableEmbeddedSnapshot(
+                        QueuedCommandSnapshot,
+                        NativeLayout.SnapshotOffset,
+                        NativeLayout.SnapshotLength,
+                        echoes::sim::kSnapshotVersion);
+        }
+    }
+    TestTrue(
+        TEXT("Mission 14 constructs a loadable schema-29 queued-command fixture"),
+        bQueuedCommandFixtureLoadable);
+    TestTrue(
+        TEXT("Mission 14 rejects a queued command that schema 28 cannot represent"),
+        bQueuedCommandFixtureLoadable &&
+            RejectsMission14ConversionWithoutMutation(QueuedCommandSnapshot));
+
+    const int32 FirstProductionStateOffset =
+        NativeLayout.Schema29AppendOffset + 4;
+    const uint32 FirstProductionEntityId =
+        EchoesSnapshotMigrationTestHelpers::ReadUint32(
+            NativeCheckpoint, FirstProductionStateOffset);
+    const echoes::sim::Entity* FirstProductionEntity =
+        Bridge->FindEntity(FirstProductionEntityId);
+    TArray<uint8> RallyAlertSnapshot = NativeCheckpoint;
+    bool bRallyAlertFixtureLoadable =
+        FirstProductionEntity != nullptr &&
+        FirstProductionEntity->completed &&
+        (FirstProductionEntity->type == EntityType::CommandCore ||
+         FirstProductionEntity->type == EntityType::Barracks) &&
+        RallyAlertSnapshot.IsValidIndex(FirstProductionStateOffset + 26) &&
+        RallyAlertSnapshot[FirstProductionStateOffset + 26] == 0U;
+    if (bRallyAlertFixtureLoadable)
+    {
+        RallyAlertSnapshot[FirstProductionStateOffset + 26] = 1U;
+        bRallyAlertFixtureLoadable =
+            EchoesSnapshotMigrationTestHelpers::ResignEmbeddedSnapshot(
+                RallyAlertSnapshot,
+                NativeLayout.SnapshotOffset,
+                NativeLayout.SnapshotLength);
+        if (bRallyAlertFixtureLoadable)
+        {
+            EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
+                RallyAlertSnapshot);
+            bRallyAlertFixtureLoadable =
+                EchoesSnapshotMigrationTestHelpers::
+                    IsLoadableEmbeddedSnapshot(
+                        RallyAlertSnapshot,
+                        NativeLayout.SnapshotOffset,
+                        NativeLayout.SnapshotLength,
+                        echoes::sim::kSnapshotVersion);
+        }
+    }
+    TestTrue(
+        TEXT("Mission 14 constructs a loadable schema-29 rally-state fixture"),
+        bRallyAlertFixtureLoadable);
+    TestTrue(
+        TEXT("Mission 14 rejects rally state that schema 28 cannot reproduce"),
+        bRallyAlertFixtureLoadable &&
+            RejectsMission14ConversionWithoutMutation(RallyAlertSnapshot));
+
     TArray<uint8> BadEnvelopeChecksum = NativeCheckpoint;
     if (!BadEnvelopeChecksum.IsEmpty())
     {
@@ -817,8 +914,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
                 ProtectedCoreSnapshot);
             // The source here is the checkpoint just written by this run, so
-            // it carries native schema 28. The replay envelope is unrelated
-            // and stays at 24.
+            // it carries native schema 30. Replay versioning is independent.
             bProtectedCoreSourceLoadable =
                 EchoesSnapshotMigrationTestHelpers::
                     IsLoadableEmbeddedSnapshot(
@@ -946,16 +1042,19 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     // may drop are the empty receipt count, the protection mask, and the
     // schema-25 memory ledgers this map's dimensions already pinned above,
     // plus the separately measured schema-26 work/projectile, schema-27
-    // lifecycle, and schema-28 hostility-mask appends.
+    // lifecycle, schema-28 hostility-mask, and schema-29 production appends.
     TestTrue(
-        TEXT("Mission 14 converts zero receipts with the exact schema-28, schema-27, and schema-26 appends, memory-ledger, and five-byte shrink"),
+        TEXT("Mission 14 converts zero receipts with the exact schema-29 through schema-26 appends, memory ledger, and five-byte legacy shrink"),
         EchoesSnapshotMigrationTestHelpers::
                 ConvertMission14EnvelopeSnapshotToV22(ZeroReceiptV22) &&
             ZeroReceiptNative.Num() - ZeroReceiptV22.Num() ==
                 5 + NativeLayout.MemoryLedgerSize +
                     NativeLayout.Schema26AppendSize +
                     NativeLayout.Schema27AppendSize +
-                    NativeLayout.Schema28AppendSize &&
+                    NativeLayout.Schema28AppendSize +
+                    NativeLayout.Schema29AppendSize +
+                    NativeLayout.Schema30AppendSize +
+                    static_cast<int32>(NativeLayout.PendingCommandCount) &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
                 ZeroReceiptV22) == 22U);
 
@@ -965,9 +1064,12 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         static_cast<uint64>(NativeLayout.MemoryLedgerSize) +
         static_cast<uint64>(NativeLayout.Schema26AppendSize) +
         static_cast<uint64>(NativeLayout.Schema27AppendSize) +
-        static_cast<uint64>(NativeLayout.Schema28AppendSize);
+        static_cast<uint64>(NativeLayout.Schema28AppendSize) +
+        static_cast<uint64>(NativeLayout.Schema29AppendSize) +
+        static_cast<uint64>(NativeLayout.Schema30AppendSize) +
+        static_cast<uint64>(NativeLayout.PendingCommandCount);
     TestTrue(
-        TEXT("The Mission 14 checkpoint converts through every schema from 28 to its genuine schema-22 shape"),
+        TEXT("The Mission 14 checkpoint converts through every schema from 30 to its synthetic schema-22 shape"),
         EchoesSnapshotMigrationTestHelpers::
                 ConvertMission14EnvelopeSnapshotToV22(V22Checkpoint) &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
@@ -1042,10 +1144,10 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TArray<uint8> ResavedNativePrimary;
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         ResavedNativeLayout;
-    // Resaving writes native schema 28. The retained backup is a genuine
+    // Resaving writes native schema 30. The retained backup is a genuine
     // migration fixture and stays at schema 22.
     TestTrue(
-        TEXT("The legacy-loaded Mission 14 state resaves natively as schema 28"),
+        TEXT("The legacy-loaded Mission 14 state resaves natively as schema 30"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, ResavedNativePrimary, MapFailure) &&
@@ -1058,7 +1160,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
                 ResavedNativePrimary) == echoes::sim::kSnapshotVersion);
     TArray<uint8> RetainedV22Backup;
     TestTrue(
-        TEXT("The first schema-28 resave retains the valid schema-22 Mission 14 generation"),
+        TEXT("The first schema-30 resave retains the valid schema-22 Mission 14 generation"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope,
             *(QuickSavePath + TEXT(".bak"))) &&
@@ -1088,7 +1190,20 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         Objective.SeveralVoicesPossibleResolveTicksRemaining,
         InitialResolveRemaining);
 
-    TestTrue(
+    // Schema 22 predates the current active-movement ledger. Reissue the
+    // same three authored player orders after migration instead of expecting
+    // a discarded movement ledger to continue by itself.
+    for (const auto& Route : {
+        TPair<echoes::sim::EntityId, echoes::sim::Vec2>{Objective.SeveralVoicesPossibleVoiceId, Plan.PossibleVoiceSite},
+        TPair<echoes::sim::EntityId, echoes::sim::Vec2>{Objective.SeveralVoicesManifestVoiceId, Plan.ManifestVoiceSite},
+        TPair<echoes::sim::EntityId, echoes::sim::Vec2>{Objective.SeveralVoicesNemeId, Plan.NemeCommandSite}})
+    {
+        if (!TestTrue(TEXT("Migrated voice accepts its original authored route"),
+            Bridge->IssueCommand(CommandType::Move, Route.Key, 0,
+                Bridge->SimToWorld(Route.Value), FutureWellChoice::Dormant, Feedback))) return false;
+    }
+
+    if (!TestTrue(
         TEXT("Possible, Manifest, and Neme reach their separate contracts"),
         TickUntil(
             [Bridge]()
@@ -1097,7 +1212,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
                     EEchoesSeveralVoicesOneCommandPhase::
                         ResearchSharedResolution;
             },
-            3000));
+            3000))) return false;
     Objective = Bridge->GetLocalObjectiveSnapshot();
     TestTrue(
         TEXT("Both incompatible stable states and all three sites are visible"),
@@ -1163,7 +1278,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             Objective.SeveralVoicesPhaseAnchorId != 0 &&
             InitialCrisisRemaining > 0 && InitialCrisisRemaining <= 160);
     TestTrue(
-        TEXT("The crisis hold reconstructs through schema-28 quick load"),
+        TEXT("The crisis hold reconstructs through schema-29 quick load"),
         Bridge->QuickSaveScenario(Feedback) &&
             Bridge->QuickLoadScenario(Feedback) &&
             Bridge->GetSeveralVoicesOneCommandPhase() ==
@@ -1314,10 +1429,10 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     const FEchoesCampaignDecisionRecord* MissionRecord =
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::SeveralVoicesOneCommand);
-    // The commit is written now, so it stamps current native schema-28
-    // provenance; the replay envelope stays at schema 24.
+    // The commit is written now, so it stamps current native schema-29
+    // provenance; replay versioning remains independent.
     TestTrue(
-        TEXT("Mission 14 stores the protocol, all facts, and schema-28 provenance"),
+        TEXT("Mission 14 stores the protocol, all facts, and current snapshot provenance"),
         MissionRecord != nullptr &&
             MissionRecord->WellChoice == FutureWellChoice::Preserve &&
             MissionRecord->AvailableWellChoices ==

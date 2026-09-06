@@ -84,6 +84,12 @@ struct FEmbeddedSnapshotLayout final
     int32 Schema28AppendOffset = INDEX_NONE;
     int32 Schema28AppendSize = 0;
     echoes::sim::PlayerHostilityMasks Schema28HostilityMasks{};
+    int32 PendingCommandOffset = INDEX_NONE;
+    uint32 PendingCommandCount = 0;
+    int32 Schema29AppendOffset = INDEX_NONE;
+    int32 Schema29AppendSize = 0;
+    int32 Schema30AppendOffset = INDEX_NONE;
+    int32 Schema30AppendSize = 0;
 };
 
 inline constexpr echoes::sim::PlayerHostilityMasks
@@ -200,10 +206,11 @@ inline int32 EmbeddedSnapshotTerrainGridOffset()
             // One empty remembered-object ledger per player, then the empty
             // entity, pending-command, receipt, schema-26 work, and ballistic
             // ledgers. The latter is flag + next ID + count with no records,
-            // followed by the schema-27 empty lifecycle count and schema-28's
-            // four measured hostility-mask bytes.
+            // followed by the schema-27 empty lifecycle count, schema-28's
+            // four measured hostility-mask bytes, and schema-29's empty
+            // producer-state count and schema-30 next-ID/entity-count header.
             static_cast<int32>(echoes::sim::kMaximumPlayers) * 4 +
-            4 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 4;
+            4 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 8 + 4;
         constexpr int32 SnapshotSignatureSize = 8;
         const echoes::sim::Simulation Probe(
             echoes::sim::SimulationConfig{2, 2, 20, 0});
@@ -326,10 +333,12 @@ inline bool ResolveEmbeddedSnapshotMemoryLedger(
 
 // Schema 26 appends worker work/order state and in-flight projectile state
 // after the receipt block. Schema 27 then appends one 16-byte Future Well
-// lifecycle record per entity. Schema 28 then appends four hostility masks.
+// lifecycle record per entity. Schema 28 then appends four hostility masks,
+// and schema 29 appends variable producer queue and rally state.
 // This helper walks the variable regions from their counts and parses the
-// schema-28 append separately; it never guesses a tail length. The real loader
-// has already validated record semantics before callers reach here.
+// schema-28, schema-29 and schema-30 appends separately; it never guesses a tail length.
+// The real loader has already validated record semantics before callers reach
+// here.
 inline bool ResolveEmbeddedSnapshotSchema26Append(
     const TArray<uint8>& Envelope,
     const FEmbeddedSnapshotLayout& Layout,
@@ -339,11 +348,15 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
 {
     constexpr int32 SnapshotSignatureSize = 8;
     constexpr int32 SerializedEntitySize = 235;
-    constexpr int32 SerializedCommandSize = 38;
+    constexpr int32 LegacySerializedCommandSize = 38;
+    constexpr int32 Schema29SerializedCommandSize = 39;
     constexpr int32 SerializedReceiptSize = 19;
     constexpr int32 SerializedWorkStateSize = 31;
     constexpr int32 SerializedQueuedOrderSize = 23;
     constexpr int32 SerializedProjectileSize = 41;
+    constexpr int32 SerializedProductionStateHeaderSize = 28;
+    constexpr int32 SerializedProductionQueueItemSize = 25;
+    constexpr int32 SerializedRallyOrderSize = 23;
     constexpr uint32 MaximumSerializedEntities = 64U * 1024U;
     OutAppendOffset = INDEX_NONE;
     OutAppendSize = 0;
@@ -358,6 +371,14 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
         Layout.SnapshotLength - SnapshotSignatureSize;
     int64 Cursor = static_cast<int64>(Layout.MemoryLedgerOffset) +
         Layout.MemoryLedgerSize;
+    const uint32 Version = ReadUint32(Envelope, Layout.SnapshotOffset + 4);
+    if (Version < 26U || Version > 30U)
+    {
+        return false;
+    }
+    const int32 SerializedCommandSize = Version >= 29U
+        ? Schema29SerializedCommandSize
+        : LegacySerializedCommandSize;
     const auto ReadCount = [&Envelope, &Cursor, PayloadEnd](uint32& OutCount)
     {
         if (Cursor + 4 > PayloadEnd || Cursor > MAX_int32)
@@ -385,6 +406,7 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
     {
         return false;
     }
+    const int64 CommandOffset = Cursor;
     Cursor += static_cast<int64>(CommandCount) * SerializedCommandSize;
     const int64 ReceiptOffset = Cursor;
     uint32 ReceiptCount = 0;
@@ -442,11 +464,6 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
     const int64 Schema26AppendEnd = Cursor;
     // Schema 27 appends exact per-entity capture/telegraph records. Synthetic
     // legacy fixtures project this block away before projecting schema 26.
-    const uint32 Version = ReadUint32(Envelope, Layout.SnapshotOffset + 4);
-    if (Version != 26U && Version != 27U && Version != 28U)
-    {
-        return false;
-    }
     if (Version >= 27U)
     {
         const int64 LifecycleOffset = Cursor;
@@ -466,12 +483,12 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
         OutLayout.Schema27AppendSize =
             static_cast<int32>(Cursor - LifecycleOffset);
     }
-    if (Version == 28U)
+    if (Version >= 28U)
     {
         constexpr int32 HostilityMaskSize =
             static_cast<int32>(echoes::sim::kMaximumPlayers);
         const int64 HostilityOffset = Cursor;
-        if (Cursor + HostilityMaskSize != PayloadEnd || Cursor > MAX_int32)
+        if (Cursor + HostilityMaskSize > PayloadEnd || Cursor > MAX_int32)
         {
             return false;
         }
@@ -491,13 +508,90 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
         OutLayout.Schema28AppendSize = HostilityMaskSize;
         OutLayout.Schema28HostilityMasks = Config.hostilityMasks;
     }
+    if (Version == 28U && Cursor != PayloadEnd)
+    {
+        return false;
+    }
+    if (Version >= 29U)
+    {
+        const int64 ProductionOffset = Cursor;
+        uint32 ProducerStateCount = 0;
+        if (!ReadCount(ProducerStateCount) || ProducerStateCount != EntityCount)
+        {
+            return false;
+        }
+        for (uint32 Index = 0; Index < ProducerStateCount; ++Index)
+        {
+            if (Cursor + SerializedProductionStateHeaderSize > PayloadEnd ||
+                Cursor > MAX_int32)
+            {
+                return false;
+            }
+            const uint8 WaitingCount =
+                Envelope[static_cast<int32>(Cursor) + 27];
+            if (WaitingCount > echoes::sim::Entity::kMaxProductionQueue)
+            {
+                return false;
+            }
+            Cursor += SerializedProductionStateHeaderSize +
+                static_cast<int64>(WaitingCount) *
+                    SerializedProductionQueueItemSize;
+            if (Cursor + 1 > PayloadEnd || Cursor > MAX_int32)
+            {
+                return false;
+            }
+            const uint8 RallyCount = Envelope[static_cast<int32>(Cursor)];
+            if (RallyCount > echoes::sim::Entity::kMaxRallyOrders)
+            {
+                return false;
+            }
+            Cursor += 1 + static_cast<int64>(RallyCount) *
+                SerializedRallyOrderSize;
+            if (Cursor > PayloadEnd)
+            {
+                return false;
+            }
+        }
+        if (ProductionOffset > MAX_int32 ||
+            Cursor - ProductionOffset > MAX_int32)
+        {
+            return false;
+        }
+        OutLayout.Schema29AppendOffset =
+            static_cast<int32>(ProductionOffset);
+        OutLayout.Schema29AppendSize =
+            static_cast<int32>(Cursor - ProductionOffset);
+    }
+    if (Version >= 30U)
+    {
+        const int64 LinkOffset = Cursor;
+        if (Cursor + 12 > PayloadEnd) return false;
+        Cursor += 8; // next monotonic production item ID
+        uint32 LinkCount = 0;
+        if (!ReadCount(LinkCount) || LinkCount != EntityCount) return false;
+        for (uint32 Index = 0; Index < LinkCount; ++Index)
+        {
+            // id, active ID, waiting count, waiting IDs, investment, repair,
+            // and operational-network flag. The real loader validates values.
+            if (Cursor + 38 > PayloadEnd || Cursor > MAX_int32) return false;
+            const uint8 WaitingCount = Envelope[static_cast<int32>(Cursor) + 12];
+            if (WaitingCount > echoes::sim::Entity::kMaxProductionQueue) return false;
+            Cursor += 38 + static_cast<int64>(WaitingCount) * 8;
+            if (Cursor > PayloadEnd) return false;
+        }
+        OutLayout.Schema30AppendOffset = static_cast<int32>(LinkOffset);
+        OutLayout.Schema30AppendSize = static_cast<int32>(Cursor - LinkOffset);
+    }
     if (Cursor != PayloadEnd) return false;
-    if (ReceiptOffset > MAX_int32 || AppendOffset > MAX_int32 ||
+    if (CommandOffset > MAX_int32 || ReceiptOffset > MAX_int32 ||
+        AppendOffset > MAX_int32 ||
         Schema26AppendEnd - AppendOffset > MAX_int32)
     {
         return false;
     }
     OutLayout.ReceiptBlockOffset = static_cast<int32>(ReceiptOffset);
+    OutLayout.PendingCommandOffset = static_cast<int32>(CommandOffset);
+    OutLayout.PendingCommandCount = CommandCount;
     OutLayout.ReceiptCount = ReceiptCount;
     OutLayout.ReceiptBlockSize = 4 +
         static_cast<int32>(ReceiptCount) * SerializedReceiptSize;
@@ -693,7 +787,179 @@ inline bool InspectEmbeddedSnapshot(
     return SelectUniqueReceiptCandidate(LoadableCandidates, OutLayout);
 }
 
-// Project a current schema-28 checkpoint to schema 27 by removing exactly the
+// A synthetic legacy fixture is permitted only when it has no new repair or
+// live construction investment and no pending identity-bound cancellation. Item
+// IDs are synthesized by the old-save migration; they are not historical IDs.
+inline bool ConvertEmbeddedSnapshotV30ToV29(
+    TArray<uint8>& Envelope,
+    int32 FixedHeaderSize,
+    int32 LedgerLengthOffset,
+    int32 SnapshotLengthOffset,
+    const echoes::sim::PlayerHostilityMasks& LegacyHostilityMasks =
+        echoes::sim::kDefaultHostilityMasks)
+{
+    FEmbeddedSnapshotLayout Layout;
+    if (!InspectEmbeddedSnapshot(Envelope, FixedHeaderSize, LedgerLengthOffset,
+            SnapshotLengthOffset, Layout, 30U, LegacyHostilityMasks) ||
+        Layout.Schema30AppendOffset == INDEX_NONE || Layout.Schema30AppendSize < 12)
+        return false;
+    std::string Error;
+    const auto Original = echoes::sim::Simulation::LoadSnapshot(
+        std::span<const uint8>(Envelope.GetData() + Layout.SnapshotOffset,
+            Layout.SnapshotLength), &Error, LegacyHostilityMasks);
+    if (!Original.has_value() || !Error.empty()) return false;
+    for (const auto& Entity : Original->Entities())
+        // Completed structures retain their original paid cost for audit, but
+        // it is inert: cancellation rejects completed entities before refund.
+        // Only live construction investment changes schema-30 behavior.
+        if ((!Entity.completed &&
+             Entity.constructionInvestedCost != echoes::sim::ResourcePool{}) ||
+            Entity.repairInterruptedUntilTick != 0 || Entity.repairRateRemainder != 0 ||
+            Entity.repairPaidHitPointCredit != 0) return false;
+    for (const auto& Command : Original->PendingCommands())
+        if (Command.type > echoes::sim::CommandType::SetRallyRoute ||
+            (Command.type == echoes::sim::CommandType::CancelProduction &&
+             (Command.position.x.Raw() != 0 || Command.position.y.Raw() != 0))) return false;
+    TArray<uint8> Working = Envelope;
+    Working.RemoveAt(Layout.Schema30AppendOffset, Layout.Schema30AppendSize, EAllowShrinking::No);
+    const uint32 Length = Layout.SnapshotLength - Layout.Schema30AppendSize;
+    WriteUint32(Working, SnapshotLengthOffset, Length);
+    WriteUint32(Working, Layout.SnapshotOffset + 4, 29U);
+    if (!ResignEmbeddedSnapshot(Working, Layout.SnapshotOffset, Length)) return false;
+    UpdateEnvelopeChecksum(Working);
+    const auto Migrated = echoes::sim::Simulation::LoadSnapshot(
+        std::span<const uint8>(Working.GetData() + Layout.SnapshotOffset, Length),
+        &Error, LegacyHostilityMasks);
+    if (!Migrated.has_value() || !Error.empty()) return false;
+    const auto Resaved = Migrated->SaveSnapshot();
+    const int32 PrefixLength = Layout.Schema30AppendOffset - Layout.SnapshotOffset;
+    // Every pre-Link field must survive; new default state and synthesized IDs
+    // must also survive a current-schema reload byte for byte.
+    const auto Reloaded = echoes::sim::Simulation::LoadSnapshot(Resaved, &Error, LegacyHostilityMasks);
+    if (Resaved.size() != Layout.SnapshotLength ||
+        FMemory::Memcmp(Resaved.data(), Envelope.GetData() + Layout.SnapshotOffset, PrefixLength) != 0 ||
+        !Reloaded.has_value() || !Error.empty() || Reloaded->SaveSnapshot() != Resaved) return false;
+    Envelope = MoveTemp(Working);
+    return true;
+}
+
+// Project a schema-29 checkpoint to its exact schema-28 representation. The
+// queue flag appended to each pending command is removed only when false, and
+// the producer tail is removed only when loading the result as schema 28 and
+// resaving it as current schema reproduces the original snapshot byte for byte.
+// That round trip makes active investment/cost state part of representability
+// and rejects waiting production, rally routes, blocked state, or any other
+// schema-29 authority that schema 28 cannot retain.
+inline bool ConvertEmbeddedSnapshotV29ToV28(
+    TArray<uint8>& Envelope,
+    int32 FixedHeaderSize,
+    int32 LedgerLengthOffset,
+    int32 SnapshotLengthOffset,
+    const echoes::sim::PlayerHostilityMasks& LegacyHostilityMasks =
+        echoes::sim::kDefaultHostilityMasks)
+{
+    constexpr int32 SnapshotVersionOffset = 4;
+    constexpr int32 SerializedCommandSize = 39;
+    constexpr int32 CommandTypeOffset = 17;
+    constexpr int32 QueueFlagOffset = 38;
+    constexpr uint32 HostilitySnapshotVersion = 28U;
+    FEmbeddedSnapshotLayout Layout;
+    if (!InspectEmbeddedSnapshot(
+            Envelope,
+            FixedHeaderSize,
+            LedgerLengthOffset,
+            SnapshotLengthOffset,
+            Layout,
+            29U,
+            LegacyHostilityMasks) ||
+        Layout.PendingCommandOffset == INDEX_NONE ||
+        Layout.Schema29AppendOffset == INDEX_NONE ||
+        Layout.Schema29AppendSize <= 0 ||
+        Layout.Schema29AppendOffset !=
+            Layout.Schema28AppendOffset + Layout.Schema28AppendSize ||
+        static_cast<uint64>(Layout.SnapshotLength) <
+            static_cast<uint64>(Layout.Schema29AppendSize) +
+                static_cast<uint64>(Layout.PendingCommandCount))
+    {
+        return false;
+    }
+    for (uint32 Index = 0; Index < Layout.PendingCommandCount; ++Index)
+    {
+        const int64 CommandOffset =
+            static_cast<int64>(Layout.PendingCommandOffset) +
+            static_cast<int64>(Index) * SerializedCommandSize;
+        if (CommandOffset > MAX_int32 - QueueFlagOffset ||
+            Envelope[static_cast<int32>(CommandOffset) + QueueFlagOffset] != 0U ||
+            Envelope[static_cast<int32>(CommandOffset) + CommandTypeOffset] >
+                static_cast<uint8>(echoes::sim::CommandType::ReconcileToPossible))
+        {
+            return false;
+        }
+    }
+
+    TArray<uint8> Working = Envelope;
+    Working.RemoveAt(
+        Layout.Schema29AppendOffset,
+        Layout.Schema29AppendSize,
+        EAllowShrinking::No);
+    for (uint32 Remaining = Layout.PendingCommandCount;
+         Remaining > 0;
+         --Remaining)
+    {
+        const int64 CommandOffset =
+            static_cast<int64>(Layout.PendingCommandOffset) +
+            static_cast<int64>(Remaining - 1U) * SerializedCommandSize;
+        Working.RemoveAt(
+            static_cast<int32>(CommandOffset) + QueueFlagOffset,
+            1,
+            EAllowShrinking::No);
+    }
+    const uint32 V28SnapshotLength = Layout.SnapshotLength -
+        static_cast<uint32>(Layout.Schema29AppendSize) -
+        Layout.PendingCommandCount;
+    WriteUint32(Working, SnapshotLengthOffset, V28SnapshotLength);
+    WriteUint32(
+        Working,
+        Layout.SnapshotOffset + SnapshotVersionOffset,
+        HostilitySnapshotVersion);
+    if (!ResignEmbeddedSnapshot(
+            Working, Layout.SnapshotOffset, V28SnapshotLength))
+    {
+        return false;
+    }
+    UpdateEnvelopeChecksum(Working);
+
+    std::string LoadError;
+    std::optional<echoes::sim::Simulation> LoadedV28 =
+        echoes::sim::Simulation::LoadSnapshot(
+            std::span<const std::uint8_t>(
+                Working.GetData() + Layout.SnapshotOffset,
+                static_cast<size_t>(V28SnapshotLength)),
+            &LoadError,
+            LegacyHostilityMasks);
+    if (!LoadedV28.has_value() || !LoadError.empty())
+    {
+        return false;
+    }
+    const std::vector<std::uint8_t> ResavedCurrent =
+        LoadedV28->SaveSnapshot();
+    const auto LoadedV29 = echoes::sim::Simulation::LoadSnapshot(
+        std::span<const uint8>(Envelope.GetData() + Layout.SnapshotOffset,
+            Layout.SnapshotLength), &LoadError, LegacyHostilityMasks);
+    if (!LoadedV29.has_value() || !LoadError.empty() ||
+        ResavedCurrent != LoadedV29->SaveSnapshot() ||
+        static_cast<uint64>(Envelope.Num() - Working.Num()) !=
+            static_cast<uint64>(Layout.Schema29AppendSize) +
+                Layout.PendingCommandCount)
+    {
+        return false;
+    }
+
+    Envelope = MoveTemp(Working);
+    return true;
+}
+
+// Project a schema-28 checkpoint to schema 27 by removing exactly the
 // four validated hostility masks. The legacy loader receives the masks that
 // the authored operation will inject when reopening the synthetic fixture.
 inline bool ConvertEmbeddedSnapshotV28ToV27(
@@ -713,7 +979,7 @@ inline bool ConvertEmbeddedSnapshotV28ToV27(
             LedgerLengthOffset,
             SnapshotLengthOffset,
             Layout,
-            echoes::sim::kSnapshotVersion,
+            28U,
             LegacyHostilityMasks) ||
         Layout.Schema28AppendOffset == INDEX_NONE ||
         Layout.Schema28AppendSize !=
@@ -956,8 +1222,10 @@ inline bool ConvertEmbeddedSnapshotV23ToV22(
 }
 
 // Walks a checkpoint this build just wrote down every schema step it supports,
-// stopping at the genuine schema-22 shape:
+// stopping at a synthetic schema-22 shape:
 //
+//   30 -> 29   require representable defaults and synthesize legacy item IDs
+//   29 -> 28   drop only losslessly representable producer/queue state
 //   28 -> 27   drop the four hostility masks (legacy adapter supplies them)
 //   27 -> 26   drop the per-entity Future Well lifecycle records
 //   26 -> 25   drop worker work/order and in-flight projectile state
@@ -982,7 +1250,19 @@ inline bool ConvertEmbeddedSnapshotToV22(
     constexpr uint32 ReceiptSnapshotVersion = 24U;
     constexpr uint32 ReceiptFreeSnapshotVersion = 23U;
     TArray<uint8> Source = Envelope;
-    if (!ConvertEmbeddedSnapshotV28ToV27(
+    if (!ConvertEmbeddedSnapshotV30ToV29(
+            Source,
+            FixedHeaderSize,
+            LedgerLengthOffset,
+            SnapshotLengthOffset,
+            LegacyHostilityMasks) ||
+        !ConvertEmbeddedSnapshotV29ToV28(
+            Source,
+            FixedHeaderSize,
+            LedgerLengthOffset,
+            SnapshotLengthOffset,
+            LegacyHostilityMasks) ||
+        !ConvertEmbeddedSnapshotV28ToV27(
             Source,
             FixedHeaderSize,
             LedgerLengthOffset,

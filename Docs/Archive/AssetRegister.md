@@ -989,3 +989,24 @@ Runtime integration uses inert children of the existing body transform, shared f
 M01 deployment-part runtime follow-up, 2026-09-05: generated Bulwark revision `m01-bulwark-deployment-parts-v1` was bound in loaded module8594. Native084912Z derivative/pool/deployment checks pass with zero warnings/errors; I1 sampled frames1–8 show attached packed/unfolded/folding geometry and consistent facing. These are bounded native/EDT observations, not final locomotion, combat, material, package or owner acceptance. The linked qualification and source/generated/module hashes remain in `BuildArtifacts/Evidence/m01-visual-completion-20260905T024342Z` and `m01-motion-tested-actors-live-comparison-20260905T085741Z-3CB1DBE3`. No asset rights or authorship claim changes.
 
 M01 public-bank material binding follow-up, 2026-09-05: the existing `M_EchoesCliffSurface` now shades M01 `BiomeHorizon`; horizontal exterior substrate retains its ground material. No new asset or rights source was introduced. The two existing placement courses receive independent deterministic variation and distinct outside-play depth bands; their124 total instances and inert roles remain. Native101237Z verifies bounds/material separation and non-M01 controls. Loaded4481 L2 all ten normal-camera samples show the material/depth correction, with repeated cap shapes and bare lanes still open asV042. This is source/native/bounded EDT progress, not finished bank composition or owner acceptance.
+
+### M01 voice asset binding — 2026-09-06
+
+The approved local Kokoro pipeline now has 28 imported M01 SoundWave candidates under
+`/Game/Audio/Voice`. `Scripts/prepare_m01_voice_bindings.py` verifies the retained v2 take
+manifest, every WAV hash and format, and each current source/pack line identity before copying
+bytes into `Content/Audio/Source/Narrative`. The deterministic `m01_voice_bindings.json`
+records per-line speaker, exact text, current branch signal, logical hook, voice pin/speed,
+PCM identity/duration, source/pack identity, retained license pointer and imported object path.
+`Scripts/import_narrative_voice.py` checks the complete mapping before import and tags each
+asset with this provenance and authorship only Angelis Pseftis. Old candidate branch signals
+are not reused. Historical candidate records remain unchanged.
+
+Preparation and import succeeded in
+`BuildArtifacts/Evidence/p0-p3-readiness-20260906/voice-prepare-4.log` and
+`voice-import-4-engine.log`: 28 imported, zero reused, manifest SHA-256
+`6ce940ea1c75f977d92226d18a956c610e92eb61c37bddfb9e84b39353b5f1c0`.
+The runtime source binds the verified mapping to the Dialogue bus and subtitle queue; that
+source has not yet passed the integrated build or playback test at this entry. Directed
+listening, pronunciation, mix loudness, subtitle synchronization, packaged coverage and owner
+acceptance remain open. Import does not promote these candidates to final audio.

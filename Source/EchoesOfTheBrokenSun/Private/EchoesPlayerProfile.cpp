@@ -16,7 +16,9 @@ constexpr uint8 ProfileMagic[] = {'E', 'C', 'H', 'O', 'P', 'R', 'F', '1'};
 constexpr int32 ProfileHeaderSize = 12;
 constexpr int32 ProfilePayloadSize = 49;
 constexpr int32 ProfileChecksumSize = 4;
-constexpr uint8 ProfileAllowedFlags = 0x7F;
+constexpr uint8 LegacyProfileAllowedFlags = 0x7F;
+constexpr uint16 ReadinessOperationProfileSchemaVersion = 2;
+constexpr uint8 ReadinessOperationProfileFlag = 1u << 7;
 constexpr int32 ProfileMinimumResolution = 320;
 constexpr int32 ProfileMaximumResolution = 16384;
 
@@ -166,6 +168,13 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
         OutError = TEXT("[PROFILE_TUTORIAL_MASK_INVALID] Verified tutorial lessons must be the contiguous authored prefix of the ten-lesson curriculum.");
         return false;
     }
+    if (Profile.bReadinessOperationVerified &&
+        Profile.TutorialVerifiedMask !=
+            FEchoesPlayerProfile::AllTutorialLessonsMask)
+    {
+        OutError = TEXT("[PROFILE_READINESS_STATE_INVALID] Readiness-operation proof requires all ten verified curriculum lessons.");
+        return false;
+    }
     if (Profile.bTutorialOptOut && !Profile.bOnboardingOffered)
     {
         OutError = TEXT("[PROFILE_ONBOARDING_STATE_INVALID] Tutorial opt-out cannot precede the confirmed onboarding offer.");
@@ -223,7 +232,10 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
         (Profile.bReducedMotion ? 1u << 3 : 0u) |
         (Profile.bReducedFlashing ? 1u << 4 : 0u) |
         (Profile.bEdgePan ? 1u << 5 : 0u) |
-        (Profile.bReducedDynamicRange ? 1u << 6 : 0u);
+        (Profile.bReducedDynamicRange ? 1u << 6 : 0u) |
+        (Profile.bReadinessOperationVerified
+             ? ReadinessOperationProfileFlag
+             : 0u);
 }
 
 [[nodiscard]] bool EncodeProfile(
@@ -306,10 +318,12 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
         OutError = TEXT("[PROFILE_TRUNCATED] The player profile header is incomplete.");
         return false;
     }
-    if (Version != FEchoesPlayerProfile::SchemaVersion)
+    if (Version < FEchoesPlayerProfile::MinimumSupportedSchemaVersion ||
+        Version > FEchoesPlayerProfile::SchemaVersion)
     {
         OutError = FString::Printf(
-            TEXT("[PROFILE_VERSION_UNSUPPORTED] Supported schema is %u; found %u."),
+            TEXT("[PROFILE_VERSION_UNSUPPORTED] Supported schemas are %u through %u; found %u."),
+            FEchoesPlayerProfile::MinimumSupportedSchemaVersion,
             FEchoesPlayerProfile::SchemaVersion,
             Version);
         return false;
@@ -342,7 +356,8 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
         OutError = TEXT("[PROFILE_TRUNCATED] The player profile payload is incomplete.");
         return false;
     }
-    if ((Flags & ~ProfileAllowedFlags) != 0)
+    if (Version == FEchoesPlayerProfile::MinimumSupportedSchemaVersion &&
+        (Flags & ~LegacyProfileAllowedFlags) != 0)
     {
         OutError = TEXT("[PROFILE_FLAGS_INVALID] The player profile contains unsupported flag bits.");
         return false;
@@ -354,6 +369,11 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
     Candidate.bReducedFlashing = (Flags & (1u << 4)) != 0;
     Candidate.bEdgePan = (Flags & (1u << 5)) != 0;
     Candidate.bReducedDynamicRange = (Flags & (1u << 6)) != 0;
+    // Schema one never assigned the high flag bit. Loading it therefore
+    // preserves every legacy field while leaving readiness proof unearned.
+    Candidate.bReadinessOperationVerified =
+        Version >= ReadinessOperationProfileSchemaVersion &&
+        (Flags & ReadinessOperationProfileFlag) != 0;
     Candidate.WindowMode = static_cast<EWindowMode::Type>(EncodedWindowMode);
     if (!ValidateProfile(Candidate, OutError))
     {
@@ -430,7 +450,8 @@ bool FEchoesPlayerProfile::ApplySettings(
 
 bool FEchoesPlayerProfile::IsTutorialMasteryComplete() const
 {
-    if (!IsOrderedTutorialMask(TutorialVerifiedMask))
+    if (!bReadinessOperationVerified ||
+        !IsOrderedTutorialMask(TutorialVerifiedMask))
     {
         return false;
     }

@@ -27,12 +27,11 @@ bool FEchoesResearchTest::RunTest(const FString& Parameters)
     {
         return false;
     }
-    // Schema 28 appends player-hostility masks after schema 27 lifecycle state.
-    // Concession recording independently advanced replay to schema 25.
-    TestEqual(TEXT("Research interruption uses snapshot schema 28"),
-              echoes::sim::kSnapshotVersion, 28U);
-    TestEqual(TEXT("Research interruption uses replay schema 25"),
-              echoes::sim::kReplayVersion, 25U);
+    // Repair and production identity advance snapshots to 30 and replay execution to 27.
+    TestEqual(TEXT("Research interruption uses snapshot schema 30"),
+              echoes::sim::kSnapshotVersion, 30U);
+    TestEqual(TEXT("Research interruption uses replay schema 27"),
+              echoes::sim::kReplayVersion, 27U);
     FTestWorldWrapper WorldWrapper;
     if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
     {

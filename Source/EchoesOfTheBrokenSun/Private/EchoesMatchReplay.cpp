@@ -29,6 +29,9 @@ constexpr int32 MaximumReplayBrowserEntries = 4096;
 constexpr int64 MaximumReplayBrowserNameCharacters = 1024 * 1024;
 constexpr int32 MaximumIdentityBytes = 512;
 constexpr int32 SerializedReplayCommandBytes = 39;
+constexpr uint64 TrainingReadinessSeed = 0xE0C0'B5A1ULL;
+constexpr uint8 TrainingReadinessMissionOrdinal = 1;
+constexpr int32 TrainingReadinessMapDimension = 64;
 
 void AppendU8(TArray<uint8>& Bytes, uint8 Value)
 {
@@ -350,6 +353,70 @@ bool ValidateOperationMap(
         }
         return true;
     }
+    if (Metadata.OperationType == EEchoesReplayOperationType::Training)
+    {
+        if (Metadata.OperationId != TEXT("training-readiness"))
+        {
+            OutError = TEXT("Replay training operation identity is unsupported.");
+            return false;
+        }
+        const echoes::world::CampaignTerrainResult Map =
+            echoes::world::CheckCampaignTerrain(
+                TrainingReadinessMissionOrdinal,
+                echoes::sim::FutureWellChoice::Preserve);
+        if (!Map.ok || Metadata.MapId != UTF8_TO_TCHAR(Map.map_id))
+        {
+            OutError = TEXT("Replay training map identity does not match the authored M01 battlefield.");
+            return false;
+        }
+        const echoes::sim::SimulationConfig& Config = Baseline.Config();
+        if (Config.mapWidthTiles != TrainingReadinessMapDimension ||
+            Config.mapHeightTiles != TrainingReadinessMapDimension ||
+            Config.ticksPerSecond != 20 ||
+            Config.randomSeed != TrainingReadinessSeed ||
+            Config.hostilityMasks != echoes::sim::kDefaultHostilityMasks ||
+            Config.protectedCommandCorePlayerMask != 0)
+        {
+            OutError = TEXT("Replay training baseline does not match the fixed readiness configuration.");
+            return false;
+        }
+        const echoes::sim::PlayerState* Local = Baseline.FindPlayer(0);
+        const echoes::sim::PlayerState* Opponent = Baseline.FindPlayer(1);
+        if (Local == nullptr || Opponent == nullptr || !Local->active ||
+            !Opponent->active ||
+            Local->faction != echoes::sim::Faction::MeridianCompact ||
+            Opponent->faction != echoes::sim::Faction::KharuunAssemblies ||
+            (Baseline.FindPlayer(2) != nullptr &&
+             Baseline.FindPlayer(2)->active) ||
+            (Baseline.FindPlayer(3) != nullptr &&
+             Baseline.FindPlayer(3)->active))
+        {
+            OutError = TEXT("Replay training baseline does not match the fixed readiness factions.");
+            return false;
+        }
+        for (int32 Y = 0; Y < TrainingReadinessMapDimension; ++Y)
+        {
+            if (Cancelled()) return false;
+            for (int32 X = 0; X < TrainingReadinessMapDimension; ++X)
+            {
+                const echoes::sim::Terrain Expected =
+                    echoes::world::IsCampaignTerrainPassable(
+                        TrainingReadinessMissionOrdinal,
+                        echoes::sim::FutureWellChoice::Preserve,
+                        X,
+                        Y)
+                        ? echoes::sim::Terrain::Open
+                        : echoes::sim::Terrain::Blocked;
+                if (Baseline.TerrainAt(X, Y) != Expected)
+                {
+                    OutError = TEXT("Replay training baseline terrain does not match the authored M01 battlefield.");
+                    return false;
+                }
+            }
+        }
+        OutCanonicalMapId = UTF8_TO_TCHAR(Map.map_id);
+        return true;
+    }
     if (Metadata.OperationType != EEchoesReplayOperationType::Campaign)
     {
         OutError = TEXT("Replay operation type is unsupported.");
@@ -441,10 +508,9 @@ bool LoadReplayBaselineAuthority(
 {
     OutAuthority = {};
     std::string BaselineError;
-    OutAuthority.Baseline = echoes::sim::Simulation::LoadSnapshot(
-        Replay.initialSnapshot,
+    OutAuthority.Baseline = echoes::sim::Simulation::BeginReplaySimulation(
+        Replay,
         &BaselineError,
-        echoes::sim::kDefaultHostilityMasks,
         MakeCoreCancellationCheck(ShouldCancel));
     if (!OutAuthority.Baseline.has_value())
     {
@@ -717,8 +783,19 @@ bool ReadMetadata(
     uint8 OutcomeCause = 0;
     uint8 FactionCount = 0;
     if (!ReadU16(Bytes, Offset, Version) ||
-        Version != FEchoesMatchReplayStore::SchemaVersion ||
-        !ReadString(Bytes, Offset, OutMetadata.ReplayId) ||
+        Version < FEchoesMatchReplayStore::MinimumSchemaVersion ||
+        Version > FEchoesMatchReplayStore::SchemaVersion)
+    {
+        OutError = TEXT("Replay metadata is malformed or unsupported.");
+        return false;
+    }
+    const uint8 MaximumOperationType = Version >= 5
+        ? static_cast<uint8>(EEchoesReplayOperationType::Training)
+        : static_cast<uint8>(EEchoesReplayOperationType::Campaign);
+    const uint8 MaximumOperationResult = Version >= 5
+        ? static_cast<uint8>(EEchoesReplayOperationResult::TrainingFailure)
+        : static_cast<uint8>(EEchoesReplayOperationResult::CampaignFailure);
+    if (!ReadString(Bytes, Offset, OutMetadata.ReplayId) ||
         !ReadString(Bytes, Offset, OutMetadata.MapId) ||
         !ReadString(Bytes, Offset, OutMetadata.OperationId) ||
         !ReadString(Bytes, Offset, OutMetadata.BuildIdentity) ||
@@ -737,10 +814,10 @@ bool ReadMetadata(
         !ReadString(Bytes, Offset, OutMetadata.IrreversibleRecordId) ||
         !ReadU64(Bytes, Offset, OutMetadata.FinalChecksum) ||
         !ReadU8(Bytes, Offset, FactionCount) || FactionCount > 4 ||
-        Operation > static_cast<uint8>(EEchoesReplayOperationType::Campaign) ||
+        Operation > MaximumOperationType ||
         Completed > 1 ||
         Outcome > static_cast<uint8>(echoes::sim::MatchOutcome::Player3Victory) ||
-        OperationResult > static_cast<uint8>(EEchoesReplayOperationResult::CampaignFailure) ||
+        OperationResult > MaximumOperationResult ||
         OutcomeCause > static_cast<uint8>(EEchoesReplayOutcomeCause::CampaignFailurePredicate) ||
         RecordedTicks > static_cast<uint64>(FDateTime::MaxValue().GetTicks()))
     {
@@ -1185,6 +1262,35 @@ bool FEchoesMatchReplayStore::FinalizeEnvelope(
             return false;
         }
     }
+    else if (RequestedMetadata.OperationType ==
+             EEchoesReplayOperationType::Training)
+    {
+        const bool bCoherentTrainingResult =
+            (RequestedMetadata.OperationResult ==
+                 EEchoesReplayOperationResult::TrainingSuccess ||
+             RequestedMetadata.OperationResult ==
+                 EEchoesReplayOperationResult::TrainingFailure) &&
+            RequestedMetadata.OutcomeCause ==
+                EEchoesReplayOutcomeCause::CommandCoreLoss &&
+            !RequestedMetadata.OutcomeReasonId.IsEmpty() &&
+            RequestedMetadata.IrreversibleRecordId.IsEmpty();
+        if (!bCoherentTrainingResult)
+        {
+            OutError = TEXT("Training replay result, Corefall cause, and reason must form a coherent readiness outcome without a campaign record.");
+            return false;
+        }
+        if (std::any_of(
+                Replay.commands.begin(),
+                Replay.commands.end(),
+                [](const echoes::sim::Command& Command)
+                {
+                    return Command.player == 1;
+                }))
+        {
+            OutError = TEXT("Training replay contains opponent commands and cannot prove passive-AI readiness play.");
+            return false;
+        }
+    }
     FReplayBaselineAuthority BaselineAuthority;
     if (!LoadReplayBaselineAuthority(
             RequestedMetadata,
@@ -1219,6 +1325,31 @@ bool FEchoesMatchReplayStore::FinalizeEnvelope(
         OutError = TEXT("A completed skirmish replay requires a terminal core outcome.");
         return false;
     }
+    if (RequestedMetadata.OperationType == EEchoesReplayOperationType::Training &&
+        (Report->outcome != echoes::sim::MatchOutcome::Player0Victory &&
+         Report->outcome != echoes::sim::MatchOutcome::Player1Victory))
+    {
+        OutError = TEXT("A completed training replay requires a terminal two-player Corefall outcome.");
+        return false;
+    }
+    if (RequestedMetadata.OperationType == EEchoesReplayOperationType::Training &&
+        Report->outcomeCause != echoes::sim::MatchOutcomeCause::CommandCoreLoss)
+    {
+        OutError = TEXT("A completed training replay requires a command-driven Corefall outcome.");
+        return false;
+    }
+    if (RequestedMetadata.OperationType == EEchoesReplayOperationType::Training)
+    {
+        const EEchoesReplayOperationResult ExpectedResult =
+            Report->outcome == echoes::sim::MatchOutcome::Player0Victory
+                ? EEchoesReplayOperationResult::TrainingSuccess
+                : EEchoesReplayOperationResult::TrainingFailure;
+        if (RequestedMetadata.OperationResult != ExpectedResult)
+        {
+            OutError = TEXT("Training replay result does not match its reconstructed Corefall winner.");
+            return false;
+        }
+    }
 
     OutEnvelope.Metadata = RequestedMetadata;
     OutEnvelope.Metadata.MapId = BaselineAuthority.CanonicalMapId;
@@ -1241,6 +1372,21 @@ bool FEchoesMatchReplayStore::FinalizeEnvelope(
             Report->outcomeCause == echoes::sim::MatchOutcomeCause::PlayerForfeit
                 ? TEXT("player_forfeit")
                 : TEXT("command_core_loss");
+    }
+    else if (RequestedMetadata.OperationType ==
+             EEchoesReplayOperationType::Training)
+    {
+        const bool bSucceeded =
+            Report->outcome == echoes::sim::MatchOutcome::Player0Victory;
+        OutEnvelope.Metadata.OperationResult = bSucceeded
+            ? EEchoesReplayOperationResult::TrainingSuccess
+            : EEchoesReplayOperationResult::TrainingFailure;
+        OutEnvelope.Metadata.OutcomeCause =
+            EEchoesReplayOutcomeCause::CommandCoreLoss;
+        OutEnvelope.Metadata.OutcomeReasonId = bSucceeded
+            ? TEXT("training_opponent_core_destroyed")
+            : TEXT("training_player_core_destroyed");
+        OutEnvelope.Metadata.IrreversibleRecordId.Reset();
     }
     OutEnvelope.Metadata.PlayerFactions.Reset();
     for (const echoes::sim::MatchPlayerStatistics& Player : Report->players)
@@ -1969,10 +2115,9 @@ bool FEchoesReplayPlaybackSession::RebuildAt(
     }
     if (!Candidate.has_value())
     {
-        Candidate = echoes::sim::Simulation::LoadSnapshot(
-            ReplayRecord.initialSnapshot,
+        Candidate = echoes::sim::Simulation::BeginReplaySimulation(
+            ReplayRecord,
             &Error,
-            echoes::sim::kDefaultHostilityMasks,
             MakeCoreCancellationCheck(ShouldCancel));
     }
     if (!Candidate.has_value())
@@ -2059,7 +2204,7 @@ bool FEchoesReplayPlaybackSession::RebuildAt(
             OutError = TEXT("Replay concession could not be applied at its terminal tick.");
             return false;
         }
-        if (Candidate->StateChecksum() != ReplayRecord.finalChecksum)
+        if (Candidate->ReplayStateChecksum() != ReplayRecord.finalChecksum)
         {
             OutError = TEXT("Replay seek state does not match the recorded final checksum.");
             return false;
@@ -2143,7 +2288,7 @@ bool FEchoesReplayPlaybackSession::AdvanceTicks(
     }
     if (BeforeTick < ReplayRecord.finalTick &&
         Simulation->CurrentTick() == ReplayRecord.finalTick &&
-        Simulation->StateChecksum() != ReplayRecord.finalChecksum)
+        Simulation->ReplayStateChecksum() != ReplayRecord.finalChecksum)
     {
         OutError = TEXT("Replay playback state does not match the recorded final checksum.");
         return false;

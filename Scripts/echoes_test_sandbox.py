@@ -189,6 +189,20 @@ def run_synthetic_denial_probe(sandbox_exec: str, profile: Path, root: Path) -> 
         raise RuntimeError("sandbox-exec synthetic writable probe did not persist")
 
 
+def _prepare_persistent_local_ddc(project: Path, home_directory: Path) -> Path:
+    """Retain derived shader data only; never reuse save or user storage."""
+    storage_root = _prepare_automation_storage_root(project, home_directory)
+    cache = storage_root.parent / "AutomationDDC"
+    if len(str(cache)) > UNREAL_DDC_MAX_PATH_LENGTH:
+        raise ValueError("persistent Unreal DDC path exceeds the engine limit")
+    if cache.is_symlink():
+        raise ValueError("persistent Unreal DDC may not traverse a symlink")
+    cache.mkdir(exist_ok=True)
+    if cache.is_symlink() or _resolved(cache) != cache:
+        raise ValueError("persistent Unreal DDC did not resolve to its fixed route")
+    return cache
+
+
 def build_editor_command(
     sandbox_exec: str,
     profile: Path,
@@ -299,7 +313,9 @@ def launch(args: argparse.Namespace) -> int:
         prefix=SUITE_PREFIX, dir=automation_storage_root))
     save_dir = sandbox_root / "SaveGames"
     user_dir = sandbox_root / "UserDir"
-    local_cache_dir = sandbox_root / LOCAL_CACHE_DIR_NAME
+    persistent_ddc = getattr(args, "reuse_local_ddc", False)
+    local_cache_dir = (_prepare_persistent_local_ddc(project, home_directory)
+                       if persistent_ddc else sandbox_root / LOCAL_CACHE_DIR_NAME)
     if len(str(local_cache_dir)) > UNREAL_DDC_MAX_PATH_LENGTH:
         shutil.rmtree(sandbox_root)
         raise RuntimeError(
@@ -307,7 +323,8 @@ def launch(args: argparse.Namespace) -> int:
             f"{local_cache_dir}")
     save_dir.mkdir()
     user_dir.mkdir()
-    local_cache_dir.mkdir()
+    if not persistent_ddc:
+        local_cache_dir.mkdir()
     manifest_path = sandbox_root / "launch-manifest.json"
     # UE reads this Startup section before MainFrame creates the Home Screen.
     # Its recent-project browser otherwise opens an installation-registry dialog
@@ -344,6 +361,9 @@ def launch(args: argparse.Namespace) -> int:
         "automation_storage_root": str(automation_storage_root),
         "sandbox_root": str(sandbox_root),
         "local_cache_dir": str(local_cache_dir),
+        "persistent_local_ddc": persistent_ddc,
+        "editor_path": str(editor),
+        "project_path": str(project),
         "protected_paths_configured": [str(project_save_games), str(home_directory)],
         "protected_policy_clauses_verified": True,
         "user_dir_note": (
@@ -394,6 +414,8 @@ def main() -> int:
     parser.add_argument("--project", required=True)
     parser.add_argument("--report-dir", required=True)
     parser.add_argument("--timeout-seconds", type=int, default=600)
+    parser.add_argument("--reuse-local-ddc", action="store_true",
+                        help="retain only project-owned derived cache between isolated runs")
     parser.add_argument("editor_args", nargs=argparse.REMAINDER)
     arguments = parser.parse_args()
     if arguments.editor_args[:1] == ["--"]:

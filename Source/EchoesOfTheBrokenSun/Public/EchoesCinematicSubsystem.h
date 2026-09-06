@@ -7,8 +7,10 @@
 
 class ALevelSequenceActor;
 class ACineCameraActor;
+class AActor;
 class ULevelSequence;
 class ULevelSequencePlayer;
+struct FEchoesNarrativeCinematic;
 
 /** The authored sequences the cinematic pipeline can play. */
 UENUM()
@@ -40,7 +42,20 @@ enum class EEchoesCinematicSequence : uint8
     EndingExtinguishment,
 
     /** Ending D: Open Evolution - Releasing the choir harmonic frequency (32s). */
-    EndingOpenEvolution
+    EndingOpenEvolution,
+
+    /** M01 authored four-shot opening: What the Ledger Keeps (18s). */
+    M01Opening
+};
+
+/** Result of the most recent cinematic start/playback attempt. */
+UENUM()
+enum class EEchoesCinematicCompletion : uint8
+{
+    None,
+    NaturalFinish,
+    Skipped,
+    FailedToStart
 };
 
 /**
@@ -76,6 +91,14 @@ public:
     /** Skips the active sequence immediately and returns to play. */
     void SkipActiveSequence();
 
+    /** Pauses or resumes the active sequence and its subtitle clock. */
+    bool SetSequencePaused(bool bPaused);
+    [[nodiscard]] bool IsSequencePaused() const
+    {
+        return bSequenceActive && bSequencePaused;
+    }
+    [[nodiscard]] double GetSequenceElapsedSeconds() const;
+
     /**
      * The data-driven trigger path: maps an authored campaign trigger signal
      * to the sequence it starts, so cinematics are bound from source-authored
@@ -88,9 +111,31 @@ public:
 
     [[nodiscard]] bool IsSequenceActive() const { return bSequenceActive; }
 
+    [[nodiscard]] bool IsSequenceActive(
+        EEchoesCinematicSequence Sequence) const
+    {
+        return bSequenceActive && bHasCurrentSequence &&
+            CurrentSequence == Sequence;
+    }
+
+    /** True after this sequence naturally finishes or is explicitly skipped.
+     *  A new start attempt clears the prior completion result. */
+    [[nodiscard]] bool HasSequenceCompleted(
+        EEchoesCinematicSequence Sequence) const
+    {
+        return bHasCurrentSequence && CurrentSequence == Sequence &&
+            (LastCompletion == EEchoesCinematicCompletion::NaturalFinish ||
+             LastCompletion == EEchoesCinematicCompletion::Skipped);
+    }
+
+    [[nodiscard]] EEchoesCinematicCompletion GetLastCompletion() const
+    {
+        return LastCompletion;
+    }
+
     /** Authoring duration query for any sequence. */
-    [[nodiscard]] static float GetSequenceDurationSeconds(
-        EEchoesCinematicSequence Sequence);
+    [[nodiscard]] float GetSequenceDurationSeconds(
+        EEchoesCinematicSequence Sequence) const;
 
     /** Reference-sequence camera language constants. */
     [[nodiscard]] static constexpr float GetReferenceDurationSeconds()
@@ -121,6 +166,7 @@ public:
     {
         return bPausedScenario;
     }
+    [[nodiscard]] int32 GetCameraCutCountForTest() const;
 #endif
 
 private:
@@ -134,6 +180,8 @@ private:
         const FRotator& EndRotation);
 
     [[nodiscard]] ULevelSequence* BuildReferenceSequence();
+    [[nodiscard]] ULevelSequence* BuildM01OpeningSequence(
+        const FEchoesNarrativeCinematic& Contract);
     [[nodiscard]] ULevelSequence* BuildTitleSequence();
     [[nodiscard]] ULevelSequence* BuildAct1ToAct2Sequence();
     [[nodiscard]] ULevelSequence* BuildAct2ToAct3Sequence();
@@ -144,6 +192,7 @@ private:
     [[nodiscard]] ULevelSequence* BuildEndingOpenEvolutionSequence();
 
     void FinishActiveSequence(bool bSkipped);
+    void DestroySpawnedCameras();
 
     UPROPERTY(Transient)
     TObjectPtr<ULevelSequence> ActiveSequence;
@@ -157,8 +206,21 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<ACineCameraActor> CameraActor;
 
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<ACineCameraActor>> AdditionalCameraActors;
+
+    UPROPERTY(Transient)
+    TObjectPtr<AActor> PreviousViewTarget;
+
     bool bSequenceActive = false;
+    bool bSequencePaused = false;
+    bool bHasCurrentSequence = false;
     bool bPausedScenario = false;
     bool bScenarioWasPaused = false;
+    bool bViewTargetCaptured = false;
+    EEchoesCinematicSequence CurrentSequence =
+        EEchoesCinematicSequence::Reference;
+    EEchoesCinematicCompletion LastCompletion =
+        EEchoesCinematicCompletion::None;
     int32 CompletedPlaybackCount = 0;
 };

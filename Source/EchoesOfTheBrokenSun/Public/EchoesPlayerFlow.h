@@ -6,7 +6,7 @@
 enum class EEchoesShellScreen : uint8
 {
     Gameplay, Title, Briefing, Pause, Results, Modes, Options, SaveLoad, Confirmation, Error, Credits,
-    DisplayConfirmation, ReplayBrowser, ReplayTransport
+    DisplayConfirmation, ReplayBrowser, ReplayTransport, Help
 };
 
 enum class EEchoesShellAction : uint8
@@ -23,7 +23,47 @@ enum class EEchoesShellAction : uint8
     HudScaleValue, OpenReplayBrowser, OpenReplay, ViewReplay, ReplayPlayPause,
     ReplaySpeedPrevious, ReplaySpeedNext, ReplayStep, ReplayPerspectivePrevious,
     ReplayPerspectiveNext, ReplayBookmark, ExitReplay, ReplayMapFilter, ReplayDateFilter,
-    Rematch, ReplaySeek
+    Rematch, ReplaySeek, Help, PracticeTutorialLesson
+};
+
+/** Transient per-lesson practice state. It never owns durable profile facts. */
+struct FEchoesTutorialPracticeState final
+{
+    static constexpr uint16 ImplementedLessonMask = 0x001f;
+
+    [[nodiscard]] bool Begin(uint16 LessonBit)
+    {
+        if (LessonBit == 0 || (LessonBit & (LessonBit - 1)) != 0 ||
+            (LessonBit & ImplementedLessonMask) == 0)
+        {
+            return false;
+        }
+        TargetBit = LessonBit;
+        AttemptMask = 0;
+        return true;
+    }
+
+    [[nodiscard]] bool RecordVerified(uint16 LessonBit)
+    {
+        if (TargetBit == 0 || LessonBit != TargetBit) return false;
+        AttemptMask |= LessonBit;
+        TargetBit = 0;
+        return true;
+    }
+
+    void Reset()
+    {
+        TargetBit = 0;
+        AttemptMask = 0;
+    }
+
+    [[nodiscard]] bool IsActive() const { return TargetBit != 0; }
+    [[nodiscard]] uint16 TargetLessonBit() const { return TargetBit; }
+    [[nodiscard]] uint16 VerifiedAttemptMask() const { return AttemptMask; }
+
+private:
+    uint16 TargetBit = 0;
+    uint16 AttemptMask = 0;
 };
 
 struct FEchoesShellSlider

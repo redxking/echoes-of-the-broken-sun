@@ -161,6 +161,8 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("CyclePlayableFaction"), EKeys::Tab));
         TestTrue(TEXT("Reverse keyboard-selection cycle input is mapped"),
                  HasAction(TEXT("CycleOwnedEntityPrevious"), EKeys::BackSpace));
+        TestTrue(TEXT("Forward keyboard-selection cycle input is mapped"),
+                 HasAction(TEXT("CycleOwnedEntityNext"), EKeys::Tab));
         TestTrue(TEXT("Keyboard target-mode input is mapped"),
                  HasAction(TEXT("ToggleKeyboardTargeting"), EKeys::Home));
         TestTrue(TEXT("Keyboard reticle-context input is mapped"),
@@ -171,6 +173,8 @@ bool FEchoesRuntimeSmokeTest::RunTest(const FString& Parameters)
                  HasAction(TEXT("KeyboardTargetRight"), EKeys::Right));
         TestTrue(TEXT("Keyboard target-snap input is mapped"),
                  HasAction(TEXT("SnapKeyboardTargetToSelection"), EKeys::End));
+        TestTrue(TEXT("Mac-compatible keyboard target-snap input is mapped"),
+                 HasAction(TEXT("SnapKeyboardTargetToSelection"), EKeys::F, true, false));
         TestTrue(TEXT("Combat-force selection input is mapped"),
                  HasAction(TEXT("SelectCombatForce"), EKeys::F7));
         TestTrue(TEXT("Faction research input is mapped"),

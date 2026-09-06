@@ -2,8 +2,10 @@
 #include "EchoesSimCore/NetworkProtocol.h"
 
 #include <algorithm>
+#include <fstream>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <map>
 #include <set>
@@ -42,6 +44,25 @@ Command MakeCommand(Tick tick,
     command.type = type;
     command.actor = actor;
     return command;
+}
+
+void SetExpectedProductionItem(Command& command, ProductionItemId itemId) {
+    command.position = Vec2::FromRaw(
+        static_cast<std::int32_t>(static_cast<std::uint32_t>(itemId)),
+        static_cast<std::int32_t>(static_cast<std::uint32_t>(itemId >> 32U)));
+}
+
+std::vector<std::uint8_t> ReadLegacyReplayFixture(const char* fileName) {
+    std::string sourcePath = __FILE__;
+    const std::size_t separator = sourcePath.find_last_of("/\\");
+    REQUIRE(separator != std::string::npos);
+    const std::string fixturePath = sourcePath.substr(0, separator) +
+        "/Fixtures/LegacyReplay/" + fileName;
+    std::ifstream input(fixturePath, std::ios::binary);
+    REQUIRE(input.good());
+    return std::vector<std::uint8_t>(
+        std::istreambuf_iterator<char>(input),
+        std::istreambuf_iterator<char>());
 }
 
 std::uint64_t SnapshotIntegrity(const std::vector<std::uint8_t>& bytes,
@@ -167,6 +188,8 @@ constexpr std::size_t kSerializedWorkStateBytes = 31;
 constexpr std::size_t kSerializedQueuedOrderBytes = 23;
 constexpr std::size_t kSerializedProjectileBytes = 41;
 constexpr std::size_t kSerializedFutureWellLifecycleBytes = 16;
+constexpr std::size_t kSerializedProductionStateHeaderBytes = 28;
+constexpr std::size_t kSerializedProductionQueueItemBytes = 25;
 
 std::size_t SerializedSpanEnd(const std::vector<std::uint8_t>& bytes,
                               std::size_t offset,
@@ -285,6 +308,91 @@ std::size_t SnapshotFutureWellLifecycleRecordOffset(
             bytes.size() - recordOffset >=
                 kSerializedFutureWellLifecycleBytes);
     return recordOffset;
+}
+
+std::size_t SnapshotHostilityBlockOffset(
+    const std::vector<std::uint8_t>& bytes, std::size_t mapTileCount) {
+    const std::size_t lifecycle =
+        SnapshotFutureWellLifecycleBlockOffset(bytes, mapTileCount);
+    return SerializedSpanEnd(bytes, lifecycle + 4U,
+        ReadU32(bytes, lifecycle), kSerializedFutureWellLifecycleBytes);
+}
+
+std::size_t SnapshotProductionStateRecordOffset(
+    const std::vector<std::uint8_t>& bytes,
+    std::size_t mapTileCount,
+    std::size_t recordIndex) {
+    const std::size_t block =
+        SnapshotHostilityBlockOffset(bytes, mapTileCount) + kMaximumPlayers;
+    const std::uint32_t count = ReadU32(bytes, block);
+    REQUIRE(recordIndex < count);
+    std::size_t offset = block + 4U;
+    for (std::size_t index = 0; index < recordIndex; ++index) {
+        REQUIRE(offset <= bytes.size() &&
+                bytes.size() - offset >=
+                    kSerializedProductionStateHeaderBytes);
+        const std::uint8_t waitingCount = bytes[offset + 27U];
+        offset = SerializedSpanEnd(
+            bytes, offset + kSerializedProductionStateHeaderBytes,
+            waitingCount, kSerializedProductionQueueItemBytes);
+        REQUIRE(offset < bytes.size());
+        const std::uint8_t rallyCount = bytes[offset++];
+        offset = SerializedSpanEnd(
+            bytes, offset, rallyCount, kSerializedQueuedOrderBytes);
+    }
+    REQUIRE(offset <= bytes.size() &&
+            bytes.size() - offset >= kSerializedProductionStateHeaderBytes);
+    return offset;
+}
+
+std::size_t SnapshotSchema30AppendOffset(
+    const std::vector<std::uint8_t>& bytes, std::size_t mapTileCount) {
+    const std::size_t block =
+        SnapshotHostilityBlockOffset(bytes, mapTileCount) + kMaximumPlayers;
+    const std::uint32_t count = ReadU32(bytes, block);
+    std::size_t offset = block + 4U;
+    for (std::uint32_t index = 0; index < count; ++index) {
+        REQUIRE(bytes.size() - offset >=
+                kSerializedProductionStateHeaderBytes);
+        const std::uint8_t waitingCount = bytes[offset + 27U];
+        offset = SerializedSpanEnd(
+            bytes, offset + kSerializedProductionStateHeaderBytes,
+            waitingCount, kSerializedProductionQueueItemBytes);
+        REQUIRE(offset < bytes.size());
+        const std::uint8_t rallyCount = bytes[offset++];
+        offset = SerializedSpanEnd(
+            bytes, offset, rallyCount, kSerializedQueuedOrderBytes);
+    }
+    return offset;
+}
+
+std::vector<std::uint8_t> ConvertSnapshotV30ToV29(
+    const std::vector<std::uint8_t>& current, std::size_t mapTileCount) {
+    REQUIRE(ReadU32(current, 4) == 30);
+    const std::size_t append =
+        SnapshotSchema30AppendOffset(current, mapTileCount);
+    REQUIRE(append <= current.size() && current.size() - append >= 8U);
+    std::vector<std::uint8_t> prior(current.begin(), current.begin() + append);
+    prior.resize(prior.size() + 8U);
+    WriteU32(prior, 4, 29);
+    ResignSnapshot(prior);
+    return prior;
+}
+
+std::vector<std::uint8_t> ConvertSnapshotV29ToV28(
+    const std::vector<std::uint8_t>& current, std::size_t mapTileCount) {
+    REQUIRE(ReadU32(current, 4) == 29);
+    const std::size_t productionBlock =
+        SnapshotHostilityBlockOffset(current, mapTileCount) +
+        kMaximumPlayers;
+    REQUIRE(productionBlock <= current.size() &&
+            current.size() - productionBlock >= 12U);
+    std::vector<std::uint8_t> prior(
+        current.begin(), current.begin() + productionBlock);
+    prior.resize(prior.size() + 8U);
+    WriteU32(prior, 4, 28);
+    ResignSnapshot(prior);
+    return prior;
 }
 
 std::vector<std::uint8_t> ConvertSnapshotV28ToV27(
@@ -2279,7 +2387,12 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(replayed->FindEntity(dormantWell)->wellActivationTick == 0);
     REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
 
-    const std::vector<std::uint8_t> v27 = ConvertSnapshotV28ToV27(snapshot, kMapTiles);
+    const std::vector<std::uint8_t> v28 =
+        ConvertSnapshotV29ToV28(
+            ConvertSnapshotV30ToV29(snapshot, kMapTiles), kMapTiles);
+    REQUIRE(Simulation::LoadSnapshot(v28, &error).has_value());
+    const std::vector<std::uint8_t> v27 =
+        ConvertSnapshotV28ToV27(v28, kMapTiles);
     REQUIRE(Simulation::LoadSnapshot(v27, &error).has_value());
     const std::vector<std::uint8_t> v26 =
         ConvertSnapshotV27ToV26(v27, kMapTiles);
@@ -4899,6 +5012,32 @@ void TestNetworkProtocolAdmissionAndHardening() {
             DecodeStatus::Ok);
     REQUIRE(decodedRequest == request);
 
+    for (const CommandType productionType : {
+             CommandType::CancelProduction,
+             CommandType::ReorderProduction,
+             CommandType::SetRallyRoute,
+             CommandType::Repair,
+             CommandType::CancelConstruction}) {
+        CommandRequest productionRequest = request;
+        productionRequest.type = productionType;
+        productionRequest.target =
+            productionType == CommandType::ReorderProduction
+                ? 1U | (4U << 8U)
+                : 1U;
+        const std::vector<std::uint8_t> encoded =
+            EncodeCommandRequest(productionRequest);
+        CommandRequest decoded{};
+        REQUIRE(DecodeCommandRequest(encoded, decoded) == DecodeStatus::Ok);
+        REQUIRE(decoded == productionRequest);
+    }
+
+    CommandRequest unknownFutureRequest = request;
+    unknownFutureRequest.type = static_cast<CommandType>(25);
+    const std::vector<std::uint8_t> unknownFutureBytes =
+        EncodeCommandRequest(unknownFutureRequest);
+    REQUIRE(DecodeCommandRequest(unknownFutureBytes, decodedRequest) ==
+            DecodeStatus::InvalidEncoding);
+
     malformed = commandBytes;
     malformed[24] = 0xff;
     ResignNetworkPacket(malformed);
@@ -4939,6 +5078,37 @@ void TestNetworkProtocolAdmissionAndHardening() {
     REQUIRE(DecodeCommandBatchRequest(batchBytes, decodedBatch) ==
             DecodeStatus::Ok);
     REQUIRE(decodedBatch == batch);
+
+    CommandBatchRequest productionBatch{};
+    productionBatch.clientBatchId = 10;
+    CommandIntent cancelIntent{};
+    cancelIntent.type = CommandType::CancelProduction;
+    cancelIntent.actor = 100;
+    CommandIntent reorderIntent{};
+    reorderIntent.type = CommandType::ReorderProduction;
+    reorderIntent.actor = 101;
+    reorderIntent.target = 1U | (4U << 8U);
+    CommandIntent rallyIntent{};
+    rallyIntent.type = CommandType::SetRallyRoute;
+    rallyIntent.actor = 102;
+    rallyIntent.position = Vec2::FromTiles(8, 8);
+    CommandIntent repairIntent{};
+    repairIntent.type = CommandType::Repair;
+    repairIntent.actor = 103;
+    repairIntent.target = 104;
+    CommandIntent cancelConstructionIntent{};
+    cancelConstructionIntent.type = CommandType::CancelConstruction;
+    cancelConstructionIntent.actor = 105;
+    productionBatch.intents = {cancelIntent, reorderIntent, rallyIntent,
+                               repairIntent, cancelConstructionIntent};
+    const std::vector<std::uint8_t> productionBatchBytes =
+        EncodeCommandBatchRequest(productionBatch);
+    REQUIRE(!productionBatchBytes.empty());
+    CommandBatchRequest decodedProductionBatch{};
+    REQUIRE(DecodeCommandBatchRequest(
+                productionBatchBytes, decodedProductionBatch) ==
+            DecodeStatus::Ok);
+    REQUIRE(decodedProductionBatch == productionBatch);
 
     CommandBatchRequest invalidBatch = batch;
     invalidBatch.clientBatchId = 0;
@@ -6524,6 +6694,552 @@ void TestProductionAndResearchQueues() {
     REQUIRE(bActive->productionType == EntityType::Soldier);
 }
 
+void TestBoundedProductionPipelineCancellationAndReplay() {
+    SimulationConfig config{32, 32, 20, 0x50524f4455455545ULL};
+    auto& soldier = config.rules.archetypes[0][
+        static_cast<std::size_t>(EntityType::Soldier)];
+    auto& heavy = config.rules.archetypes[0][
+        static_cast<std::size_t>(EntityType::HeavyUnit)];
+    auto& scout = config.rules.archetypes[0][
+        static_cast<std::size_t>(EntityType::ScoutUnit)];
+    soldier.cost = {101, 7};
+    heavy.cost = {173, 11};
+    scout.cost = {67, 5};
+    soldier.productionTicks = heavy.productionTicks = scout.productionTicks = 50;
+
+    Simulation simulation(config);
+    REQUIRE(simulation.AddPlayer(
+        0, Faction::MeridianCompact, ResourcePool{2000, 200}));
+    const EntityId core = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(5, 5));
+    const EntityId foundry = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks,
+        Vec2::FromTiles(10, 5));
+    REQUIRE(core != 0 && foundry != 0);
+    simulation.CaptureReplayBaseline();
+
+    std::uint64_t sequence = 1;
+    const auto QueueProduce = [&](EntityType type) {
+        Command command = MakeCommand(
+            simulation.CurrentTick(), 0, sequence++, CommandType::Produce,
+            foundry);
+        command.buildType = type;
+        REQUIRE(simulation.QueueCommand(command));
+    };
+    QueueProduce(EntityType::Soldier);
+    QueueProduce(EntityType::HeavyUnit);
+    QueueProduce(EntityType::ScoutUnit);
+    QueueProduce(EntityType::Soldier);
+    QueueProduce(EntityType::HeavyUnit);
+    simulation.Step();
+
+    const ResourcePool chargedOnce{1899, 193};
+    REQUIRE(simulation.FindPlayer(0)->resources == chargedOnce);
+    std::optional<ProducerQueueState> state =
+        simulation.ProducerQueueStateFor(0, foundry);
+    REQUIRE(state.has_value());
+    REQUIRE(state->active);
+    REQUIRE(state->activeItem.unitType == EntityType::Soldier);
+    REQUIRE(state->activeItem.configuredCost == (ResourcePool{101, 7}));
+    REQUIRE(state->activeProgress == 1);
+    REQUIRE(state->waiting.size() == 4);
+    REQUIRE(state->waiting[0].unitType == EntityType::HeavyUnit);
+    REQUIRE(state->waiting[1].unitType == EntityType::ScoutUnit);
+    REQUIRE(state->waiting[2].unitType == EntityType::Soldier);
+    REQUIRE(state->waiting[3].unitType == EntityType::HeavyUnit);
+    REQUIRE(std::all_of(
+        state->waiting.begin(), state->waiting.end(),
+        [](const ProductionQueueItem& item) {
+            return item.investedCost == ResourcePool{};
+        }));
+    REQUIRE(simulation.ValidateProduction(
+                0, foundry, EntityType::Soldier) ==
+            ProductionResult::QueueFull);
+
+    QueueProduce(EntityType::ScoutUnit);
+    const std::uint64_t fullSequence = sequence - 1;
+    simulation.Step();
+    REQUIRE(simulation.FindCommandResolutionReceipt(0, fullSequence)->outcome ==
+            CommandResolutionOutcome::NoEffect);
+    REQUIRE(simulation.FindPlayer(0)->resources == chargedOnce);
+
+    Command reorder = MakeCommand(
+        simulation.CurrentTick(), 0, sequence++,
+        CommandType::ReorderProduction, foundry);
+    reorder.target = 1U | (4U << 8U);
+    REQUIRE(simulation.QueueCommand(reorder));
+    simulation.Step();
+    state = simulation.ProducerQueueStateFor(0, foundry);
+    REQUIRE(state->waiting.front().unitType == EntityType::ScoutUnit);
+    REQUIRE(state->waiting.back().unitType == EntityType::HeavyUnit);
+    const std::vector<ProductionQueueItem> reordered = state->waiting;
+
+    Command activeSlotReorder = MakeCommand(
+        simulation.CurrentTick(), 0, sequence++,
+        CommandType::ReorderProduction, foundry);
+    activeSlotReorder.target = 1U << 8U;
+    REQUIRE(simulation.QueueCommand(activeSlotReorder));
+    simulation.Step();
+    REQUIRE(simulation.FindCommandResolutionReceipt(
+                0, activeSlotReorder.sequence)->outcome ==
+            CommandResolutionOutcome::NoEffect);
+    REQUIRE(simulation.ProducerQueueStateFor(0, foundry)->waiting == reordered);
+
+    Command outOfBoundsReorder = MakeCommand(
+        simulation.CurrentTick(), 0, sequence++,
+        CommandType::ReorderProduction, foundry);
+    outOfBoundsReorder.target = 1U | (5U << 8U);
+    REQUIRE(simulation.QueueCommand(outOfBoundsReorder));
+    simulation.Step();
+    REQUIRE(simulation.FindCommandResolutionReceipt(
+                0, outOfBoundsReorder.sequence)->outcome ==
+            CommandResolutionOutcome::NoEffect);
+    REQUIRE(simulation.ProducerQueueStateFor(0, foundry)->waiting == reordered);
+
+    const ResourcePool beforeWaitingCancel =
+        simulation.FindPlayer(0)->resources;
+    Command cancelWaiting = MakeCommand(
+        simulation.CurrentTick(), 0, sequence++,
+        CommandType::CancelProduction, foundry);
+    cancelWaiting.target = 1;
+    SetExpectedProductionItem(cancelWaiting, state->waiting[0].itemId);
+    REQUIRE(simulation.QueueCommand(cancelWaiting));
+    simulation.Step();
+    REQUIRE(simulation.FindPlayer(0)->resources == beforeWaitingCancel);
+    REQUIRE(simulation.ProducerQueueStateFor(0, foundry)->waiting.size() == 3);
+    const std::vector<Command> activeProducerAi =
+        simulation.GenerateAiCommands(0, AiPersonality::Balanced);
+    REQUIRE(std::none_of(
+        activeProducerAi.begin(), activeProducerAi.end(),
+        [foundry](const Command& command) {
+            return command.actor == foundry &&
+                command.type == CommandType::Produce;
+        }));
+
+    const std::vector<std::uint8_t> snapshot = simulation.SaveSnapshot();
+    std::string error;
+    const std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(snapshot, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
+    REQUIRE(restored->ProducerQueueStateFor(0, foundry) ==
+            simulation.ProducerQueueStateFor(0, foundry));
+    const std::optional<PlayerView> view = restored->CreatePlayerView(0);
+    REQUIRE(view.has_value());
+    REQUIRE(std::any_of(
+        view->ProducerQueues().begin(), view->ProducerQueues().end(),
+        [foundry](const ProducerQueueState& observed) {
+            return observed.producer == foundry && observed.active &&
+                observed.waiting.size() == 3;
+        }));
+
+    std::vector<std::uint8_t> corrupt = snapshot;
+    REQUIRE(corrupt.size() > 9);
+    corrupt[corrupt.size() - 9] =
+        static_cast<std::uint8_t>(Entity::kMaxRallyOrders + 1);
+    ResignSnapshot(corrupt);
+    REQUIRE(!Simulation::LoadSnapshot(corrupt, &error).has_value());
+
+    std::vector<std::uint8_t> forgedInvestment = snapshot;
+    const std::size_t foundryProductionState =
+        SnapshotProductionStateRecordOffset(
+            forgedInvestment, 32U * 32U, 1U);
+    REQUIRE(ReadU32(forgedInvestment, foundryProductionState) == foundry);
+    REQUIRE(forgedInvestment[foundryProductionState + 27U] == 3U);
+    const std::size_t firstWaitingItem =
+        foundryProductionState + kSerializedProductionStateHeaderBytes;
+    constexpr std::size_t kWaitingInvestedMaterialOffset = 17U;
+    REQUIRE(ReadU32(
+                forgedInvestment,
+                firstWaitingItem + kWaitingInvestedMaterialOffset) == 0U);
+    WriteU32(
+        forgedInvestment,
+        firstWaitingItem + kWaitingInvestedMaterialOffset,
+        1U);
+    ResignSnapshot(forgedInvestment);
+    REQUIRE(!Simulation::LoadSnapshot(
+                 forgedInvestment, &error).has_value());
+    REQUIRE(error == "snapshot producer state is invalid");
+
+    const ReplayRecord replay = simulation.ExportReplay(&error);
+    REQUIRE(error.empty());
+    REQUIRE(replay.version == kReplayVersion);
+    const std::optional<Simulation> replayed =
+        Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
+    ReplayRecord masqueradingLegacy = replay;
+    masqueradingLegacy.version = kForfeitReplayVersion;
+    REQUIRE(!Simulation::ReplayToEnd(masqueradingLegacy, &error).has_value());
+
+    const ResourcePool beforeQueuedActivation =
+        simulation.FindPlayer(0)->resources;
+    REQUIRE(simulation.ProducerQueueStateFor(0, foundry)->activeProgress == 6);
+    simulation.Step(44);
+    state = simulation.ProducerQueueStateFor(0, foundry);
+    REQUIRE(state->active);
+    REQUIRE(state->activeProgress == 0);
+    REQUIRE(state->activeItem.unitType == EntityType::Soldier);
+    REQUIRE(state->waiting.size() == 2);
+    REQUIRE(simulation.FindPlayer(0)->resources ==
+            (ResourcePool{
+                beforeQueuedActivation.material - 101,
+                beforeQueuedActivation.dawnshards - 7}));
+
+    const auto VerifyRefund = [&](std::int32_t progress,
+                                  ResourcePool expectedResources) {
+        Simulation refund(config);
+        REQUIRE(refund.AddPlayer(
+            0, Faction::MeridianCompact, ResourcePool{899, 93}));
+        const EntityId refundCore = refund.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::CommandCore,
+            Vec2::FromTiles(5, 5));
+        const EntityId refundFoundry = refund.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Barracks,
+            Vec2::FromTiles(10, 5));
+        REQUIRE(refundCore != 0 && refundFoundry != 0);
+        refund.MutableEntityForTesting(refundFoundry)->productionRequired = 10;
+        refund.MutableEntityForTesting(refundFoundry)->productionProgress = progress;
+        refund.MutableEntityForTesting(refundFoundry)->productionType =
+            EntityType::Soldier;
+        refund.MutableEntityForTesting(refundFoundry)->productionInvestedCost =
+            {101, 7};
+        refund.MutableEntityForTesting(refundFoundry)->productionLogisticsCost = 2;
+        refund.MutableEntityForTesting(refundFoundry)->activeProductionItemId = 41;
+        Command cancel = MakeCommand(
+            refund.CurrentTick(), 0, 1, CommandType::CancelProduction,
+            refundFoundry);
+        SetExpectedProductionItem(cancel, 41);
+        REQUIRE(refund.QueueCommand(cancel));
+        refund.Step();
+        REQUIRE(refund.FindPlayer(0)->resources == expectedResources);
+        REQUIRE(!refund.ProducerQueueStateFor(0, refundFoundry)->active);
+        const ResourcePool afterFirst = refund.FindPlayer(0)->resources;
+        cancel.sequence = 2;
+        cancel.executeTick = refund.CurrentTick();
+        REQUIRE(refund.QueueCommand(cancel));
+        refund.Step();
+        REQUIRE(refund.FindCommandResolutionReceipt(0, 2)->outcome ==
+                CommandResolutionOutcome::NoEffect);
+        REQUIRE(refund.FindPlayer(0)->resources == afterFirst);
+    };
+    VerifyRefund(4, ResourcePool{974, 98});
+    VerifyRefund(5, ResourcePool{949, 96});
+
+    Simulation sameTick(config);
+    REQUIRE(sameTick.AddPlayer(
+        0, Faction::MeridianCompact, ResourcePool{1000, 100}));
+    const EntityId sameTickCore = sameTick.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(5, 5));
+    const EntityId sameTickFoundry = sameTick.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks,
+        Vec2::FromTiles(10, 5));
+    REQUIRE(sameTickCore != 0 && sameTickFoundry != 0);
+    Command produceA = MakeCommand(
+        0, 0, 1, CommandType::Produce, sameTickFoundry);
+    produceA.buildType = EntityType::Soldier;
+    Command produceB = MakeCommand(
+        0, 0, 2, CommandType::Produce, sameTickFoundry);
+    produceB.buildType = EntityType::HeavyUnit;
+    REQUIRE(sameTick.QueueCommand(produceA));
+    REQUIRE(sameTick.QueueCommand(produceB));
+    sameTick.Step();
+    Command cancelA = MakeCommand(
+        sameTick.CurrentTick(), 0, 3,
+        CommandType::CancelProduction, sameTickFoundry);
+    cancelA.target = 0;
+    SetExpectedProductionItem(
+        cancelA,
+        sameTick.ProducerQueueStateFor(0, sameTickFoundry)
+            ->activeItem.itemId);
+    Command produceC = MakeCommand(
+        sameTick.CurrentTick(), 0, 4,
+        CommandType::Produce, sameTickFoundry);
+    produceC.buildType = EntityType::ScoutUnit;
+    REQUIRE(sameTick.QueueCommand(cancelA));
+    REQUIRE(sameTick.QueueCommand(produceC));
+    sameTick.Step();
+    const std::optional<ProducerQueueState> sameTickState =
+        sameTick.ProducerQueueStateFor(0, sameTickFoundry);
+    REQUIRE(sameTickState.has_value());
+    REQUIRE(sameTickState->active);
+    REQUIRE(sameTickState->activeItem.unitType == EntityType::HeavyUnit);
+    REQUIRE(sameTickState->waiting.size() == 1U);
+    REQUIRE(sameTickState->waiting.front().unitType == EntityType::ScoutUnit);
+    REQUIRE(sameTickState->waiting.front().investedCost == ResourcePool{});
+
+    Simulation fullWaiting(config);
+    REQUIRE(fullWaiting.AddPlayer(
+        0, Faction::MeridianCompact, ResourcePool{101, 7}));
+    const EntityId fullWaitingCore = fullWaiting.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(5, 5));
+    const EntityId fullWaitingFoundry = fullWaiting.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks,
+        Vec2::FromTiles(10, 5));
+    REQUIRE(fullWaitingCore != 0 && fullWaitingFoundry != 0);
+    const EntityType firstFive[] = {
+        EntityType::Soldier,
+        EntityType::HeavyUnit,
+        EntityType::Soldier,
+        EntityType::ScoutUnit,
+        EntityType::HeavyUnit};
+    std::uint64_t fullWaitingSequence = 1;
+    for (const EntityType type : firstFive) {
+        Command queued = MakeCommand(
+            0, 0, fullWaitingSequence++, CommandType::Produce,
+            fullWaitingFoundry);
+        queued.buildType = type;
+        REQUIRE(fullWaiting.QueueCommand(queued));
+    }
+    fullWaiting.Step();
+    REQUIRE(fullWaiting.ProducerQueueStateFor(
+                0, fullWaitingFoundry)->waiting.size() == 4U);
+    Command cancelUnaffordableFront = MakeCommand(
+        fullWaiting.CurrentTick(), 0, fullWaitingSequence++,
+        CommandType::CancelProduction, fullWaitingFoundry);
+    SetExpectedProductionItem(
+        cancelUnaffordableFront,
+        fullWaiting.ProducerQueueStateFor(0, fullWaitingFoundry)
+            ->activeItem.itemId);
+    Command exceedWaitingCapacity = MakeCommand(
+        fullWaiting.CurrentTick(), 0, fullWaitingSequence++,
+        CommandType::Produce, fullWaitingFoundry);
+    exceedWaitingCapacity.buildType = EntityType::ScoutUnit;
+    REQUIRE(fullWaiting.QueueCommand(cancelUnaffordableFront));
+    REQUIRE(fullWaiting.QueueCommand(exceedWaitingCapacity));
+    fullWaiting.Step();
+    const std::optional<ProducerQueueState> fullWaitingState =
+        fullWaiting.ProducerQueueStateFor(0, fullWaitingFoundry);
+    REQUIRE(fullWaitingState.has_value());
+    REQUIRE(!fullWaitingState->active);
+    REQUIRE(fullWaitingState->waiting.size() == 4U);
+    REQUIRE(fullWaitingState->waiting.front().unitType ==
+        EntityType::HeavyUnit);
+    REQUIRE(fullWaiting.FindCommandResolutionReceipt(
+                0, exceedWaitingCapacity.sequence)->outcome ==
+            CommandResolutionOutcome::NoEffect);
+    REQUIRE(fullWaiting.ValidateProduction(
+                0, fullWaitingFoundry, EntityType::ScoutUnit) ==
+            ProductionResult::QueueFull);
+    const std::optional<Simulation> fullWaitingRestored =
+        Simulation::LoadSnapshot(fullWaiting.SaveSnapshot(), &error);
+    REQUIRE(fullWaitingRestored.has_value());
+    REQUIRE(fullWaitingRestored->ProducerQueueStateFor(
+                0, fullWaitingFoundry) == fullWaitingState);
+
+    // Original schema-25 writer bytes and terminal checksum preserve the
+    // historical production/emergence behavior. Relabeling a current snapshot
+    // as an older replay never establishes that compatibility.
+    ReplayRecord version25{};
+    version25.version = kForfeitReplayVersion;
+    version25.initialSnapshot = ReadLegacyReplayFixture("schema25-baseline.bin");
+    version25.finalTick = 100;
+    version25.finalChecksum = 4983431485298820942ULL;
+    Command oneWorker = MakeCommand(0, 0, 1, CommandType::Produce, 1);
+    oneWorker.buildType = EntityType::Worker;
+    Command historicalMove = MakeCommand(0, 0, 2, CommandType::Move, 3);
+    historicalMove.position = Vec2::FromTiles(7, 7);
+    version25.commands = {oneWorker, historicalMove};
+    REQUIRE(Simulation::ReplayToEnd(version25, &error).has_value());
+    ReplayRecord version24 = version25;
+    version24.version = kLegacyReplayVersion;
+    REQUIRE(Simulation::ReplayToEnd(version24, &error).has_value());
+
+}
+
+void TestBlockedProductionExitAndRallyRoutes() {
+    SimulationConfig blockedConfig{24, 24, 20, 0x424c4f434b454458ULL};
+    auto& blockedWorker = blockedConfig.rules.archetypes[0][
+        static_cast<std::size_t>(EntityType::Worker)];
+    blockedWorker.cost = {10, 0};
+    blockedWorker.productionTicks = 2;
+    Simulation blocked(blockedConfig);
+    REQUIRE(blocked.AddPlayer(
+        0, Faction::MeridianCompact, ResourcePool{100, 0}));
+    const EntityId blockedCore = blocked.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(12, 12));
+    REQUIRE(blockedCore != 0);
+    Command produce = MakeCommand(
+        0, 0, 1, CommandType::Produce, blockedCore);
+    produce.buildType = EntityType::Worker;
+    REQUIRE(blocked.QueueCommand(produce));
+    blocked.Step();
+    for (std::int32_t y = 0; y < 24; ++y) {
+        for (std::int32_t x = 0; x < 24; ++x) {
+            REQUIRE(blocked.SetTerrainTile(x, y, Terrain::Blocked));
+        }
+    }
+    blocked.Step(100);
+    std::optional<ProducerQueueState> blockedState =
+        blocked.ProducerQueueStateFor(0, blockedCore);
+    REQUIRE(blockedState.has_value());
+    REQUIRE(blockedState->active);
+    REQUIRE(blockedState->activeProgress == 2);
+    REQUIRE(blockedState->spawnBlockedTicks == 100);
+    REQUIRE(blockedState->pausedForSpawn);
+    REQUIRE(blockedState->spawnBlockedAlert);
+
+    std::string error;
+    std::optional<Simulation> resumed =
+        Simulation::LoadSnapshot(blocked.SaveSnapshot(), &error);
+    REQUIRE(resumed.has_value());
+    REQUIRE(resumed->ProducerQueueStateFor(0, blockedCore) == blockedState);
+    // A unit centered on integer tile 15 spans the four adjacent terrain
+    // cells, and radius two still overlaps the Anchor's authored 5x5
+    // footprint. Reopen the first legal radius-three footprint in full.
+    REQUIRE(resumed->SetTerrainTile(14, 14, Terrain::Open));
+    REQUIRE(resumed->SetTerrainTile(15, 14, Terrain::Open));
+    REQUIRE(resumed->SetTerrainTile(14, 15, Terrain::Open));
+    REQUIRE(resumed->SetTerrainTile(15, 15, Terrain::Open));
+    resumed->Step();
+    REQUIRE(!resumed->ProducerQueueStateFor(0, blockedCore)->active);
+    REQUIRE(!resumed->ProducerQueueStateFor(0, blockedCore)->spawnBlockedAlert);
+    REQUIRE(std::count_if(
+                resumed->Entities().begin(), resumed->Entities().end(),
+                [](const Entity& entity) {
+                    return entity.owner == 0 &&
+                        entity.type == EntityType::Worker;
+                }) == 1);
+
+    SimulationConfig gatherConfig{24, 24, 20, 0x474154484552524cULL};
+    gatherConfig.rules.archetypes[0][
+        static_cast<std::size_t>(EntityType::Worker)].productionTicks = 2;
+    Simulation gather(gatherConfig);
+    REQUIRE(gather.AddPlayer(
+        0, Faction::MeridianCompact, ResourcePool{1000, 100}));
+    const EntityId gatherCore = gather.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(10, 10));
+    const EntityId node = gather.SpawnResourceNode(
+        Vec2::FromTiles(14, 10), 500);
+    REQUIRE(gatherCore != 0 && node != 0);
+    Command gatherRally = MakeCommand(
+        0, 0, 1, CommandType::SetRallyRoute, gatherCore);
+    gatherRally.target = node;
+    gatherRally.position = Vec2::FromTiles(14, 10);
+    Command gatherProduce = MakeCommand(
+        0, 0, 2, CommandType::Produce, gatherCore);
+    gatherProduce.buildType = EntityType::Worker;
+    REQUIRE(gather.QueueCommand(gatherRally));
+    REQUIRE(gather.QueueCommand(gatherProduce));
+    gather.Step(2);
+    const auto spawnedWorker = std::find_if(
+        gather.Entities().begin(), gather.Entities().end(),
+        [](const Entity& entity) {
+            return entity.owner == 0 && entity.type == EntityType::Worker;
+        });
+    REQUIRE(spawnedWorker != gather.Entities().end());
+    REQUIRE(spawnedWorker->order.type == OrderType::Gather);
+    REQUIRE(spawnedWorker->order.target == node);
+    REQUIRE(!gather.ProducerQueueStateFor(0, gatherCore)->rallyAlert);
+
+    Command groundRally = MakeCommand(
+        gather.CurrentTick(), 0, 3, CommandType::SetRallyRoute, gatherCore);
+    groundRally.position = Vec2::FromTiles(16, 10);
+    Command appendedGround = MakeCommand(
+        gather.CurrentTick(), 0, 4, CommandType::SetRallyRoute, gatherCore);
+    appendedGround.position = Vec2::FromTiles(18, 10);
+    appendedGround.queue = true;
+    Command secondWorker = MakeCommand(
+        gather.CurrentTick(), 0, 5, CommandType::Produce, gatherCore);
+    secondWorker.buildType = EntityType::Worker;
+    REQUIRE(gather.QueueCommand(groundRally));
+    REQUIRE(gather.QueueCommand(appendedGround));
+    REQUIRE(gather.QueueCommand(secondWorker));
+    gather.Step(2);
+    const Entity* groundRalliedWorker = nullptr;
+    for (const Entity& entity : gather.Entities()) {
+        if (entity.owner == 0 && entity.type == EntityType::Worker &&
+            (groundRalliedWorker == nullptr ||
+             entity.id > groundRalliedWorker->id)) {
+            groundRalliedWorker = &entity;
+        }
+    }
+    REQUIRE(groundRalliedWorker != nullptr);
+    REQUIRE(groundRalliedWorker->order.type == OrderType::Move);
+    REQUIRE(groundRalliedWorker->order.destination ==
+            Vec2::FromTiles(16, 10));
+    REQUIRE(groundRalliedWorker->orderQueue.size() == 1);
+    REQUIRE(groundRalliedWorker->orderQueue.front().type == OrderType::Move);
+    REQUIRE(groundRalliedWorker->orderQueue.front().destination ==
+            Vec2::FromTiles(18, 10));
+
+    SimulationConfig alliedConfig{24, 24, 20, 0x4755415244524c59ULL};
+    alliedConfig.hostilityMasks = {0x02, 0x0D, 0x02, 0x02};
+    alliedConfig.rules.archetypes[0][
+        static_cast<std::size_t>(EntityType::Soldier)].productionTicks = 2;
+    Simulation allied(alliedConfig);
+    REQUIRE(allied.AddPlayer(
+        0, Faction::MeridianCompact, ResourcePool{1000, 100}));
+    REQUIRE(allied.AddPlayer(2, Faction::MeridianCompact, ResourcePool{}));
+    const EntityId alliedCore = allied.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(8, 8));
+    const EntityId alliedFoundry = allied.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks,
+        Vec2::FromTiles(10, 8));
+    const EntityId guardTarget = allied.SpawnEntity(
+        2, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(14, 8));
+    REQUIRE(alliedCore != 0 && alliedFoundry != 0 && guardTarget != 0);
+    Command guardRally = MakeCommand(
+        0, 0, 1, CommandType::SetRallyRoute, alliedFoundry);
+    guardRally.target = guardTarget;
+    guardRally.position = Vec2::FromTiles(14, 8);
+    Command soldierProduce = MakeCommand(
+        0, 0, 2, CommandType::Produce, alliedFoundry);
+    soldierProduce.buildType = EntityType::Soldier;
+    REQUIRE(allied.QueueCommand(guardRally));
+    REQUIRE(allied.QueueCommand(soldierProduce));
+    allied.Step(2);
+    const auto guardingSoldier = std::find_if(
+        allied.Entities().begin(), allied.Entities().end(),
+        [](const Entity& entity) {
+            return entity.owner == 0 && entity.type == EntityType::Soldier;
+        });
+    REQUIRE(guardingSoldier != allied.Entities().end());
+    REQUIRE(guardingSoldier->order.type == OrderType::Guard);
+    REQUIRE(guardingSoldier->order.target == guardTarget);
+
+    SimulationConfig unreachableConfig{
+        12, 12, 20, 0x554e52454143484cULL};
+    unreachableConfig.rules.archetypes[0][
+        static_cast<std::size_t>(EntityType::Worker)].productionTicks = 2;
+    Simulation unreachable(unreachableConfig);
+    REQUIRE(unreachable.AddPlayer(
+        0, Faction::MeridianCompact, ResourcePool{1000, 100}));
+    const EntityId unreachableCore = unreachable.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(2, 6));
+    REQUIRE(unreachableCore != 0);
+    for (std::int32_t y = 0; y < 12; ++y) {
+        REQUIRE(unreachable.SetTerrainTile(6, y, Terrain::Blocked));
+    }
+    Command unreachableRally = MakeCommand(
+        0, 0, 1, CommandType::SetRallyRoute, unreachableCore);
+    unreachableRally.position = Vec2::FromTiles(9, 6);
+    Command unreachableProduce = MakeCommand(
+        0, 0, 2, CommandType::Produce, unreachableCore);
+    unreachableProduce.buildType = EntityType::Worker;
+    REQUIRE(unreachable.QueueCommand(unreachableRally));
+    REQUIRE(unreachable.QueueCommand(unreachableProduce));
+    unreachable.Step(2);
+    const auto haltedWorker = std::find_if(
+        unreachable.Entities().begin(), unreachable.Entities().end(),
+        [](const Entity& entity) {
+            return entity.owner == 0 && entity.type == EntityType::Worker;
+        });
+    REQUIRE(haltedWorker != unreachable.Entities().end());
+    REQUIRE(haltedWorker->order.type == OrderType::None);
+    REQUIRE(unreachable.ProducerQueueStateFor(
+                0, unreachableCore)->rallyAlert);
+}
+
 void TestTacticalMinimapAndSpatialAlertHistory() {
     // SPEC-HUD-006, SPEC-HUD-007, SPEC-CTL-013: Minimap & Spatial Alert Log
     struct SpatialAlert {
@@ -7643,6 +8359,138 @@ void TestAutonomousWorkerGatherLoopAndCadence() {
     REQUIRE(sim.FindEntity(depNode2)->resourceRemaining == 500);
 }
 
+void TestTransientMaterialDeliveryReceipts() {
+    Simulation simulation(SimulationConfig{32, 32, 20, 0xD311'BEEFULL});
+    REQUIRE(simulation.AddPlayer(
+        0, Faction::MeridianCompact, ResourcePool{400, 80}));
+    REQUIRE(simulation.AddPlayer(
+        1, Faction::KharuunAssemblies, ResourcePool{400, 80}));
+
+    const EntityId core0 = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(8, 8));
+    const EntityId worker0 = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker,
+        Vec2::FromTiles(10, 8));
+    const EntityId node0 = simulation.SpawnResourceNode(
+        Vec2::FromTiles(11, 8), 500);
+    const EntityId core1 = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore,
+        Vec2::FromTiles(24, 24));
+    const EntityId worker1 = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Worker,
+        Vec2::FromTiles(22, 24));
+    const EntityId node1 = simulation.SpawnResourceNode(
+        Vec2::FromTiles(21, 24), 500);
+    REQUIRE(core0 != 0 && worker0 != 0 && node0 != 0);
+    REQUIRE(core1 != 0 && worker1 != 0 && node1 != 0);
+
+    const std::optional<PlayerView> initialView0 =
+        simulation.CreatePlayerView(0);
+    const std::optional<PlayerView> initialView1 =
+        simulation.CreatePlayerView(1);
+    REQUIRE(initialView0.has_value() && initialView1.has_value());
+    REQUIRE(initialView0->MaterialDeliveries().empty());
+    REQUIRE(initialView1->MaterialDeliveries().empty());
+    std::int32_t previousMaterial0 = initialView0->Player().resources.material;
+    std::int32_t previousMaterial1 = initialView1->Player().resources.material;
+    const std::int32_t cargoCapacity0 =
+        simulation.FindEntity(worker0)->cargoCapacity;
+    const std::int32_t cargoCapacity1 =
+        simulation.FindEntity(worker1)->cargoCapacity;
+    REQUIRE(cargoCapacity0 > 0 && cargoCapacity1 > 0);
+
+    Command gather0 = MakeCommand(0, 0, 1, CommandType::Gather, worker0);
+    gather0.target = node0;
+    Command gather1 = MakeCommand(0, 1, 1, CommandType::Gather, worker1);
+    gather1.target = node1;
+    REQUIRE(simulation.QueueCommand(gather0));
+    REQUIRE(simulation.QueueCommand(gather1));
+
+    bool observed0 = false;
+    bool observed1 = false;
+    bool restoreClearedReceipt = false;
+    for (Tick tick = 0; tick < 200 && !(observed0 && observed1); ++tick) {
+        simulation.Step();
+        const std::optional<PlayerView> view0 =
+            simulation.CreatePlayerView(0);
+        const std::optional<PlayerView> view1 =
+            simulation.CreatePlayerView(1);
+        REQUIRE(view0.has_value() && view1.has_value());
+        std::int64_t receiptTotal0 = 0;
+        for (const MaterialDeliveryReceipt& receipt :
+             view0->MaterialDeliveries()) {
+            REQUIRE(receipt.worker == worker0);
+            REQUIRE(receipt.worker != worker1);
+            REQUIRE(receipt.amount == cargoCapacity0);
+            REQUIRE(receipt.tick + 1 == view0->CurrentTick());
+            receiptTotal0 += receipt.amount;
+            observed0 = true;
+        }
+        REQUIRE(static_cast<std::int64_t>(
+                    view0->Player().resources.material) - previousMaterial0 ==
+                receiptTotal0);
+        previousMaterial0 = view0->Player().resources.material;
+        std::int64_t receiptTotal1 = 0;
+        for (const MaterialDeliveryReceipt& receipt :
+             view1->MaterialDeliveries()) {
+            REQUIRE(receipt.worker == worker1);
+            REQUIRE(receipt.worker != worker0);
+            REQUIRE(receipt.amount == cargoCapacity1);
+            REQUIRE(receipt.tick + 1 == view1->CurrentTick());
+            receiptTotal1 += receipt.amount;
+            observed1 = true;
+        }
+        REQUIRE(static_cast<std::int64_t>(
+                    view1->Player().resources.material) - previousMaterial1 ==
+                receiptTotal1);
+        previousMaterial1 = view1->Player().resources.material;
+        if (!restoreClearedReceipt &&
+            (!view0->MaterialDeliveries().empty() ||
+             !view1->MaterialDeliveries().empty())) {
+            std::string error;
+            const std::optional<Simulation> restored =
+                Simulation::LoadSnapshot(simulation.SaveSnapshot(), &error);
+            REQUIRE(restored.has_value());
+            REQUIRE(error.empty());
+            REQUIRE(restored->CreatePlayerView(0)->MaterialDeliveries().empty());
+            REQUIRE(restored->CreatePlayerView(1)->MaterialDeliveries().empty());
+            restoreClearedReceipt = true;
+        }
+    }
+    REQUIRE(observed0 && observed1);
+    REQUIRE(restoreClearedReceipt);
+
+    simulation.Step();
+    REQUIRE(simulation.CreatePlayerView(0)->MaterialDeliveries().empty());
+    REQUIRE(simulation.CreatePlayerView(1)->MaterialDeliveries().empty());
+
+    Simulation saturated(SimulationConfig{32, 32, 20, 0xC2ED17ULL});
+    REQUIRE(saturated.AddPlayer(0, Faction::MeridianCompact,
+        ResourcePool{std::numeric_limits<std::int32_t>::max() - 5, 0}));
+    const EntityId saturatedCore = saturated.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(8, 8));
+    const EntityId saturatedWorker = saturated.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker,
+        Vec2::FromTiles(9, 8));
+    saturated.MutableEntityForTesting(saturatedWorker)->cargo = 10;
+    Command deliver = MakeCommand(
+        0, 0, 1, CommandType::Deliver, saturatedWorker);
+    deliver.target = saturatedCore;
+    REQUIRE(saturated.QueueCommand(deliver));
+    saturated.Step();
+    const std::optional<PlayerView> saturatedView =
+        saturated.CreatePlayerView(0);
+    REQUIRE(saturatedView.has_value());
+    REQUIRE(saturatedView->Player().resources.material ==
+        std::numeric_limits<std::int32_t>::max());
+    REQUIRE(saturatedView->MaterialDeliveries().size() == 1);
+    REQUIRE(saturatedView->MaterialDeliveries().front().worker ==
+        saturatedWorker);
+    REQUIRE(saturatedView->MaterialDeliveries().front().amount == 5);
+}
+
 void TestCalibratedConstructionAndMultiBuilderFalloff() {
     // REL-BLD-003 & REL-BLD-004: Authored ticks duration and multi-builder assist falloff
     Simulation sim(SimulationConfig{32, 32, 20, 0x81D100ULL});
@@ -7957,13 +8805,17 @@ void TestExplicitHostilityAndLegacyReplay() {
     auto invalidFallback = kDefaultHostilityMasks;
     invalidFallback[0] = 0xFF;
     REQUIRE(Simulation::LoadSnapshot(snapshot, &error, invalidFallback).has_value());
+    const std::size_t hostilityOffset =
+        SnapshotHostilityBlockOffset(snapshot, 32 * 32);
     for (std::uint8_t invalid : {std::uint8_t{0x82}, std::uint8_t{0x03}, std::uint8_t{0x06}}) {
         auto bad = snapshot;
-        bad[bad.size() - 12U] = invalid;
+        bad[hostilityOffset] = invalid;
         ResignSnapshot(bad);
         REQUIRE(!Simulation::LoadSnapshot(bad, &error).has_value());
     }
-    const auto legacy = ConvertSnapshotV28ToV27(snapshot, 32 * 32);
+    const auto v28 = ConvertSnapshotV29ToV28(
+        ConvertSnapshotV30ToV29(snapshot, 32 * 32), 32 * 32);
+    const auto legacy = ConvertSnapshotV28ToV27(v28, 32 * 32);
     const auto generic = Simulation::LoadSnapshot(legacy, &error);
     const auto mission = Simulation::LoadSnapshot(legacy, &error, config.hostilityMasks);
     REQUIRE(generic.has_value() && mission.has_value());
@@ -8009,7 +8861,11 @@ void TestExplicitHostilityAndLegacyReplay() {
     REQUIRE(unsafeLegacy.QueueCommand(legacyAttack));
     unsafeLegacy.Step();
     REQUIRE(!unsafeLegacy.Projectiles().empty());
-    const auto unsafeBytes = ConvertSnapshotV28ToV27(unsafeLegacy.SaveSnapshot(), 32 * 32);
+    const auto unsafeV28 = ConvertSnapshotV29ToV28(
+        ConvertSnapshotV30ToV29(
+            unsafeLegacy.SaveSnapshot(), 32 * 32),
+        32 * 32);
+    const auto unsafeBytes = ConvertSnapshotV28ToV27(unsafeV28, 32 * 32);
     auto sanitized = Simulation::LoadSnapshot(unsafeBytes, &error, config.hostilityMasks);
     REQUIRE(sanitized.has_value());
     REQUIRE(sanitized->Projectiles().empty());
@@ -8033,7 +8889,12 @@ void TestExplicitHostilityAndLegacyReplay() {
     const auto currentReplay = oldWorld.ExportReplay();
     REQUIRE(Simulation::ReplayToEnd(currentReplay, &error).has_value());
     auto oldReplay = currentReplay;
-    oldReplay.initialSnapshot = ConvertSnapshotV28ToV27(currentReplay.initialSnapshot, 32 * 32);
+    oldReplay.initialSnapshot = ConvertSnapshotV28ToV27(
+        ConvertSnapshotV29ToV28(
+            ConvertSnapshotV30ToV29(
+                currentReplay.initialSnapshot, 32 * 32),
+            32 * 32),
+        32 * 32);
     oldReplay.finalChecksum = 7947105480651690908ULL;
     REQUIRE(oldReplay.finalChecksum != currentReplay.finalChecksum);
     REQUIRE(Simulation::ReplayToEnd(oldReplay, &error).has_value());
@@ -8041,11 +8902,435 @@ void TestExplicitHostilityAndLegacyReplay() {
     REQUIRE(!Simulation::ReplayToEnd(oldReplay, &error).has_value());
 }
 
+void TestAuthenticSchema24And25ReplayCompatibility() {
+    struct LegacyOracle final {
+        const char* baseline;
+        const char* finalSnapshot;
+        std::uint64_t finalChecksum;
+    };
+    const LegacyOracle oracles[] = {
+        {"schema24-baseline.bin", "schema24-final.bin",
+         7869839117225865629ULL},
+        {"schema25-baseline.bin", "schema25-final.bin",
+         4983431485298820942ULL}};
+    for (const LegacyOracle& oracle : oracles) {
+        ReplayRecord replay{};
+        replay.version = kLegacyReplayVersion;
+        replay.initialSnapshot = ReadLegacyReplayFixture(oracle.baseline);
+        replay.finalTick = 100;
+        replay.finalChecksum = oracle.finalChecksum;
+
+        Command produce = MakeCommand(
+            0, 0, 1, CommandType::Produce, 1);
+        produce.buildType = EntityType::Worker;
+        Command move = MakeCommand(
+            0, 0, 2, CommandType::Move, 3);
+        move.position = Vec2::FromTiles(7, 7);
+        replay.commands = {produce, move};
+
+        std::string error;
+        ReplayRecord terminalSnapshot{};
+        terminalSnapshot.version = kLegacyReplayVersion;
+        terminalSnapshot.initialSnapshot =
+            ReadLegacyReplayFixture(oracle.finalSnapshot);
+        terminalSnapshot.finalTick = replay.finalTick;
+        terminalSnapshot.finalChecksum = oracle.finalChecksum;
+        const std::optional<Simulation> loadedTerminal =
+            Simulation::BeginReplaySimulation(terminalSnapshot, &error);
+        REQUIRE(loadedTerminal.has_value());
+        REQUIRE(error.empty());
+        REQUIRE(loadedTerminal->ReplayStateChecksum() == oracle.finalChecksum);
+
+        std::optional<Simulation> incremental =
+            Simulation::BeginReplaySimulation(replay, &error);
+        REQUIRE(incremental.has_value());
+        REQUIRE(error.empty());
+        REQUIRE(incremental->QueueCommand(produce, &error));
+        REQUIRE(incremental->QueueCommand(move, &error));
+        incremental->Step(100);
+        REQUIRE(incremental->ReplayStateChecksum() == oracle.finalChecksum);
+
+        const std::optional<Simulation> replayed =
+            Simulation::ReplayToEnd(replay, &error);
+        REQUIRE(replayed.has_value());
+        REQUIRE(error.empty());
+        REQUIRE(replayed->CurrentTick() == 100);
+        REQUIRE(replayed->Outcome() == MatchOutcome::Ongoing);
+        REQUIRE(replayed->FindEntity(3) != nullptr);
+        REQUIRE(replayed->FindEntity(3)->position == Vec2::FromTiles(7, 7));
+
+        const std::optional<MatchReport> report =
+            Simulation::BuildMatchReport(replay, &error);
+        REQUIRE(report.has_value());
+        REQUIRE(error.empty());
+        REQUIRE(report->baselineTick == 0);
+        REQUIRE(report->finalTick == 100);
+        REQUIRE(report->finalChecksum == oracle.finalChecksum);
+        REQUIRE(report->outcome == MatchOutcome::Ongoing);
+        REQUIRE(report->commands.size() == 2U);
+    }
+
+    // Snapshot 28 / replay 25 still used building-only production admission,
+    // and its lifecycle-aware search ignored a collapsed Well at the selected
+    // edge coordinate. Schema 29's current unit-footprint admission would
+    // reject that coordinate, so this also locks the compatibility boundary.
+    SimulationConfig schema28Config{16, 16, 20, 1};
+    Simulation schema28World(schema28Config);
+    REQUIRE(schema28World.AddPlayer(
+        0, Faction::MeridianCompact, {1000, 1000}));
+    REQUIRE(schema28World.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(3, 3)) == 1);
+    REQUIRE(schema28World.SpawnFutureWell(Vec2::FromTiles(0, 0)) == 2);
+    schema28World.Step();
+    Entity* collapsedWell = schema28World.MutableEntityForTesting(2);
+    REQUIRE(collapsedWell != nullptr);
+    collapsedWell->owner = 0;
+    collapsedWell->faction = Faction::MeridianCompact;
+    collapsedWell->wellChoice = FutureWellChoice::Harvest;
+    collapsedWell->wellActivationTick = schema28World.CurrentTick();
+    collapsedWell->wellProtocolTicks = 0;
+
+    ReplayRecord schema28Replay{};
+    schema28Replay.version = kForfeitReplayVersion;
+    schema28Replay.initialSnapshot = ConvertSnapshotV29ToV28(
+        ConvertSnapshotV30ToV29(
+            schema28World.SaveSnapshot(), 16 * 16),
+        16 * 16);
+    schema28Replay.finalTick = schema28World.CurrentTick() + 100;
+    std::string error;
+    std::optional<Simulation> schema28Playback =
+        Simulation::BeginReplaySimulation(schema28Replay, &error);
+    REQUIRE(schema28Playback.has_value());
+    REQUIRE(error.empty());
+    Command schema28Produce = MakeCommand(
+        schema28Playback->CurrentTick(), 0, 1, CommandType::Produce, 1);
+    schema28Produce.buildType = EntityType::Worker;
+    REQUIRE(schema28Playback->QueueCommand(schema28Produce, &error));
+    schema28Playback->Step(100);
+    REQUIRE(schema28Playback->FindEntity(3) != nullptr);
+    REQUIRE(schema28Playback->FindEntity(3)->position ==
+            Vec2::FromTiles(0, 0));
+}
+
+void TestAuthenticSchema29ZeroTickNetworkReplay() {
+    ReplayRecord replay;
+    replay.version = kProductionReplayVersion;
+    replay.initialSnapshot = ReadLegacyReplayFixture("schema29-network-baseline.bin");
+    replay.finalTick = 0;
+    replay.finalChecksum = 2870429037547598980ULL;
+    std::string error;
+    const auto playback = Simulation::BeginReplaySimulation(replay, &error);
+    REQUIRE(playback.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(!playback->FindEntity(3)->aegisPowered);
+    REQUIRE(playback->ReplayStateChecksum() == replay.finalChecksum);
+    const auto finished = Simulation::ReplayToEnd(replay, &error);
+    if (!finished) throw TestFailure("Authentic schema29 zero-tick replay failed: " + error);
+    REQUIRE(finished->ReplayStateChecksum() == replay.finalChecksum);
+
+    const auto currentLoaded = Simulation::LoadSnapshot(
+        replay.initialSnapshot, &error);
+    REQUIRE(currentLoaded.has_value());
+    Simulation continued = *currentLoaded;
+    if (!continued.ContinueReplayRecording(replay, &error)) {
+        throw TestFailure("Authentic schema29 continuation failed: " + error);
+    }
+    REQUIRE(error.empty());
+    REQUIRE(continued.StateChecksum() == finished->StateChecksum());
+    REQUIRE(continued.ExportReplay().initialSnapshot == replay.initialSnapshot);
+
+    // Authentic legacy topology must remain saveable after replay-bound restore.
+    // Retaining a replay prefix cannot make the next current-schema checkpoint invalid.
+    const auto liveChecksum = continued.StateChecksum();
+    const auto liveReplayChecksum = continued.ReplayStateChecksum();
+    std::uint64_t savedChecksum = 0;
+    const auto resumedSnapshot = continued.SaveSnapshot(&savedChecksum);
+    REQUIRE(continued.StateChecksum() == liveChecksum);
+    REQUIRE(continued.ReplayStateChecksum() == liveReplayChecksum);
+    auto resumed = Simulation::LoadSnapshot(resumedSnapshot, &error);
+    if (!resumed) throw TestFailure("Legacy continuation checkpoint reload failed: " + error);
+    REQUIRE(resumed->StateChecksum() == savedChecksum);
+    REQUIRE(resumed->ContinueReplayRecording(continued.ExportReplay(), &error));
+    REQUIRE(resumed->ReplayStateChecksum() == continued.ReplayStateChecksum());
+    Simulation rebased = continued;
+    rebased.CaptureReplayBaseline();
+    const auto rebasedReplay = rebased.ExportReplay(&error);
+    const auto rebasedPlayback = Simulation::ReplayToEnd(rebasedReplay, &error);
+    if (!rebasedPlayback) throw TestFailure("Migrated replay baseline failed: " + error);
+    REQUIRE(rebasedPlayback->StateChecksum() == rebased.StateChecksum());
+}
+
+void TestLinkRepairConstructionAndProductionIdentity() {
+    SimulationConfig config{40, 40, 20, 0x4c494e4bULL};
+    auto& linkRules = config.rules.archetypes[0][
+        static_cast<std::size_t>(EntityType::Dropoff)];
+    linkRules.cost = {90, 10};
+    linkRules.maxHitPoints = 450;
+    linkRules.constructionRequired = 100;
+    linkRules.populationCapacity = 6;
+    config.rules.poweredAegis.connectionRadiusRaw = 8 * kFixedScale;
+    // Keep the attacker quiet between hits through serialized fixture rules,
+    // not an entity-stat mutation that the snapshot validator must reject.
+    config.rules.archetypes[1][static_cast<std::size_t>(EntityType::Soldier)].attackPeriodTicks = 1000;
+
+    Simulation sim(config);
+    REQUIRE(sim.AddPlayer(
+        0, Faction::MeridianCompact, ResourcePool{2000, 200}));
+    REQUIRE(sim.AddPlayer(
+        1, Faction::KharuunAssemblies, ResourcePool{1000, 100}));
+    const EntityId core = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(4, 4));
+    const EntityId link = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Dropoff,
+        Vec2::FromTiles(10, 4), 350);
+    const EntityId foundry = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks,
+        Vec2::FromTiles(18, 4));
+    const EntityId chainedLink = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Dropoff,
+        Vec2::FromTiles(26, 4));
+    const EntityId disconnectedLink = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Dropoff,
+        Vec2::FromTiles(35, 35));
+    const EntityId workers[] = {
+        sim.SpawnEntity(0, Faction::MeridianCompact, EntityType::Worker,
+                        Vec2::FromTiles(10, 5)),
+        sim.SpawnEntity(0, Faction::MeridianCompact, EntityType::Worker,
+                        Vec2::FromTiles(9, 4)),
+        sim.SpawnEntity(0, Faction::MeridianCompact, EntityType::Worker,
+                        Vec2::FromTiles(11, 4))};
+    const EntityId enemyCore = sim.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore,
+        Vec2::FromTiles(30, 30));
+    const EntityId enemy = sim.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier,
+        Vec2::FromTiles(12, 5));
+    REQUIRE(core != 0 && link != 0 && foundry != 0 && chainedLink != 0 &&
+            disconnectedLink != 0 && workers[0] != 0 && workers[1] != 0 &&
+            workers[2] != 0 && enemyCore != 0 && enemy != 0);
+    REQUIRE(sim.FindEntity(core)->networkOperational);
+    REQUIRE(sim.FindEntity(link)->networkOperational);
+    REQUIRE(sim.FindEntity(foundry)->networkOperational);
+    REQUIRE(sim.FindEntity(chainedLink)->networkOperational);
+    REQUIRE(!sim.FindEntity(disconnectedLink)->networkOperational);
+    const std::int32_t connectedCapacity = sim.PopulationCapacity(0);
+    sim.MutableEntityForTesting(chainedLink)->hitPoints = 0;
+    sim.Step();
+    REQUIRE(sim.PopulationCapacity(0) == connectedCapacity - 6);
+
+    std::uint64_t sequence = 1;
+    for (EntityId worker : workers) {
+        Command repair = MakeCommand(
+            sim.CurrentTick(), 0, sequence++, CommandType::Repair, worker);
+        repair.target = link;
+        REQUIRE(sim.QueueCommand(repair));
+    }
+    const ResourcePool beforeRepair = sim.FindPlayer(0)->resources;
+    sim.Step(100);
+    REQUIRE(sim.FindEntity(link)->hitPoints == 450);
+    REQUIRE(sim.FindPlayer(0)->resources.material ==
+            beforeRepair.material - 10);
+    const auto repairedView = sim.CreatePlayerView(0);
+    REQUIRE(repairedView.has_value());
+    REQUIRE(!repairedView->RepairReceipts().empty());
+
+    // Isolate the interruption check to one maintenance channel. Assistants
+    // must receive normal Stop orders before the target is damaged again.
+    for (std::size_t index = 1; index < 3; ++index) {
+        REQUIRE(sim.QueueCommand(MakeCommand(sim.CurrentTick(), 0, sequence++,
+            CommandType::Stop, workers[index])));
+    }
+    sim.Step();
+
+    Entity* damagedLink = sim.MutableEntityForTesting(link);
+    REQUIRE(damagedLink != nullptr);
+    damagedLink->hitPoints = 430;
+    REQUIRE(sim.FindEntity(enemy) != nullptr);
+    Command resumeRepair = MakeCommand(
+        sim.CurrentTick(), 0, sequence++, CommandType::Repair, workers[0]);
+    resumeRepair.target = link;
+    Command attackWorker = MakeCommand(
+        sim.CurrentTick(), 1, 1, CommandType::Attack, enemy);
+    attackWorker.target = workers[0];
+    REQUIRE(sim.QueueCommand(resumeRepair));
+    REQUIRE(sim.QueueCommand(attackWorker));
+    const std::int32_t workerHpBeforeAttack = sim.FindEntity(workers[0])->hitPoints;
+    for (int tick = 0; tick < 100 &&
+         sim.FindEntity(workers[0]) != nullptr &&
+         sim.FindEntity(workers[0])->hitPoints == workerHpBeforeAttack; ++tick) {
+        sim.Step();
+    }
+    REQUIRE(sim.FindEntity(workers[0]) != nullptr);
+    REQUIRE(sim.FindEntity(workers[0])->hitPoints < workerHpBeforeAttack);
+    const std::int32_t afterAttackRepairHp = sim.FindEntity(link)->hitPoints;
+    REQUIRE(sim.FindEntity(workers[0])->repairInterruptedUntilTick >=
+            sim.CurrentTick() + 19);
+    sim.Step(19);
+    REQUIRE(sim.FindEntity(link)->hitPoints == afterAttackRepairHp);
+    sim.Step(2);
+    REQUIRE(sim.FindEntity(link)->hitPoints > afterAttackRepairHp);
+
+    const ResourcePool beforeBuild = sim.FindPlayer(0)->resources;
+    Command build = MakeCommand(
+        sim.CurrentTick(), 0, sequence++, CommandType::Build, workers[1]);
+    build.buildType = EntityType::Dropoff;
+    build.position = Vec2::FromTiles(6, 14);
+    REQUIRE(sim.QueueCommand(build));
+    sim.Step();
+    const auto createdView = sim.CreatePlayerView(0);
+    REQUIRE(createdView.has_value());
+    const auto created = std::find_if(
+        createdView->ConstructionReceipts().begin(),
+        createdView->ConstructionReceipts().end(),
+        [build](const ConstructionReceipt& receipt) {
+            return receipt.transition == ConstructionTransition::Created &&
+                   receipt.commandSequence == build.sequence;
+        });
+    REQUIRE(created != createdView->ConstructionReceipts().end());
+    REQUIRE(created->charged == (ResourcePool{90, 10}));
+    const EntityId site = created->structure;
+    REQUIRE(sim.FindEntity(site) != nullptr && !sim.FindEntity(site)->completed);
+    Command cancelSite = MakeCommand(
+        sim.CurrentTick(), 0, sequence++,
+        CommandType::CancelConstruction, site);
+    REQUIRE(sim.QueueCommand(cancelSite));
+    sim.Step();
+    REQUIRE(sim.FindEntity(site) == nullptr);
+    REQUIRE(sim.FindPlayer(0)->resources ==
+            (ResourcePool{beforeBuild.material - 23,
+                          beforeBuild.dawnshards - 3}));
+    const auto cancelledView = sim.CreatePlayerView(0);
+    REQUIRE(cancelledView.has_value());
+    REQUIRE(cancelledView->ConstructionReceipts().size() == 1);
+    REQUIRE(cancelledView->ConstructionReceipts()[0].refund ==
+            (ResourcePool{67, 7}));
+
+    const ResourcePool beforeHalfBuild = sim.FindPlayer(0)->resources;
+    Command halfBuild = MakeCommand(
+        sim.CurrentTick(), 0, sequence++, CommandType::Build, workers[1]);
+    halfBuild.buildType = EntityType::Dropoff;
+    halfBuild.position = Vec2::FromTiles(8, 14);
+    REQUIRE(sim.QueueCommand(halfBuild));
+    sim.Step();
+    const auto halfCreated = sim.CreatePlayerView(0);
+    REQUIRE(halfCreated.has_value());
+    const EntityId halfSite = halfCreated->ConstructionReceipts().front().structure;
+    Entity* halfEntity = sim.MutableEntityForTesting(halfSite);
+    REQUIRE(halfEntity != nullptr);
+    halfEntity->constructionProgress = 50;
+    Command cancelHalf = MakeCommand(
+        sim.CurrentTick(), 0, sequence++,
+        CommandType::CancelConstruction, halfSite);
+    REQUIRE(sim.QueueCommand(cancelHalf));
+    sim.Step();
+    REQUIRE(sim.FindPlayer(0)->resources ==
+            (ResourcePool{beforeHalfBuild.material - 45,
+                          beforeHalfBuild.dawnshards - 5}));
+
+    const EntityId authoredSite = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Dropoff,
+        Vec2::FromTiles(6, 18));
+    REQUIRE(authoredSite != 0);
+    Entity* authored = sim.MutableEntityForTesting(authoredSite);
+    authored->completed = false;
+    authored->constructionProgress = 50;
+    authored->constructionRequired = 100;
+    authored->hitPoints = 100;
+    const ResourcePool beforeAuthoredCancel = sim.FindPlayer(0)->resources;
+    Command cancelAuthored = MakeCommand(
+        sim.CurrentTick(), 0, sequence++,
+        CommandType::CancelConstruction, authoredSite);
+    REQUIRE(sim.QueueCommand(cancelAuthored));
+    sim.Step();
+    REQUIRE(sim.FindPlayer(0)->resources == beforeAuthoredCancel);
+
+    sim.CaptureReplayBaseline();
+    Command first = MakeCommand(
+        sim.CurrentTick(), 0, sequence++, CommandType::Produce, foundry);
+    first.buildType = EntityType::Soldier;
+    Command second = MakeCommand(
+        sim.CurrentTick(), 0, sequence++, CommandType::Produce, foundry);
+    second.buildType = EntityType::Soldier;
+    Command third = MakeCommand(
+        sim.CurrentTick(), 0, sequence++, CommandType::Produce, foundry);
+    third.buildType = EntityType::Soldier;
+    REQUIRE(sim.QueueCommand(first));
+    REQUIRE(sim.QueueCommand(second));
+    REQUIRE(sim.QueueCommand(third));
+    sim.Step();
+    auto queue = sim.ProducerQueueStateFor(0, foundry);
+    REQUIRE(queue.has_value() && queue->active && queue->waiting.size() == 2);
+    REQUIRE(queue->activeItem.itemId != 0 &&
+            queue->waiting[0].itemId != queue->waiting[1].itemId);
+    const ProductionItemId confirmedId = queue->waiting[0].itemId;
+    Command reorder = MakeCommand(
+        sim.CurrentTick(), 0, sequence++,
+        CommandType::ReorderProduction, foundry);
+    reorder.target = 1U | (2U << 8U);
+    Command staleCancel = MakeCommand(
+        sim.CurrentTick(), 0, sequence++,
+        CommandType::CancelProduction, foundry);
+    staleCancel.target = 1;
+    SetExpectedProductionItem(staleCancel, confirmedId);
+    REQUIRE(sim.QueueCommand(reorder));
+    REQUIRE(sim.QueueCommand(staleCancel));
+    sim.Step();
+    REQUIRE(sim.FindCommandResolutionReceipt(0, staleCancel.sequence)->outcome ==
+            CommandResolutionOutcome::NoEffect);
+    queue = sim.ProducerQueueStateFor(0, foundry);
+    REQUIRE(queue->waiting.size() == 2);
+    Command exactCancel = MakeCommand(
+        sim.CurrentTick(), 0, sequence++,
+        CommandType::CancelProduction, foundry);
+    exactCancel.target = 2;
+    SetExpectedProductionItem(exactCancel, confirmedId);
+    REQUIRE(sim.QueueCommand(exactCancel));
+    sim.Step();
+    REQUIRE(sim.ProducerQueueStateFor(0, foundry)->waiting.size() == 1);
+
+    std::string error;
+    const auto snapshot = sim.SaveSnapshot();
+    const auto restored = Simulation::LoadSnapshot(snapshot, &error);
+    if (!restored.has_value()) throw TestFailure("Link save reload failed: " + error);
+    REQUIRE(restored->StateChecksum() == sim.StateChecksum());
+    REQUIRE(restored->ProducerQueueStateFor(0, foundry) ==
+            sim.ProducerQueueStateFor(0, foundry));
+    const ReplayRecord replay = sim.ExportReplay(&error);
+    REQUIRE(replay.version == kLinkMechanicsReplayVersion);
+    const auto replayed = Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == sim.StateChecksum());
+
+    // Use original writer bytes: this current scenario contains Repair state
+    // that never existed in schema 29 and cannot be projected to that schema.
+    const auto schema29 = ReadLegacyReplayFixture("schema29-network-baseline.bin.production");
+    const auto migrated = Simulation::LoadSnapshot(schema29, &error);
+    if (!migrated) throw TestFailure("Original schema29 production migration failed: " + error);
+    const auto migratedQueue = migrated->ProducerQueueStateFor(0, 2);
+    REQUIRE(migratedQueue && migratedQueue->active && migratedQueue->waiting.size() == 1);
+    REQUIRE(migratedQueue->activeItem.itemId != 0 && migratedQueue->waiting[0].itemId != 0);
+    REQUIRE(migratedQueue->activeItem.itemId != migratedQueue->waiting[0].itemId);
+    const auto migratedAgain =
+        Simulation::LoadSnapshot(migrated->SaveSnapshot(), &error);
+    REQUIRE(migratedAgain.has_value());
+    REQUIRE(migratedAgain->SaveSnapshot() == migrated->SaveSnapshot());
+    REQUIRE(migratedAgain->StateChecksum() == migrated->StateChecksum());
+}
+
 #include "ReplayReportTests.h"
 
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
+    std::string filter;
+    if (argc == 3 && std::string_view(argv[1]) == "--filter") {
+        filter = argv[2];
+    } else if (argc != 1) {
+        std::cerr << "Usage: echoes_sim_tests [--filter name-substring]\n";
+        return 2;
+    }
     const std::vector<std::pair<std::string, std::function<void()>>> tests{
         {"projectile persistence and malformed snapshot bounds", TestProjectilePersistenceRegression},
         {"ballistic cover interception and moving-target tracking", TestBallisticCoverAndTrackingRegression},
@@ -8165,6 +9450,10 @@ int main() {
          TestCommandDeckActionGridAndDisabledReasons},
         {"production and research queues",
          TestProductionAndResearchQueues},
+        {"bounded production queue cancellation and replay",
+         TestBoundedProductionPipelineCancellationAndReplay},
+        {"blocked production exit and rally routes",
+         TestBlockedProductionExitAndRallyRoutes},
         {"tactical minimap and spatial alert history",
          TestTacticalMinimapAndSpatialAlertHistory},
         {"accessibility and control remapping",
@@ -8225,6 +9514,8 @@ int main() {
          TestLocalizationSimulationDeterminismAndEvidenceMatrices},
         {"autonomous worker gather loop and cadence",
          TestAutonomousWorkerGatherLoopAndCadence},
+        {"transient player-scoped Material delivery receipts",
+         TestTransientMaterialDeliveryReceipts},
         {"calibrated construction and multi-builder falloff",
          TestCalibratedConstructionAndMultiBuilderFalloff},
         {"Phase Anchor Dawn coherence field",
@@ -8232,11 +9523,20 @@ int main() {
         {"ballistic projectile flight and occlusion",
          TestBallisticProjectileFlightAndOcclusion},
         {"explicit hostility and legacy replay", TestExplicitHostilityAndLegacyReplay},
+        {"authentic schema24 and schema25 replay compatibility",
+         TestAuthenticSchema24And25ReplayCompatibility},
+        {"Link repair construction network and production identity",
+         TestLinkRepairConstructionAndProductionIdentity},
+        {"authentic schema29 zero-tick network replay",
+         TestAuthenticSchema29ZeroTickNetworkReplay},
     };
 
     std::size_t passed = 0;
     std::size_t failed = 0;
     for (const auto& [name, test] : tests) {
+        if (!filter.empty() && std::string_view(name).find(filter) == std::string_view::npos) {
+            continue;
+        }
         try {
             test();
             ++passed;
@@ -8246,7 +9546,11 @@ int main() {
             ++failed;
         }
     }
-    std::cout << passed << "/" << tests.size()
+    if (passed + failed == 0) {
+        std::cerr << "No native simulation tests matched the filter\n";
+        return 2;
+    }
+    std::cout << passed << "/" << (passed + failed)
               << " native simulation tests passed\n";
     return failed == 0 ? 0 : 1;
 }

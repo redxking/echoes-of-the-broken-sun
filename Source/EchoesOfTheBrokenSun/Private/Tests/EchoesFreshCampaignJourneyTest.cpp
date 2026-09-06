@@ -9,6 +9,7 @@
 #include "EchoesBrokenSunMissionModel.h"
 #include "EchoesCampaignProgress.h"
 #include "EchoesChoirAtLumeReachMissionModel.h"
+#include "EchoesCinematicSubsystem.h"
 #include "EchoesCityReserveMissionModel.h"
 #include "EchoesFutureThatWonMissionModel.h"
 #include "EchoesNamesWithoutBirthsMissionModel.h"
@@ -22,6 +23,7 @@
 #include "EchoesTermsOfContinuanceMissionModel.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
+#include "InputKeyEventArgs.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Tests/AutomationCommon.h"
@@ -421,9 +423,12 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
     if (Controller != nullptr)
     {
         World->AddController(Controller);
+        Controller->InitInputSystem();
     }
     if (!TestNotNull(TEXT("The fresh journey owns a player controller"),
                      Controller) ||
+        !TestNotNull(TEXT("The fresh journey controller initializes input"),
+                     Controller->PlayerInput.Get()) ||
         !TestTrue(TEXT("The controller is the world's result recipient"),
                   World->GetFirstPlayerController() == Controller))
     {
@@ -536,8 +541,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         return Bridge->GetActiveQuickSavePath();
     };
 
-    const auto BeginFreshRoute = [Bridge, Controller, CampaignPath, &Feedback,
-                                  &Require](bool bReplaceExisting)
+    const auto BeginFreshRoute = [World, Bridge, Controller, CampaignPath,
+                                  &Feedback, &Require](bool bReplaceExisting)
     {
         Controller->PresentTitleScreen();
         if (!Require(
@@ -590,10 +595,33 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             return false;
         }
         Controller->ConfirmPrimaryAction();
+        UEchoesCinematicSubsystem* Opening =
+            World->GetSubsystem<UEchoesCinematicSubsystem>();
+        if (!Require(
+                Opening != nullptr &&
+                    Opening->IsSequenceActive(
+                        EEchoesCinematicSequence::M01Opening) &&
+                    !Controller->IsMissionBriefingVisible() &&
+                    Bridge->IsScenarioPaused(),
+                TEXT("Mission 01 deployment enters its authored opening")))
+        {
+            return false;
+        }
+        if (!Require(
+                Controller->InputKey(
+                    FInputKeyEventArgs::CreateSimulated(
+                        EKeys::Escape, IE_Pressed, 1.0f)),
+                TEXT("Mission 01 opening consumes the ordinary Escape skip input")))
+        {
+            return false;
+        }
+        Controller->PlayerTick(0.0f);
         return Require(
-            !Controller->IsMissionBriefingVisible() &&
+            Opening->HasSequenceCompleted(
+                EEchoesCinematicSequence::M01Opening) &&
+                !Controller->IsMissionBriefingVisible() &&
                 !Bridge->IsScenarioPaused(),
-            TEXT("Mission 01 deploys from its briefing"));
+            TEXT("Mission 01 deploys after its authored opening completes"));
     };
 
     const auto RunMissionsOneThroughFive = [
@@ -6896,7 +6924,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             Bridge->GetCampaignProgress().FindDecision(
                 EEchoesCampaignMissionId::TheBrokenSun);
         // This record is written by the live simulation as the journey ends,
-        // so it pins current schema 28. The replay envelope remains schema 24.
+        // so it must carry the current native snapshot schema.
         if (!Require(
                 Record != nullptr &&
                     Record->VerifiedFacts == 0xFF &&
@@ -6904,7 +6932,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Record->AvailableFinalResolutions ==
                         Spec.ExpectedFinalResolutionMask &&
                     Record->FinalPlanKey == Spec.ExpectedFinalPlanKey &&
-                    Record->SimulationSnapshotVersion == 28 &&
+                    Record->SimulationSnapshotVersion == echoes::sim::kSnapshotVersion &&
                     Record->CompletionTick > 0 &&
                     Record->FinalStateChecksum != 0,
                 TEXT("Mission 15 retains full native ending provenance")) ||

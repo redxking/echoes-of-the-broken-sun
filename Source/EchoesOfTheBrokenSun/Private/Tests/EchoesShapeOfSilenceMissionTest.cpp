@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 
@@ -18,30 +19,7 @@
 
 namespace
 {
-struct FPreservedShapeFile final
-{
-    explicit FPreservedShapeFile(FString InPath) : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedShapeFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedShapeFile = FEchoesPreservedTestFile;
 
 uint8 ShapeChoiceMask(echoes::sim::FutureWellChoice Choice)
 {
@@ -246,8 +224,11 @@ bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
     FPreservedShapeFile PreservedPrimary(CampaignPath);
+    if (!PreservedPrimary.IsReady()) return false;
     FPreservedShapeFile PreservedBackup(CampaignPath + TEXT(".bak"));
+    if (!PreservedBackup.IsReady()) return false;
     FPreservedShapeFile PreservedTemporary(CampaignPath + TEXT(".tmp"));
+    if (!PreservedTemporary.IsReady()) return false;
     IFileManager::Get().Delete(*CampaignPath, false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".bak")), false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".tmp")), false, true, true);
@@ -300,8 +281,11 @@ bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
                  Feedback) == EEchoesCampaignCommitStatus::Added);
     const FString QuickSavePath = ShapeQuickSavePath(SixRecords);
     FPreservedShapeFile PreservedQuickSave(QuickSavePath);
+    if (!PreservedQuickSave.IsReady()) return false;
     FPreservedShapeFile PreservedQuickSaveBackup(QuickSavePath + TEXT(".bak"));
+    if (!PreservedQuickSaveBackup.IsReady()) return false;
     FPreservedShapeFile PreservedQuickSaveTemporary(QuickSavePath + TEXT(".tmp"));
+    if (!PreservedQuickSaveTemporary.IsReady()) return false;
     IFileManager::Get().Delete(*QuickSavePath, false, true, true);
     IFileManager::Get().Delete(*(QuickSavePath + TEXT(".bak")), false, true, true);
     IFileManager::Get().Delete(*(QuickSavePath + TEXT(".tmp")), false, true, true);

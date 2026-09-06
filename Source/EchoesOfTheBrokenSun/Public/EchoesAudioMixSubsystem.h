@@ -17,10 +17,10 @@ class USoundSubmix;
  * resolves that gain from the player's own volume controls, reduced dynamic
  * range, and dialogue sidechain ducking.
  *
- * Dialogue sidechain ducking: when dialogue is active, Music and Ambience are
- * ducked by -9 dB with a 120ms attack and 400ms release curve. Effects and
- * Interface submixes are strictly unducked (0 dB change) to preserve combat
- * readability and tactical feedback.
+ * Dialogue sidechain ducking: when dialogue is active, Music is ducked by
+ * -6 dB and Ambience by -4 dB with a 150ms attack and 500ms release curve.
+ * Effects and Interface submixes are strictly unducked (0 dB change) to
+ * preserve combat readability and tactical feedback.
  *
  * The graph is presentation only. It never feeds command validation,
  * simulation timing, visibility, saves, replays, or checksums.
@@ -96,10 +96,14 @@ public:
         return bDialogueDuckingActive;
     }
 
-    /** The current linear ducking multiplier on ducked categories. */
-    [[nodiscard]] float GetDialogueDuckingGain() const
+    /** The current linear dialogue-ducking multiplier for one category. */
+    [[nodiscard]] float GetDialogueDuckingGain(
+        EEchoesAudioCategory Category) const
     {
-        return CurrentDuckingGain;
+        const int32 Index = EchoesAudioMix::CategoryIndex(Category);
+        return Index >= 0 && Index < EchoesAudioCategoryCount
+            ? CurrentDuckingGains[Index]
+            : 1.0f;
     }
 
     /** Advances ducking envelope directly (used by world tick and tests). */
@@ -120,7 +124,8 @@ private:
 
     float BaseAppliedGains[EchoesAudioCategoryCount] = {};
     float AppliedGains[EchoesAudioCategoryCount] = {};
-    float CurrentDuckingGain = 1.0f;
+    float CurrentDuckingGains[EchoesAudioCategoryCount] = {
+        1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
     bool bDialogueDuckingActive = false;
     bool bAppliedReducedDynamicRange = false;
 };

@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 #include "EchoesCampaignLedgerProbe.h"
@@ -18,31 +19,7 @@
 
 namespace
 {
-struct FPreservedSevenAccountsFile final
-{
-    explicit FPreservedSevenAccountsFile(FString InPath)
-        : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedSevenAccountsFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedSevenAccountsFile = FEchoesPreservedTestFile;
 
 FEchoesCampaignDecisionRecord MakePrologueRecord(
     echoes::sim::FutureWellChoice Choice)
@@ -152,18 +129,25 @@ bool FEchoesSevenAccountsMissionTest::RunTest(const FString& Parameters)
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
     FPreservedSevenAccountsFile PreservedPrimary(CampaignPath);
+    if (!PreservedPrimary.IsReady()) return false;
     FPreservedSevenAccountsFile PreservedBackup(CampaignPath + TEXT(".bak"));
+    if (!PreservedBackup.IsReady()) return false;
     FPreservedSevenAccountsFile PreservedTemporary(CampaignPath + TEXT(".tmp"));
+    if (!PreservedTemporary.IsReady()) return false;
     const FString MissionQuickSavePath = FPaths::Combine(
         FEchoesCampaignProgressStore::GetSaveGameDirectory(),
         TEXT("EchoesQuickSaveSevenAccountsOfRain.bin"));
     FPreservedSevenAccountsFile PreservedQuickSave(MissionQuickSavePath);
+    if (!PreservedQuickSave.IsReady()) return false;
     FPreservedSevenAccountsFile PreservedQuickSaveBackup(
         MissionQuickSavePath + TEXT(".bak"));
+    if (!PreservedQuickSaveBackup.IsReady()) return false;
     FPreservedSevenAccountsFile PreservedQuickSaveBackupTemporary(
         MissionQuickSavePath + TEXT(".bak.tmp"));
+    if (!PreservedQuickSaveBackupTemporary.IsReady()) return false;
     FPreservedSevenAccountsFile PreservedQuickSaveTemporary(
         MissionQuickSavePath + TEXT(".tmp"));
+    if (!PreservedQuickSaveTemporary.IsReady()) return false;
     IFileManager::Get().Delete(*CampaignPath, false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".bak")), false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".tmp")), false, true, true);

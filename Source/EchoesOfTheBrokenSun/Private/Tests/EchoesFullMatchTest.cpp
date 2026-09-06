@@ -6,6 +6,7 @@
 
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesPlayerController.h"
+#include "EchoesFormationLayout.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesSkirmishOverlayLayout.h"
 #include "EchoesSkirmishSetup.h"
@@ -455,14 +456,27 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
     }
     const echoes::sim::Vec2 RallyPoint =
         echoes::sim::Vec2::FromTiles(27, 27);
+    FVector StrikeCentroid = FVector::ZeroVector;
     for (const echoes::sim::EntityId Soldier : StrikeForce)
     {
+        StrikeCentroid += Bridge->SimToWorld(Bridge->FindEntity(Soldier)->position);
+    }
+    StrikeCentroid /= static_cast<double>(StrikeForce.Num());
+    const FVector RallyWorld = Bridge->SimToWorld(RallyPoint);
+    // Use the same Box destination distribution as the player controller;
+    // individual bridge commands do not distribute a shared point themselves.
+    const TArray<FVector> RallyDestinations = FEchoesFormationLayout::BuildDestinations(
+        RallyWorld, RallyWorld - StrikeCentroid, StrikeForce.Num(),
+        EEchoesFormationType::Box, 150.0f);
+    for (int32 RallyIndex = 0; RallyIndex < StrikeForce.Num(); ++RallyIndex)
+    {
+        const echoes::sim::EntityId Soldier = StrikeForce[RallyIndex];
         if (!QueueCommand(
                 TEXT("Could not rally the strike force"),
                 echoes::sim::CommandType::Move,
                 Soldier,
                 0,
-                RallyPoint,
+                Bridge->WorldToSim(RallyDestinations[RallyIndex]),
                 echoes::sim::FutureWellChoice::Dormant))
         {
             Bridge->StopPrototypeScenario();
@@ -470,8 +484,8 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
             return false;
         }
     }
-    // SPEC-MOV-008/011: eight units ordered to one point never share a tile;
-    // they stabilize within the group's arrival packing radius. A rally is
+    // SPEC-MOV-008/011: eight units receive distributed formation destinations
+    // and stabilize within the group's arrival area. A rally is
     // every unit inside that radius with its order resolved, then holding
     // still per SPEC-MOV-012 (no more than 0.05 tiles of drift across 20
     // consecutive ticks). The exact-point form this replaces encoded the

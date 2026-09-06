@@ -316,22 +316,48 @@ echoes::sim::EntityId AEchoesEntityView::GetPresentedArchiveCarrierId() const
         return Bridge->GetArchiveCarrierId();
     }
 
-    // M01's canonical spawn order assigns the archive carrier entity 11. The
-    // role ID is part of the replayed baseline even though the UE-only mission
-    // field is not. Validate its traits before exposing the authored name; if
-    // the carrier has been destroyed, no later scout may inherit that role.
-    constexpr echoes::sim::EntityId M01ArchiveCarrierEntityId = 11;
     const echoes::sim::Simulation* Replay =
         Bridge->GetReplayPresentationSimulation();
-    const echoes::sim::Entity* Candidate = Replay != nullptr
-        ? Replay->FindEntity(M01ArchiveCarrierEntityId)
-        : nullptr;
-    return Candidate != nullptr &&
-            Candidate->owner == UEchoesSimulationSubsystem::LocalPlayerId &&
-            Candidate->faction == echoes::sim::Faction::MeridianCompact &&
-            Candidate->type == echoes::sim::EntityType::ScoutUnit
-        ? Candidate->id
-        : 0;
+    if (Replay == nullptr)
+    {
+        return 0;
+    }
+
+    // The canonical M01 setup creates its sole local Relay Skiff before the
+    // mission's Future Well. Produced scouts are created after that objective
+    // entity, so this setup boundary preserves the replayed carrier role
+    // without coupling presentation to one numeric spawn ID.
+    echoes::sim::EntityId FutureWellId = 0;
+    for (const echoes::sim::Entity& Entity : Replay->Entities())
+    {
+        if (Entity.type == echoes::sim::EntityType::FutureWell &&
+            (FutureWellId == 0 || Entity.id < FutureWellId))
+        {
+            FutureWellId = Entity.id;
+        }
+    }
+    if (FutureWellId == 0)
+    {
+        return 0;
+    }
+
+    echoes::sim::EntityId CandidateId = 0;
+    for (const echoes::sim::Entity& Entity : Replay->Entities())
+    {
+        if (Entity.id >= FutureWellId ||
+            Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId ||
+            Entity.faction != echoes::sim::Faction::MeridianCompact ||
+            Entity.type != echoes::sim::EntityType::ScoutUnit)
+        {
+            continue;
+        }
+        if (CandidateId != 0)
+        {
+            return 0;
+        }
+        CandidateId = Entity.id;
+    }
+    return CandidateId;
 }
 
 AEchoesEntityView::AEchoesEntityView()

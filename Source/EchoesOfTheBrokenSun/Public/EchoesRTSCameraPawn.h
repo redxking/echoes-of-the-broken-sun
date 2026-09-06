@@ -38,7 +38,21 @@ public:
         TArray<FVector>& OutCorners,
         float GroundZ = 0.0f) const;
 
+    /** Runtime provenance for tutorial observation; setters are never exposed to widgets. */
+    [[nodiscard]] uint64 GetNavigationRevision() const { return NavigationRevision; }
+    [[nodiscard]] bool WasLastNavigationPlayerDriven() const { return bLastNavigationPlayerDriven; }
+    [[nodiscard]] float GetNavigationZoom() const;
+    [[nodiscard]] float GetMinimumNavigationZoom() const { return MinimumZoom; }
+    [[nodiscard]] float GetMaximumNavigationZoom() const { return MaximumZoom; }
+    [[nodiscard]] bool GetNavigationCenter(FVector2D& OutCenter) const;
+
 private:
+    friend class AEchoesPlayerController;
+    friend class FEchoesOrthographicCameraTest;
+    void ApplyZoomAtViewportPoint(float Direction, const FVector2D& Point, const FVector2D& ViewportSize);
+    void PanFromPlayerInput(const FVector& WorldPosition);
+    uint64 NavigationRevision = 0;
+    bool bLastNavigationPlayerDriven = false;
     /** Applies the authored exposure, tonemapper, and bloom baseline
      *  (revision exposure-authored-v1) to the camera. Every mode inherits
      *  this; review fixtures override only the exposure bias. */

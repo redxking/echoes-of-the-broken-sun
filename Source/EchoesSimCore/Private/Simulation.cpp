@@ -39,13 +39,17 @@ constexpr std::uint32_t kCommandResolutionReceiptSnapshotVersion = 24;
 constexpr std::uint32_t kMemorySnapshotVersion = 25;
 constexpr std::uint32_t kWorkStateSnapshotVersion = 26;
 constexpr std::uint32_t kFutureWellLifecycleSnapshotVersion = 27;
+constexpr std::uint32_t kHostilitySnapshotVersion = 28;
+constexpr std::uint32_t kProductionPipelineSnapshotVersion = 29;
+constexpr std::uint32_t kLinkMechanicsSnapshotVersion = 30;
 constexpr std::size_t kSerializedRememberedObjectBytes = 24;
 constexpr std::size_t kLegacyFactionCount = 2;
 constexpr std::size_t kLegacyResearchTypeCount = 5;
 constexpr std::size_t kLegacySerializedEntityBytes = 202;
 constexpr std::size_t kPriorSerializedEntityBytes = 210;
 constexpr std::size_t kSerializedEntityBytes = 235;
-constexpr std::size_t kSerializedCommandBytes = 38;
+constexpr std::size_t kLegacySerializedCommandBytes = 38;
+constexpr std::size_t kSerializedCommandBytes = 39;
 constexpr std::size_t kSerializedCommandResolutionReceiptBytes = 19;
 constexpr std::size_t kSerializedFutureWellLifecycleBytes = 16;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 132;
@@ -84,6 +88,15 @@ constexpr std::uint8_t kValidCommandCoreProtectionMask =
 [[nodiscard]] bool HasFutureWellLifecycleSnapshotSchema(
     std::uint32_t version) {
     return version >= kFutureWellLifecycleSnapshotVersion;
+}
+
+[[nodiscard]] bool HasProductionPipelineSnapshotSchema(
+    std::uint32_t version) {
+    return version >= kProductionPipelineSnapshotVersion;
+}
+
+[[nodiscard]] bool HasLinkMechanicsSnapshotSchema(std::uint32_t version) {
+    return version >= kLinkMechanicsSnapshotVersion;
 }
 
 [[nodiscard]] std::int64_t Abs64(std::int64_t value) {
@@ -190,7 +203,7 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
 
 [[nodiscard]] bool IsValidCommandType(CommandType type) {
     return type >= CommandType::Stop &&
-           type <= CommandType::ReconcileToPossible;
+           type <= CommandType::CancelConstruction;
 }
 
 [[nodiscard]] bool IsValidCommandResolutionOutcome(
@@ -665,7 +678,8 @@ constexpr std::int32_t kScarredMovementPercent = 85;
     if (!building->completed) {
         return ProductionResult::ProducerIncomplete;
     }
-    if (building->productionRequired > 0) {
+    if (view.Player().activeResearch != ResearchType::None &&
+        view.Player().researchProducer == producer) {
         return ProductionResult::ProducerBusy;
     }
     const bool supported =
@@ -675,6 +689,12 @@ constexpr std::int32_t kScarredMovementPercent = 85;
          IsBarracksUnitType(unitType));
     if (!supported) {
         return ProductionResult::UnsupportedUnit;
+    }
+    if (building->productionRequired > 0 ||
+        !building->productionQueue.empty()) {
+        return building->productionQueue.size() < Entity::kMaxProductionQueue
+                   ? ProductionResult::Valid
+                   : ProductionResult::QueueFull;
     }
     if (!ResourceCovers(
             view.Player().resources,
@@ -687,8 +707,7 @@ constexpr std::int32_t kScarredMovementPercent = 85;
         if (entity.owner == view.Player().id && entity.productionRequired > 0) {
             committedPopulation = SaturatingAdd(
                 committedPopulation,
-                PopulationCostFor(
-                    view.Config().rules, entity.faction, entity.productionType));
+                entity.productionLogisticsCost);
         }
     }
     if (SaturatingAdd(
@@ -710,7 +729,10 @@ constexpr std::int32_t kScarredMovementPercent = 85;
             !IsDropoffType(entity.type) ||
             (entity.faction == Faction::KharuunAssemblies &&
              entity.type == EntityType::Dropoff &&
-             entity.waystoneMode != WaystoneMode::Rooted)) {
+             entity.waystoneMode != WaystoneMode::Rooted) ||
+            (entity.faction == Faction::MeridianCompact &&
+             entity.type == EntityType::Dropoff &&
+             !entity.networkOperational)) {
             continue;
         }
         const std::uint64_t distance =
@@ -864,7 +886,8 @@ private:
 };
 
 template <typename Writer>
-void WriteCommand(Writer& writer, const Command& command) {
+void WriteCommand(Writer& writer, const Command& command,
+                  std::uint32_t snapshotVersion) {
     writer.U64(command.executeTick);
     writer.U8(command.player);
     writer.U64(command.sequence);
@@ -877,9 +900,13 @@ void WriteCommand(Writer& writer, const Command& command) {
     writer.U8(static_cast<std::uint8_t>(command.wellChoice));
     writer.U8(static_cast<std::uint8_t>(command.warformAdaptation));
     writer.U8(static_cast<std::uint8_t>(command.researchType));
+    if (HasProductionPipelineSnapshotSchema(snapshotVersion)) {
+        writer.U8(command.queue ? 1 : 0);
+    }
 }
 
-[[nodiscard]] bool ReadCommand(BinaryReader& reader, Command& command) {
+[[nodiscard]] bool ReadCommand(BinaryReader& reader, Command& command,
+                               std::uint32_t snapshotVersion) {
     std::uint8_t type = 0;
     std::uint8_t buildType = 0;
     std::uint8_t wellChoice = 0;
@@ -895,7 +922,18 @@ void WriteCommand(Writer& writer, const Command& command) {
         !reader.U8(researchType)) {
         return false;
     }
-    if (type > static_cast<std::uint8_t>(CommandType::ReconcileToPossible) ||
+    std::uint8_t queued = 0;
+    if (HasProductionPipelineSnapshotSchema(snapshotVersion) &&
+        (!reader.U8(queued) || queued > 1)) {
+        return false;
+    }
+    const CommandType maximumCommand =
+        HasLinkMechanicsSnapshotSchema(snapshotVersion)
+            ? CommandType::CancelConstruction
+            : HasProductionPipelineSnapshotSchema(snapshotVersion)
+                  ? CommandType::SetRallyRoute
+                  : CommandType::ReconcileToPossible;
+    if (type > static_cast<std::uint8_t>(maximumCommand) ||
         buildType > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
         wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
         warformAdaptation >
@@ -911,6 +949,7 @@ void WriteCommand(Writer& writer, const Command& command) {
     command.warformAdaptation =
         static_cast<WarformAdaptation>(warformAdaptation);
     command.researchType = static_cast<ResearchType>(researchType);
+    command.queue = queued != 0;
     return true;
 }
 
@@ -1339,7 +1378,8 @@ void Simulation::RefreshChoirIdentityStats(Entity& entity) const {
 EntityId Simulation::SpawnEntity(PlayerId owner,
                                  Faction faction,
                                  EntityType type,
-                                 Vec2 position) {
+                                 Vec2 position,
+                                 std::optional<std::int32_t> initialHitPoints) {
     if (!IsInsideMap(position) || owner == kNeutralPlayer ||
         FindPlayer(owner) == nullptr || players_[owner].faction != faction ||
         !IsValidFaction(faction) || !IsValidEntityType(type) ||
@@ -1347,6 +1387,12 @@ EntityId Simulation::SpawnEntity(PlayerId owner,
         return 0;
     }
     Entity entity = MakeEntity(owner, faction, type, position);
+    if (initialHitPoints.has_value()) {
+        if (*initialHitPoints <= 0 || *initialHitPoints > entity.maxHitPoints) {
+            return 0;
+        }
+        entity.hitPoints = *initialHitPoints;
+    }
     if (IsChoirCoherenceStructure(entity)) {
         entity.choirCoherenceNextChargeTick = std::min(
             kMaximumSupportedTick,
@@ -1623,8 +1669,11 @@ std::int32_t Simulation::PopulationCapacity(PlayerId player) const {
 bool Simulation::IsOperationalDropoff(const Entity& entity) const {
     return entity.type == EntityType::CommandCore ||
            (entity.type == EntityType::Dropoff &&
-            (entity.faction != Faction::KharuunAssemblies ||
-             entity.waystoneMode == WaystoneMode::Rooted));
+            (entity.faction == Faction::KharuunAssemblies
+                 ? entity.waystoneMode == WaystoneMode::Rooted
+                 : entity.faction != Faction::MeridianCompact ||
+                       legacyLinkReplaySemantics_ ||
+                       entity.networkOperational));
 }
 
 bool Simulation::CanRootWaystone(const Entity& waystone) const {
@@ -1873,6 +1922,26 @@ bool Simulation::IsAegisNetworkPowered(const Entity& aegis) const {
         });
 }
 
+bool Simulation::IsPositionInMeridianNetwork(PlayerId player,
+                                             Vec2 position) const {
+    if (legacyLinkReplaySemantics_) {
+        return true;
+    }
+    const std::int64_t radius = config_.rules.poweredAegis.connectionRadiusRaw;
+    const std::uint64_t radiusSquared =
+        static_cast<std::uint64_t>(radius * radius);
+    return std::any_of(entities_.begin(), entities_.end(),
+                       [&](const Entity& node) {
+        return node.owner == player && node.completed && node.hitPoints > 0 &&
+               node.faction == Faction::MeridianCompact &&
+               node.networkOperational &&
+               (node.type == EntityType::CommandCore ||
+                node.type == EntityType::Dropoff ||
+                node.type == EntityType::Barracks) &&
+               DistanceSquaredRaw(position, node.position) <= radiusSquared;
+    });
+}
+
 MineralCoverResult Simulation::ValidateMineralCover(
     PlayerId player,
     EntityId actor,
@@ -2040,7 +2109,8 @@ bool Simulation::IsRelayConnected(const Entity& relay) const {
             return candidate.owner == relay.owner && candidate.completed &&
                    candidate.hitPoints > 0 &&
                    (candidate.type == EntityType::CommandCore ||
-                    candidate.type == EntityType::Dropoff) &&
+                    (candidate.type == EntityType::Dropoff &&
+                     IsOperationalDropoff(candidate))) &&
                    DistanceSquaredRaw(relay.position, candidate.position) <=
                        radiusSquared;
         });
@@ -2084,9 +2154,6 @@ ProductionResult Simulation::ValidateProduction(PlayerId player,
     if (!building->completed) {
         return ProductionResult::ProducerIncomplete;
     }
-    if (building->productionRequired > 0) {
-        return ProductionResult::ProducerBusy;
-    }
     if (playerState->activeResearch != ResearchType::None &&
         playerState->researchProducer == producer) {
         return ProductionResult::ProducerBusy;
@@ -2099,6 +2166,15 @@ ProductionResult Simulation::ValidateProduction(PlayerId player,
     if (!supported) {
         return ProductionResult::UnsupportedUnit;
     }
+    if (building->productionRequired > 0 ||
+        !building->productionQueue.empty()) {
+        if (legacyProductionReplaySemantics_) {
+            return ProductionResult::ProducerBusy;
+        }
+        return building->productionQueue.size() < Entity::kMaxProductionQueue
+                   ? ProductionResult::Valid
+                   : ProductionResult::QueueFull;
+    }
     const ResourcePool cost = ProductionCost(playerState->faction, unitType);
     if (!ResourceCovers(playerState->resources, cost)) {
         return ProductionResult::InsufficientResources;
@@ -2108,7 +2184,7 @@ ProductionResult Simulation::ValidateProduction(PlayerId player,
         if (entity.owner == player && entity.productionRequired > 0) {
             committedPopulation = SaturatingAdd(
                 committedPopulation,
-                PopulationCost(entity.faction, entity.productionType));
+                entity.productionLogisticsCost);
         }
     }
     if (SaturatingAdd(
@@ -2117,10 +2193,106 @@ ProductionResult Simulation::ValidateProduction(PlayerId player,
         return ProductionResult::CapacityReached;
     }
     if (entities_.size() >= kMaximumSerializedEntities || nextEntityId_ == 0 ||
-        nextEntityId_ == std::numeric_limits<EntityId>::max()) {
+        nextEntityId_ == std::numeric_limits<EntityId>::max() ||
+        nextProductionItemId_ == 0 ||
+        nextProductionItemId_ ==
+            std::numeric_limits<ProductionItemId>::max()) {
         return ProductionResult::EntityCapacityReached;
     }
     return ProductionResult::Valid;
+}
+
+ProductionStartBlockReason Simulation::ProductionStartBlockReasonFor(
+    PlayerId player,
+    EntityId producer,
+    EntityType unitType) const {
+    const PlayerState* playerState = FindPlayer(player);
+    const Entity* building = FindEntity(producer);
+    if (playerState == nullptr || building == nullptr ||
+        building->owner != player || building->hitPoints <= 0) {
+        return ProductionStartBlockReason::InvalidProducer;
+    }
+    if (!building->completed) {
+        return ProductionStartBlockReason::ProducerIncomplete;
+    }
+    const bool supported =
+        (building->type == EntityType::CommandCore &&
+         unitType == EntityType::Worker) ||
+        (building->type == EntityType::Barracks &&
+         IsBarracksUnitType(unitType));
+    if (!supported) {
+        return ProductionStartBlockReason::UnsupportedUnit;
+    }
+    if (playerState->activeResearch != ResearchType::None &&
+        playerState->researchProducer == producer) {
+        return ProductionStartBlockReason::Busy;
+    }
+    if (building->productionRequired > 0 ||
+        !building->productionQueue.empty()) {
+        return building->productionQueue.size() >= Entity::kMaxProductionQueue
+                   ? ProductionStartBlockReason::QueueFull
+                   : ProductionStartBlockReason::Busy;
+    }
+    const ResourcePool cost = ProductionCost(playerState->faction, unitType);
+    if (playerState->resources.material < cost.material) {
+        return ProductionStartBlockReason::InsufficientMatter;
+    }
+    if (playerState->resources.dawnshards < cost.dawnshards) {
+        return ProductionStartBlockReason::InsufficientDawn;
+    }
+    std::int32_t committedPopulation = PopulationUsed(player);
+    for (const Entity& entity : entities_) {
+        if (entity.owner == player && entity.productionRequired > 0) {
+            committedPopulation = SaturatingAdd(
+                committedPopulation, entity.productionLogisticsCost);
+        }
+    }
+    if (SaturatingAdd(
+            committedPopulation,
+            PopulationCost(playerState->faction, unitType)) >
+        PopulationCapacity(player)) {
+        return ProductionStartBlockReason::LogisticsCapacity;
+    }
+    if (entities_.size() >= kMaximumSerializedEntities || nextEntityId_ == 0 ||
+        nextEntityId_ == std::numeric_limits<EntityId>::max() ||
+        nextProductionItemId_ == 0 ||
+        nextProductionItemId_ ==
+            std::numeric_limits<ProductionItemId>::max()) {
+        return ProductionStartBlockReason::EntityCapacity;
+    }
+    return ProductionStartBlockReason::None;
+}
+
+std::optional<ProducerQueueState> Simulation::ProducerQueueStateFor(
+    PlayerId player,
+    EntityId producer) const {
+    const Entity* building = FindEntity(producer);
+    if (FindPlayer(player) == nullptr || building == nullptr ||
+        building->owner != player || building->hitPoints <= 0 ||
+        !building->completed ||
+        (building->type != EntityType::CommandCore &&
+         building->type != EntityType::Barracks)) {
+        return std::nullopt;
+    }
+    ProducerQueueState state{};
+    state.producer = producer;
+    state.active = building->productionRequired > 0;
+    if (state.active) {
+        state.activeItem.itemId = building->activeProductionItemId;
+        state.activeItem.unitType = building->productionType;
+        state.activeItem.configuredCost = building->productionInvestedCost;
+        state.activeItem.requiredTicks = building->productionRequired;
+        state.activeItem.logisticsCost = building->productionLogisticsCost;
+        state.activeItem.investedCost = building->productionInvestedCost;
+        state.activeProgress = building->productionProgress;
+    }
+    state.spawnBlockedTicks = building->productionSpawnBlockedTicks;
+    state.pausedForSpawn = building->productionPausedForSpawn;
+    state.spawnBlockedAlert = building->productionSpawnBlockedAlert;
+    state.rallyAlert = building->rallyRouteAlert;
+    state.waiting = building->productionQueue;
+    state.rallyRoute = building->rallyRoute;
+    return state;
 }
 
 const ResearchRules* Simulation::ResearchDefinition(
@@ -2310,6 +2482,10 @@ bool Simulation::QueueCommand(const Command& command, std::string* rejectionReas
         return false;
     }
     if (!IsValidCommandType(command.type) ||
+        (legacyProductionReplaySemantics_ &&
+         command.type > CommandType::ReconcileToPossible) ||
+        (legacyLinkReplaySemantics_ &&
+         command.type > CommandType::SetRallyRoute) ||
         !IsValidEntityType(command.buildType) ||
         !IsValidWellChoice(command.wellChoice) ||
         !IsValidWarformAdaptation(command.warformAdaptation) ||
@@ -2404,6 +2580,10 @@ bool Simulation::PrepareReplayCommandSchedule(
             }
             if (validateEncoding &&
                 (!IsValidCommandType(command.type) ||
+                 (replay.version < kProductionReplayVersion &&
+                  command.type > CommandType::ReconcileToPossible) ||
+                 (replay.version < kLinkMechanicsReplayVersion &&
+                  command.type > CommandType::SetRallyRoute) ||
                  !IsValidEntityType(command.buildType) ||
                  !IsValidWellChoice(command.wellChoice) ||
                  !IsValidWarformAdaptation(command.warformAdaptation) ||
@@ -3564,6 +3744,61 @@ std::optional<Vec2> Simulation::FindProductionSpawnPosition(
     const Entity& producer) const {
     const std::int32_t centerX = producer.position.x.FloorToInt();
     const std::int32_t centerY = producer.position.y.FloorToInt();
+    const auto IsAvailable = [this, &producer](Vec2 candidate) {
+        if (!legacyProductionReplaySemantics_) {
+            return IsSpawnPositionAvailable(
+                producer.faction, producer.productionType, candidate);
+        }
+        // Replay versions through 25 admitted completed units against terrain
+        // and building footprints only. Retain that exact search contract for
+        // authenticated legacy playback; current production continues to use
+        // full unit-footprint admission.
+        if (!IsPositionPassable(candidate)) {
+            return false;
+        }
+        for (const Entity& entity : entities_) {
+            if (entity.hitPoints <= 0 ||
+                (replayChecksumSnapshotVersion_ >=
+                     kFutureWellLifecycleSnapshotVersion &&
+                 IsCollapsedFutureWell(entity)) ||
+                !IsBuilding(entity.type)) {
+                continue;
+            }
+            const std::int32_t combinedExtent =
+                FootprintHalfExtentRaw(entity.faction, entity.type) +
+                kFixedScale / 8;
+            if (Abs64(static_cast<std::int64_t>(candidate.x.Raw()) -
+                      entity.position.x.Raw()) < combinedExtent &&
+                Abs64(static_cast<std::int64_t>(candidate.y.Raw()) -
+                      entity.position.y.Raw()) < combinedExtent) {
+                return false;
+            }
+        }
+        return true;
+    };
+    if (legacyProductionReplaySemantics_ &&
+        replayChecksumSnapshotVersion_ < kMemorySnapshotVersion) {
+        // Schema 24 searched each ring from its negative corner. Schema 25
+        // changed the ordering to search away from the map centre.
+        for (std::int32_t radius = 2; radius <= 8; ++radius) {
+            for (std::int32_t offsetY = -radius; offsetY <= radius;
+                 ++offsetY) {
+                for (std::int32_t offsetX = -radius; offsetX <= radius;
+                     ++offsetX) {
+                    if (Abs64(offsetX) != radius &&
+                        Abs64(offsetY) != radius) {
+                        continue;
+                    }
+                    const Vec2 candidate = Vec2::FromTiles(
+                        centerX + offsetX, centerY + offsetY);
+                    if (IsAvailable(candidate)) {
+                        return candidate;
+                    }
+                }
+            }
+        }
+        return std::nullopt;
+    }
     const std::int32_t mapCenterX = config_.mapWidthTiles / 2;
     const std::int32_t mapCenterY = config_.mapHeightTiles / 2;
     const std::int32_t signX = centerX < mapCenterX ? -1 : 1;
@@ -3578,33 +3813,131 @@ std::optional<Vec2> Simulation::FindProductionSpawnPosition(
                 }
                 const Vec2 candidate =
                     Vec2::FromTiles(centerX + offsetX, centerY + offsetY);
-                if (!IsPositionPassable(candidate)) {
-                    continue;
-                }
-                bool blockedByBuilding = false;
-                for (const Entity& entity : entities_) {
-                    if (entity.hitPoints <= 0 || IsCollapsedFutureWell(entity) ||
-                        !IsBuilding(entity.type)) {
-                        continue;
-                    }
-                    const std::int32_t combinedExtent =
-                        FootprintHalfExtentRaw(entity.faction, entity.type) +
-                        kFixedScale / 8;
-                    if (Abs64(static_cast<std::int64_t>(candidate.x.Raw()) -
-                              entity.position.x.Raw()) < combinedExtent &&
-                        Abs64(static_cast<std::int64_t>(candidate.y.Raw()) -
-                              entity.position.y.Raw()) < combinedExtent) {
-                        blockedByBuilding = true;
-                        break;
-                    }
-                }
-                if (!blockedByBuilding) {
+                if (IsAvailable(candidate)) {
                     return candidate;
                 }
             }
         }
     }
     return std::nullopt;
+}
+
+bool Simulation::TryActivateNextProduction(Entity& producer) {
+    if (producer.productionRequired > 0 || producer.productionQueue.empty() ||
+        producer.hitPoints <= 0 || !producer.completed) {
+        return false;
+    }
+    PlayerState* player = MutablePlayer(producer.owner);
+    if (player == nullptr ||
+        (player->activeResearch != ResearchType::None &&
+         player->researchProducer == producer.id)) {
+        return false;
+    }
+    const ProductionQueueItem& item = producer.productionQueue.front();
+    if (!ResourceCovers(player->resources, item.configuredCost) ||
+        entities_.size() >= kMaximumSerializedEntities) {
+        return false;
+    }
+    std::int32_t committedPopulation = PopulationUsed(producer.owner);
+    for (const Entity& entity : entities_) {
+        if (entity.owner == producer.owner && entity.productionRequired > 0) {
+            committedPopulation = SaturatingAdd(
+                committedPopulation, entity.productionLogisticsCost);
+        }
+    }
+    if (SaturatingAdd(committedPopulation, item.logisticsCost) >
+        PopulationCapacity(producer.owner)) {
+        return false;
+    }
+    player->resources.material -= item.configuredCost.material;
+    player->resources.dawnshards -= item.configuredCost.dawnshards;
+    producer.activeProductionItemId = item.itemId;
+    producer.productionType = item.unitType;
+    producer.productionProgress = 0;
+    producer.productionRequired = item.requiredTicks;
+    producer.productionInvestedCost = item.configuredCost;
+    producer.productionLogisticsCost = item.logisticsCost;
+    producer.productionSpawnBlockedTicks = 0;
+    producer.productionPausedForSpawn = false;
+    producer.productionSpawnBlockedAlert = false;
+    if (producer.owner < productionTransitionReceipts_.size()) {
+        productionTransitionReceipts_[producer.owner].push_back({
+            currentTick_, producer.id, item.itemId, 0, item.unitType,
+            ProductionTransition::Activated,
+            ProductionStartBlockReason::None, item.configuredCost, {},
+            item.logisticsCost, 0});
+    }
+    producer.productionQueue.erase(producer.productionQueue.begin());
+    return true;
+}
+
+void Simulation::ClearActiveProduction(Entity& producer) {
+    producer.productionType = EntityType::Worker;
+    producer.activeProductionItemId = 0;
+    producer.productionProgress = 0;
+    producer.productionRequired = 0;
+    producer.productionInvestedCost = {};
+    producer.productionLogisticsCost = 0;
+    producer.productionSpawnBlockedTicks = 0;
+    producer.productionPausedForSpawn = false;
+    producer.productionSpawnBlockedAlert = false;
+}
+
+void Simulation::ApplyRallyRoute(Entity& unit, Entity& producer) {
+    unit.order = {};
+    unit.orderQueue.clear();
+    if (producer.rallyRoute.empty()) {
+        producer.rallyRouteAlert = false;
+        return;
+    }
+    std::vector<Order> admitted{};
+    admitted.reserve(producer.rallyRoute.size());
+    for (Order order : producer.rallyRoute) {
+        const Vec2 routeStart = admitted.empty()
+                                    ? unit.position
+                                    : admitted.back().destination;
+        order.anchor = routeStart;
+        if (order.type == OrderType::Move) {
+            if (!IsPositionPassable(order.destination)) {
+                producer.rallyRouteAlert = true;
+                return;
+            }
+        } else if (order.type == OrderType::Guard) {
+            const Entity* target = FindEntity(order.target);
+            if (unit.attackDamage <= 0 || target == nullptr ||
+                target->hitPoints <= 0 || target->id == unit.id ||
+                target->owner == kNeutralPlayer ||
+                config_.IsHostile(unit.owner, target->owner)) {
+                producer.rallyRouteAlert = true;
+                return;
+            }
+            order.destination = target->position;
+        } else if (order.type == OrderType::Gather) {
+            const Entity* target = FindEntity(order.target);
+            if (unit.type != EntityType::Worker || target == nullptr ||
+                target->type != EntityType::ResourceNode ||
+                target->resourceRemaining <= 0) {
+                producer.rallyRouteAlert = true;
+                return;
+            }
+            order.destination = target->position;
+        } else {
+            producer.rallyRouteAlert = true;
+            return;
+        }
+        if (order.destination != routeStart &&
+            !FindNextPathWaypoint(routeStart, order.destination).has_value()) {
+            producer.rallyRouteAlert = true;
+            return;
+        }
+        admitted.push_back(order);
+    }
+    unit.order = admitted.front();
+    unit.orderQueue.assign(admitted.begin() + 1, admitted.end());
+    if (unit.order.type == OrderType::Gather) {
+        BeginGather(unit, unit.order.target);
+    }
+    producer.rallyRouteAlert = false;
 }
 
 void Simulation::ProcessCommandsForCurrentTick(
@@ -3667,7 +4000,9 @@ void Simulation::PruneCommandResolutionReceipts() {
 
 CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
     Entity* actor = MutableEntity(command.actor);
-    if (actor == nullptr || actor->owner != command.player || !actor->completed ||
+    if (actor == nullptr || actor->owner != command.player ||
+        (!actor->completed &&
+         command.type != CommandType::CancelConstruction) ||
         actor->hitPoints <= 0) {
         return CommandResolutionOutcome::NoEffect;
     }
@@ -3820,13 +4155,102 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
             site.completed = false;
             site.hitPoints = std::max(1, site.maxHitPoints / 10);
             site.constructionProgress = 0;
+            site.constructionInvestedCost = cost;
             actor->order.type = OrderType::Build;
             actor->order.target = site.id;
             actor->order.anchor = actor->position;
             actor->order.destination = site.position;
             actor->order.buildType = command.buildType;
             // Set the order before push_back; vector growth may relocate the actor.
+            const EntityId workerId = actor->id;
             entities_.push_back(site);
+            constructionReceipts_[command.player].push_back({
+                currentTick_, workerId, site.id,
+                ConstructionTransition::Created, 0, cost, {},
+                command.sequence});
+            outcome = CommandResolutionOutcome::Applied;
+            return;
+        }
+        case CommandType::Repair: {
+            const Entity* target = FindEntity(command.target);
+            if (actor->type != EntityType::Worker || target == nullptr ||
+                target->hitPoints <= 0 || target->id == actor->id ||
+                target->owner == kNeutralPlayer ||
+                config_.IsHostile(command.player, target->owner) ||
+                !IsEntityVisibleTo(command.player, target->id) ||
+                target->hitPoints >= target->maxHitPoints ||
+                (!target->completed && !IsBuilding(target->type)) ||
+                (actor->faction != Faction::MeridianCompact &&
+                 (!target->completed || !IsBuilding(target->type))) ||
+                (actor->faction == Faction::MeridianCompact &&
+                 !IsPositionInMeridianNetwork(
+                     command.player, actor->position))) {
+                return;
+            }
+            if (command.queue && actor->order.type != OrderType::None) {
+                if (actor->orderQueue.size() < Entity::kMaxQueuedOrders) {
+                    Order queued{};
+                    queued.type = OrderType::Repair;
+                    queued.target = target->id;
+                    queued.anchor = actor->position;
+                    queued.destination = target->position;
+                    actor->orderQueue.push_back(queued);
+                }
+                outcome = CommandResolutionOutcome::Applied;
+                return;
+            }
+            actor->order.type = OrderType::Repair;
+            actor->order.target = target->id;
+            actor->order.anchor = actor->position;
+            actor->order.destination = target->position;
+            outcome = CommandResolutionOutcome::Applied;
+            return;
+        }
+        case CommandType::CancelConstruction: {
+            if (actor->completed || !IsBuilding(actor->type)) {
+                return;
+            }
+            PlayerState* player = MutablePlayer(command.player);
+            if (player == nullptr) {
+                return;
+            }
+            const std::int32_t refundPercent =
+                static_cast<std::int64_t>(actor->constructionProgress) * 2 <
+                        std::max(1, actor->constructionRequired)
+                    ? 75
+                    : 50;
+            const auto Refund = [refundPercent](std::int32_t invested) {
+                return static_cast<std::int32_t>(
+                    static_cast<std::int64_t>(invested) * refundPercent / 100);
+            };
+            const ResourcePool refund{
+                Refund(actor->constructionInvestedCost.material),
+                Refund(actor->constructionInvestedCost.dawnshards)};
+            player->resources.material = SaturatingAdd(
+                player->resources.material, refund.material);
+            player->resources.dawnshards = SaturatingAdd(
+                player->resources.dawnshards, refund.dawnshards);
+            const EntityId cancelledId = actor->id;
+            constructionReceipts_[command.player].push_back({
+                currentTick_, 0, cancelledId,
+                ConstructionTransition::Cancelled, 0, {}, refund,
+                command.sequence});
+            for (Entity& entity : entities_) {
+                if ((entity.order.type == OrderType::Build ||
+                     entity.order.type == OrderType::Repair) &&
+                    entity.order.target == cancelledId) {
+                    entity.order = {};
+                }
+                std::erase_if(entity.orderQueue, [cancelledId](const Order& order) {
+                    return (order.type == OrderType::Build ||
+                            order.type == OrderType::Repair) &&
+                           order.target == cancelledId;
+                });
+            }
+            actor = MutableEntity(cancelledId);
+            if (actor != nullptr) {
+                actor->hitPoints = 0;
+            }
             outcome = CommandResolutionOutcome::Applied;
             return;
         }
@@ -3901,14 +4325,200 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
             if (player == nullptr) {
                 return;
             }
-            const ResourcePool cost =
+            ProductionQueueItem item{};
+            if (nextProductionItemId_ == 0 ||
+                nextProductionItemId_ ==
+                    std::numeric_limits<ProductionItemId>::max()) {
+                return;
+            }
+            item.itemId = nextProductionItemId_;
+            item.unitType = command.buildType;
+            item.configuredCost =
                 ProductionCost(player->faction, command.buildType);
-            player->resources.material -= cost.material;
-            player->resources.dawnshards -= cost.dawnshards;
-            actor->productionType = command.buildType;
-            actor->productionProgress = 0;
-            actor->productionRequired =
+            item.requiredTicks =
                 ProductionTicks(player->faction, command.buildType);
+            item.logisticsCost =
+                PopulationCost(player->faction, command.buildType);
+            if (actor->productionRequired > 0 ||
+                !actor->productionQueue.empty()) {
+                actor->productionQueue.push_back(item);
+                ++nextProductionItemId_;
+                productionTransitionReceipts_[command.player].push_back({
+                    currentTick_, actor->id, item.itemId, 0, item.unitType,
+                    ProductionTransition::Queued,
+                    ProductionStartBlockReason::Busy, {}, {}, 0,
+                    command.sequence});
+                if (actor->productionRequired <= 0) {
+                    (void)TryActivateNextProduction(*actor);
+                }
+            } else {
+                actor->productionQueue.insert(
+                    actor->productionQueue.begin(), item);
+                if (!TryActivateNextProduction(*actor)) {
+                    actor->productionQueue.erase(actor->productionQueue.begin());
+                    return;
+                }
+                ++nextProductionItemId_;
+                if (!productionTransitionReceipts_[command.player].empty()) {
+                    productionTransitionReceipts_[command.player].back()
+                        .commandSequence = command.sequence;
+                }
+            }
+            outcome = CommandResolutionOutcome::Applied;
+            return;
+        }
+        case CommandType::CancelProduction: {
+            PlayerState* player = MutablePlayer(command.player);
+            if (player == nullptr || !actor->completed ||
+                (actor->type != EntityType::CommandCore &&
+                 actor->type != EntityType::Barracks)) {
+                return;
+            }
+            const std::uint32_t slot = command.target;
+            const ProductionItemId expectedItemId =
+                static_cast<ProductionItemId>(
+                    static_cast<std::uint32_t>(command.position.x.Raw())) |
+                (static_cast<ProductionItemId>(
+                     static_cast<std::uint32_t>(command.position.y.Raw()))
+                 << 32U);
+            if (slot == 0) {
+                if (actor->productionRequired <= 0) {
+                    return;
+                }
+                if (!legacyLinkReplaySemantics_ &&
+                    expectedItemId != actor->activeProductionItemId) {
+                    return;
+                }
+                const std::int32_t refundPercent =
+                    static_cast<std::int64_t>(actor->productionProgress) * 2 <
+                            actor->productionRequired
+                        ? 75
+                        : 50;
+                const auto Refund = [refundPercent](std::int32_t invested) {
+                    return static_cast<std::int32_t>(
+                        static_cast<std::int64_t>(invested) * refundPercent /
+                        100);
+                };
+                player->resources.material = SaturatingAdd(
+                    player->resources.material,
+                    Refund(actor->productionInvestedCost.material));
+                player->resources.dawnshards = SaturatingAdd(
+                    player->resources.dawnshards,
+                    Refund(actor->productionInvestedCost.dawnshards));
+                const ProductionItemId cancelledId =
+                    actor->activeProductionItemId;
+                const EntityType cancelledType = actor->productionType;
+                const ResourcePool refunded{
+                    Refund(actor->productionInvestedCost.material),
+                    Refund(actor->productionInvestedCost.dawnshards)};
+                const std::int32_t releasedLogistics =
+                    actor->productionLogisticsCost;
+                ClearActiveProduction(*actor);
+                productionTransitionReceipts_[command.player].push_back({
+                    currentTick_, actor->id, cancelledId, 0, cancelledType,
+                    ProductionTransition::Cancelled,
+                    ProductionStartBlockReason::None, {}, refunded,
+                    -releasedLogistics, command.sequence});
+                (void)TryActivateNextProduction(*actor);
+                outcome = CommandResolutionOutcome::Applied;
+                return;
+            }
+            if (slot > actor->productionQueue.size()) {
+                return;
+            }
+            const std::size_t waitingIndex =
+                static_cast<std::size_t>(slot - 1);
+            const ProductionQueueItem cancelled =
+                actor->productionQueue[waitingIndex];
+            if (!legacyLinkReplaySemantics_ &&
+                expectedItemId != cancelled.itemId) {
+                return;
+            }
+            player->resources.material = SaturatingAdd(
+                player->resources.material, cancelled.investedCost.material);
+            player->resources.dawnshards = SaturatingAdd(
+                player->resources.dawnshards,
+                cancelled.investedCost.dawnshards);
+            actor->productionQueue.erase(
+                actor->productionQueue.begin() +
+                static_cast<std::ptrdiff_t>(waitingIndex));
+            productionTransitionReceipts_[command.player].push_back({
+                currentTick_, actor->id, cancelled.itemId, 0,
+                cancelled.unitType, ProductionTransition::Cancelled,
+                ProductionStartBlockReason::None, {}, cancelled.investedCost,
+                0, command.sequence});
+            outcome = CommandResolutionOutcome::Applied;
+            return;
+        }
+        case CommandType::ReorderProduction: {
+            if (!actor->completed ||
+                (actor->type != EntityType::CommandCore &&
+                 actor->type != EntityType::Barracks) ||
+                (command.target & 0xffff0000U) != 0) {
+                return;
+            }
+            const std::uint32_t fromSlot = command.target & 0xffU;
+            const std::uint32_t toSlot = (command.target >> 8U) & 0xffU;
+            if (fromSlot == 0 || toSlot == 0 ||
+                fromSlot > actor->productionQueue.size() ||
+                toSlot > actor->productionQueue.size()) {
+                return;
+            }
+            if (fromSlot != toSlot) {
+                ProductionQueueItem moved = actor->productionQueue[
+                    static_cast<std::size_t>(fromSlot - 1)];
+                actor->productionQueue.erase(
+                    actor->productionQueue.begin() +
+                    static_cast<std::ptrdiff_t>(fromSlot - 1));
+                actor->productionQueue.insert(
+                    actor->productionQueue.begin() +
+                        static_cast<std::ptrdiff_t>(toSlot - 1),
+                    moved);
+            }
+            outcome = CommandResolutionOutcome::Applied;
+            return;
+        }
+        case CommandType::SetRallyRoute: {
+            if (!actor->completed ||
+                (actor->type != EntityType::CommandCore &&
+                 actor->type != EntityType::Barracks)) {
+                return;
+            }
+            Order rally{};
+            rally.anchor = actor->position;
+            rally.destination = command.position;
+            if (command.target == 0) {
+                if (!IsInsideMap(command.position) ||
+                    !IsPositionPassable(command.position)) {
+                    return;
+                }
+                rally.type = OrderType::Move;
+            } else {
+                const Entity* target = FindEntity(command.target);
+                if (target == nullptr || target->hitPoints <= 0 ||
+                    !IsEntityVisibleTo(command.player, target->id)) {
+                    return;
+                }
+                rally.target = target->id;
+                rally.destination = target->position;
+                if (target->type == EntityType::ResourceNode &&
+                    target->resourceRemaining > 0) {
+                    rally.type = OrderType::Gather;
+                } else if (target->owner != kNeutralPlayer &&
+                           !config_.IsHostile(command.player, target->owner)) {
+                    rally.type = OrderType::Guard;
+                } else {
+                    return;
+                }
+            }
+            if (!command.queue) {
+                actor->rallyRoute.clear();
+            }
+            if (actor->rallyRoute.size() >= Entity::kMaxRallyOrders) {
+                return;
+            }
+            actor->rallyRoute.push_back(rally);
+            actor->rallyRouteAlert = false;
             outcome = CommandResolutionOutcome::Applied;
             return;
         }
@@ -4010,7 +4620,9 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
         case CommandType::Guard: {
             const Entity* guarded = FindEntity(command.target);
             if (actor->attackDamage > 0 && guarded != nullptr &&
-                guarded->owner == command.player && guarded->id != actor->id) {
+                guarded->owner != kNeutralPlayer &&
+                !config_.IsHostile(command.player, guarded->owner) &&
+                guarded->id != actor->id) {
                 if (command.queue && actor->order.type != OrderType::None) {
                     if (actor->orderQueue.size() < Entity::kMaxQueuedOrders) {
                         Order queued{};
@@ -4417,7 +5029,14 @@ void Simulation::ProcessDeliver(Entity& worker) {
     worker.harvestState = HarvestState::Delivering;
     PlayerState* player = MutablePlayer(worker.owner);
     if (player != nullptr && worker.cargo > 0) {
-        player->resources.material = SaturatingAdd(player->resources.material, worker.cargo);
+        const std::int32_t materialBefore = player->resources.material;
+        player->resources.material = SaturatingAdd(materialBefore, worker.cargo);
+        const std::int32_t credited =
+            player->resources.material - materialBefore;
+        if (credited > 0 && worker.owner < materialDeliveryReceipts_.size()) {
+            materialDeliveryReceipts_[worker.owner].push_back(
+                MaterialDeliveryReceipt{currentTick_, worker.id, credited});
+        }
         worker.cargo = 0;
     }
     const Entity* node = FindEntity(worker.assignedResourceNode);
@@ -4444,6 +5063,7 @@ void Simulation::ProcessBuild(Entity& worker) {
         return;
     }
 
+    const std::int32_t progressBefore = site->constructionProgress;
     if (worker.cargoCapacity > 12) {
         // Legacy unit fixture (e.g. test 2): uses workRate directly
         site->constructionProgress = std::min(
@@ -4491,6 +5111,13 @@ void Simulation::ProcessBuild(Entity& worker) {
         std::max(1, site->constructionRequired);
     site->hitPoints =
         std::max(site->hitPoints, static_cast<std::int32_t>(scaledHealth));
+    const std::int32_t progressDelta =
+        site->constructionProgress - progressBefore;
+    if (progressDelta > 0 && worker.owner < constructionReceipts_.size()) {
+        constructionReceipts_[worker.owner].push_back({
+            currentTick_, worker.id, site->id,
+            ConstructionTransition::Progressed, progressDelta, {}, {}, 0});
+    }
     if (site->constructionProgress >= site->constructionRequired) {
         site->completed = true;
         site->hitPoints = site->maxHitPoints;
@@ -4500,6 +5127,113 @@ void Simulation::ProcessBuild(Entity& worker) {
                 currentTick_ +
                     config_.rules.choirCoherence.upkeepIntervalTicks);
         }
+        if (worker.owner < constructionReceipts_.size()) {
+            constructionReceipts_[worker.owner].push_back({
+                currentTick_, worker.id, site->id,
+                ConstructionTransition::Completed, 0, {}, {}, 0});
+        }
+        worker.order = {};
+    }
+}
+
+void Simulation::ProcessRepair(Entity& worker) {
+    Entity* target = MutableEntity(worker.order.target);
+    if (target == nullptr || worker.type != EntityType::Worker ||
+        target->hitPoints <= 0 || target->owner == kNeutralPlayer ||
+        config_.IsHostile(worker.owner, target->owner) ||
+        (!target->completed && !IsBuilding(target->type)) ||
+        (worker.faction != Faction::MeridianCompact &&
+         (!target->completed || !IsBuilding(target->type)))) {
+        worker.order = {};
+        return;
+    }
+    if (worker.faction == Faction::MeridianCompact &&
+        !IsPositionInMeridianNetwork(worker.owner, worker.position)) {
+        worker.order = {};
+        return;
+    }
+    const std::int32_t interactionRange =
+        worker.faction == Faction::MeridianCompact
+            ? 2 * kFixedScale
+            : kFixedScale / 2;
+    if (!InInteractionRange(worker, *target, interactionRange)) {
+        (void)MoveTowards(worker, target->position);
+        return;
+    }
+    if (currentTick_ < worker.repairInterruptedUntilTick) {
+        return;
+    }
+    std::int32_t ceiling = target->maxHitPoints;
+    if (!target->completed) {
+        const std::int32_t progressCeiling = static_cast<std::int32_t>(
+            static_cast<std::int64_t>(target->maxHitPoints) *
+            target->constructionProgress /
+            std::max(1, target->constructionRequired));
+        ceiling = std::max(1, std::max(target->maxHitPoints / 10,
+                                      progressCeiling));
+    }
+    if (target->hitPoints >= ceiling) {
+        worker.order = {};
+        return;
+    }
+    std::int32_t ratePerSecond = 20;
+    std::int32_t hitPointsPerMatter = 4;
+    if (worker.faction == Faction::MeridianCompact) {
+        hitPointsPerMatter = 10;
+        std::int32_t rank = 0;
+        for (const Entity& other : entities_) {
+            if (other.id < worker.id && other.owner == worker.owner &&
+                other.type == EntityType::Worker &&
+                other.faction == Faction::MeridianCompact &&
+                other.order.type == OrderType::Repair &&
+                other.order.target == target->id &&
+                other.hitPoints > 0 && other.completed &&
+                currentTick_ >= other.repairInterruptedUntilTick &&
+                InInteractionRange(other, *target, 2 * kFixedScale)) {
+                ++rank;
+            }
+        }
+        ratePerSecond = rank == 0 ? 10 : rank == 1 ? 6 : rank == 2 ? 4 : 0;
+    }
+    if (ratePerSecond <= 0) {
+        return;
+    }
+    worker.repairRateRemainder = SaturatingAdd(
+        worker.repairRateRemainder, ratePerSecond);
+    std::int32_t availableHitPoints = static_cast<std::int32_t>(
+        worker.repairRateRemainder /
+        static_cast<std::int32_t>(config_.ticksPerSecond));
+    worker.repairRateRemainder %=
+        static_cast<std::int32_t>(config_.ticksPerSecond);
+    if (availableHitPoints <= 0) {
+        return;
+    }
+    PlayerState* player = MutablePlayer(worker.owner);
+    if (player == nullptr) {
+        worker.order = {};
+        return;
+    }
+    std::int32_t restored = 0;
+    std::int32_t spent = 0;
+    while (availableHitPoints-- > 0 && target->hitPoints < ceiling) {
+        if (worker.repairPaidHitPointCredit <= 0) {
+            if (player->resources.material <= 0) {
+                worker.order = {};
+                break;
+            }
+            --player->resources.material;
+            ++spent;
+            worker.repairPaidHitPointCredit = hitPointsPerMatter;
+        }
+        ++target->hitPoints;
+        --worker.repairPaidHitPointCredit;
+        ++restored;
+    }
+    if (restored > 0 && worker.owner < repairReceipts_.size()) {
+        repairReceipts_[worker.owner].push_back(
+            {currentTick_, worker.id, target->id, restored, spent});
+    }
+    if (target->hitPoints >= ceiling) {
         worker.order = {};
     }
 }
@@ -4697,7 +5431,9 @@ void Simulation::ProcessGuard(
     std::vector<PendingDamage>& pendingDamage) {
     Entity* guarded = MutableEntity(attacker.order.target);
     if (attacker.attackDamage <= 0 || guarded == nullptr ||
-        guarded->owner != attacker.owner || guarded->id == attacker.id) {
+        guarded->owner == kNeutralPlayer ||
+        config_.IsHostile(attacker.owner, guarded->owner) ||
+        guarded->id == attacker.id) {
         attacker.order = {};
         return;
     }
@@ -5041,49 +5777,104 @@ void Simulation::ProcessFutureWellLifecycles() {
 }
 
 void Simulation::ProcessProduction() {
-    struct CompletedUnit final {
-        EntityId producer = 0;
-        Entity unit{};
-    };
-    std::vector<CompletedUnit> completedUnits{};
-    for (Entity& producer : entities_) {
-        if (producer.hitPoints <= 0 || !producer.completed ||
-            producer.productionRequired <= 0) {
+    std::vector<EntityId> producerIds{};
+    producerIds.reserve(entities_.size());
+    for (const Entity& entity : entities_) {
+        if (entity.hitPoints > 0 && entity.completed &&
+            (entity.type == EntityType::CommandCore ||
+             entity.type == EntityType::Barracks)) {
+            producerIds.push_back(entity.id);
+        }
+    }
+    for (EntityId producerId : producerIds) {
+        Entity* producer = MutableEntity(producerId);
+        if (producer == nullptr) {
             continue;
         }
-        producer.productionProgress = std::min(
-            producer.productionRequired,
-            SaturatingAdd(producer.productionProgress, 1));
-        if (producer.productionProgress < producer.productionRequired) {
+        if (producer->productionRequired <= 0) {
+            (void)TryActivateNextProduction(*producer);
+        }
+        if (producer->productionRequired <= 0) {
+            continue;
+        }
+        if (!producer->productionPausedForSpawn) {
+            producer->productionProgress = std::min(
+                producer->productionRequired,
+                SaturatingAdd(producer->productionProgress, 1));
+        }
+        if (producer->productionProgress < producer->productionRequired) {
             continue;
         }
         const std::optional<Vec2> spawnPosition =
-            FindProductionSpawnPosition(producer);
+            FindProductionSpawnPosition(*producer);
         if (!spawnPosition.has_value() ||
-            entities_.size() + completedUnits.size() >=
-                kMaximumSerializedEntities) {
+            entities_.size() >= kMaximumSerializedEntities) {
+            const bool wasAlerted = producer->productionSpawnBlockedAlert;
+            producer->productionSpawnBlockedTicks = std::min<Tick>(
+                100, producer->productionSpawnBlockedTicks + 1);
+            if (producer->productionSpawnBlockedTicks >= 100) {
+                producer->productionPausedForSpawn = true;
+                producer->productionSpawnBlockedAlert = true;
+            }
+            if (!wasAlerted && producer->productionSpawnBlockedAlert) {
+                productionTransitionReceipts_[producer->owner].push_back({
+                    currentTick_, producer->id,
+                    producer->activeProductionItemId, 0,
+                    producer->productionType,
+                    ProductionTransition::SpawnBlocked,
+                    ProductionStartBlockReason::None, {}, {}, 0, 0});
+            }
             continue;
         }
         EntityId unitId = 0;
         if (!TryAllocateEntityId(unitId)) {
+            const bool wasAlerted = producer->productionSpawnBlockedAlert;
+            producer->productionSpawnBlockedTicks = std::min<Tick>(
+                100, producer->productionSpawnBlockedTicks + 1);
+            if (producer->productionSpawnBlockedTicks >= 100) {
+                producer->productionPausedForSpawn = true;
+                producer->productionSpawnBlockedAlert = true;
+            }
+            if (!wasAlerted && producer->productionSpawnBlockedAlert) {
+                productionTransitionReceipts_[producer->owner].push_back({
+                    currentTick_, producer->id,
+                    producer->activeProductionItemId, 0,
+                    producer->productionType,
+                    ProductionTransition::SpawnBlocked,
+                    ProductionStartBlockReason::None, {}, {}, 0, 0});
+            }
             continue;
         }
+        const ProductionItemId completedItemId =
+            producer->activeProductionItemId;
+        const EntityType completedType = producer->productionType;
+        const bool resumedFromBlock =
+            producer->productionSpawnBlockedTicks > 0;
         Entity unit = MakeEntity(
-            producer.owner,
-            producer.faction,
-            producer.productionType,
+            producer->owner,
+            producer->faction,
+            producer->productionType,
             *spawnPosition);
         unit.id = unitId;
-        completedUnits.push_back({producer.id, unit});
-    }
-    for (const CompletedUnit& completion : completedUnits) {
-        Entity* producer = MutableEntity(completion.producer);
-        if (producer == nullptr || producer->hitPoints <= 0) {
-            continue;
+        ClearActiveProduction(*producer);
+        entities_.push_back(unit);
+        producer = MutableEntity(producerId);
+        Entity* spawned = MutableEntity(unitId);
+        if (producer != nullptr && spawned != nullptr) {
+            ApplyRallyRoute(*spawned, *producer);
+            if (resumedFromBlock) {
+                productionTransitionReceipts_[producer->owner].push_back({
+                    currentTick_, producer->id, completedItemId, unitId,
+                    completedType, ProductionTransition::SpawnResumed,
+                    ProductionStartBlockReason::None, {}, {}, 0, 0});
+            }
+            productionTransitionReceipts_[producer->owner].push_back({
+                currentTick_, producer->id, completedItemId, unitId,
+                completedType, ProductionTransition::Completed,
+                ProductionStartBlockReason::None, {}, {},
+                0, 0});
+            (void)TryActivateNextProduction(*producer);
         }
-        producer->productionProgress = 0;
-        producer->productionRequired = 0;
-        entities_.push_back(completion.unit);
     }
 }
 
@@ -5166,7 +5957,13 @@ void Simulation::ProcessEntityOrders() {
             case OrderType::Move:
                 if (ShouldPackAtDestination(entity) ||
                     MoveTowards(entity, entity.order.destination)) {
-                    entity.order.type = OrderType::None;
+                    if (legacyProductionReplaySemantics_ &&
+                        replayChecksumSnapshotVersion_ <
+                            kMemorySnapshotVersion) {
+                        entity.order = {};
+                    } else {
+                        entity.order.type = OrderType::None;
+                    }
                 }
                 break;
             case OrderType::Gather:
@@ -5177,6 +5974,9 @@ void Simulation::ProcessEntityOrders() {
                 break;
             case OrderType::Build:
                 ProcessBuild(entity);
+                break;
+            case OrderType::Repair:
+                ProcessRepair(entity);
                 break;
             case OrderType::Attack:
                 ProcessAttack(entity, pendingDamage);
@@ -5279,8 +6079,15 @@ void Simulation::ProcessEntityOrders() {
         if (Entity* mutableTarget = MutableEntity(targetId);
             mutableTarget != nullptr &&
             !IsProtectedCommandCore(*mutableTarget)) {
-            mutableTarget->hitPoints -= static_cast<std::int32_t>(std::min<std::int64_t>(
-                totalDamage, std::numeric_limits<std::int32_t>::max()));
+            const std::int32_t appliedDamage =
+                static_cast<std::int32_t>(std::min<std::int64_t>(
+                    totalDamage, std::numeric_limits<std::int32_t>::max()));
+            mutableTarget->hitPoints -= appliedDamage;
+            if (appliedDamage > 0 &&
+                mutableTarget->order.type == OrderType::Repair) {
+                mutableTarget->repairInterruptedUntilTick = std::min(
+                    kMaximumSupportedTick, currentTick_ + 20);
+            }
         }
     }
 }
@@ -5334,6 +6141,7 @@ void Simulation::ClearInvalidOrders() {
                 // Delivery owns missing-depot recovery and retained cargo.
                 break;
             case OrderType::Build:
+            case OrderType::Repair:
             case OrderType::Attack:
             case OrderType::FutureWell:
                 if (const Entity* target = FindEntity(entity.order.target);
@@ -5343,6 +6151,9 @@ void Simulation::ClearInvalidOrders() {
                       (target->wellChoice != FutureWellChoice::Dormant &&
                        (target->wellChoice != FutureWellChoice::Preserve ||
                         !config_.IsHostile(entity.owner, target->owner))))) ||
+                    (entity.order.type == OrderType::Repair &&
+                     (target->hitPoints <= 0 ||
+                      config_.IsHostile(entity.owner, target->owner))) ||
                     (entity.order.type == OrderType::Attack &&
                      (!config_.IsHostile(entity.owner, target->owner) ||
                       IsProtectedCommandCore(*target)))) {
@@ -5571,9 +6382,63 @@ void Simulation::ResolveMineralCovers() {
 }
 
 void Simulation::ResolveAegisPower() {
+    if (!legacyLinkReplaySemantics_) {
+        for (Entity& entity : entities_) {
+            entity.networkOperational = false;
+            if (entity.owner != kNeutralPlayer && entity.completed &&
+                entity.hitPoints > 0 &&
+                entity.faction == Faction::MeridianCompact &&
+                entity.type == EntityType::CommandCore) {
+                entity.networkOperational = true;
+            }
+        }
+        const std::int64_t radius =
+            config_.rules.poweredAegis.connectionRadiusRaw;
+        const std::uint64_t radiusSquared =
+            static_cast<std::uint64_t>(radius * radius);
+        bool added = true;
+        while (added) {
+            added = false;
+            for (Entity& candidate : entities_) {
+                if (candidate.networkOperational ||
+                    candidate.owner == kNeutralPlayer ||
+                    !candidate.completed || candidate.hitPoints <= 0 ||
+                    candidate.faction != Faction::MeridianCompact ||
+                    (candidate.type != EntityType::Dropoff &&
+                     candidate.type != EntityType::Barracks)) {
+                    continue;
+                }
+                const bool connected = std::any_of(
+                    entities_.begin(), entities_.end(),
+                    [&](const Entity& node) {
+                        return node.owner == candidate.owner &&
+                               node.networkOperational &&
+                               DistanceSquaredRaw(candidate.position,
+                                                  node.position) <=
+                                   radiusSquared;
+                    });
+                if (connected) {
+                    candidate.networkOperational = true;
+                    added = true;
+                }
+            }
+        }
+    }
     for (Entity& entity : entities_) {
-        entity.aegisPowered =
-            IsAegisPost(entity) && IsAegisNetworkPowered(entity);
+        if (legacyLinkReplaySemantics_) {
+            entity.networkOperational = false;
+            entity.aegisPowered =
+                IsAegisPost(entity) && IsAegisNetworkPowered(entity);
+            continue;
+        }
+        if (IsAegisPost(entity)) {
+            entity.aegisPowered =
+                entity.completed && entity.hitPoints > 0 &&
+                (entity.owner == kNeutralPlayer ||
+                 IsPositionInMeridianNetwork(entity.owner, entity.position));
+        } else {
+            entity.aegisPowered = false;
+        }
     }
 }
 
@@ -5670,6 +6535,10 @@ void Simulation::ApplyResolvedDamage(
                 100));
     }
     target.hitPoints -= resolvedDamage;
+    if (resolvedDamage > 0 && target.order.type == OrderType::Repair) {
+        target.repairInterruptedUntilTick = std::min(
+            kMaximumSupportedTick, currentTick_ + 20);
+    }
 }
 
 void Simulation::SpawnBallisticProjectile(
@@ -5764,6 +6633,13 @@ void Simulation::Step(
     if (currentTick_ >= kMaximumSupportedTick) {
         return;
     }
+    for (std::vector<MaterialDeliveryReceipt>& receipts :
+         materialDeliveryReceipts_) {
+        receipts.clear();
+    }
+    for (auto& receipts : repairReceipts_) receipts.clear();
+    for (auto& receipts : constructionReceipts_) receipts.clear();
+    for (auto& receipts : productionTransitionReceipts_) receipts.clear();
     ResolveExpiredRelaySupply();
     ResolveWaystoneTransitions();
     ResolveWarformMolts();
@@ -6084,7 +6960,18 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
     view.decisionSeed_ = config_.randomSeed;
     view.populationUsed_ = PopulationUsed(player);
     view.populationCapacity_ = PopulationCapacity(player);
+    view.materialDeliveries_ = materialDeliveryReceipts_[player];
+    view.repairReceipts_ = repairReceipts_[player];
+    view.constructionReceipts_ = constructionReceipts_[player];
+    view.productionTransitions_ = productionTransitionReceipts_[player];
     view.publicFutureWellTelegraphs_ = PublicFutureWellTelegraphs();
+    for (const Entity& entity : entities_) {
+        if (const std::optional<ProducerQueueState> producerState =
+                ProducerQueueStateFor(player, entity.id);
+            producerState.has_value()) {
+            view.producerQueues_.push_back(*producerState);
+        }
+    }
     const std::size_t tileCount =
         static_cast<std::size_t>(config_.mapWidthTiles) *
         static_cast<std::size_t>(config_.mapHeightTiles);
@@ -6156,6 +7043,14 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
                 observed.productionType = EntityType::Worker;
                 observed.productionProgress = 0;
                 observed.productionRequired = 0;
+                observed.productionInvestedCost = {};
+                observed.productionLogisticsCost = 0;
+                observed.productionSpawnBlockedTicks = 0;
+                observed.productionPausedForSpawn = false;
+                observed.productionSpawnBlockedAlert = false;
+                observed.rallyRouteAlert = false;
+                observed.productionQueue.clear();
+                observed.rallyRoute.clear();
                 observed.relaySupplyUntilTick = 0;
                 observed.relaySupplyCooldownUntilTick = 0;
                 observed.waystoneTransitionUntilTick = 0;
@@ -6280,9 +7175,6 @@ std::vector<Command> Simulation::GenerateAiCommands(
     const auto PopulationCapacity = [&](PlayerId) {
         return view.PopulationCapacity();
     };
-    const auto PopulationCost = [&](EntityType type) {
-        return PopulationCostFor(config_.rules, playerState->faction, type);
-    };
     const auto BuildCost = [&](Faction faction, EntityType type) {
         return BuildCostFor(config_.rules, faction, type);
     };
@@ -6360,7 +7252,7 @@ std::vector<Command> Simulation::GenerateAiCommands(
         if (entity.productionRequired > 0) {
             committedPopulation = SaturatingAdd(
                 committedPopulation,
-                PopulationCost(entity.productionType));
+                entity.productionLogisticsCost);
         }
     }
 
@@ -6553,6 +7445,13 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 if (command.type == CommandType::Research) {
                     continue;
                 }
+            }
+            // Queueing is a player-directed production capability. Preserve the
+            // AI's established one-at-a-time cadence so repeated planning
+            // windows do not fill every waiting slot behind an active unit.
+            if (actor.productionRequired > 0 ||
+                !actor.productionQueue.empty()) {
+                continue;
             }
             command.type = CommandType::Produce;
             if (actor.type == EntityType::CommandCore) {
@@ -7100,26 +7999,28 @@ void Simulation::WriteSnapshotPayload(Writer& writer, std::uint32_t version) con
         writer.U32(static_cast<std::uint32_t>(explored.size()));
         writer.Bytes(explored);
     }
-    // Schema 25: per-player remembered terrain and remembered permanent
-    // objects. Both are authoritative per-player state; a save that dropped
-    // them would hand the loading player a map repainted from live truth.
-    for (const auto& remembered : rememberedTerrain_) {
-        writer.U32(static_cast<std::uint32_t>(remembered.size()));
-        writer.Bytes(std::span<const std::uint8_t>(
-            reinterpret_cast<const std::uint8_t*>(remembered.data()),
-            remembered.size()));
-    }
-    for (const auto& memory : rememberedObjects_) {
-        writer.U32(static_cast<std::uint32_t>(memory.size()));
-        for (const RememberedObject& remembered : memory) {
-            writer.U32(remembered.id);
-            writer.U8(remembered.owner);
-            writer.U8(static_cast<std::uint8_t>(remembered.faction));
-            writer.U8(static_cast<std::uint8_t>(remembered.type));
-            writer.U8(static_cast<std::uint8_t>(remembered.wellChoice));
-            writer.I32(remembered.position.x.Raw());
-            writer.I32(remembered.position.y.Raw());
-            writer.U64(remembered.observedTick);
+    if (HasMemorySnapshotSchema(version)) {
+        // Schema 25: per-player remembered terrain and remembered permanent
+        // objects. Both are authoritative per-player state; a save that
+        // dropped them would repaint the loading player's map from live truth.
+        for (const auto& remembered : rememberedTerrain_) {
+            writer.U32(static_cast<std::uint32_t>(remembered.size()));
+            writer.Bytes(std::span<const std::uint8_t>(
+                reinterpret_cast<const std::uint8_t*>(remembered.data()),
+                remembered.size()));
+        }
+        for (const auto& memory : rememberedObjects_) {
+            writer.U32(static_cast<std::uint32_t>(memory.size()));
+            for (const RememberedObject& remembered : memory) {
+                writer.U32(remembered.id);
+                writer.U8(remembered.owner);
+                writer.U8(static_cast<std::uint8_t>(remembered.faction));
+                writer.U8(static_cast<std::uint8_t>(remembered.type));
+                writer.U8(static_cast<std::uint8_t>(remembered.wellChoice));
+                writer.I32(remembered.position.x.Raw());
+                writer.I32(remembered.position.y.Raw());
+                writer.U64(remembered.observedTick);
+            }
         }
     }
     writer.U32(static_cast<std::uint32_t>(entities_.size()));
@@ -7189,7 +8090,7 @@ void Simulation::WriteSnapshotPayload(Writer& writer, std::uint32_t version) con
     std::sort(pending.begin(), pending.end(), CommandLess);
     writer.U32(static_cast<std::uint32_t>(pending.size()));
     for (const Command& command : pending) {
-        WriteCommand(writer, command);
+        WriteCommand(writer, command, version);
     }
     std::vector<StoredCommandResolutionReceipt> receipts(
         commandResolutionReceipts_.begin(),
@@ -7213,65 +8114,133 @@ void Simulation::WriteSnapshotPayload(Writer& writer, std::uint32_t version) con
         writer.U64(stored.receipt.assignedExecutionTick);
         writer.U8(static_cast<std::uint8_t>(stored.receipt.outcome));
     }
-    // Schema 26 appends transient-but-authoritative work/order state. Keep the
-    // earlier entity records intact so legacy migrations retain their layout.
-    writer.U32(static_cast<std::uint32_t>(entities_.size()));
-    for (const Entity& entity : entities_) {
-        writer.U32(entity.id);
-        writer.U8(static_cast<std::uint8_t>(entity.harvestState));
-        writer.U8(entity.harvestSlotHeld ? 1 : 0);
-        writer.U64(entity.harvestTicks);
-        writer.U32(entity.assignedResourceNode);
-        writer.U64(entity.harvestQueueTicket);
-        writer.I32(entity.constructionSubProgress);
-        writer.U8(static_cast<std::uint8_t>(entity.orderQueue.size()));
-        for (const Order& order : entity.orderQueue) {
-            writer.U8(static_cast<std::uint8_t>(order.type));
-            writer.U32(order.target);
-            writer.I32(order.anchor.x.Raw());
-            writer.I32(order.anchor.y.Raw());
-            writer.I32(order.destination.x.Raw());
-            writer.I32(order.destination.y.Raw());
-            writer.U8(static_cast<std::uint8_t>(order.buildType));
-            writer.U8(static_cast<std::uint8_t>(order.wellChoice));
+    if (HasWorkStateSnapshotSchema(version)) {
+        // Schema 26 appends transient-but-authoritative work/order state. Keep
+        // earlier entity records intact so migrations retain their layout.
+        writer.U32(static_cast<std::uint32_t>(entities_.size()));
+        for (const Entity& entity : entities_) {
+            writer.U32(entity.id);
+            writer.U8(static_cast<std::uint8_t>(entity.harvestState));
+            writer.U8(entity.harvestSlotHeld ? 1 : 0);
+            writer.U64(entity.harvestTicks);
+            writer.U32(entity.assignedResourceNode);
+            writer.U64(entity.harvestQueueTicket);
+            writer.I32(entity.constructionSubProgress);
+            writer.U8(static_cast<std::uint8_t>(entity.orderQueue.size()));
+            for (const Order& order : entity.orderQueue) {
+                writer.U8(static_cast<std::uint8_t>(order.type));
+                writer.U32(order.target);
+                writer.I32(order.anchor.x.Raw());
+                writer.I32(order.anchor.y.Raw());
+                writer.I32(order.destination.x.Raw());
+                writer.I32(order.destination.y.Raw());
+                writer.U8(static_cast<std::uint8_t>(order.buildType));
+                writer.U8(static_cast<std::uint8_t>(order.wellChoice));
+            }
+        }
+        // Schema 26 also retains in-flight ballistic state. These records are
+        // ordered by monotonic IDs so load cannot change impact order.
+        writer.U8(config_.enableBallisticProjectiles ? 1 : 0);
+        writer.U32(nextProjectileId_);
+        writer.U32(static_cast<std::uint32_t>(projectiles_.size()));
+        for (const Projectile& projectile : projectiles_) {
+            writer.U32(projectile.id);
+            writer.U8(projectile.owner);
+            writer.U32(projectile.source);
+            writer.U32(projectile.target);
+            writer.I32(projectile.position.x.Raw());
+            writer.I32(projectile.position.y.Raw());
+            writer.I32(projectile.destination.x.Raw());
+            writer.I32(projectile.destination.y.Raw());
+            writer.I32(projectile.damage);
+            writer.I32(projectile.speedRaw);
+            writer.I32(projectile.travelDistanceRemainingRaw);
         }
     }
-    // Schema 26 also retains in-flight ballistic state. These records are
-    // ordered by their monotonic projectile IDs so loading cannot change
-    // impact order or reissue an already consumed identifier.
-    writer.U8(config_.enableBallisticProjectiles ? 1 : 0);
-    writer.U32(nextProjectileId_);
-    writer.U32(static_cast<std::uint32_t>(projectiles_.size()));
-    for (const Projectile& projectile : projectiles_) {
-        writer.U32(projectile.id);
-        writer.U8(projectile.owner);
-        writer.U32(projectile.source);
-        writer.U32(projectile.target);
-        writer.I32(projectile.position.x.Raw());
-        writer.I32(projectile.position.y.Raw());
-        writer.I32(projectile.destination.x.Raw());
-        writer.I32(projectile.destination.y.Raw());
-        writer.I32(projectile.damage);
-        writer.I32(projectile.speedRaw);
-        writer.I32(projectile.travelDistanceRemainingRaw);
-    }
-    // Schema 27 appends Well lifecycle state after every schema-26 record so
-    // older migration helpers retain their byte layout unchanged.
-    writer.U32(static_cast<std::uint32_t>(entities_.size()));
-    for (const Entity& entity : entities_) {
-        writer.U32(entity.id);
-        writer.U8(entity.wellCapturePlayer);
-        writer.U16(entity.wellCaptureProgress);
-        writer.U8(static_cast<std::uint8_t>(entity.wellPendingChoice));
-        writer.U64(entity.wellProtocolTicks);
+    if (HasFutureWellLifecycleSnapshotSchema(version)) {
+        // Schema 27 appends Well lifecycle state after schema-26 records.
+        writer.U32(static_cast<std::uint32_t>(entities_.size()));
+        for (const Entity& entity : entities_) {
+            writer.U32(entity.id);
+            writer.U8(entity.wellCapturePlayer);
+            writer.U16(entity.wellCaptureProgress);
+            writer.U8(static_cast<std::uint8_t>(entity.wellPendingChoice));
+            writer.U64(entity.wellProtocolTicks);
+        }
     }
     // Schema 28 preserves explicit hostility without changing earlier blocks.
-    if (version >= 28) {
+    if (version >= kHostilitySnapshotVersion) {
         for (std::uint8_t mask : config_.hostilityMasks) writer.U8(mask);
+    }
+    // Schema 29 appends queue-aware manufacturing and rally authority. The
+    // legacy active-slot fields above remain intact for schemas 20-28.
+    if (HasProductionPipelineSnapshotSchema(version)) {
+        writer.U32(static_cast<std::uint32_t>(entities_.size()));
+        for (const Entity& entity : entities_) {
+            writer.U32(entity.id);
+            writer.I32(entity.productionInvestedCost.material);
+            writer.I32(entity.productionInvestedCost.dawnshards);
+            writer.I32(entity.productionLogisticsCost);
+            writer.U64(entity.productionSpawnBlockedTicks);
+            writer.U8(entity.productionPausedForSpawn ? 1 : 0);
+            writer.U8(entity.productionSpawnBlockedAlert ? 1 : 0);
+            writer.U8(entity.rallyRouteAlert ? 1 : 0);
+            writer.U8(static_cast<std::uint8_t>(entity.productionQueue.size()));
+            for (const ProductionQueueItem& item : entity.productionQueue) {
+                writer.U8(static_cast<std::uint8_t>(item.unitType));
+                writer.I32(item.configuredCost.material);
+                writer.I32(item.configuredCost.dawnshards);
+                writer.I32(item.requiredTicks);
+                writer.I32(item.logisticsCost);
+                writer.I32(item.investedCost.material);
+                writer.I32(item.investedCost.dawnshards);
+            }
+            writer.U8(static_cast<std::uint8_t>(entity.rallyRoute.size()));
+            for (const Order& order : entity.rallyRoute) {
+                writer.U8(static_cast<std::uint8_t>(order.type));
+                writer.U32(order.target);
+                writer.I32(order.anchor.x.Raw());
+                writer.I32(order.anchor.y.Raw());
+                writer.I32(order.destination.x.Raw());
+                writer.I32(order.destination.y.Raw());
+                writer.U8(static_cast<std::uint8_t>(order.buildType));
+                writer.U8(static_cast<std::uint8_t>(order.wellChoice));
+            }
+        }
+    }
+    if (HasLinkMechanicsSnapshotSchema(version)) {
+        writer.U64(nextProductionItemId_);
+        writer.U32(static_cast<std::uint32_t>(entities_.size()));
+        for (const Entity& entity : entities_) {
+            writer.U32(entity.id);
+            writer.U64(entity.activeProductionItemId);
+            writer.U8(static_cast<std::uint8_t>(entity.productionQueue.size()));
+            for (const ProductionQueueItem& item : entity.productionQueue) {
+                writer.U64(item.itemId);
+            }
+            writer.I32(entity.constructionInvestedCost.material);
+            writer.I32(entity.constructionInvestedCost.dawnshards);
+            writer.U64(entity.repairInterruptedUntilTick);
+            writer.I32(entity.repairRateRemainder);
+            writer.I32(entity.repairPaidHitPointCredit);
+            writer.U8(entity.networkOperational ? 1 : 0);
+        }
     }
 }
 
-std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
+std::vector<std::uint8_t> Simulation::SaveSnapshot(
+    std::uint64_t* snapshotStateChecksum) const {
+    if (legacyLinkReplaySemantics_) {
+        // Schema 30 stores current network derivatives. Keep the live historical
+        // execution and its replay checksum unchanged; migrate only the save copy.
+        Simulation checkpoint = *this;
+        checkpoint.legacyLinkReplaySemantics_ = false;
+        checkpoint.ResolveAegisPower();
+        return checkpoint.SaveSnapshot(snapshotStateChecksum);
+    }
+    if (snapshotStateChecksum != nullptr) {
+        *snapshotStateChecksum = StateChecksum();
+    }
     BinaryWriter writer{};
     std::size_t rememberedObjectCount = 0;
     for (const auto& memory : rememberedObjects_) {
@@ -7357,6 +8326,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         return std::nullopt;
     }
     if (version != kSnapshotVersion &&
+        version != kProductionPipelineSnapshotVersion &&
+        version != kHostilitySnapshotVersion &&
         version != kFutureWellLifecycleSnapshotVersion &&
         version != kWorkStateSnapshotVersion &&
         version != kMemorySnapshotVersion &&
@@ -7367,7 +8338,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot version is unsupported");
         return std::nullopt;
     }
-    if (version < 28) {
+    if (version < kHostilitySnapshotVersion) {
         config.hostilityMasks = legacyHostilityMasks;
         if (!config.HasValidHostilityMasks()) {
             SetError(error, "legacy snapshot hostility migration is invalid");
@@ -7893,7 +8864,10 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                                                 : Faction::KharuunAssemblies) ||
             type > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
             completed > 1 ||
-            orderType > static_cast<std::uint8_t>(OrderType::Patrol) ||
+            orderType > static_cast<std::uint8_t>(
+                HasLinkMechanicsSnapshotSchema(version)
+                    ? OrderType::Repair
+                    : OrderType::Patrol) ||
             orderBuildType >
                 static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
             orderWellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
@@ -8149,7 +9123,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         if (IsCancelledAtInterval()) {
             return std::nullopt;
         }
-        if (entity.aegisPowered !=
+        if (!HasLinkMechanicsSnapshotSchema(version) &&
+            entity.aegisPowered !=
             simulation.IsAegisNetworkPowered(entity)) {
             SetError(error, "snapshot Aegis power state is invalid");
             return std::nullopt;
@@ -8229,9 +9204,13 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         }
     }
     std::uint32_t commandCount = 0;
+    const std::size_t serializedCommandBytes =
+        HasProductionPipelineSnapshotSchema(version)
+            ? kSerializedCommandBytes
+            : kLegacySerializedCommandBytes;
     if (!reader.U32(commandCount) || commandCount > kMaximumSerializedCommands ||
         static_cast<std::size_t>(commandCount) >
-            reader.Remaining() / kSerializedCommandBytes) {
+            reader.Remaining() / serializedCommandBytes) {
         SetError(error, "snapshot command count is invalid");
         return std::nullopt;
     }
@@ -8243,13 +9222,14 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         if (IsCancelledAtInterval()) {
             return std::nullopt;
         }
-        if (!ReadCommand(reader, command) ||
+        if (!ReadCommand(reader, command, version) ||
             command.player >= simulation.players_.size() ||
             !simulation.players_[command.player].active ||
             command.executeTick < simulation.currentTick_ ||
             command.executeTick > kMaximumSupportedTick || command.actor == 0 ||
             (simulation.config_.rules.version < 2 &&
-             (command.type > CommandType::Research ||
+             ((command.type == CommandType::ReconcileToManifest ||
+               command.type == CommandType::ReconcileToPossible) ||
               command.researchType >
                   ResearchType::KharuunAncestralEdge))) {
             SetError(error, "snapshot pending command is invalid");
@@ -8331,6 +9311,8 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             if (player >= simulation.players_.size() ||
                 !simulation.players_[player].active ||
                 !IsValidCommandType(stored.receipt.commandType) ||
+                (!HasLinkMechanicsSnapshotSchema(version) &&
+                 stored.receipt.commandType > CommandType::SetRallyRoute) ||
                 !IsValidCommandResolutionOutcome(stored.receipt.outcome) ||
                 assignedTick >= simulation.currentTick_ ||
                 (simulation.currentTick_ > assignedTick &&
@@ -8349,7 +9331,10 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                 (IsMovementRejectionOutcome(stored.receipt.outcome) &&
                  stored.receipt.commandType != CommandType::Move) ||
                 (simulation.config_.rules.version < 2 &&
-                 stored.receipt.commandType > CommandType::Research)) {
+                 (stored.receipt.commandType ==
+                      CommandType::ReconcileToManifest ||
+                  stored.receipt.commandType ==
+                      CommandType::ReconcileToPossible))) {
                 SetError(error,
                          "snapshot command resolution receipt is invalid");
                 return std::nullopt;
@@ -8422,7 +9407,10 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                 order.wellChoice = static_cast<FutureWellChoice>(well);
                 order.anchor = Vec2::FromRaw(ax, ay);
                 order.destination = Vec2::FromRaw(dx, dy);
-                if (type == 0 || type > static_cast<std::uint8_t>(OrderType::Patrol) ||
+                if (type == 0 || type > static_cast<std::uint8_t>(
+                        HasLinkMechanicsSnapshotSchema(version)
+                            ? OrderType::Repair
+                            : OrderType::Patrol) ||
                     !IsValidEntityType(order.buildType) ||
                     well > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
                     !simulation.IsInsideMap(order.anchor) || !simulation.IsInsideMap(order.destination)) {
@@ -8618,6 +9606,259 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             return std::nullopt;
         }
     }
+    if (HasProductionPipelineSnapshotSchema(version)) {
+        std::uint32_t producerStateCount = 0;
+        if (!reader.U32(producerStateCount) ||
+            producerStateCount != simulation.entities_.size()) {
+            SetError(error, "snapshot production state count is invalid");
+            return std::nullopt;
+        }
+        for (Entity& entity : simulation.entities_) {
+            if (IsCancelledAtInterval()) {
+                return std::nullopt;
+            }
+            std::uint32_t id = 0;
+            std::uint8_t paused = 0;
+            std::uint8_t spawnAlert = 0;
+            std::uint8_t rallyAlert = 0;
+            std::uint8_t waitingCount = 0;
+            if (!reader.U32(id) ||
+                !reader.I32(entity.productionInvestedCost.material) ||
+                !reader.I32(entity.productionInvestedCost.dawnshards) ||
+                !reader.I32(entity.productionLogisticsCost) ||
+                !reader.U64(entity.productionSpawnBlockedTicks) ||
+                !reader.U8(paused) || !reader.U8(spawnAlert) ||
+                !reader.U8(rallyAlert) || !reader.U8(waitingCount) ||
+                id != entity.id || paused > 1 || spawnAlert > 1 ||
+                rallyAlert > 1 ||
+                waitingCount > Entity::kMaxProductionQueue) {
+                SetError(error, "snapshot production state is invalid");
+                return std::nullopt;
+            }
+            entity.productionPausedForSpawn = paused != 0;
+            entity.productionSpawnBlockedAlert = spawnAlert != 0;
+            entity.rallyRouteAlert = rallyAlert != 0;
+            entity.productionQueue.clear();
+            entity.productionQueue.reserve(waitingCount);
+            for (std::uint8_t index = 0; index < waitingCount; ++index) {
+                ProductionQueueItem item{};
+                std::uint8_t unitType = 0;
+                if (!reader.U8(unitType) ||
+                    !reader.I32(item.configuredCost.material) ||
+                    !reader.I32(item.configuredCost.dawnshards) ||
+                    !reader.I32(item.requiredTicks) ||
+                    !reader.I32(item.logisticsCost) ||
+                    !reader.I32(item.investedCost.material) ||
+                    !reader.I32(item.investedCost.dawnshards) ||
+                    unitType > static_cast<std::uint8_t>(EntityType::UtilityStructure)) {
+                    SetError(error, "snapshot production queue is truncated or invalid");
+                    return std::nullopt;
+                }
+                item.unitType = static_cast<EntityType>(unitType);
+                entity.productionQueue.push_back(item);
+            }
+            std::uint8_t rallyCount = 0;
+            if (!reader.U8(rallyCount) ||
+                rallyCount > Entity::kMaxRallyOrders) {
+                SetError(error, "snapshot rally route count is invalid");
+                return std::nullopt;
+            }
+            entity.rallyRoute.clear();
+            entity.rallyRoute.reserve(rallyCount);
+            for (std::uint8_t index = 0; index < rallyCount; ++index) {
+                Order order{};
+                std::uint8_t orderType = 0;
+                std::int32_t anchorX = 0;
+                std::int32_t anchorY = 0;
+                std::int32_t destinationX = 0;
+                std::int32_t destinationY = 0;
+                std::uint8_t buildType = 0;
+                std::uint8_t wellChoice = 0;
+                if (!reader.U8(orderType) || !reader.U32(order.target) ||
+                    !reader.I32(anchorX) || !reader.I32(anchorY) ||
+                    !reader.I32(destinationX) || !reader.I32(destinationY) ||
+                    !reader.U8(buildType) || !reader.U8(wellChoice) ||
+                    orderType > static_cast<std::uint8_t>(OrderType::Patrol) ||
+                    buildType > static_cast<std::uint8_t>(EntityType::UtilityStructure) ||
+                    wellChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape)) {
+                    SetError(error, "snapshot rally route is truncated or invalid");
+                    return std::nullopt;
+                }
+                order.type = static_cast<OrderType>(orderType);
+                order.anchor = Vec2::FromRaw(anchorX, anchorY);
+                order.destination = Vec2::FromRaw(destinationX, destinationY);
+                order.buildType = static_cast<EntityType>(buildType);
+                order.wellChoice = static_cast<FutureWellChoice>(wellChoice);
+                entity.rallyRoute.push_back(order);
+            }
+
+            const bool producer = entity.type == EntityType::CommandCore ||
+                entity.type == EntityType::Barracks;
+            const auto Supports = [&entity](EntityType type) {
+                return (entity.type == EntityType::CommandCore &&
+                        type == EntityType::Worker) ||
+                    (entity.type == EntityType::Barracks &&
+                     IsBarracksUnitType(type));
+            };
+            const bool active = entity.productionRequired > 0;
+            bool queueValid = true;
+            for (const ProductionQueueItem& item : entity.productionQueue) {
+                queueValid = queueValid && Supports(item.unitType) &&
+                    item.configuredCost.material >= 0 &&
+                    item.configuredCost.dawnshards >= 0 &&
+                    item.investedCost == ResourcePool{} &&
+                    item.requiredTicks > 0 &&
+                    item.requiredTicks <= kMaximumProductionTicks &&
+                    item.logisticsCost > 0;
+            }
+            bool rallyValid = true;
+            for (const Order& order : entity.rallyRoute) {
+                rallyValid = rallyValid &&
+                    (order.type == OrderType::Move ||
+                     order.type == OrderType::Guard ||
+                     order.type == OrderType::Gather) &&
+                    simulation.IsInsideMap(order.destination);
+            }
+            const bool activeStateValid = active
+                ? Supports(entity.productionType) &&
+                    entity.productionInvestedCost.material >= 0 &&
+                    entity.productionInvestedCost.dawnshards >= 0 &&
+                    entity.productionLogisticsCost > 0 &&
+                    entity.productionSpawnBlockedTicks <= 100 &&
+                    (!entity.productionPausedForSpawn ||
+                     (entity.productionSpawnBlockedTicks == 100 &&
+                      entity.productionSpawnBlockedAlert)) &&
+                    (!entity.productionSpawnBlockedAlert ||
+                     entity.productionSpawnBlockedTicks == 100)
+                : entity.productionInvestedCost.material == 0 &&
+                    entity.productionInvestedCost.dawnshards == 0 &&
+                    entity.productionLogisticsCost == 0 &&
+                    entity.productionSpawnBlockedTicks == 0 &&
+                    !entity.productionPausedForSpawn &&
+                    !entity.productionSpawnBlockedAlert;
+            if (!producer || !entity.completed || entity.hitPoints <= 0) {
+                if (active || !entity.productionQueue.empty() ||
+                    !entity.rallyRoute.empty() || !activeStateValid ||
+                    entity.rallyRouteAlert) {
+                    SetError(error, "snapshot non-producer carries production state");
+                    return std::nullopt;
+                }
+            } else if (!activeStateValid || !queueValid || !rallyValid) {
+                SetError(error, "snapshot producer state is invalid");
+                return std::nullopt;
+            }
+        }
+    } else {
+        // Schemas 20-28 charged production at command admission and retained
+        // only the active slot. Reconstruct the exact investment/logistics
+        // needed to finish or cancel it under the compatibility path.
+        for (Entity& entity : simulation.entities_) {
+            if (entity.productionRequired <= 0) {
+                continue;
+            }
+            entity.productionInvestedCost = simulation.ProductionCost(
+                entity.faction, entity.productionType);
+            entity.productionLogisticsCost = simulation.PopulationCost(
+                entity.faction, entity.productionType);
+        }
+    }
+    if (HasLinkMechanicsSnapshotSchema(version)) {
+        std::uint32_t linkStateCount = 0;
+        if (!reader.U64(simulation.nextProductionItemId_) ||
+            !reader.U32(linkStateCount) ||
+            simulation.nextProductionItemId_ == 0 ||
+            linkStateCount != simulation.entities_.size()) {
+            SetError(error, "snapshot Link mechanics header is invalid");
+            return std::nullopt;
+        }
+        std::set<ProductionItemId> itemIds;
+        std::vector<bool> storedNetworkState{};
+        std::vector<bool> storedAegisState{};
+        storedNetworkState.reserve(simulation.entities_.size());
+        storedAegisState.reserve(simulation.entities_.size());
+        for (Entity& entity : simulation.entities_) {
+            EntityId id = 0;
+            std::uint8_t waitingCount = 0;
+            std::uint8_t networkOperational = 0;
+            if (!reader.U32(id) ||
+                !reader.U64(entity.activeProductionItemId) ||
+                !reader.U8(waitingCount) || id != entity.id ||
+                waitingCount != entity.productionQueue.size()) {
+                SetError(error, "snapshot Link mechanics state is invalid");
+                return std::nullopt;
+            }
+            for (ProductionQueueItem& item : entity.productionQueue) {
+                if (!reader.U64(item.itemId) || item.itemId == 0 ||
+                    item.itemId >= simulation.nextProductionItemId_ ||
+                    !itemIds.insert(item.itemId).second) {
+                    SetError(error,
+                             "snapshot production item identity is invalid");
+                    return std::nullopt;
+                }
+            }
+            if (!reader.I32(entity.constructionInvestedCost.material) ||
+                !reader.I32(entity.constructionInvestedCost.dawnshards) ||
+                !reader.U64(entity.repairInterruptedUntilTick) ||
+                !reader.I32(entity.repairRateRemainder) ||
+                !reader.I32(entity.repairPaidHitPointCredit) ||
+                !reader.U8(networkOperational) || networkOperational > 1 ||
+                entity.constructionInvestedCost.material < 0 ||
+                entity.constructionInvestedCost.dawnshards < 0 ||
+                entity.repairInterruptedUntilTick > kMaximumSupportedTick ||
+                entity.repairRateRemainder < 0 ||
+                entity.repairRateRemainder >=
+                    static_cast<std::int32_t>(simulation.config_.ticksPerSecond) ||
+                entity.repairPaidHitPointCredit < 0 ||
+                entity.repairPaidHitPointCredit > 10 ||
+                ((entity.productionRequired > 0) !=
+                 (entity.activeProductionItemId != 0)) ||
+                (entity.activeProductionItemId != 0 &&
+                 (entity.activeProductionItemId >=
+                      simulation.nextProductionItemId_ ||
+                  !itemIds.insert(entity.activeProductionItemId).second))) {
+                SetError(error, "snapshot Link mechanics state is invalid");
+                return std::nullopt;
+            }
+            entity.networkOperational = networkOperational != 0;
+            storedNetworkState.push_back(entity.networkOperational);
+            storedAegisState.push_back(entity.aegisPowered);
+        }
+        simulation.legacyLinkReplaySemantics_ = false;
+        simulation.ResolveAegisPower();
+        for (std::size_t index = 0; index < simulation.entities_.size(); ++index) {
+            if (simulation.entities_[index].aegisPowered != storedAegisState[index]) {
+                SetError(error, "snapshot Aegis power state is invalid");
+                return std::nullopt;
+            }
+            if (simulation.entities_[index].networkOperational !=
+                storedNetworkState[index]) {
+                SetError(error,
+                         "snapshot Meridian network state is invalid");
+                return std::nullopt;
+            }
+        }
+    } else {
+        simulation.nextProductionItemId_ = 1;
+        for (Entity& entity : simulation.entities_) {
+            if (entity.productionRequired > 0) {
+                entity.activeProductionItemId =
+                    simulation.nextProductionItemId_++;
+            }
+            for (ProductionQueueItem& item : entity.productionQueue) {
+                item.itemId = simulation.nextProductionItemId_++;
+            }
+            entity.constructionInvestedCost = {};
+            entity.repairInterruptedUntilTick = 0;
+            entity.repairRateRemainder = 0;
+            entity.repairPaidHitPointCredit = 0;
+            entity.networkOperational = false;
+        }
+        // A loaded save migrates immediately to current network semantics so
+        // its next schema-30 save is self-consistent. BeginReplaySimulation
+        // restores the historical replay cutoff after baseline loading.
+        simulation.legacyLinkReplaySemantics_ = false;
+        simulation.ResolveAegisPower();
+    }
     if (!reader.AtEnd()) {
         SetError(error, "snapshot contains trailing payload data");
         return std::nullopt;
@@ -8643,8 +9884,18 @@ std::optional<Simulation> Simulation::LoadSnapshot(
 }
 
 void Simulation::CaptureReplayBaseline() {
+    if (legacyLinkReplaySemantics_) {
+        // Starting a new current-version recording migrates the live state as
+        // well as its baseline; otherwise a zero-tick replay already diverges.
+        legacyLinkReplaySemantics_ = false;
+        ResolveAegisPower();
+    }
     replayInitialSnapshot_ = SaveSnapshot();
     commandLog_.clear();
+    replayVersion_ = kReplayVersion;
+    replayChecksumSnapshotVersion_ = kSnapshotVersion;
+    legacyProductionReplaySemantics_ = false;
+    legacyLinkReplaySemantics_ = false;
     replayForfeitingPlayer_ = kNeutralPlayer;
 }
 
@@ -8671,12 +9922,25 @@ bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
         SetError(error, "replay prefix is invalid: " + replayError);
         return false;
     }
-    if (replayed->StateChecksum() != StateChecksum()) {
+    // Snapshot loading evaluates derived network state under current rules.
+    // Compare a staged restored candidate under the prefix's historical rules
+    // so a supported replay-bound checkpoint is normalized consistently.
+    Simulation restored = *this;
+    restored.legacyProductionReplaySemantics_ =
+        prefix.version < kProductionReplayVersion;
+    restored.legacyLinkReplaySemantics_ =
+        prefix.version < kLinkMechanicsReplayVersion;
+    restored.ResolveAegisPower();
+    if (replayed->StateChecksum() != restored.StateChecksum()) {
         SetError(error, "replay prefix state does not match restored state");
         return false;
     }
+    *this = std::move(restored);
     replayInitialSnapshot_ = prefix.initialSnapshot;
     commandLog_ = prefix.commands;
+    replayVersion_ = prefix.version;
+    replayChecksumSnapshotVersion_ =
+        replayed->replayChecksumSnapshotVersion_;
     replayForfeitingPlayer_ = prefix.forfeitingPlayer;
     return true;
 }
@@ -8692,14 +9956,61 @@ ReplayRecord Simulation::ExportReplay(std::string* error) const {
         return rejected;
     }
     ReplayRecord replay{};
+    replay.version = replayVersion_;
     replay.initialSnapshot = replayInitialSnapshot_.empty() ? SaveSnapshot()
                                                             : replayInitialSnapshot_;
     replay.commands = commandLog_;
     std::sort(replay.commands.begin(), replay.commands.end(), CommandLess);
     replay.finalTick = currentTick_;
-    replay.finalChecksum = StateChecksum();
+    replay.finalChecksum = ReplayStateChecksum();
     replay.forfeitingPlayer = replayForfeitingPlayer_;
     return replay;
+}
+
+std::optional<Simulation> Simulation::BeginReplaySimulation(
+    const ReplayRecord& replay,
+    std::string* error,
+    const ReplayCancellationCheck& shouldCancel) {
+    if (error != nullptr) {
+        error->clear();
+    }
+    if (replay.version != kLegacyReplayVersion &&
+        replay.version != kForfeitReplayVersion &&
+        replay.version != kProductionReplayVersion &&
+        replay.version != kReplayVersion) {
+        SetError(error, "replay version is unsupported");
+        return std::nullopt;
+    }
+    std::optional<Simulation> simulation = LoadSnapshot(
+        replay.initialSnapshot, error, kDefaultHostilityMasks, shouldCancel);
+    if (!simulation.has_value()) {
+        return std::nullopt;
+    }
+    const std::uint32_t baselineVersion =
+        static_cast<std::uint32_t>(replay.initialSnapshot[4]) |
+        (static_cast<std::uint32_t>(replay.initialSnapshot[5]) << 8U) |
+        (static_cast<std::uint32_t>(replay.initialSnapshot[6]) << 16U) |
+        (static_cast<std::uint32_t>(replay.initialSnapshot[7]) << 24U);
+    simulation->replayInitialSnapshot_ = replay.initialSnapshot;
+    simulation->replayVersion_ = replay.version;
+    simulation->replayChecksumSnapshotVersion_ =
+        baselineVersion >= kCommandResolutionReceiptSnapshotVersion
+            ? baselineVersion
+            : kSnapshotVersion;
+    simulation->legacyProductionReplaySemantics_ =
+        replay.version < kProductionReplayVersion;
+    simulation->legacyLinkReplaySemantics_ =
+        replay.version < kLinkMechanicsReplayVersion;
+    // Loading a save applies current network rules. Playback must restore the
+    // original rules before its first checksum, including zero-tick records.
+    simulation->ResolveAegisPower();
+    return simulation;
+}
+
+std::uint64_t Simulation::ReplayStateChecksum() const {
+    HashWriter writer{};
+    WriteSnapshotPayload(writer, replayChecksumSnapshotVersion_);
+    return writer.Value();
 }
 
 std::optional<Simulation> Simulation::ReplayToEnd(const ReplayRecord& replay,
@@ -8709,6 +10020,8 @@ std::optional<Simulation> Simulation::ReplayToEnd(const ReplayRecord& replay,
         error->clear();
     }
     if (replay.version != kLegacyReplayVersion &&
+        replay.version != kForfeitReplayVersion &&
+        replay.version != kProductionReplayVersion &&
         replay.version != kReplayVersion) {
         SetError(error, "replay version is unsupported");
         return std::nullopt;
@@ -8729,8 +10042,8 @@ std::optional<Simulation> Simulation::ReplayToEnd(const ReplayRecord& replay,
         SetError(error, "replay validation cancelled");
         return std::nullopt;
     }
-    std::optional<Simulation> simulation = LoadSnapshot(
-        replay.initialSnapshot, error, kDefaultHostilityMasks, shouldCancel);
+    std::optional<Simulation> simulation = BeginReplaySimulation(
+        replay, error, shouldCancel);
     if (!simulation.has_value()) {
         if (error != nullptr && *error == "snapshot load cancelled") {
             SetError(error, "replay validation cancelled");
@@ -8819,19 +10132,7 @@ std::optional<Simulation> Simulation::ReplayToEnd(const ReplayRecord& replay,
         SetError(error, "replay forfeit marker could not be applied");
         return std::nullopt;
     }
-    // The baseline was integrity-checked by LoadSnapshot. Schema 27 has the
-    // exact same payload shape except the version word and hostility tail.
-    // Preserve its recorded final hash; do not claim this writer reproduces
-    // the older variable payload layouts.
-    const std::uint32_t baselineVersion =
-        static_cast<std::uint32_t>(replay.initialSnapshot[4]) |
-        (static_cast<std::uint32_t>(replay.initialSnapshot[5]) << 8U) |
-        (static_cast<std::uint32_t>(replay.initialSnapshot[6]) << 16U) |
-        (static_cast<std::uint32_t>(replay.initialSnapshot[7]) << 24U);
-    HashWriter replayChecksum;
-    simulation->WriteSnapshotPayload(replayChecksum,
-        baselineVersion == 27 ? 27 : kSnapshotVersion);
-    if (replayChecksum.Value() != replay.finalChecksum) {
+    if (simulation->ReplayStateChecksum() != replay.finalChecksum) {
         SetError(error, "replay final checksum does not match");
         return std::nullopt;
     }
@@ -8850,6 +10151,8 @@ std::optional<MatchReport> Simulation::BuildMatchReport(
         error->clear();
     }
     if (replay.version != kLegacyReplayVersion &&
+        replay.version != kForfeitReplayVersion &&
+        replay.version != kProductionReplayVersion &&
         replay.version != kReplayVersion) {
         SetError(error, "replay version is unsupported");
         return std::nullopt;
@@ -8870,8 +10173,8 @@ std::optional<MatchReport> Simulation::BuildMatchReport(
         SetError(error, "replay validation cancelled");
         return std::nullopt;
     }
-    std::optional<Simulation> simulation = LoadSnapshot(
-        replay.initialSnapshot, error, kDefaultHostilityMasks, shouldCancel);
+    std::optional<Simulation> simulation = BeginReplaySimulation(
+        replay, error, shouldCancel);
     if (!simulation.has_value()) {
         if (error != nullptr && *error == "snapshot load cancelled") {
             SetError(error, "replay validation cancelled");
@@ -9243,15 +10546,7 @@ std::optional<MatchReport> Simulation::BuildMatchReport(
     // Commands scheduled after the recording stopped remain admitted replay
     // inputs but have no resolution. Preserve them as resolved=false and keep
     // them out of APM and Well-decision claims.
-    const std::uint32_t baselineVersion =
-        static_cast<std::uint32_t>(replay.initialSnapshot[4]) |
-        (static_cast<std::uint32_t>(replay.initialSnapshot[5]) << 8U) |
-        (static_cast<std::uint32_t>(replay.initialSnapshot[6]) << 16U) |
-        (static_cast<std::uint32_t>(replay.initialSnapshot[7]) << 24U);
-    HashWriter replayChecksum;
-    simulation->WriteSnapshotPayload(
-        replayChecksum, baselineVersion == 27 ? 27 : kSnapshotVersion);
-    if (replayChecksum.Value() != replay.finalChecksum) {
+    if (simulation->ReplayStateChecksum() != replay.finalChecksum) {
         SetError(error, "replay final checksum does not match");
         return std::nullopt;
     }

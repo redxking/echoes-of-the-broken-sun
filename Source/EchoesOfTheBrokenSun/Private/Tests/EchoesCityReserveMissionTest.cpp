@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 
@@ -16,31 +17,7 @@
 
 namespace
 {
-struct FPreservedCityReserveFile final
-{
-    explicit FPreservedCityReserveFile(FString InPath)
-        : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedCityReserveFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedCityReserveFile = FEchoesPreservedTestFile;
 
 FEchoesCampaignDecisionRecord MakePriorRecord(
     EEchoesCampaignMissionId Mission,
@@ -157,15 +134,22 @@ bool FEchoesCityReserveMissionTest::RunTest(const FString& Parameters)
         FEchoesCampaignProgressStore::GetSaveGameDirectory(),
         TEXT("EchoesQuickSaveACityOnReserve.bin"));
     FPreservedCityReserveFile PreservedPrimary(CampaignPath);
+    if (!PreservedPrimary.IsReady()) return false;
     FPreservedCityReserveFile PreservedBackup(CampaignPath + TEXT(".bak"));
+    if (!PreservedBackup.IsReady()) return false;
     FPreservedCityReserveFile PreservedTemporary(CampaignPath + TEXT(".tmp"));
+    if (!PreservedTemporary.IsReady()) return false;
     FPreservedCityReserveFile PreservedQuickSave(QuickSavePath);
+    if (!PreservedQuickSave.IsReady()) return false;
     FPreservedCityReserveFile PreservedQuickSaveBackup(
         QuickSavePath + TEXT(".bak"));
+    if (!PreservedQuickSaveBackup.IsReady()) return false;
     FPreservedCityReserveFile PreservedQuickSaveBackupTemporary(
         QuickSavePath + TEXT(".bak.tmp"));
+    if (!PreservedQuickSaveBackupTemporary.IsReady()) return false;
     FPreservedCityReserveFile PreservedQuickSaveTemporary(
         QuickSavePath + TEXT(".tmp"));
+    if (!PreservedQuickSaveTemporary.IsReady()) return false;
     IFileManager::Get().Delete(*CampaignPath, false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".bak")), false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".tmp")), false, true, true);

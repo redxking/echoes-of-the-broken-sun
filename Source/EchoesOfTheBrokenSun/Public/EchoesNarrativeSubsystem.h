@@ -7,6 +7,9 @@
 
 #include "EchoesNarrativeSubsystem.generated.h"
 
+class UAudioComponent;
+class USoundWave;
+
 /** One authored dialogue line as the runtime pack carries it. */
 USTRUCT()
 struct FEchoesNarrativeLine
@@ -26,6 +29,63 @@ struct FEchoesNarrativeLine
     FString Text;
 };
 
+/** One authored in-engine storyboard shot projected from narrative source. */
+USTRUCT()
+struct FEchoesNarrativeCinematicShot
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    FString Id;
+
+    UPROPERTY()
+    float EditorialTargetSeconds = 0.0f;
+
+    UPROPERTY()
+    TArray<FString> LineIds;
+
+    UPROPERTY()
+    TArray<FString> VisualHookIds;
+
+    UPROPERTY()
+    TArray<FString> AudioHookIds;
+};
+
+/** Authored cinematic contract projected from one mission source record. */
+USTRUCT()
+struct FEchoesNarrativeCinematic
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    FString Id;
+
+    UPROPERTY()
+    FString TriggerId;
+
+    UPROPERTY()
+    FString Signal;
+
+    UPROPERTY()
+    FString Format;
+
+    UPROPERTY()
+    bool bNamedCharacterPhysicalPresenceAsserted = false;
+
+    UPROPERTY()
+    TArray<FEchoesNarrativeCinematicShot> Shots;
+
+    [[nodiscard]] float GetEditorialDurationSeconds() const
+    {
+        float Duration = 0.0f;
+        for (const FEchoesNarrativeCinematicShot& Shot : Shots)
+        {
+            Duration += Shot.EditorialTargetSeconds;
+        }
+        return Duration;
+    }
+};
+
 /**
  * Loads the digest-verified narrative pack compiled from
  * `Content/Narrative/Source` and serves per-operation briefs, objectives,
@@ -43,6 +103,7 @@ class ECHOESOFTHEBROKENSUN_API UEchoesNarrativeSubsystem final
 
 public:
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+    virtual void Deinitialize() override;
 
     [[nodiscard]] bool IsReady() const { return bReady; }
     [[nodiscard]] const FString& GetLoadError() const { return LoadError; }
@@ -66,6 +127,10 @@ public:
     [[nodiscard]] FString GetFailureCondition(
         EEchoesOperationMode Operation,
         const FString& ReasonCode) const;
+
+    /** The registered in-engine storyboard contract for an operation. */
+    [[nodiscard]] const FEchoesNarrativeCinematic* GetCinematic(
+        EEchoesOperationMode Operation) const;
 
     /** Every authored line bound to one runtime signal, in authored order. */
     [[nodiscard]] TArray<FEchoesNarrativeLine> GetLinesForSignal(
@@ -110,6 +175,13 @@ public:
         FString& OutSpeaker,
         FString& OutText);
 
+    /** Freezes or resumes the subtitle clock without consuming queued time. */
+    void SetSubtitlePlaybackPaused(bool bPaused, double NowSeconds);
+    [[nodiscard]] bool IsSubtitlePlaybackPaused() const
+    {
+        return bSubtitlePlaybackPaused;
+    }
+
     /** Clears any queued or active lines (title screen, scenario change). */
     void ClearSubtitleQueue();
 
@@ -122,10 +194,17 @@ public:
         return SubtitleQueue.Num() > 0 ? SubtitleQueue.Last().Id : FString();
     }
 
+    /** Resolves authored control tokens from current input mappings; unknown tokens refuse display. */
+    [[nodiscard]] static FString ResolveInputTokens(const FString& Text);
+
     /** Seconds one line owns the lane: base plus per-character reading time. */
     [[nodiscard]] static double SubtitleDurationSeconds(const FString& Text);
 
 private:
+    friend class FEchoesNarrativePackTest;
+    bool ValidateVoiceBindings(const FString& Json, TMap<FString, FString>& OutPaths,
+        TMap<FString, double>* OutDurations = nullptr) const;
+
     struct FOperationNarrative
     {
         FString Title;
@@ -136,16 +215,38 @@ private:
         TMap<FString, FString> Failures;
         TMap<FString, FString> FailureLines;
         FString Retry;
+        FEchoesNarrativeCinematic Cinematic;
     };
 
     void LoadPack();
+    void LoadVoiceBindings();
+    void StopActiveVoice();
+    void OnVoiceWorldCleanup(UWorld* World, bool bSessionEnded, bool bCleanupResources);
+    TWeakObjectPtr<UWorld> VoiceRoutingWorld;
+    void RefreshVoiceDucking();
+    UFUNCTION()
+    void OnVoicePlaybackFinished();
+    double StartVoiceForLine(const FEchoesNarrativeLine& Line);
+
+    UPROPERTY(Transient)
+    TMap<FString, TObjectPtr<USoundWave>> VoiceWaves;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UAudioComponent> ActiveVoice;
+
+    FString ActiveVoiceLineId;
+    double ActiveVoiceDuration = 0.0;
+    bool bVoiceBindingsLoaded = false;
+
 
     TMap<FString, FOperationNarrative> Operations;
     TArray<FEchoesNarrativeLine> DemoLines;
     TArray<FEchoesNarrativeLine> SubtitleQueue;
     double ActiveLineStartSeconds = -1.0;
+    double SubtitlePauseStartedSeconds = -1.0;
     FString PackDigest;
     FString LoadError;
     int32 TotalLineCount = 0;
     bool bReady = false;
+    bool bSubtitlePlaybackPaused = false;
 };

@@ -658,6 +658,9 @@ void UEchoesFieldHudMinimapWidget::RefreshMissionLabels()
             UTextBlock::StaticClass());
         ConfigureText(Label, FText::GetEmpty(), 9, 1.0f,
             AccentColor(bHighContrast));
+        // Mission labels identify minimap destinations but must not consume
+        // the pointer press intended to navigate to that destination.
+        Label->SetVisibility(ESlateVisibility::HitTestInvisible);
         RootCanvas->AddChildToCanvas(Label);
         MissionLabels.Add(Label);
     }
@@ -1617,6 +1620,13 @@ void UEchoesFieldHudWidget::ApplyView()
                 "{0} x{1}  HP {2}/{3}  ARM {4}  DMG {5}  {6}"),
             Entry.Name, Entry.Count, Entry.HitPoints, Entry.MaxHitPoints,
             Entry.Armor, Entry.Damage, Entry.Order);
+        if (!Entry.Purpose.IsEmpty())
+        {
+            Summary = FText::Format(
+                NSLOCTEXT("EchoesFieldHud", "SelectionPurpose",
+                    "{0}\nPURPOSE  {1}"),
+                Summary, Entry.Purpose);
+        }
         if (!Entry.Production.IsEmpty())
         {
             Summary = FText::Format(
@@ -1633,9 +1643,103 @@ void UEchoesFieldHudWidget::ApplyView()
         }
         Lines.Add(Summary);
     }
+    if (View.Production.bVisible)
+    {
+        if (View.Production.Cancellation.bVisible)
+        {
+            const FEchoesFieldHudProductionCancellationView& Cancellation =
+                View.Production.Cancellation;
+            Lines.Add(NSLOCTEXT(
+                "EchoesFieldHud", "ProductionCancellationHeading",
+                "CANCEL PRODUCTION?"));
+            Lines.Add(Cancellation.bActive
+                ? FText::Format(
+                      Cancellation.RefundPercent == 75
+                          ? NSLOCTEXT(
+                                "EchoesFieldHud",
+                                "ProductionCancellationActiveBelowHalf",
+                                "{0}  {1}% COMPLETE\nBELOW 50% // REFUND RATE {2}%\nINVESTED  {3} Matter / {4} Dawn\nREFUND  {5} Matter / {6} Dawn")
+                          : NSLOCTEXT(
+                                "EchoesFieldHud",
+                                "ProductionCancellationActiveHalfOrLater",
+                                "{0}  {1}% COMPLETE\nAT OR ABOVE 50% // REFUND RATE {2}%\nINVESTED  {3} Matter / {4} Dawn\nREFUND  {5} Matter / {6} Dawn"),
+                      Cancellation.Unit,
+                      FText::AsNumber(Cancellation.ProgressPercent),
+                      FText::AsNumber(Cancellation.RefundPercent),
+                      FText::AsNumber(Cancellation.InvestedMatter),
+                      FText::AsNumber(Cancellation.InvestedDawn),
+                      FText::AsNumber(Cancellation.RefundMatter),
+                      FText::AsNumber(Cancellation.RefundDawn))
+                : FText::Format(
+                      NSLOCTEXT(
+                          "EchoesFieldHud", "ProductionCancellationWaiting",
+                          "WAITING {0}\nNOT YET CHARGED\nREFUND  {1} Matter / {2} Dawn"),
+                      Cancellation.Unit,
+                      FText::AsNumber(Cancellation.RefundMatter),
+                      FText::AsNumber(Cancellation.RefundDawn)));
+        }
+        else
+        {
+            Lines.Add(NSLOCTEXT(
+                "EchoesFieldHud", "ProductionQueueHeading", "PRODUCTION QUEUE"));
+            if (View.Production.Items.IsEmpty())
+            {
+                Lines.Add(NSLOCTEXT(
+                    "EchoesFieldHud", "ProductionQueueEmpty", "ACTIVE  NONE"));
+            }
+            for (const FEchoesFieldHudProductionItem& Item : View.Production.Items)
+            {
+                if (Item.bActive)
+                {
+                    Lines.Add(FText::Format(
+                        NSLOCTEXT(
+                            "EchoesFieldHud",
+                            "ProductionActiveItem",
+                            "ACTIVE  {0}  {1}%\nINVESTED  {2} Matter / {3} Dawn\nLOGISTICS  {4} RESERVED"),
+                        Item.Unit,
+                        FText::AsNumber(Item.ProgressPercent),
+                        FText::AsNumber(Item.InvestedMatter),
+                        FText::AsNumber(Item.InvestedDawn),
+                        FText::AsNumber(Item.Logistics)));
+                }
+                else
+                {
+                    Lines.Add(FText::Format(
+                        NSLOCTEXT(
+                            "EchoesFieldHud",
+                            "ProductionWaitingItem",
+                            "WAITING {0}  {1}\nUNPAID COST  {2} Matter / {3} Dawn\nLOGISTICS  {4} ON START"),
+                        FText::AsNumber(Item.Slot),
+                        Item.Unit,
+                        FText::AsNumber(Item.ConfiguredMatter),
+                        FText::AsNumber(Item.ConfiguredDawn),
+                        FText::AsNumber(Item.Logistics)));
+                }
+            }
+            if (View.Production.RallyWaypointCount > 0)
+            {
+                Lines.Add(FText::Format(
+                    NSLOCTEXT(
+                        "EchoesFieldHud",
+                        "ProductionRallyRoute",
+                        "RALLY  {0} {0}|plural(one=WAYPOINT,other=WAYPOINTS)"),
+                    View.Production.RallyWaypointCount));
+            }
+            if (View.Production.bRallyNeedsAttention)
+            {
+                Lines.Add(NSLOCTEXT(
+                    "EchoesFieldHud", "ProductionRallyAlert", "RALLY ROUTE NEEDS ATTENTION"));
+            }
+            if (View.Production.bSpawnBlocked)
+            {
+                Lines.Add(NSLOCTEXT(
+                    "EchoesFieldHud", "ProductionSpawnBlocked", "[SPAWN BLOCKED] Clear the emergence area."));
+            }
+        }
+    }
     Panel = GetSection(EEchoesFieldHudSection::Selection);
     Panel->SetContent(NSLOCTEXT("EchoesFieldHud", "Selection", "SELECTION"),
-        Lines, {}, View.bHighContrast, Scale);
+        Lines, View.Production.Controls, View.bHighContrast, Scale);
     Panel->SetVisibility(bBattlefield && View.Selection.bVisible
         ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 
@@ -1656,7 +1760,7 @@ void UEchoesFieldHudWidget::ApplyView()
         Lines.Add(JoinedLine(Line));
     }
     Panel = GetSection(EEchoesFieldHudSection::Objectives);
-    Panel->SetContent(View.ObjectiveTitle, Lines, {}, View.bHighContrast, Scale);
+    Panel->SetContent(View.ObjectiveTitle, Lines, View.ObjectiveControls, View.bHighContrast, Scale);
     Panel->SetVisibility(bBattlefield && View.bObjectiveVisible
         ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 
@@ -1899,7 +2003,12 @@ bool UEchoesFieldHudWidget::FocusDefaultAction()
 {
     TArray<UEchoesFieldHudActionButton*> Buttons;
     GatherActionButtons(Buttons);
-    int32 Index = FindButtonIndex(Buttons, FocusedAction, FocusedArgument);
+    int32 Index = View.Production.Cancellation.bVisible
+        ? FindButtonIndex(
+              Buttons,
+              EEchoesFieldHudAction::ProductionCancelBack,
+              0)
+        : FindButtonIndex(Buttons, FocusedAction, FocusedArgument);
     if (!Buttons.IsValidIndex(Index) || !Buttons[Index]->GetIsEnabled())
     {
         Index = FindDefaultButtonIndex(Buttons);
@@ -1961,6 +2070,7 @@ bool UEchoesFieldHudWidget::ActivateFocused()
 bool UEchoesFieldHudWidget::IsModalSurface() const
 {
     return View.Technology.bVisible ||
+        View.Production.Cancellation.bVisible ||
         View.Surface == EEchoesFieldHudSurface::CampaignOperations ||
         View.Surface == EEchoesFieldHudSurface::OnlineFrontDoor ||
         View.Surface == EEchoesFieldHudSurface::NetworkLobby ||

@@ -25,6 +25,7 @@
 #include "EchoesSkirmishSetup.h"
 #include "EchoesTerrainView.h"
 #include "EchoesWeatherView.h"
+#include "../../../Content/World/Generated/Training/EchoesTrainingStaging.h"
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
@@ -87,6 +88,7 @@ constexpr int32 PrototypeMapWidthTiles = 64;
 constexpr int32 PrototypeMapHeightTiles = 64;
 constexpr uint32 PrototypeTicksPerSecond = 20;
 constexpr uint64 PrototypeSeed = 0xE0C0'B5A1ULL;
+constexpr uint8 TrainingReadinessSetupRevision = 1;
 static_assert(
     PrototypeMapWidthTiles == FEchoesSkirmishSetupModel::MapWidthTiles &&
         PrototypeMapHeightTiles == FEchoesSkirmishSetupModel::MapHeightTiles,
@@ -206,6 +208,7 @@ using echoes::sim::Vec2;
         case EEchoesOperationMode::CampaignNamesWithoutBirths:
         case EEchoesOperationMode::CampaignShapeBesideUs:
         case EEchoesOperationMode::CampaignReserveAuthority:
+        case EEchoesOperationMode::TrainingReadiness:
             OutFaction = Faction::MeridianCompact;
             return true;
         default:
@@ -273,9 +276,69 @@ enum class EQuickSaveContainerRead : uint8
     Invalid
 };
 
+[[nodiscard]] bool ValidateTrainingReadinessReplayBinding(
+    EEchoesOperationMode Operation,
+    EEchoesCheckpointReplayBindingRead Binding,
+    const echoes::sim::ReplayRecord& ReplayPrefix,
+    FString& OutError)
+{
+    if (Operation != EEchoesOperationMode::TrainingReadiness)
+    {
+        return true;
+    }
+    if (Binding != EEchoesCheckpointReplayBindingRead::Bound)
+    {
+        OutError = TEXT(
+            "[LOAD_TRAINING_REPLAY_UNBOUND] A readiness checkpoint must carry its complete replay prefix.");
+        return false;
+    }
+    if (std::any_of(
+            ReplayPrefix.commands.begin(),
+            ReplayPrefix.commands.end(),
+            [](const echoes::sim::Command& Command)
+            {
+                return Command.player ==
+                    UEchoesSimulationSubsystem::OpponentPlayerId;
+            }))
+    {
+        OutError = TEXT(
+            "[LOAD_TRAINING_PASSIVE_AI_MISMATCH] A readiness checkpoint cannot contain opponent commands.");
+        return false;
+    }
+    return true;
+}
+
+[[nodiscard]] bool ValidateTrainingReadinessPendingCommands(
+    EEchoesOperationMode Operation,
+    const echoes::sim::Simulation& Candidate,
+    FString& OutError)
+{
+    if (Operation != EEchoesOperationMode::TrainingReadiness)
+    {
+        return true;
+    }
+    const std::span<const echoes::sim::Command> PendingCommands =
+        Candidate.PendingCommands();
+    if (std::any_of(
+            PendingCommands.begin(),
+            PendingCommands.end(),
+            [](const echoes::sim::Command& Command)
+            {
+                return Command.player ==
+                    UEchoesSimulationSubsystem::OpponentPlayerId;
+            }))
+    {
+        OutError = TEXT(
+            "[LOAD_TRAINING_PASSIVE_AI_MISMATCH] A readiness checkpoint cannot resume pending opponent commands.");
+        return false;
+    }
+    return true;
+}
+
 [[nodiscard]] bool UsesQuickSaveContainer(EEchoesOperationMode Operation)
 {
     return Operation == EEchoesOperationMode::Skirmish ||
+        Operation == EEchoesOperationMode::TrainingReadiness ||
         Operation == EEchoesOperationMode::CampaignPrologue ||
         Operation == EEchoesOperationMode::CampaignSevenAccounts ||
         Operation == EEchoesOperationMode::CampaignCityReserve ||
@@ -317,7 +380,17 @@ enum class EQuickSaveContainerRead : uint8
     TArray<uint8>& Bytes, FString& OutError)
 {
     EEchoesCampaignMissionId Mission{};
-    if (!UEchoesSimulationSubsystem::GetMissionIdForOperation(Operation, Mission)) return true;
+    const bool bTrainingReadiness =
+        Operation == EEchoesOperationMode::TrainingReadiness;
+    if (bTrainingReadiness)
+    {
+        Mission = EEchoesCampaignMissionId::WhatTheLedgerKeeps;
+    }
+    else if (!UEchoesSimulationSubsystem::GetMissionIdForOperation(
+                 Operation, Mission))
+    {
+        return true;
+    }
     const auto* Founding = Progress.FindDecision(EEchoesCampaignMissionId::WhatTheLedgerKeeps);
     const auto Doctrine = Mission == EEchoesCampaignMissionId::WhatTheLedgerKeeps
         ? FutureWellChoice::Preserve : Founding ? Founding->WellChoice : FutureWellChoice::Dormant;
@@ -361,6 +434,28 @@ enum class EQuickSaveContainerRead : uint8
 {
     OutIdentity = 0;
     OutError.Reset();
+    if (Operation == EEchoesOperationMode::TrainingReadiness)
+    {
+        // This stable identity binds the persisted drill to the approved M01
+        // terrain/seed/force contract while leaving the campaign ledger out of
+        // training admission entirely.
+        uint8 SetupBytes[] = {
+            'T', 'R', 'N', TrainingReadinessSetupRevision,
+            static_cast<uint8>(EEchoesCampaignMissionId::WhatTheLedgerKeeps),
+            static_cast<uint8>(Faction::MeridianCompact),
+            static_cast<uint8>(Faction::KharuunAssemblies),
+            6, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0};
+        for (int32 Index = 0; Index < 8; ++Index)
+        {
+            SetupBytes[10 + Index] = static_cast<uint8>(
+                PrototypeSeed >> (Index * 8));
+        }
+        const uint64 Hash = FXxHash64::HashBuffer(
+            SetupBytes,
+            UE_ARRAY_COUNT(SetupBytes)).Hash;
+        OutIdentity = Hash != 0 ? Hash : 1;
+        return true;
+    }
     if (Operation == EEchoesOperationMode::Skirmish)
     {
         if (!FEchoesSkirmishSetupModel::Validate(
@@ -540,6 +635,12 @@ enum class EQuickSaveContainerRead : uint8
             QuickSaveContainerMagic,
             UE_ARRAY_COUNT(QuickSaveContainerMagic)) != 0)
     {
+        if (ExpectedOperation == EEchoesOperationMode::TrainingReadiness)
+        {
+            OutError = TEXT(
+                "[LOAD_TRAINING_SETUP_UNBOUND] This checkpoint has no training readiness setup identity.");
+            return EQuickSaveContainerRead::Invalid;
+        }
         if (RequiresCampaignBranchBoundQuickSave(ExpectedOperation))
         {
             OutError = TEXT(
@@ -766,6 +867,21 @@ enum class EQuickSaveContainerRead : uint8
         {
             OutError = TEXT(
                 "[LOAD_LEDGER_BRANCH_MISMATCH] This checkpoint belongs to a different campaign ledger branch.");
+            return EQuickSaveContainerRead::Invalid;
+        }
+    }
+    else if (ExpectedOperation == EEchoesOperationMode::TrainingReadiness)
+    {
+        if (Version < 2 || CampaignBranchIdentity == 0)
+        {
+            OutError = TEXT(
+                "[LOAD_TRAINING_SETUP_UNBOUND] This checkpoint has no training readiness setup identity.");
+            return EQuickSaveContainerRead::Invalid;
+        }
+        if (CampaignBranchIdentity != ExpectedCampaignBranchIdentity)
+        {
+            OutError = TEXT(
+                "[LOAD_TRAINING_SETUP_MISMATCH] This checkpoint belongs to a different training readiness setup.");
             return EQuickSaveContainerRead::Invalid;
         }
     }
@@ -2121,8 +2237,10 @@ struct FEchoesImmutableCheckpointCapture final
 {
     FEchoesCheckpointEncodeResult Result;
     Result.CapturedTick = Capture.Simulation.CurrentTick();
-    Result.CapturedChecksum = Capture.Simulation.StateChecksum();
-    const std::vector<uint8> Snapshot = Capture.Simulation.SaveSnapshot();
+    // The persisted current-schema state may differ from live legacy replay
+    // derivatives. Validate the bytes against their own normalized state checksum.
+    const std::vector<uint8> Snapshot = Capture.Simulation.SaveSnapshot(
+        &Result.CapturedChecksum);
     if (Snapshot.empty() || Snapshot.size() > MAX_int32)
     {
         Result.Error = TEXT(
@@ -2252,8 +2370,21 @@ struct FEchoesImmutableCheckpointCapture final
                 : UTF8_TO_TCHAR(ReplayError.c_str()));
         return Result;
     }
+    if (!ValidateTrainingReadinessReplayBinding(
+            Capture.Operation,
+            EEchoesCheckpointReplayBindingRead::Bound,
+            ReplayPrefix,
+            Result.Error) ||
+        !ValidateTrainingReadinessPendingCommands(
+            Capture.Operation,
+            Capture.Simulation,
+            Result.Error))
+    {
+        Result.Bytes.Reset();
+        return Result;
+    }
     if (ReplayPrefix.finalTick != Result.CapturedTick ||
-        ReplayPrefix.finalChecksum != Result.CapturedChecksum)
+        ReplayPrefix.finalChecksum != Capture.Simulation.ReplayStateChecksum())
     {
         Result.Bytes.Reset();
         Result.Error = TEXT(
@@ -2334,6 +2465,12 @@ struct FEchoesImmutableCheckpointCapture final
             CandidateBytes, ReplayBoundPayload, ReplayPrefix, OutFailure);
     }
     if (ReplayBinding == EEchoesCheckpointReplayBindingRead::Invalid)
+    {
+        return false;
+    }
+    if (ExpectedValidatedReplayBytes == nullptr &&
+        !ValidateTrainingReadinessReplayBinding(
+            Operation, ReplayBinding, ReplayPrefix, OutFailure))
     {
         return false;
     }
@@ -2510,6 +2647,11 @@ struct FEchoesImmutableCheckpointCapture final
     {
         OutFailure = TEXT(
             "checkpoint is not compatible with the selected operation and faction");
+        return false;
+    }
+    if (!ValidateTrainingReadinessPendingCommands(
+            Operation, *Candidate, OutFailure))
+    {
         return false;
     }
     return Operation != EEchoesOperationMode::Skirmish ||
@@ -2841,6 +2983,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
             &UEchoesSimulationSubsystem::OnPostGarbageCollect);
     FixedTimeAccumulator = 0.0;
     NextPlayerCommandSequence = 1;
+    LastAcceptedLocalCommandSequence.Reset();
     bScenarioReady = false;
     bWarnedAboutTimeClamp = false;
     bLoggedFirstTick = false;
@@ -3064,6 +3207,10 @@ echoes::sim::Vec2 UEchoesSimulationSubsystem::GetEvacuationSite()
 
 FString UEchoesSimulationSubsystem::GetOperationLabel() const
 {
+    if (SelectedOperation == EEchoesOperationMode::TrainingReadiness)
+    {
+        return TEXT("Operational Readiness");
+    }
     return FEchoesCampaignJourneyModel::OperationDisplayName(
         SelectedOperation);
 }
@@ -3525,8 +3672,15 @@ bool UEchoesSimulationSubsystem::StartScenario(
             EEchoesOperationMode::CampaignSeveralVoicesOneCommand ||
         SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun;
     EEchoesCampaignMissionId TerrainMissionId{};
+    const bool bTrainingReadiness =
+        SelectedOperation == EEchoesOperationMode::TrainingReadiness;
+    if (bTrainingReadiness)
+    {
+        TerrainMissionId = EEchoesCampaignMissionId::WhatTheLedgerKeeps;
+    }
     const bool bCampaignTerrain = !bUseStressScenario &&
-        GetMissionIdForOperation(SelectedOperation, TerrainMissionId);
+        (bTrainingReadiness ||
+         GetMissionIdForOperation(SelectedOperation, TerrainMissionId));
     const int32 BaseGlassScarBlockedTiles = bCampaignTerrain ? 0 : bLumeReach
         ? ConfigureLumeReach(*Simulation, SevenAccountsBranch)
         : bConfiguredSkirmish
@@ -3595,7 +3749,8 @@ bool UEchoesSimulationSubsystem::StartScenario(
     }
     const Faction ScenarioLocalFaction =
         bUseStressScenario ? Faction::MeridianCompact
-        : SelectedOperation == EEchoesOperationMode::CampaignPrologue
+        : (SelectedOperation == EEchoesOperationMode::CampaignPrologue ||
+           bTrainingReadiness)
             ? Faction::MeridianCompact
         : SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
             ? Faction::KharuunAssemblies
@@ -3689,8 +3844,9 @@ bool UEchoesSimulationSubsystem::StartScenario(
                     || SelectedOperation ==
                         EEchoesOperationMode::CampaignTheBrokenSun
                 ? ResourcePool{1000, 500}
-                : SelectedOperation ==
-                          EEchoesOperationMode::CampaignPrologue
+                : (SelectedOperation ==
+                           EEchoesOperationMode::CampaignPrologue ||
+                   bTrainingReadiness)
                     ? CampaignPrologueResources
                     : SelectedOperation == EEchoesOperationMode::Skirmish
                         ? ConfiguredSkirmishResources
@@ -3815,11 +3971,21 @@ bool UEchoesSimulationSubsystem::StartScenario(
                                int32 TileX,
                                int32 TileY)
     {
+        std::optional<int32> InitialHitPoints = std::nullopt;
+        if (SelectedOperation == EEchoesOperationMode::TrainingReadiness &&
+            Owner == LocalPlayerId && Type == EntityType::Dropoff &&
+            TileX == echoes::world::training_staging::kLinkRepairTargetSite.x &&
+            TileY == echoes::world::training_staging::kLinkRepairTargetSite.y)
+        {
+            InitialHitPoints =
+                echoes::world::training_staging::kLinkRepairInitialHp;
+        }
         const EntityId Spawned = Simulation->SpawnEntity(
             Owner,
             UnitFaction,
             Type,
-            Vec2::FromTiles(TileX, TileY));
+            Vec2::FromTiles(TileX, TileY),
+            InitialHitPoints);
         bSpawnSucceeded &= Spawned != 0;
         if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
             Owner == LocalPlayerId && Type == EntityType::ScoutUnit)
@@ -4074,11 +4240,35 @@ bool UEchoesSimulationSubsystem::StartScenario(
                     Tiles[Index].Y);
             }
         };
-        const auto SpawnForce = [&SpawnUnit](
+        const auto SpawnForce = [this, &SpawnUnit](
                                     uint8 Owner,
                                     Faction ForceFaction,
                                     bool bSouthwest)
         {
+            if (bSouthwest &&
+                (SelectedOperation == EEchoesOperationMode::CampaignPrologue ||
+                 SelectedOperation ==
+                     EEchoesOperationMode::TrainingReadiness))
+            {
+                // SPEC-PLAN-001 and REL-FTU-012: M01 and the readiness drill
+                // share the approved six-Surveyor/two-Lancer force. Training
+                // adds no roster, map, or narrative canon.
+                SpawnUnit(Owner, ForceFaction, EntityType::CommandCore, 10, 10);
+                SpawnUnit(Owner, ForceFaction, EntityType::Barracks, 14, 10);
+                SpawnUnit(Owner, ForceFaction, EntityType::Dropoff, 6, 17);
+                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 8, 13);
+                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 11, 14);
+                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 14, 12);
+                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 8, 16);
+                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 11, 17);
+                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 14, 15);
+                SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 8, 8);
+                SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 12, 7);
+                SpawnUnit(Owner, ForceFaction, EntityType::HeavyUnit, 7, 6);
+                SpawnUnit(Owner, ForceFaction, EntityType::ScoutUnit, 15, 6);
+                SpawnUnit(Owner, ForceFaction, EntityType::UtilityStructure, 6, 11);
+                return;
+            }
             if (bSouthwest)
             {
                 SpawnUnit(Owner, ForceFaction, EntityType::CommandCore, 10, 10);
@@ -5135,6 +5325,7 @@ bool UEchoesSimulationSubsystem::StartScenario(
     NextPlayerCommandSequence = bUseKharuunSystemsPresentation
                                     ? 4
                                     : bUseAnyResearchPresentation ? 2 : 1;
+    LastAcceptedLocalCommandSequence.Reset();
     bLoggedFirstTick = false;
     bLoggedStressCombat = false;
     bLoggedAiExpansion = false;
@@ -6087,10 +6278,16 @@ bool UEchoesSimulationSubsystem::StartScenario(
     LastAutosavedReason = EEchoesAutosaveReason::None;
     LastAutosaveRequestedPhase = LastAutosavedPhase;
     LastAutosaveRequestedTick = 0;
-    if (!bSuppressAutosave && !bStressScenario && !bSustainedStressScenario && SelectedOperation != EEchoesOperationMode::Skirmish && Simulation.IsValid())
+    if (!bSuppressAutosave && !bStressScenario && !bSustainedStressScenario &&
+        SelectedOperation != EEchoesOperationMode::Skirmish &&
+        Simulation.IsValid())
     {
         FString AutosaveFeedback;
         AutosaveScenario(EEchoesAutosaveReason::MissionEntry, AutosaveFeedback);
+    }
+    if (ScenarioAuthorityGeneration != MAX_uint64)
+    {
+        ++ScenarioAuthorityGeneration;
     }
     return true;
 }
@@ -6104,6 +6301,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     Simulation.Reset();
     FixedTimeAccumulator = 0.0;
     NextPlayerCommandSequence = 1;
+    LastAcceptedLocalCommandSequence.Reset();
     bScenarioReady = false;
     bWarnedAboutTimeClamp = false;
     bLoggedFirstTick = false;
@@ -6284,6 +6482,13 @@ bool UEchoesSimulationSubsystem::SelectLocalFaction(
         NewFaction != Faction::MeridianCompact)
     {
         OutFeedback = TEXT("[FACTION_PROLOGUE_LOCKED] Mara Vey deploys with the Meridian Compact.");
+        return false;
+    }
+    if (SelectedOperation == EEchoesOperationMode::TrainingReadiness &&
+        NewFaction != Faction::MeridianCompact)
+    {
+        OutFeedback = TEXT(
+            "[FACTION_TRAINING_LOCKED] The readiness drill uses the approved M01 Meridian force.");
         return false;
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts &&
@@ -6469,6 +6674,8 @@ bool UEchoesSimulationSubsystem::ApplySkirmishSetup(
     const double PreviousFixedTimeAccumulator = FixedTimeAccumulator;
     const uint64 PreviousNextPlayerCommandSequence =
         NextPlayerCommandSequence;
+    const TOptional<uint64> PreviousLastAcceptedLocalCommandSequence =
+        LastAcceptedLocalCommandSequence;
     const bool bPreviouslyWarnedAboutTimeClamp = bWarnedAboutTimeClamp;
     const bool bPreviouslyLoggedFirstTick = bLoggedFirstTick;
     const bool bPreviouslyLoggedStressCombat = bLoggedStressCombat;
@@ -6571,6 +6778,8 @@ bool UEchoesSimulationSubsystem::ApplySkirmishSetup(
         Simulation = MoveTemp(PreviousSimulation);
         FixedTimeAccumulator = PreviousFixedTimeAccumulator;
         NextPlayerCommandSequence = PreviousNextPlayerCommandSequence;
+        LastAcceptedLocalCommandSequence =
+            PreviousLastAcceptedLocalCommandSequence;
         bWarnedAboutTimeClamp = bPreviouslyWarnedAboutTimeClamp;
         bLoggedFirstTick = bPreviouslyLoggedFirstTick;
         bLoggedStressCombat = bPreviouslyLoggedStressCombat;
@@ -6634,6 +6843,13 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
     if (bStressScenario)
     {
         OutFeedback = TEXT("[OPERATION_STRESS_LOCKED] The scale fixture has a fixed operation.");
+        return false;
+    }
+    if (static_cast<uint8>(NewOperation) >
+        static_cast<uint8>(EEchoesOperationMode::TrainingReadiness))
+    {
+        OutFeedback = TEXT(
+            "[OPERATION_INVALID] The requested operation identity is unsupported.");
         return false;
     }
     if (NewOperation == EEchoesOperationMode::CampaignSevenAccounts &&
@@ -6762,7 +6978,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
         OutFeedback = FString::Printf(
             TEXT("OPERATION SELECTED: %s%s"),
             *GetOperationLabel(),
-            SelectedOperation == EEchoesOperationMode::CampaignPrologue
+            SelectedOperation == EEchoesOperationMode::TrainingReadiness
+                ? TEXT(" — passive opposition and the approved M01 Meridian force are fixed for this readiness drill.")
+            : SelectedOperation == EEchoesOperationMode::CampaignPrologue
                 ? TEXT(" — Mara Vey's Meridian force is locked for this mission.")
             : SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
                 ? TEXT(" — Oruun's Kharuun migration force is locked for this mission.")
@@ -6808,7 +7026,9 @@ bool UEchoesSimulationSubsystem::SelectOperationMode(
             LogEchoes,
             Display,
             TEXT("[ECHOES_OPERATION_SELECTED] operation=%s scenarioReset=%s paused=%s"),
-            SelectedOperation == EEchoesOperationMode::CampaignPrologue
+            SelectedOperation == EEchoesOperationMode::TrainingReadiness
+                ? TEXT("TrainingReadiness")
+            : SelectedOperation == EEchoesOperationMode::CampaignPrologue
                 ? TEXT("WhatTheLedgerKeeps")
             : SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts
                 ? TEXT("SevenAccountsOfRain")
@@ -7168,6 +7388,12 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
         return FPaths::ConvertRelativePathToFull(QuickSavePathOverride);
     }
 #endif
+    if (SelectedOperation == EEchoesOperationMode::TrainingReadiness)
+    {
+        return FPaths::Combine(
+            GetJourneyCheckpointDirectory(),
+            TEXT("EchoesQuickSaveTrainingReadiness.bin"));
+    }
     if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
     {
         FEchoesCampaignProgress PrerequisiteLedger;
@@ -8596,7 +8822,14 @@ bool UEchoesSimulationSubsystem::InspectSaveContainer(
 
     int32 Offset = MagicSize;
     OutVersion = Bytes[Offset++];
-    OutOperation = static_cast<EEchoesOperationMode>(Bytes[Offset++]);
+    const uint8 RawOperation = Bytes[Offset++];
+    if (RawOperation >
+        static_cast<uint8>(EEchoesOperationMode::TrainingReadiness))
+    {
+        OutError = TEXT("unsupported operation identity");
+        return false;
+    }
+    OutOperation = static_cast<EEchoesOperationMode>(RawOperation);
     OutFaction = static_cast<echoes::sim::Faction>(Bytes[Offset++]);
     const uint8 TopologyRevision = Bytes[Offset++];
 
@@ -8687,6 +8920,11 @@ bool UEchoesSimulationSubsystem::ValidateCheckpointFileOnDisk(
         FEchoesMatchReplayStore::ExtractCheckpointPayload(
             CandidateBytes, ReplayBoundPayload, ReplayPrefix, OutFailure);
     if (ReplayBinding == EEchoesCheckpointReplayBindingRead::Invalid)
+    {
+        return false;
+    }
+    if (!ValidateTrainingReadinessReplayBinding(
+            SelectedOperation, ReplayBinding, ReplayPrefix, OutFailure))
     {
         return false;
     }
@@ -8870,6 +9108,11 @@ bool UEchoesSimulationSubsystem::ValidateCheckpointFileOnDisk(
                 ? RecoveredSkirmishSetup
                 : ActiveSkirmishSetup,
             OutFailure))
+    {
+        return false;
+    }
+    if (!ValidateTrainingReadinessPendingCommands(
+            SelectedOperation, *Candidate, OutFailure))
     {
         return false;
     }
@@ -9350,6 +9593,14 @@ bool UEchoesSimulationSubsystem::LoadScenarioFromPath(const FString& SavePath, F
         {
             return false;
         }
+        if (!ValidateTrainingReadinessReplayBinding(
+                SelectedOperation,
+                ReplayBinding,
+                ReplayPrefix,
+                OutFailure))
+        {
+            return false;
+        }
         Bytes = MoveTemp(ReplayBoundPayload);
 
         TArray<uint8> ContainerPayload;
@@ -9541,6 +9792,11 @@ bool UEchoesSimulationSubsystem::LoadScenarioFromPath(const FString& SavePath, F
                     ? CandidateSkirmishSetup
                     : ActiveSkirmishSetup,
                 OutFailure))
+        {
+            return false;
+        }
+        if (!ValidateTrainingReadinessPendingCommands(
+                SelectedOperation, *Candidate, OutFailure))
         {
             return false;
         }
@@ -10301,7 +10557,21 @@ bool UEchoesSimulationSubsystem::LoadScenarioFromPath(const FString& SavePath, F
     FixedTimeAccumulator = 0.0;
     NextPlayerCommandSequence =
         *Simulation->NextCommandSequence(LocalPlayerId);
+    LastAcceptedLocalCommandSequence.Reset();
+    for (auto It = Simulation->CommandLog().rbegin();
+         It != Simulation->CommandLog().rend(); ++It)
+    {
+        if (It->player == LocalPlayerId)
+        {
+            LastAcceptedLocalCommandSequence = It->sequence;
+            break;
+        }
+    }
     bScenarioReady = true;
+    if (ScenarioAuthorityGeneration != MAX_uint64)
+    {
+        ++ScenarioAuthorityGeneration;
+    }
     bWarnedAboutTimeClamp = false;
     bLoggedFirstTick = true;
     bSimulationPaused = false;
@@ -10403,6 +10673,12 @@ FString UEchoesSimulationSubsystem::GetActiveAutosavePath() const
         return FPaths::ConvertRelativePathToFull(AutosavePathOverride);
     }
 #endif
+    if (SelectedOperation == EEchoesOperationMode::TrainingReadiness)
+    {
+        return FPaths::Combine(
+            GetJourneyCheckpointDirectory(),
+            TEXT("EchoesAutoSaveTrainingReadiness.bin"));
+    }
     if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
     {
         FEchoesCampaignProgress PrerequisiteLedger;
@@ -10529,6 +10805,16 @@ uint8 UEchoesSimulationSubsystem::GetCurrentOperationPhase() const
 {
     switch (SelectedOperation)
     {
+    case EEchoesOperationMode::TrainingReadiness:
+        if (!Simulation.IsValid() ||
+            Simulation->Outcome() == echoes::sim::MatchOutcome::Ongoing)
+        {
+            return 1;
+        }
+        return Simulation->Outcome() ==
+                       echoes::sim::MatchOutcome::Player0Victory
+                   ? 2
+                   : 3;
     case EEchoesOperationMode::CampaignPrologue:
         return static_cast<uint8>(GetProloguePhase());
     case EEchoesOperationMode::CampaignSevenAccounts:
@@ -10568,6 +10854,8 @@ bool UEchoesSimulationSubsystem::IsOperationPhaseTerminal(EEchoesOperationMode M
 {
     switch (Mode)
     {
+    case EEchoesOperationMode::TrainingReadiness:
+        return Phase == 2 || Phase == 3;
     case EEchoesOperationMode::CampaignPrologue:
         return Phase == static_cast<uint8>(EEchoesProloguePhase::Complete) ||
                Phase == static_cast<uint8>(EEchoesProloguePhase::Failed);
@@ -10622,6 +10910,8 @@ FString UEchoesSimulationSubsystem::GetOperationDisplayName(EEchoesOperationMode
 {
     switch (Mode)
     {
+    case EEchoesOperationMode::TrainingReadiness:
+        return TEXT("Operational Readiness");
     case EEchoesOperationMode::CampaignPrologue:
         return TEXT("What the Ledger Keeps");
     case EEchoesOperationMode::CampaignSevenAccounts:
@@ -10663,6 +10953,14 @@ FString UEchoesSimulationSubsystem::GetPhaseDisplayName(EEchoesOperationMode Mod
 {
     switch (Mode)
     {
+    case EEchoesOperationMode::TrainingReadiness:
+        switch (Phase)
+        {
+        case 1: return TEXT("Readiness Drill");
+        case 2: return TEXT("Readiness Demonstrated");
+        case 3: return TEXT("Readiness Not Demonstrated");
+        default: return TEXT("Initial");
+        }
     case EEchoesOperationMode::CampaignPrologue:
         switch (static_cast<EEchoesProloguePhase>(Phase))
         {
@@ -10809,11 +11107,13 @@ bool UEchoesSimulationSubsystem::InspectRecoveryCheckpointFile(
         bMapEnvelope ? MapPayload : DiskBytes;
     TArray<uint8> QuickSaveBytes;
     echoes::sim::ReplayRecord ReplayPrefix;
-    if (FEchoesMatchReplayStore::ExtractCheckpointPayload(
+    const EEchoesCheckpointReplayBindingRead ReplayBinding =
+        FEchoesMatchReplayStore::ExtractCheckpointPayload(
             ReplayEnvelope,
             QuickSaveBytes,
             ReplayPrefix,
-            OutError) == EEchoesCheckpointReplayBindingRead::Invalid)
+            OutError);
+    if (ReplayBinding == EEchoesCheckpointReplayBindingRead::Invalid)
     {
         return false;
     }
@@ -10826,6 +11126,14 @@ bool UEchoesSimulationSubsystem::InspectRecoveryCheckpointFile(
             OutInspection.BranchIdentity,
             OutInspection.ContainerCrc,
             OutInspection.Payload,
+            OutError))
+    {
+        return false;
+    }
+    if (!ValidateTrainingReadinessReplayBinding(
+            OutInspection.Operation,
+            ReplayBinding,
+            ReplayPrefix,
             OutError))
     {
         return false;
@@ -11030,6 +11338,11 @@ bool UEchoesSimulationSubsystem::CheckInterruptedSessionRecovery(
         {
             continue;
         }
+        if (!ValidateTrainingReadinessPendingCommands(
+                Inspection.Operation, *TempSim, ContainerErr))
+        {
+            continue;
+        }
         if (Inspection.Operation == EEchoesOperationMode::Skirmish &&
             TempSim->Outcome() != echoes::sim::MatchOutcome::Ongoing)
         {
@@ -11068,7 +11381,10 @@ bool UEchoesSimulationSubsystem::CheckInterruptedSessionRecovery(
                 Inspection.ContainerCrc,
                 Inspection.Operation == EEchoesOperationMode::Skirmish
                     ? TEXT("its serialized skirmish setup")
-                    : TEXT("the active campaign branch"),
+                    : Inspection.Operation ==
+                            EEchoesOperationMode::TrainingReadiness
+                        ? TEXT("the fixed training readiness setup")
+                        : TEXT("the active campaign branch"),
                 *OutCandidate.HonestLimitationNotice);
         }
     }
@@ -15830,6 +16146,7 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                 : 0;
         QueueOpponentCommands();
         Simulation->Step();
+        OnFixedStepObserved.Broadcast();
         if (bSustainedStressScenario &&
             !MaintainSustainedStressContractAfterFixedStep(
                 SustainedCombatHitPointsBeforeStep))
@@ -16906,7 +17223,9 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                             : *CampaignFeedback);
                 }
             }
-            else if (SelectedOperation == EEchoesOperationMode::Skirmish &&
+            else if ((SelectedOperation == EEchoesOperationMode::Skirmish ||
+                      SelectedOperation ==
+                          EEchoesOperationMode::TrainingReadiness) &&
                      Outcome != echoes::sim::MatchOutcome::Ongoing &&
                      !bMatchResultReported)
             {
@@ -16933,12 +17252,27 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                 {
                     ResultController->NotifyMatchFinished(Outcome);
                 }
-                UE_LOG(
-                    LogEchoes,
-                    Display,
-                    TEXT("[ECHOES_MATCH_FINISHED] outcome=%u tick=%llu"),
-                    static_cast<uint8>(Outcome),
-                    static_cast<unsigned long long>(Simulation->CurrentTick()));
+                if (SelectedOperation ==
+                    EEchoesOperationMode::TrainingReadiness)
+                {
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_TRAINING_READINESS_FINISHED] outcome=%u tick=%llu campaignLedgerAdvanced=false"),
+                        static_cast<uint8>(Outcome),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()));
+                }
+                else
+                {
+                    UE_LOG(
+                        LogEchoes,
+                        Display,
+                        TEXT("[ECHOES_MATCH_FINISHED] outcome=%u tick=%llu"),
+                        static_cast<uint8>(Outcome),
+                        static_cast<unsigned long long>(
+                            Simulation->CurrentTick()));
+                }
             }
             AdvancePrologueCompletionPresentation();
             if (!bLoggedFirstTick)
@@ -17112,6 +17446,7 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 void UEchoesSimulationSubsystem::QueueOpponentCommands()
 {
     if (bStressScenario || bNetworkHumanOpponent ||
+        SelectedOperation == EEchoesOperationMode::TrainingReadiness ||
         bPointerCombatGuardPresentationScenario ||
         !Simulation.IsValid())
     {
@@ -17803,6 +18138,142 @@ bool UEchoesSimulationSubsystem::IssueProductionCommand(
         OutFeedback);
 }
 
+bool UEchoesSimulationSubsystem::IssueProductionCancellation(
+    uint32 ProducerId,
+    uint8 Slot,
+    uint64 ExpectedProductionItemId,
+    FString& OutFeedback)
+{
+    const echoes::sim::Vec2 Identity = echoes::sim::Vec2::FromRaw(
+        static_cast<int32>(static_cast<uint32>(ExpectedProductionItemId)),
+        static_cast<int32>(static_cast<uint32>(
+            ExpectedProductionItemId >> 32U)));
+    return QueuePlayerCommand(
+        echoes::sim::CommandType::CancelProduction,
+        ProducerId,
+        Slot,
+        Identity,
+        echoes::sim::FutureWellChoice::Dormant,
+        echoes::sim::EntityType::Worker,
+        OutFeedback);
+}
+
+echoes::sim::ProductionStartBlockReason
+UEchoesSimulationSubsystem::GetLocalProductionStartBlockReason(
+    uint32 ProducerId,
+    echoes::sim::EntityType UnitType) const
+{
+    if (!Simulation.IsValid() || !bScenarioReady)
+    {
+        return echoes::sim::ProductionStartBlockReason::InvalidProducer;
+    }
+    return Simulation->ProductionStartBlockReasonFor(
+        LocalPlayerId, ProducerId, UnitType);
+}
+
+std::optional<echoes::sim::PlayerView>
+UEchoesSimulationSubsystem::GetLocalPlayerView() const
+{
+    if (!Simulation.IsValid() || !bScenarioReady)
+    {
+        return std::nullopt;
+    }
+    return Simulation->CreatePlayerView(LocalPlayerId);
+}
+
+bool UEchoesSimulationSubsystem::IssueRepairCommand(
+    uint32 WorkerId,
+    uint32 TargetId,
+    FString& OutFeedback)
+{
+    const echoes::sim::Entity* Target = FindEntity(TargetId);
+    const echoes::sim::Vec2 Position =
+        Target != nullptr ? Target->position : echoes::sim::Vec2{};
+    return QueuePlayerCommand(
+        echoes::sim::CommandType::Repair,
+        WorkerId,
+        TargetId,
+        Position,
+        echoes::sim::FutureWellChoice::Dormant,
+        echoes::sim::EntityType::Worker,
+        OutFeedback);
+}
+
+bool UEchoesSimulationSubsystem::IssueConstructionCancellation(
+    uint32 StructureId,
+    FString& OutFeedback)
+{
+    const echoes::sim::Entity* Structure = FindEntity(StructureId);
+    const echoes::sim::Vec2 Position =
+        Structure != nullptr ? Structure->position : echoes::sim::Vec2{};
+    return QueuePlayerCommand(
+        echoes::sim::CommandType::CancelConstruction,
+        StructureId,
+        0,
+        Position,
+        echoes::sim::FutureWellChoice::Dormant,
+        echoes::sim::EntityType::Worker,
+        OutFeedback);
+}
+
+bool UEchoesSimulationSubsystem::IssueProductionReorder(
+    uint32 ProducerId,
+    uint8 FromWaitingSlot,
+    uint8 ToWaitingSlot,
+    FString& OutFeedback)
+{
+    const echoes::sim::Entity* Producer = FindEntity(ProducerId);
+    const echoes::sim::Vec2 Position =
+        Producer != nullptr ? Producer->position : echoes::sim::Vec2{};
+    const uint32 PackedSlots = static_cast<uint32>(FromWaitingSlot) |
+        (static_cast<uint32>(ToWaitingSlot) << 8U);
+    return QueuePlayerCommand(
+        echoes::sim::CommandType::ReorderProduction,
+        ProducerId,
+        PackedSlots,
+        Position,
+        echoes::sim::FutureWellChoice::Dormant,
+        echoes::sim::EntityType::Worker,
+        OutFeedback);
+}
+
+bool UEchoesSimulationSubsystem::IssueRallyCommand(
+    uint32 ProducerId,
+    uint32 TargetId,
+    const FVector& WorldPosition,
+    bool bAppend,
+    FString& OutFeedback)
+{
+    return QueuePlayerCommand(
+        echoes::sim::CommandType::SetRallyRoute,
+        ProducerId,
+        TargetId,
+        WorldToSim(WorldPosition),
+        echoes::sim::FutureWellChoice::Dormant,
+        echoes::sim::EntityType::Worker,
+        OutFeedback,
+        bAppend);
+}
+
+bool UEchoesSimulationSubsystem::GetLocalProducerQueueState(
+    uint32 ProducerId,
+    echoes::sim::ProducerQueueState& OutState) const
+{
+    OutState = {};
+    if (!Simulation.IsValid() || !bScenarioReady)
+    {
+        return false;
+    }
+    const std::optional<echoes::sim::ProducerQueueState> State =
+        Simulation->ProducerQueueStateFor(LocalPlayerId, ProducerId);
+    if (!State.has_value())
+    {
+        return false;
+    }
+    OutState = *State;
+    return true;
+}
+
 bool UEchoesSimulationSubsystem::IssueResearchCommand(
     uint32 ProducerId,
     echoes::sim::ResearchType ResearchType,
@@ -17869,7 +18340,7 @@ bool UEchoesSimulationSubsystem::IssueResearchCommand(
     // cannot target an earlier tick than an already queued order.
     Command.executeTick = ResolvePlayerExecuteTick(1);
     Command.player = LocalPlayerId;
-    Command.sequence = NextPlayerCommandSequence++;
+    Command.sequence = NextPlayerCommandSequence;
     Command.type = echoes::sim::CommandType::Research;
     Command.actor = ProducerId;
     Command.researchType = ResearchType;
@@ -17880,6 +18351,9 @@ bool UEchoesSimulationSubsystem::IssueResearchCommand(
             TEXT("[RESEARCH_REJECTED] %s"), UTF8_TO_TCHAR(Rejection.c_str()));
         return false;
     }
+
+    ++NextPlayerCommandSequence;
+    LastAcceptedLocalCommandSequence = Command.sequence;
     OutFeedback = TEXT("RESEARCH QUEUED: production is suspended until completion.");
     UE_LOG(
         LogEchoes,
@@ -17957,7 +18431,7 @@ bool UEchoesSimulationSubsystem::IssueWarformAdaptation(
     echoes::sim::Command Command;
     Command.executeTick = ResolvePlayerExecuteTick(1);
     Command.player = LocalPlayerId;
-    Command.sequence = NextPlayerCommandSequence++;
+    Command.sequence = NextPlayerCommandSequence;
     Command.type = echoes::sim::CommandType::AdaptWarform;
     Command.actor = ActorId;
     Command.target = SiteId;
@@ -17970,6 +18444,8 @@ bool UEchoesSimulationSubsystem::IssueWarformAdaptation(
             TEXT("[CORE_REJECTED] %s"), UTF8_TO_TCHAR(Rejection.c_str()));
         return false;
     }
+    ++NextPlayerCommandSequence;
+    LastAcceptedLocalCommandSequence = Command.sequence;
     OutFeedback = TEXT("[QUEUED] Warform molt accepted for the next simulation tick.");
     return true;
 }
@@ -18103,7 +18579,8 @@ bool UEchoesSimulationSubsystem::QueuePlayerCommand(
     const echoes::sim::Vec2& SimPosition,
     echoes::sim::FutureWellChoice WellChoice,
     echoes::sim::EntityType BuildType,
-    FString& OutFeedback)
+    FString& OutFeedback,
+    bool bQueue)
 {
     OutFeedback.Reset();
     if (bReplayPlaybackActive)
@@ -18163,13 +18640,14 @@ bool UEchoesSimulationSubsystem::QueuePlayerCommand(
     echoes::sim::Command Command;
     Command.executeTick = ResolvePlayerExecuteTick(1);
     Command.player = LocalPlayerId;
-    Command.sequence = NextPlayerCommandSequence++;
+    Command.sequence = NextPlayerCommandSequence;
     Command.type = CommandType;
     Command.actor = ActorId;
     Command.target = TargetId;
     Command.position = SimPosition;
     Command.wellChoice = WellChoice;
     Command.buildType = BuildType;
+    Command.queue = bQueue;
 
     std::string Rejection;
     if (!Simulation->QueueCommand(Command, &Rejection))
@@ -18186,6 +18664,9 @@ bool UEchoesSimulationSubsystem::QueuePlayerCommand(
             UTF8_TO_TCHAR(Rejection.c_str()));
         return false;
     }
+
+    ++NextPlayerCommandSequence;
+    LastAcceptedLocalCommandSequence = Command.sequence;
 
     OutFeedback = TEXT("[QUEUED] Order accepted for the next simulation tick.");
     UE_LOG(
@@ -18479,6 +18960,87 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
         case CommandType::Research:
             OutFeedback = TEXT("[RESEARCH_FORM_REQUIRED] Use a declared research command.");
             return false;
+        case CommandType::CancelProduction:
+        {
+            const std::optional<echoes::sim::ProducerQueueState> State =
+                Simulation->ProducerQueueStateFor(LocalPlayerId, Actor.id);
+            if (!State.has_value())
+            {
+                OutFeedback = TEXT("[PRODUCER_INVALID] Select an owned completed production structure.");
+                return false;
+            }
+            if (TargetId == 0)
+            {
+                if (!State->active)
+                {
+                    OutFeedback = TEXT("[PRODUCTION_SLOT_EMPTY] This producer has no active item to cancel.");
+                    return false;
+                }
+                return true;
+            }
+            if (TargetId > State->waiting.size())
+            {
+                OutFeedback = TEXT("[PRODUCTION_SLOT_EMPTY] The selected waiting slot does not exist.");
+                return false;
+            }
+            return true;
+        }
+        case CommandType::ReorderProduction:
+        {
+            const std::optional<echoes::sim::ProducerQueueState> State =
+                Simulation->ProducerQueueStateFor(LocalPlayerId, Actor.id);
+            const uint32 FromSlot = TargetId & 0xffU;
+            const uint32 ToSlot = (TargetId >> 8U) & 0xffU;
+            if (!State.has_value())
+            {
+                OutFeedback = TEXT("[PRODUCER_INVALID] Select an owned completed production structure.");
+                return false;
+            }
+            if ((TargetId & 0xffff0000U) != 0 || FromSlot == 0 ||
+                ToSlot == 0 || FromSlot > State->waiting.size() ||
+                ToSlot > State->waiting.size())
+            {
+                OutFeedback = TEXT("[PRODUCTION_REORDER_INVALID] Reordering accepts existing waiting slots 1 through 4; the active slot is fixed.");
+                return false;
+            }
+            return true;
+        }
+        case CommandType::SetRallyRoute:
+            if (!Actor.completed ||
+                (Actor.type != EntityType::CommandCore &&
+                 Actor.type != EntityType::Barracks))
+            {
+                OutFeedback = TEXT("[PRODUCER_INVALID] Select an owned completed production structure.");
+                return false;
+            }
+            if (TargetId == 0)
+            {
+                if (!Simulation->IsPositionPassable(Position))
+                {
+                    OutFeedback = TEXT("[RALLY_DESTINATION_INVALID] Choose passable ground for the rally point.");
+                    return false;
+                }
+                return true;
+            }
+            if (Target == nullptr ||
+                !Simulation->IsEntityVisibleTo(LocalPlayerId, Target->id))
+            {
+                OutFeedback = TEXT("[TARGET_NOT_VISIBLE] The rally target is not currently visible.");
+                return false;
+            }
+            if (Target->type == EntityType::ResourceNode &&
+                Target->resourceRemaining > 0)
+            {
+                return true;
+            }
+            if (Target->owner != echoes::sim::kNeutralPlayer &&
+                Target->hitPoints > 0 &&
+                !Simulation->Config().IsHostile(LocalPlayerId, Target->owner))
+            {
+                return true;
+            }
+            OutFeedback = TEXT("[RALLY_TARGET_INVALID] Rally targets must be available Matter or a live allied entity.");
+            return false;
         case CommandType::Hold:
             if (Actor.attackDamage <= 0)
             {
@@ -18492,10 +19054,12 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                 OutFeedback = TEXT("[GUARD_REQUIRES_DEFENDER] Select an attack-capable unit.");
                 return false;
             }
-            if (Target == nullptr || Target->owner != LocalPlayerId ||
+            if (Target == nullptr ||
+                Target->owner == echoes::sim::kNeutralPlayer ||
+                Simulation->Config().IsHostile(LocalPlayerId, Target->owner) ||
                 Target->id == Actor.id)
             {
-                OutFeedback = TEXT("[GUARD_TARGET_INVALID] Guard requires a different live owned entity.");
+                OutFeedback = TEXT("[GUARD_TARGET_INVALID] Guard requires a different live allied entity.");
                 return false;
             }
             return true;
@@ -18605,6 +19169,50 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                 }
             }
             break;
+        case CommandType::Repair:
+            if (Actor.type != EntityType::Worker)
+            {
+                OutFeedback = TEXT("[REPAIR_REQUIRES_WORKER] Select a worker before choosing a repair target.");
+                return false;
+            }
+            if (Target == nullptr || Target->hitPoints <= 0 ||
+                Target->owner == echoes::sim::kNeutralPlayer ||
+                Simulation->Config().IsHostile(LocalPlayerId, Target->owner) ||
+                Target->hitPoints >= Target->maxHitPoints)
+            {
+                OutFeedback = TEXT("[REPAIR_TARGET_INVALID] Choose a damaged live allied unit or structure.");
+                return false;
+            }
+            if (!Target->completed &&
+                Target->type != EntityType::CommandCore &&
+                Target->type != EntityType::Dropoff &&
+                Target->type != EntityType::Barracks &&
+                Target->type != EntityType::UtilityStructure)
+            {
+                OutFeedback = TEXT("[REPAIR_TARGET_INVALID] Incomplete repair targets must be structures.");
+                return false;
+            }
+            if (Actor.faction != echoes::sim::Faction::MeridianCompact &&
+                (Target->type != EntityType::CommandCore &&
+                 Target->type != EntityType::Dropoff &&
+                 Target->type != EntityType::Barracks &&
+                 Target->type != EntityType::UtilityStructure))
+            {
+                OutFeedback = TEXT("[REPAIR_TARGET_INVALID] This worker repairs completed allied structures.");
+                return false;
+            }
+            return true;
+        case CommandType::CancelConstruction:
+            if (Actor.completed ||
+                (Actor.type != EntityType::CommandCore &&
+                 Actor.type != EntityType::Dropoff &&
+                 Actor.type != EntityType::Barracks &&
+                 Actor.type != EntityType::UtilityStructure))
+            {
+                OutFeedback = TEXT("[CONSTRUCTION_CANCEL_INVALID] Select an owned incomplete structure.");
+                return false;
+            }
+            return true;
         case CommandType::Build:
         {
             if (Actor.type != EntityType::Worker)
@@ -18879,6 +19487,9 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                     break;
                 case echoes::sim::ProductionResult::EntityCapacityReached:
                     OutFeedback = TEXT("[ENTITY_CAPACITY] The deterministic entity limit was reached.");
+                    break;
+                case echoes::sim::ProductionResult::QueueFull:
+                    OutFeedback = TEXT("[PRODUCTION_QUEUE_FULL] This producer already has one active and four waiting items.");
                     break;
             }
             return false;
@@ -20359,10 +20970,14 @@ bool UEchoesSimulationSubsystem::SpawnFogView()
             *PresentedSimulation,
             PresentedPlayer,
             TileWorldSize,
-            (bReplayPlaybackActive
-                 ? ReplayPresentationOperation
-                 : SelectedOperation) ==
-                EEchoesOperationMode::CampaignPrologue))
+            ((bReplayPlaybackActive
+                  ? ReplayPresentationOperation
+                  : SelectedOperation) ==
+                 EEchoesOperationMode::CampaignPrologue ||
+             (bReplayPlaybackActive
+                  ? ReplayPresentationOperation
+                  : SelectedOperation) ==
+                 EEchoesOperationMode::TrainingReadiness)))
     {
         if (NewFogView != nullptr)
         {
@@ -20516,14 +21131,17 @@ void UEchoesSimulationSubsystem::SynchronizeSkirmishEnvironmentPresentation()
             // M01's terrain compositor owns grounded, knowledge-scoped fracture
             // masses. Retire the bright legacy ridge trays and unscopeable shards
             // in this mission; other scenarios keep their existing presentation.
-            if (PresentationOperation == EEchoesOperationMode::CampaignPrologue &&
+            if ((PresentationOperation == EEchoesOperationMode::CampaignPrologue ||
+                 PresentationOperation == EEchoesOperationMode::TrainingReadiness) &&
                 (Actor->ActorHasTag(TEXT("EchoesScarBand")) ||
                  Actor->ActorHasTag(TEXT("EchoesGlassShard")) ||
                  Actor->ActorHasTag(TEXT("EchoesScarGlow"))))
             {
                 bShouldShow = false;
             }
-            if (PresentationOperation == EEchoesOperationMode::CampaignPrologue && TerrainView.IsValid() &&
+            if ((PresentationOperation == EEchoesOperationMode::CampaignPrologue ||
+                 PresentationOperation == EEchoesOperationMode::TrainingReadiness) &&
+                TerrainView.IsValid() &&
                 EchoesBattlefieldPresentation::IsGlassScarRoute(Actor->Tags))
             {
                 bShouldShow &= TerrainView->IsWorldBoundsKnown(Actor->GetComponentsBoundingBox(true));

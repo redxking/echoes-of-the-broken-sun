@@ -351,8 +351,16 @@ void TestReplayReportAuthorityAndContinuation() {
     REQUIRE(!wrongState.ContinueReplayRecording(replay, &error));
     REQUIRE(error == "replay prefix state does not match restored state");
 
-    ReplayRecord legacy = replay;
+    ReplayRecord legacy{};
     legacy.version = kLegacyReplayVersion;
+    legacy.initialSnapshot = ReadLegacyReplayFixture("schema25-baseline.bin");
+    legacy.finalTick = 100;
+    legacy.finalChecksum = 4983431485298820942ULL;
+    Command legacyProduce = MakeCommand(0, 0, 1, CommandType::Produce, 1);
+    legacyProduce.buildType = EntityType::Worker;
+    Command legacyMove = MakeCommand(0, 0, 2, CommandType::Move, 3);
+    legacyMove.position = Vec2::FromTiles(7, 7);
+    legacy.commands = {legacyProduce, legacyMove};
     REQUIRE(Simulation::ReplayToEnd(legacy, &error).has_value());
 
     Simulation conceded(config);
