@@ -1,0 +1,47 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "assembled_at": "2026-09-06T23:33:41.894581+00:00",
+  "counts": {
+    "campaign_sheets": 15,
+    "skirmish_sheets": 3,
+    "selected_source_images": 18,
+    "detail_panels": 54,
+    "component_design_records": 58,
+    "scene_landmark_records": 23,
+    "concept_object_records": 153,
+    "candidate_records": 153,
+    "canon_approved_records": 0,
+    "not_started_records": 153,
+    "supported_location_records": 18,
+    "entity_bound_detail_records": 0,
+    "context_only_detail_and_component_records": 135
+  },
+  "by_domain": {
+    "WRL": 153
+  },
+  "by_type": {
+    "ENV": 25,
+    "PRP": 120,
+    "BLD": 7,
+    "SYS": 1
+  },
+  "by_regional_grammar": {
+    "Glass Scar": 15,
+    "Kharuun mineral/ecology": 18,
+    "Lume Reach civic": 59,
+    "Neutral Line of Parity": 12,
+    "Crownfall / Confluence": 49
+  },
+  "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/map-concepts-20260906",
+  "boundary": "All counts are scoped to this collection, not a replacement for repository inventory.",
+  "not_covered": [
+    "Individual campaign branch and ending state sheets",
+    "Conquest sector concepts",
+    "Team/FFA map-format variants",
+    "Orthographic/scale/footprint production packages",
+    "RTS camera validation",
+    "Unreal implementation",
+    "Owner acceptance"
+  ]
+}

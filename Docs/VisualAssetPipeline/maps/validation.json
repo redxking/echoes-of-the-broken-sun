@@ -1,0 +1,22 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "status": "PASS",
+  "errors": [],
+  "counts": {
+    "maps": 18,
+    "source_images": 18,
+    "detail_panels": 54,
+    "object_records": 153,
+    "component_design_records": 58
+  },
+  "method": "Read-only structural, local-link, metadata and SHA-256 checks",
+  "boundary": "Does not certify raster geometry, canon, branch completeness, Unreal integration, RTS readability or performance.",
+  "additional_retention_checks": {
+    "date": "2026-09-06T23:36:35.994369+00:00",
+    "selected_git_lfs_pointer_matches": 18,
+    "parallel_pipeline_id_collisions": 0,
+    "parallel_register_sha256": "1dc394c09e6b4f7602fc89674f2762aa0b74654043f152d9296174a876a6fc58",
+    "scope": "Only this worktree Docs/VisualAssetPipeline/maps paths changed by these commits. No Unreal, gameplay or model-production writes."
+  }
+}

@@ -1,0 +1,204 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "source_images": [
+    {
+      "source_id": "EBS-SRC-e6e115bd86de5fed",
+      "map_id": "M01",
+      "path": "images/m01-environment-candidate.png",
+      "sha256": "e6e115bd86de5fedc52b1d955818b0183f9eeebba3aac0d998b3621d69d6ef44",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 1,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m01-r1.json"
+    },
+    {
+      "source_id": "EBS-SRC-9c05b6aade72e83e",
+      "map_id": "M02",
+      "path": "images/m02-environment-candidate.png",
+      "sha256": "9c05b6aade72e83e1f4094ad4bbab74cce12b031bade7778c3a54d96c90c74a3",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m02-r2.json"
+    },
+    {
+      "source_id": "EBS-SRC-45bf679e492ecc64",
+      "map_id": "M03",
+      "path": "images/m03-environment-candidate.png",
+      "sha256": "45bf679e492ecc640890f1649fb6ab9fe8b56f7137a2aeaab55a7c4a7a730f14",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 1,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m03-r1.json"
+    },
+    {
+      "source_id": "EBS-SRC-b569b9726d2d78b0",
+      "map_id": "M04",
+      "path": "images/m04-environment-candidate.png",
+      "sha256": "b569b9726d2d78b05983ff25c6fca172b30827b556d6095c021077fd2619a925",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m04-r2.json"
+    },
+    {
+      "source_id": "EBS-SRC-fa68e4e4f81e6c85",
+      "map_id": "M05",
+      "path": "images/m05-environment-candidate.png",
+      "sha256": "fa68e4e4f81e6c85e250c8ee08fb40cc9948b3699a02cda73972f6a54a4f3ddd",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m05-r2.json"
+    },
+    {
+      "source_id": "EBS-SRC-7141ed2ba5568a0a",
+      "map_id": "M06",
+      "path": "images/m06-environment-candidate.png",
+      "sha256": "7141ed2ba5568a0acabc980c243fb15a9b361357986ff198d3ddd8c95b25dd87",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m06-r2.json"
+    },
+    {
+      "source_id": "EBS-SRC-0ff00b61fb6b448a",
+      "map_id": "M07",
+      "path": "images/m07-environment-candidate.png",
+      "sha256": "0ff00b61fb6b448a1823bfacd7736a253a92ee8ad63e64c26a0ba53e76eeb749",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m07-r2.json"
+    },
+    {
+      "source_id": "EBS-SRC-bbe0a80765b56038",
+      "map_id": "M08",
+      "path": "images/m08-environment-candidate.png",
+      "sha256": "bbe0a80765b560383a3877958c9ba4ecf792c9966658a9a513e56b9ab2eda11d",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m08-r2.json"
+    },
+    {
+      "source_id": "EBS-SRC-7cbf878af5a8499f",
+      "map_id": "M09",
+      "path": "images/m09-environment-candidate.png",
+      "sha256": "7cbf878af5a8499ffccc959f27a02f7b640c88898758ebbf235f3ffcde9d8a67",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 1,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m09-r1.json"
+    },
+    {
+      "source_id": "EBS-SRC-95daa7a349fd163f",
+      "map_id": "M10",
+      "path": "images/m10-environment-candidate.png",
+      "sha256": "95daa7a349fd163fc1c79539e645dc9d1f4d999bde1fe93a8c7e43291d5b80ef",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m10-r2.json"
+    },
+    {
+      "source_id": "EBS-SRC-c1b46e383f959116",
+      "map_id": "M11",
+      "path": "images/m11-environment-candidate.png",
+      "sha256": "c1b46e383f9591160d42c5a69ee6e32d9f6c2056282ea119647ed18bdb4bbde7",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m11-r2.json"
+    },
+    {
+      "source_id": "EBS-SRC-66da0e22725356d7",
+      "map_id": "M12",
+      "path": "images/m12-environment-candidate.png",
+      "sha256": "66da0e22725356d7c483973b0eafbf394b8be5b8224b3734242cece082e18e3a",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m12-r2.json"
+    },
+    {
+      "source_id": "EBS-SRC-4de53f2969af1d9f",
+      "map_id": "M13",
+      "path": "images/m13-environment-candidate.png",
+      "sha256": "4de53f2969af1d9f45cf9f3443387eb4ce1fea94354e40ce58469e44f481fe2d",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m13-r2.json"
+    },
+    {
+      "source_id": "EBS-SRC-91127a60d99b2591",
+      "map_id": "M14",
+      "path": "images/m14-environment-candidate.png",
+      "sha256": "91127a60d99b2591456e9c2f0b16c64312a5a9c22ecb0d2038f0f7d039697c06",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 1,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m14-r1.json"
+    },
+    {
+      "source_id": "EBS-SRC-44a29319807587bf",
+      "map_id": "M15",
+      "path": "images/m15-environment-candidate.png",
+      "sha256": "44a29319807587bf3a239294571aad2fb947ec980408fea54d51a7394fd5b946",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/m15-r2.json"
+    },
+    {
+      "source_id": "EBS-SRC-497d2e1b3a23df3e",
+      "map_id": "SK01",
+      "path": "images/sk01-environment-candidate.png",
+      "sha256": "497d2e1b3a23df3ef0270cc8426f25a09c2297ec19a58d64a6f79e61cb782c28",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/sk01-r2.json"
+    },
+    {
+      "source_id": "EBS-SRC-95da911d7c9ba95b",
+      "map_id": "SK02",
+      "path": "images/sk02-environment-candidate.png",
+      "sha256": "95da911d7c9ba95b62108e4595095b1ffa3973ccf3aa39ab02c0cf7f74256312",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 4,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/sk02-r4.json"
+    },
+    {
+      "source_id": "EBS-SRC-cb963fd861e6cf61",
+      "map_id": "SK03",
+      "path": "images/sk03-environment-candidate.png",
+      "sha256": "cb963fd861e6cf61eadf8e5d807cfed0e71483d1682f447e816ca187245fe42e",
+      "width": 1536,
+      "height": 1024,
+      "selected_revision": 2,
+      "source_commit": "d5619c0f9c99adcbc7e336428c16fbd215ee3220",
+      "receipt": "receipts/sk03-r2.json"
+    }
+  ]
+}

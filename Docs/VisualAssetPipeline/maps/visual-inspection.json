@@ -1,0 +1,830 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "date": "2026-09-06",
+  "method": "Direct visual inspection of each complete selected sheet; exact nav geometry is not certified.",
+  "maps": {
+    "M01": {
+      "selected_revision": 1,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Archive loading court, separated dormant Well and vitrified shoulders are visible; the three lower panels retain loading furniture, glass/basalt edge and Matter. No mission-coordinate or access proof is inferred."
+    },
+    "M02": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Corrected sills are worked stone without civic electronics. Pale grass, compressed route margins and central basalt divider remain distinct. Actual route availability and grass scale need later map binding."
+    },
+    "M03": {
+      "selected_revision": 1,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Distributed cistern, ribbed transit and archive service forms are distinguishable; lower studies expose paired duct mouths/grille, deck/coffer/gallery and cassette/service panels. Discharge water is a service-detail proposal, not a new terrain hazard."
+    },
+    "M04": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Corrected vaults and docks use continuous grown strata, rooted grips and amber contacts. Earlier masonry/mechanical interpretation is superseded. The terminal custody niche is shown without claiming memory restoration."
+    },
+    "M05": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Neutral corridor and offset witnesses remain distinct. Corrected mineral bench/spine contacts use amber; ceramic fittings retain cyan. The long corridor is a composition, not evidence of exact navigable width."
+    },
+    "M06": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Monument-like props and incidental Well-like spire were removed; empty foundations, intact civic blocks and diagonal absence remain. Duct cross sections are visible in lower-left detail. No cause, deaths or population total is asserted."
+    },
+    "M07": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Ridge sockets and ribs now use grown/stratified mineral forms. Hollow is empty; no incidental Well remains. Civic absence stays distant; witness approaches are visible without a branch-route acceptance claim."
+    },
+    "M08": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Contact surface is now a low rectangular plinth distinct from the Future Well. Offset frame ends and solid terrace floors remain visible; endpoint material refinements and exact interaction footprint remain future work."
+    },
+    "M09": {
+      "selected_revision": 1,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Two district branches visibly carry cyan status; Archive frontage is intact and dark. This is explicitly the illustrative Life Support + Transit allocation, not canon selection."
+    },
+    "M10": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Corrected frontage is long, low and stepped; deferred Archive indicators remain dark and intact. Civic-mineral adapter uses amber on mineral side, distinct from magenta Choir panes. One dormant Well remains separate. Well failure-state authority conflict is unresolved."
+    },
+    "M11": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Corrected Census Gate is a low rectilinear civic frontage. Two contribution settings, separate ceramic/mineral evidence stations and rally pad are visible; mineral record uses amber. Ornamental trees and banners were removed. No record text, deaths or faction merger is asserted."
+    },
+    "M12": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Corrected Reserve Gate is a low civic frontage on a dry basalt plateau. Instrument line and independent ceramic/mineral readbacks remain distinct; mineral contact is amber and the separate Well is dormant. Repeated instrument counts in art are illustrative, not executable site bindings."
+    },
+    "M13": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Blank horizontal index drawers, separate receivers and two empty witness platforms are visible. Incidental Well-like object was removed; mineral receiver now uses amber. No named dead, blame or restoration claim."
+    },
+    "M14": {
+      "selected_revision": 1,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Distinct basin terraces, phase frames, command position, research table and unoccupied anchor setting are visible. Small central peg is an alignment detail candidate, not an installed crisis machine. No actual hold or failure behavior is evidenced."
+    },
+    "M15": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Broken stellar fragments replace the eclipse, visible substructure grounds the dais, and empty resolution mount selects no ending. Three distinct construction-language sites and corresponding detail fittings remain visible. Fine signal colors and exact conduit silhouettes require later selected-state references."
+    },
+    "SK01": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Corrected overview shows opposed north/south home shelves, three distinct crossing treatments, six cyan-white deposit clusters and one low dormant Well. Image is an abstract composition; actual path widths, ridge passability and travel-time fairness are not certified."
+    },
+    "SK02": {
+      "selected_revision": 4,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Two north-south ridges now have six visible openings aligned into three east-west corridors. Eight Matter clusters and one north-of-center dormant Well are visible. Exact deposit zoning, coordinates, passage widths and fairness remain unverified; source/runtime Well-coordinate drift is recorded as MAP-DEC-008."
+    },
+    "SK03": {
+      "selected_revision": 2,
+      "status": "RETAINED_CANDIDATE",
+      "observation": "Corrected overview shows four cardinal ring entrances, eight visible deposit clusters and one central Well. Base-like home ornaments were removed. Exact spawn/deposit zoning and approach fairness require registered-map verification."
+    }
+  },
+  "subobjects": [
+    {
+      "concept_id": "EBS-CON-WRL-PRP-155",
+      "parent_concept_id": "EBS-CON-WRL-PRP-101",
+      "display_name": "Carrier cradle",
+      "locator": "large U-shaped cradle chassis",
+      "observation": "Carrier cradle — large U-shaped cradle chassis. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-156",
+      "parent_concept_id": "EBS-CON-WRL-PRP-101",
+      "display_name": "Cargo lashing set",
+      "locator": "restraining bands on cargo adjacent to cradle",
+      "observation": "Cargo lashing set — restraining bands on cargo adjacent to cradle. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-157",
+      "parent_concept_id": "EBS-CON-WRL-PRP-101",
+      "display_name": "Loading rail",
+      "locator": "recessed rails running through cradle bed",
+      "observation": "Loading rail — recessed rails running through cradle bed. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-158",
+      "parent_concept_id": "EBS-CON-WRL-PRP-107",
+      "display_name": "Cistern wall module",
+      "locator": "pale ceramic wall body",
+      "observation": "Cistern wall module — pale ceramic wall body. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-159",
+      "parent_concept_id": "EBS-CON-WRL-PRP-107",
+      "display_name": "Discharge grille",
+      "locator": "wide black grille above duct pair",
+      "observation": "Discharge grille — wide black grille above duct pair. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-160",
+      "parent_concept_id": "EBS-CON-WRL-PRP-107",
+      "display_name": "Paired duct mouth",
+      "locator": "repeated circular duct openings and their collars",
+      "observation": "Paired duct mouth — repeated circular duct openings and their collars. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-161",
+      "parent_concept_id": "EBS-CON-WRL-PRP-108",
+      "display_name": "Transit deck segment",
+      "locator": "ribbed pale upper deck",
+      "observation": "Transit deck segment — ribbed pale upper deck. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-162",
+      "parent_concept_id": "EBS-CON-WRL-PRP-108",
+      "display_name": "Transit coffer support",
+      "locator": "dark load-bearing body below deck",
+      "observation": "Transit coffer support — dark load-bearing body below deck. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-163",
+      "parent_concept_id": "EBS-CON-WRL-PRP-108",
+      "display_name": "Maintenance gallery",
+      "locator": "accessible lower service platform",
+      "observation": "Maintenance gallery — accessible lower service platform. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-164",
+      "parent_concept_id": "EBS-CON-WRL-PRP-108",
+      "display_name": "Replacement bracket",
+      "locator": "pale support bracket at side of gallery",
+      "observation": "Replacement bracket — pale support bracket at side of gallery. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-165",
+      "parent_concept_id": "EBS-CON-WRL-PRP-109",
+      "display_name": "Archive cassette door",
+      "locator": "repeated sealed upper door modules",
+      "observation": "Archive cassette door — repeated sealed upper door modules. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-166",
+      "parent_concept_id": "EBS-CON-WRL-PRP-109",
+      "display_name": "Archive servo rail",
+      "locator": "rails exposed in lower service opening",
+      "observation": "Archive servo rail — rails exposed in lower service opening. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-167",
+      "parent_concept_id": "EBS-CON-WRL-PRP-109",
+      "display_name": "Detachable service panel",
+      "locator": "separate leaning panel",
+      "observation": "Detachable service panel — separate leaning panel. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-168",
+      "parent_concept_id": "EBS-CON-WRL-PRP-111",
+      "display_name": "Rooting dock hollow",
+      "locator": "shallow grown mineral basin",
+      "observation": "Rooting dock hollow — shallow grown mineral basin. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-169",
+      "parent_concept_id": "EBS-CON-WRL-PRP-111",
+      "display_name": "Root clamp set",
+      "locator": "repeated rooted gripping projections around basin",
+      "observation": "Root clamp set — repeated rooted gripping projections around basin. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-170",
+      "parent_concept_id": "EBS-CON-WRL-PRP-112",
+      "display_name": "Custody niche",
+      "locator": "recessed strata pocket",
+      "observation": "Custody niche — recessed strata pocket. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-171",
+      "parent_concept_id": "EBS-CON-WRL-PRP-112",
+      "display_name": "Memory shard",
+      "locator": "single small shard held in niche",
+      "observation": "Memory shard — single small shard held in niche. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-172",
+      "parent_concept_id": "EBS-CON-WRL-PRP-113",
+      "display_name": "Revetment wall course",
+      "locator": "dark layered repair wall",
+      "observation": "Revetment wall course — dark layered repair wall. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-173",
+      "parent_concept_id": "EBS-CON-WRL-PRP-113",
+      "display_name": "Ceramic stitching plate",
+      "locator": "pale rectangular wall reinforcement plates",
+      "observation": "Ceramic stitching plate — pale rectangular wall reinforcement plates. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-174",
+      "parent_concept_id": "EBS-CON-WRL-PRP-114",
+      "display_name": "Witness kiosk shelter",
+      "locator": "small open-faced ceramic kiosk frame",
+      "observation": "Witness kiosk shelter — small open-faced ceramic kiosk frame. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-175",
+      "parent_concept_id": "EBS-CON-WRL-PRP-114",
+      "display_name": "Witness readback pedestal",
+      "locator": "small cylindrical instrument inside shelter",
+      "observation": "Witness readback pedestal — small cylindrical instrument inside shelter. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-176",
+      "parent_concept_id": "EBS-CON-WRL-PRP-115",
+      "display_name": "Mineral observation bench",
+      "locator": "grown curved low strata ledge",
+      "observation": "Mineral observation bench — grown curved low strata ledge. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-177",
+      "parent_concept_id": "EBS-CON-WRL-PRP-115",
+      "display_name": "Mineral contact node",
+      "locator": "rooted upright adjacent to bench",
+      "observation": "Mineral contact node — rooted upright adjacent to bench. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-178",
+      "parent_concept_id": "EBS-CON-WRL-PRP-119",
+      "display_name": "Resonant rib",
+      "locator": "weathered dark mineral blade",
+      "observation": "Resonant rib — weathered dark mineral blade. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-179",
+      "parent_concept_id": "EBS-CON-WRL-PRP-119",
+      "display_name": "Rooted rib socket",
+      "locator": "grown mineral foot and seated bedrock transition",
+      "observation": "Rooted rib socket — grown mineral foot and seated bedrock transition. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-180",
+      "parent_concept_id": "EBS-CON-WRL-PRP-122",
+      "display_name": "Offset beam end",
+      "locator": "paired beam termination design",
+      "observation": "Offset beam end — paired beam termination design. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-181",
+      "parent_concept_id": "EBS-CON-WRL-PRP-122",
+      "display_name": "Independent frame support",
+      "locator": "sloped load-bearing upright below beam",
+      "observation": "Independent frame support — sloped load-bearing upright below beam. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-182",
+      "parent_concept_id": "EBS-CON-WRL-PRP-124",
+      "display_name": "Civic contact fitting",
+      "locator": "small pale fitting on one end of rectangular contact platform",
+      "observation": "Civic contact fitting — small pale fitting on one end of rectangular contact platform. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-183",
+      "parent_concept_id": "EBS-CON-WRL-PRP-124",
+      "display_name": "Mineral-side contact fitting",
+      "locator": "small dark fitting at opposite end; grown-material refinement remains open",
+      "observation": "Mineral-side contact fitting — small dark fitting at opposite end; grown-material refinement remains open. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-184",
+      "parent_concept_id": "EBS-CON-WRL-PRP-125",
+      "display_name": "Allocation valve housing",
+      "locator": "paired civic service valve body",
+      "observation": "Allocation valve housing — paired civic service valve body. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-185",
+      "parent_concept_id": "EBS-CON-WRL-PRP-125",
+      "display_name": "Allocation status band",
+      "locator": "contained cyan band across valve",
+      "observation": "Allocation status band — contained cyan band across valve. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-186",
+      "parent_concept_id": "EBS-CON-WRL-PRP-126",
+      "display_name": "Transit status fixture",
+      "locator": "recessed geometric cyan indicator on service body",
+      "observation": "Transit status fixture — recessed geometric cyan indicator on service body. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-187",
+      "parent_concept_id": "EBS-CON-WRL-PRP-127",
+      "display_name": "Deferred cassette interface",
+      "locator": "intact dark inset cassette/status assembly",
+      "observation": "Deferred cassette interface — intact dark inset cassette/status assembly. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-188",
+      "parent_concept_id": "EBS-CON-WRL-PRP-128",
+      "display_name": "Ceramic service endpoint",
+      "locator": "pale service end on left of adapter",
+      "observation": "Ceramic service endpoint — pale service end on left of adapter. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-189",
+      "parent_concept_id": "EBS-CON-WRL-PRP-128",
+      "display_name": "Mineral contact endpoint",
+      "locator": "rooted strata contact on right of adapter",
+      "observation": "Mineral contact endpoint — rooted strata contact on right of adapter. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-190",
+      "parent_concept_id": "EBS-CON-WRL-PRP-128",
+      "display_name": "Endpoint adapter",
+      "locator": "exposed joining hardware between distinct constructions",
+      "observation": "Endpoint adapter — exposed joining hardware between distinct constructions. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-191",
+      "parent_concept_id": "EBS-CON-WRL-PRP-131",
+      "display_name": "Public ceramic endpoint",
+      "locator": "pale service support on left",
+      "observation": "Public ceramic endpoint — pale service support on left. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-192",
+      "parent_concept_id": "EBS-CON-WRL-PRP-131",
+      "display_name": "Public mineral endpoint",
+      "locator": "grown dark mineral contact on right",
+      "observation": "Public mineral endpoint — grown dark mineral contact on right. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-193",
+      "parent_concept_id": "EBS-CON-WRL-PRP-131",
+      "display_name": "Public junction module",
+      "locator": "serviceable adapter body between endpoints",
+      "observation": "Public junction module — serviceable adapter body between endpoints. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-194",
+      "parent_concept_id": "EBS-CON-WRL-PRP-134",
+      "display_name": "Calibration frame pair",
+      "locator": "two supported measurement uprights",
+      "observation": "Calibration frame pair — two supported measurement uprights. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-195",
+      "parent_concept_id": "EBS-CON-WRL-PRP-134",
+      "display_name": "Contained measurement path",
+      "locator": "bounded sensor path connecting calibration frame",
+      "observation": "Contained measurement path — bounded sensor path connecting calibration frame. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-196",
+      "parent_concept_id": "EBS-CON-WRL-PRP-136",
+      "display_name": "Civic readback station",
+      "locator": "independent pale instrument and observation pad",
+      "observation": "Civic readback station — independent pale instrument and observation pad. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-197",
+      "parent_concept_id": "EBS-CON-WRL-PRP-136",
+      "display_name": "Mineral readback station",
+      "locator": "independent grown strata instrument and observation pad",
+      "observation": "Mineral readback station — independent grown strata instrument and observation pad. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-198",
+      "parent_concept_id": "EBS-CON-WRL-PRP-138",
+      "display_name": "Civic record receiver",
+      "locator": "pale ceramic receiver at left",
+      "observation": "Civic record receiver — pale ceramic receiver at left. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-199",
+      "parent_concept_id": "EBS-CON-WRL-PRP-138",
+      "display_name": "Mineral record receiver",
+      "locator": "grown mineral receiver at right",
+      "observation": "Mineral record receiver — grown mineral receiver at right. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-200",
+      "parent_concept_id": "EBS-CON-WRL-PRP-138",
+      "display_name": "Neutral record adapter",
+      "locator": "distinct connector between receivers",
+      "observation": "Neutral record adapter — distinct connector between receivers. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-201",
+      "parent_concept_id": "EBS-CON-WRL-PRP-140",
+      "display_name": "Phase frame upright",
+      "locator": "repeated offset upright design",
+      "observation": "Phase frame upright — repeated offset upright design. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-202",
+      "parent_concept_id": "EBS-CON-WRL-PRP-140",
+      "display_name": "Contained phase filament",
+      "locator": "fine magenta joint effect within supported frame",
+      "observation": "Contained phase filament — fine magenta joint effect within supported frame. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-203",
+      "parent_concept_id": "EBS-CON-WRL-PRP-142",
+      "display_name": "Anchor socket",
+      "locator": "empty keyed setting with alignment feature",
+      "observation": "Anchor socket — empty keyed setting with alignment feature. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-204",
+      "parent_concept_id": "EBS-CON-WRL-PRP-142",
+      "display_name": "Socket service access",
+      "locator": "exposed route into mounting setting",
+      "observation": "Socket service access — exposed route into mounting setting. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-205",
+      "parent_concept_id": "EBS-CON-WRL-PRP-144",
+      "display_name": "Civic accord fitting",
+      "locator": "left pale ceramic interface",
+      "observation": "Civic accord fitting — left pale ceramic interface. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-206",
+      "parent_concept_id": "EBS-CON-WRL-PRP-144",
+      "display_name": "Mineral accord fitting",
+      "locator": "middle grown-strata interface",
+      "observation": "Mineral accord fitting — middle grown-strata interface. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-207",
+      "parent_concept_id": "EBS-CON-WRL-PRP-144",
+      "display_name": "Choir accord fitting",
+      "locator": "right offset-glass interface",
+      "observation": "Choir accord fitting — right offset-glass interface. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-208",
+      "parent_concept_id": "EBS-CON-WRL-PRP-147",
+      "display_name": "Causeway deck",
+      "locator": "continuous ribbed ceramic passage deck",
+      "observation": "Causeway deck — continuous ribbed ceramic passage deck. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-209",
+      "parent_concept_id": "EBS-CON-WRL-PRP-147",
+      "display_name": "Causeway coffer",
+      "locator": "dark supporting structure visible beneath deck",
+      "observation": "Causeway coffer — dark supporting structure visible beneath deck. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-210",
+      "parent_concept_id": "EBS-CON-WRL-PRP-148",
+      "display_name": "Folded Verge plate",
+      "locator": "repeated offset supported crossing plate design",
+      "observation": "Folded Verge plate — repeated offset supported crossing plate design. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-211",
+      "parent_concept_id": "EBS-CON-WRL-PRP-153",
+      "display_name": "Ring frame fixture",
+      "locator": "offset independently seated frame assembly",
+      "observation": "Ring frame fixture — offset independently seated frame assembly. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-212",
+      "parent_concept_id": "EBS-CON-WRL-PRP-153",
+      "display_name": "Ring glass pane",
+      "locator": "supported translucent pane within frame",
+      "observation": "Ring glass pane — supported translucent pane within frame. Candidate component interpretation from the retained panel; model dimensions and separation remain TBD.",
+      "classification": "assembly_component_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-301",
+      "parent_concept_id": "EBS-CON-WRL-ENV-101",
+      "display_name": "Receiving threshold",
+      "locator": "upper center small receiving platform and service threshold",
+      "observation": "Receiving threshold — upper center small receiving platform and service threshold. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-BLD-101",
+      "parent_concept_id": "EBS-CON-WRL-ENV-103",
+      "display_name": "Cistern plant massing",
+      "locator": "upper scene left tiered reservoir/service complex",
+      "observation": "Cistern plant massing — upper scene left tiered reservoir/service complex. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "BLD"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-BLD-102",
+      "parent_concept_id": "EBS-CON-WRL-ENV-103",
+      "display_name": "Transit service complex",
+      "locator": "upper scene rear raised ribbed deck and gallery",
+      "observation": "Transit service complex — upper scene rear raised ribbed deck and gallery. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "BLD"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-BLD-103",
+      "parent_concept_id": "EBS-CON-WRL-ENV-103",
+      "display_name": "Archive stack massing",
+      "locator": "upper scene right stepped windowless stacks",
+      "observation": "Archive stack massing — upper scene right stepped windowless stacks. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "BLD"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-302",
+      "parent_concept_id": "EBS-CON-WRL-ENV-105",
+      "display_name": "Corridor ceramic relay",
+      "locator": "upper scene compact ceramic relay on distant corridor setback",
+      "observation": "Corridor ceramic relay — upper scene compact ceramic relay on distant corridor setback. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-303",
+      "parent_concept_id": "EBS-CON-WRL-ENV-105",
+      "display_name": "Corridor mineral spine",
+      "locator": "upper scene rooted spine on opposite distant setback",
+      "observation": "Corridor mineral spine — upper scene rooted spine on opposite distant setback. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-201",
+      "parent_concept_id": "EBS-CON-WRL-ENV-106",
+      "display_name": "Bounded absence edge",
+      "locator": "upper scene diagonal civic cut with exposed vertical material thickness",
+      "observation": "Bounded absence edge — upper scene diagonal civic cut with exposed vertical material thickness. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "ENV"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-202",
+      "parent_concept_id": "EBS-CON-WRL-ENV-108",
+      "display_name": "Offset approach frame assembly",
+      "locator": "upper scene paired overhead frame structures around solid approaches",
+      "observation": "Offset approach frame assembly — upper scene paired overhead frame structures around solid approaches. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "ENV"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-BLD-104",
+      "parent_concept_id": "EBS-CON-WRL-ENV-109",
+      "display_name": "Authority Exchange hall",
+      "locator": "upper scene low central allocation hall",
+      "observation": "Authority Exchange hall — upper scene low central allocation hall. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "BLD"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-304",
+      "parent_concept_id": "EBS-CON-WRL-ENV-110",
+      "display_name": "Public Choir pane setting",
+      "locator": "upper scene repeated pane fixture beside civic approach",
+      "observation": "Public Choir pane setting — upper scene repeated pane fixture beside civic approach. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-BLD-105",
+      "parent_concept_id": "EBS-CON-WRL-ENV-111",
+      "display_name": "Census Gate frontage",
+      "locator": "upper scene broad rectilinear civic gate and stepped frontage",
+      "observation": "Census Gate frontage — upper scene broad rectilinear civic gate and stepped frontage. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "BLD"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-305",
+      "parent_concept_id": "EBS-CON-WRL-ENV-111",
+      "display_name": "District contribution station",
+      "locator": "upper scene repeated contribution interface pad",
+      "observation": "District contribution station — upper scene repeated contribution interface pad. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-203",
+      "parent_concept_id": "EBS-CON-WRL-ENV-111",
+      "display_name": "Protocol rally pad",
+      "locator": "upper scene empty public rally area",
+      "observation": "Protocol rally pad — upper scene empty public rally area. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "ENV"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-BLD-106",
+      "parent_concept_id": "EBS-CON-WRL-ENV-112",
+      "display_name": "Reserve Gate frontage",
+      "locator": "upper scene civic frontage at demonstrator origin",
+      "observation": "Reserve Gate frontage — upper scene civic frontage at demonstrator origin. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "BLD"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-SYS-101",
+      "parent_concept_id": "EBS-CON-WRL-ENV-112",
+      "display_name": "Demonstrator spine assembly",
+      "locator": "upper scene repeated calibration stations linked along a single instrument line",
+      "observation": "Demonstrator spine assembly — upper scene repeated calibration stations linked along a single instrument line. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "SYS"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-BLD-107",
+      "parent_concept_id": "EBS-CON-WRL-ENV-113",
+      "display_name": "Public index assembly",
+      "locator": "upper scene central stacked record infrastructure with accessible aisles",
+      "observation": "Public index assembly — upper scene central stacked record infrastructure with accessible aisles. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "BLD"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-204",
+      "parent_concept_id": "EBS-CON-WRL-ENV-114",
+      "display_name": "Possible and Manifest terrace design",
+      "locator": "upper scene separated terraces; common platform grammar, distinct site roles retained",
+      "observation": "Possible and Manifest terrace design — upper scene separated terraces; common platform grammar, distinct site roles retained. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "ENV"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-306",
+      "parent_concept_id": "EBS-CON-WRL-ENV-114",
+      "display_name": "Command position",
+      "locator": "upper scene small central command setting",
+      "observation": "Command position — upper scene small central command setting. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-307",
+      "parent_concept_id": "EBS-CON-WRL-ENV-114",
+      "display_name": "Research work surface",
+      "locator": "upper scene lower-left separate research table",
+      "observation": "Research work surface — upper scene lower-left separate research table. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "PRP"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-205",
+      "parent_concept_id": "EBS-CON-WRL-ENV-115",
+      "display_name": "Civic witnessed-accord setting",
+      "locator": "upper scene left civic construction-language site",
+      "observation": "Civic witnessed-accord setting — upper scene left civic construction-language site. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "ENV"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-206",
+      "parent_concept_id": "EBS-CON-WRL-ENV-115",
+      "display_name": "Mineral witnessed-accord setting",
+      "locator": "upper scene rear grown mineral construction-language site",
+      "observation": "Mineral witnessed-accord setting — upper scene rear grown mineral construction-language site. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "ENV"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-207",
+      "parent_concept_id": "EBS-CON-WRL-ENV-115",
+      "display_name": "Choir witnessed-accord setting",
+      "locator": "upper scene right offset-glass construction-language site",
+      "observation": "Choir witnessed-accord setting — upper scene right offset-glass construction-language site. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "ENV"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-308",
+      "parent_concept_id": "EBS-CON-WRL-ENV-115",
+      "display_name": "Accord approach threshold",
+      "locator": "upper scene foreground approach and anchor foundation",
+      "observation": "Accord approach threshold — upper scene foreground approach and anchor foundation. Scene-scale candidate study, not an approved standalone model.",
+      "classification": "scene_landmark_design",
+      "object_type": "PRP"
+    }
+  ],
+  "inventory_boundary": "Track intentional environmental designs, distinct landmark assemblies, three detail panels and separable reusable components. Repeated instances and fasteners are not separate concepts. Candidate scene silhouettes do not replace established building references."
+}

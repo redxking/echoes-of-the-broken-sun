@@ -1,7 +1,9 @@
 # Campaign and skirmish environment concept collection
 
-**Author and owner:** Angelis Pseftis  
-**Created:** 2026-09-06  
+**Author and owner:** Angelis Pseftis
+
+**Created:** 2026-09-06
+
 **Status:** Candidate environment studies; no canon acceptance, production-stage advancement, navigation certification or Unreal integration.
 
 This collection develops the terrain and environmental objects for all fifteen campaign locations and the three named offline skirmish maps. The review gallery presents one landscape sheet and three detail panels per location. The machine-readable brief and object supplement preserve each design's identity and source. Repeated instances are not counted as new concepts.
@@ -14,7 +16,7 @@ The live primary checkout supplies the creative and behavioral references: [Requ
 
 Work is isolated on `docs/map-environment-concepts`, based on `8d9ba30`, in the separate map-environment-concepts worktree. The primary checkout's gameplay/HUD work and the concept-production-pipeline checkout's model work are outside this change. No Content, Source, Config, map, Blueprint, build script, workflow or existing concept has been changed. Remote image generation does not launch the shared Unreal Editor or a local model/render workload.
 
-The archive location of the Development Bible does not retire its creative authority. The book-informed earlier selections supply visual history; they do not override current game requirements. Prompts are retained in [map-concepts.json](map-concepts.json). The new images are derived composition studies, not replacements for original approved references.
+The archive location of the Development Bible does not retire its creative authority. The book-informed earlier selections supply visual history; they do not override current game requirements. Prompts are retained in [map-concepts.json](map-concepts.json). The new images are derived composition studies, not replacements for original approved references. Incidental insignia, microtext and unregistered trim remain unapproved illustration details; they are not new logo or faction canon.
 
 ## Review the set
 
@@ -43,7 +45,7 @@ Open [review.html](review.html) for the full gallery. Each card identifies the s
 
 ## What the sheets establish
 
-The upper scene is a proposed environmental composition. The lower panels develop individually identifiable surfaces, structural pieces, props or interface assemblies. Their object locators refer to original pixels, not model-ready cutouts. Compound panels also receive child records where they contain independent reusable designs. A montage is never treated as one anonymous asset.
+The upper scene is a proposed environmental composition. The lower panels develop individually identifiable surfaces, structural pieces, props or interface assemblies. Their object locators refer to original pixels, not model-ready cutouts. Compound panels also receive child records where they contain independent reusable designs. Distinct larger scene landmarks receive their own records and source locators. A montage is never treated as one anonymous asset.
 
 The three skirmish resource and passage counts are brief requirements from SPEC-SKM-011..013. Image review checks visible interpretation, but the raster is not an exact placement contract. Tile bounds, collision, line of sight, mirrored approach times and resource timing remain in authored map data and later measured tests. Campaign compositions likewise preserve the mission sequence without inventing coordinate authority. The M01 study is an evacuation layout, not a reskin of the skirmish Glass Scar.
 
@@ -67,7 +69,7 @@ These are design proposals, not implemented animation systems. Each future asset
 
 ## Digital thread and production handoff
 
-Each new ID is stable across renames. This isolated collection allocates environment compositions under EBS-CON-WRL-ENV-101 onward and detail designs under EBS-CON-WRL-PRP-101 onward, with explicit subtype and reuse relations. WRL denotes the environmental collection; regional/faction grammar is recorded separately. A civic prop in a world scene is not automatically a newly approved Meridian production asset.
+Each new ID is stable across renames. This isolated collection allocates environment compositions under EBS-CON-WRL-ENV-101 onward and detail designs under EBS-CON-WRL-PRP-101 onward, with separate BLD, ENV and SYS ranges for scene landmarks, with explicit subtype and reuse relations. WRL denotes the environmental collection; regional/faction grammar is recorded separately. A civic prop in a world scene is not automatically a newly approved Meridian production asset.
 
 Before integration, collision-check these IDs against the then-current authoritative register and reconcile any independently allocated IDs through explicit aliases. Do not silently renumber references. The [concept-object supplement](concept-object-register.json) retains source-image hashes, locators, mapping evidence, parent/child relations, canon status, production status and unknown production fields. It is a scoped addition, not a competing replacement for [the existing register](../concept-register.json).
 
@@ -96,6 +98,6 @@ No gate is satisfied by the presence of an attractive concept sheet.
 | MAP-DEC-005 — Format coverage | This illustrated set covers the fifteen mission locations and three named offline skirmish maps. | Conquest's 25 sectors and team/FFA map-format bindings are additional registered work, not silently satisfied by these eighteen pictures. |
 | MAP-DEC-006 — Dimensions and budgets | All model dimensions, texture allocations, LOD/Nanite decisions, collision and exact placements remain unclaimed. | Set them from current approved contracts and measured representative assets in the later integration task. |
 | MAP-DEC-007 — Owner review | Every new image and detail remains CANDIDATE. | Record Angelis's selection or correction against the exact image hash. Praise of earlier faction-base sheets does not approve this new set. |
+| MAP-DEC-008 — Crownfall map-source drift | Read-only source comparison confirms three cross-ridge corridors; the proposed map source and runtime code use different Well coordinates. | Reconcile source/implementation identity in a later map task. No coordinate in this concept collection overrides either source or requirements. |
 
 The read-only [audit](audit.py) checks inventory coverage, ID uniqueness, required metadata, local links, hashes, prompt/receipt binding and the preserved candidate boundary. It does not inspect Unreal, certify pixel geometry, decide canon, or write assets. Retained generation and inspection results distinguish requested features from what each image visibly achieved.
-
