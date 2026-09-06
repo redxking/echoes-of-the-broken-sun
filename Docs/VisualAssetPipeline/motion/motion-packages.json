@@ -54,7 +54,8 @@
       "acceptance_evidence_required": "2200 cm detection; 200 cm resolution; moving-only anonymous signatures; no health/targetability/identity disclosure.",
       "interruption_and_restore": "Clear only when authoritative signature state removes or expires the contact; do not inspect hidden-unit velocity. Restore current signature state without replaying wave/sound.",
       "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
-      "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
+      "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here",
+      "selected_design": "UNARMED. Sensor-only board; current attack data removal is prepared but unimplemented."
     },
     {
       "gap_id": "EBS-PKG-KA-GROWTH-BASIN-GAP-02",
@@ -175,7 +176,7 @@
       ],
       "reduced_motion": "Discrete offset, damaged, registered and extinguished poses.",
       "audio": "Operational held tone; damage cue TBD. Stop tone on destruction; collapse cue requires Choir approval.",
-      "acceptance_evidence_required": "12 persistent pane identities. Core destruction is authoritative immediately; same-tick match outcome only for the final required team Core. Debris through tick 200; footprint recovery at 201.",
+      "acceptance_evidence_required": "12 pane identities; immediate Core removal and conditional final-team-Core outcome. Nonblocking cosmetic debris lasts 200 ticks; gameplay footprint clears immediately under the selected amendment.",
       "interruption_and_restore": "Restore current health/destruction state; never replay collapse. Presentation cannot delay Core destruction or the conditional match outcome.",
       "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
       "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
@@ -281,7 +282,7 @@
         },
         {
           "label": "Overlap",
-          "caption": "Read resolved value only"
+          "caption": "Selected overlap floor: 3 Dawn"
         },
         {
           "label": "Field loss",
@@ -298,10 +299,51 @@
       ],
       "reduced_motion": "Ring present/absent plus neighbor marker change; suppress flicker.",
       "audio": "Pure sustained tone while active, no beating. Stop on loss; no replayed onset on restore.",
-      "acceptance_evidence_required": "700 cm measured membership; boundary/overlap/save/replay and RTS tests. SPEC says no stacking; REL requires floor 3: reconcile before value-specific acceptance.",
+      "acceptance_evidence_required": "Selected overlap: 5/4/3 Dawn with floor 3; apply prepared SPEC wording amendment. Test 700 cm membership, boundary/overlap/loss/reload and non-color state readability.",
       "interruption_and_restore": "Animation never counts overlaps. Restore current resolved state. Recovery stops loss cue; no duplicate neighbor response.",
       "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
       "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
+    },
+    {
+      "gap_id": "EBS-PKG-EBS-FAM-FWL-001-GAP-01",
+      "title": "Future Well chosen family",
+      "contracts": [
+        "REL-ART-014 (selected amendment)",
+        "REL-WEL-005/006/015",
+        "DevelopmentBible Future Wells"
+      ],
+      "phases": [
+        {
+          "label": "Dormant",
+          "caption": "One bowl/spire; quiet doubled shadow"
+        },
+        {
+          "label": "Harvest telegraph",
+          "caption": "180 state ticks; amber climbs"
+        },
+        {
+          "label": "Harvest commit",
+          "caption": "Fold inward; dark spent bowl"
+        },
+        {
+          "label": "Preserve",
+          "caption": "Cyan custody; keep the spire"
+        },
+        {
+          "label": "Reshape manifest",
+          "caption": "After 180-tick telegraph: temporary feature"
+        },
+        {
+          "label": "Reshape expiry",
+          "caption": "After 1800 ticks: authored feature removed"
+        }
+      ],
+      "reduced_motion": "Discrete state shape, progress and protocol marker; no rapid flash. Preserve/Reshape retain distinct cues.",
+      "audio": "Dormant low hum; Harvest rise then hard cutoff only on commit; Preserve sustained custody and cadence; Reshape phase tone and expiry warning. No audio files created.",
+      "acceptance_evidence_required": "Apply palette amendment; test interruption with zero payout, successful +500 Dawn once, permanent spent state, custody loss and authored Reshape expiry/fallback. Runtime and camera evidence remain pending.",
+      "interruption_and_restore": "Read authoritative protocol/state. Cancel telegraph without spent pose or success sound. Reload current state; never replay payout, collapse or terrain creation.",
+      "status": "SELECTED_AMENDMENT_REFERENCE_RUNTIME_UNVERIFIED",
+      "clock": "Exact state ticks from requirements; drawing sequence is not a runtime test."
     }
   ],
   "source_evidence": [
@@ -317,5 +359,7 @@
       "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c",
       "status": "EVIDENCE_COPY_NOT_AUTHORITY"
     }
-  ]
+  ],
+  "selected_amendments_source": "gap-decisions.json#/master_amendments",
+  "authority_boundary": "Source bindings retain inspected existing text. Selected conflicting directions are explicit planned amendments, not claims that the master/runtime has already changed."
 }

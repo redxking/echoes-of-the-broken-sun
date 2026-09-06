@@ -15,7 +15,22 @@ def render(item):
  for n,phase in enumerate(item['phases']):
   x=40+(n%3)*520;y=125+(n//3)*295;box(x,y,500,275,'#b7b4aa');text(x+18,y+32,phase['label'],24)
   cx=x+250;cy=y+135
-  if 'Concordance' in title:
+  if 'Future Well' in title:
+   color=['#56545a','#b28739','#47464a','#338791','#a74783','#a74783'][n]
+   out.append(f'<ellipse cx="{cx}" cy="{cy+35}" rx="100" ry="32" fill="none" stroke="{color}" stroke-width="4"/>')
+   if n!=2:
+    line(cx,cy+30,cx,cy-65,color,12)
+    if n==0:
+     line(cx,cy+30,cx+65,cy+55,'#aaa7ad',3);line(cx,cy+30,cx-60,cy+50,'#aaa7ad',3)
+   else:
+    line(cx-32,cy+25,cx,cy+5,color,6);line(cx,cy+5,cx+25,cy+30,color,6)
+   if n==3:circle(cx,cy,60,color)
+   if n==4:
+    line(cx+25,cy+35,cx+155,cy+15,color,3);box(cx+120,cy-5,60,32,color)
+   if n==5:
+    line(cx+120,cy-5,cx+180,cy+27,'#77727a',3);line(cx+120,cy+27,cx+180,cy-5,'#77727a',3)
+   text(x+18,y+216,'Shared family; no new unrelated model',16)
+  elif 'Concordance' in title:
    for i in range(6):
     a=math.radians(45+i*54)
     for j in range(2):
@@ -62,4 +77,4 @@ def render(item):
 if __name__=='__main__':
  target=P/'storyboards';target.mkdir(exist_ok=True)
  for item in json.loads((P/'motion-packages.json').read_text())['items']:(target/(item['gap_id']+'.svg')).write_text(render(item))
- print('7 source-bound vector state boards generated')
+ print('Source-bound vector state boards generated')

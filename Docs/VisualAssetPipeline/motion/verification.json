@@ -11,7 +11,8 @@
     "candidate_records": 21,
     "control_checks": 4,
     "construction_topology_tests": 7,
-    "handoff_integrity_tests": 8
+    "handoff_integrity_tests": 8,
+    "decision_contract_tests": 10
   },
   "browser_visual_review": "BLOCKED: browser security policy verification unavailable; no workaround attempted",
   "primary_checkout_head": "1a60cb1fecdd5a709f940726a6a3e15b0fc378ff",
@@ -87,22 +88,92 @@
       },
       "original_gap_records": 63,
       "open_gap_definition": "Excludes2 corrected reference defects and8 decided design questions; none implies owner acceptance or full asset completion"
+    },
+    {
+      "author": "Angelis Pseftis",
+      "creator": "Angelis Pseftis",
+      "created_utc": "2026-09-06T20:29:28.045038+00:00",
+      "packages": 21,
+      "open_gap_records": 53,
+      "tests": {
+        "audit_and_decision_tests": 15,
+        "motion_studies": 11,
+        "sample_executions": 132,
+        "candidate_records": 21,
+        "control_checks": 4,
+        "construction_topology_tests": 7,
+        "handoff_integrity_tests": 8,
+        "decision_contract_tests": 7
+      },
+      "browser_visual_review": "BLOCKED: browser security policy verification unavailable; no workaround attempted",
+      "primary_checkout_head": "1a60cb1fecdd5a709f940726a6a3e15b0fc378ff",
+      "worktree_baseline": "f85123f",
+      "source_bindings": {
+        "Docs/Requirements.md": "467e263d65a4f33c07882631c7479401d75cce2447ae018859aa86a7d435100e",
+        "Docs/RequirementsState.md": "efb2baae7b2cb79d5264d4d6ca824a163db8eded6586dc8a277a76ba807f5961",
+        "Docs/Archive/DevelopmentBible.md": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+      },
+      "boundary": "Source checks and static reference visual review; interactive browser verification still blocked; no clips, rig, engine assets, audio audition or runtime acceptance",
+      "image_corrections": {
+        "growth_basin": "Image-level state contrast improved; RTS recognition open",
+        "chorus_loom": "Image-level state contrast improved; RTS recognition open",
+        "aegis_post": "Partial mount supplement; complete matched-view geometry open",
+        "power_link": "Missing panel03 restored beside02; loose connector present; routing remains unverified",
+        "phase_anchor": "Magenta ground ring visually inspected; final material and coverage measurement remain open"
+      },
+      "updated_utc": "2026-09-06T21:12:23.706160+00:00",
+      "gap_dispositions": {
+        "REFERENCE_REQUIRED": 25,
+        "AUTHORITY_DEPENDENCY": 2,
+        "CORRECTED_REFERENCE": 2,
+        "INTEGRATION_DEPENDENCY": 19,
+        "DESIGN_DECIDED": 8,
+        "MOTION_REFERENCE_REQUIRED": 7
+      },
+      "original_gap_records": 63,
+      "open_gap_definition": "Excludes2 corrected reference defects and8 decided design questions; none implies owner acceptance or full asset completion",
+      "static_reference_review": {
+        "construction_sheets": 5,
+        "state_boards": 8,
+        "result": "Rendered locally and visually inspected; corrected text overlap and Phase Anchor loss-ring visibility before final bindings",
+        "evidence_manifest": "preparation-evidence.json",
+        "final_review_corrections": [
+          "Basin reload active snapshot",
+          "Conditional team Core outcome",
+          "Resonant authoritative expiry only",
+          "Phase Anchor no loss ring",
+          "Preserved exact dirty authority payloads"
+        ]
+      },
+      "preparation_counts": {
+        "BRIEF_READY": 27,
+        "BLOCKED_BY_AUTHORITY": 2,
+        "PARTIAL_REFERENCE": 6,
+        "ARTIFACT_READY": 9,
+        "DEFERRED_TO_INTEGRATION": 19
+      },
+      "authority_conflicts": 3,
+      "preservation_preflight": {
+        "inventory_paths": 244,
+        "full_payloads_matching_in_primary": 244,
+        "isolated_worktree_pointer_paths": 79,
+        "resolution": "Read primary payloads with --source-root; no hydration or writes"
+      },
+      "authority_evidence_manifest": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/authority-evidence/manifest.json",
+      "historical_evidence_gap": "Original dirty RequirementsState payload efb2baae7b2cb79d5264d4d6ca824a163db8eded6586dc8a277a76ba807f5961 was not retained; current observation has different hash and is not substituted. Requirements and Bible source payloads match exact motion bindings."
     }
   ],
-  "updated_utc": "2026-09-06T21:12:23.706160+00:00",
+  "updated_utc": "2026-09-06T21:43:20.248899+00:00",
   "gap_dispositions": {
-    "REFERENCE_REQUIRED": 25,
-    "AUTHORITY_DEPENDENCY": 2,
+    "EXECUTION_PENDING": 53,
     "CORRECTED_REFERENCE": 2,
-    "INTEGRATION_DEPENDENCY": 19,
-    "DESIGN_DECIDED": 8,
-    "MOTION_REFERENCE_REQUIRED": 7
+    "DESIGN_DECIDED": 8
   },
   "original_gap_records": 63,
-  "open_gap_definition": "Excludes2 corrected reference defects and8 decided design questions; none implies owner acceptance or full asset completion",
+  "open_gap_definition": "53 unresolved execution-evidence items, zero undecided design choices in the delegated batch",
   "static_reference_review": {
     "construction_sheets": 5,
-    "state_boards": 7,
+    "state_boards": 8,
     "result": "Rendered locally and visually inspected; corrected text overlap and Phase Anchor loss-ring visibility before final bindings",
     "evidence_manifest": "preparation-evidence.json",
     "final_review_corrections": [
@@ -114,13 +185,12 @@
     ]
   },
   "preparation_counts": {
-    "BRIEF_READY": 27,
-    "BLOCKED_BY_AUTHORITY": 2,
+    "BRIEF_READY": 28,
+    "ARTIFACT_READY": 10,
     "PARTIAL_REFERENCE": 6,
-    "ARTIFACT_READY": 9,
     "DEFERRED_TO_INTEGRATION": 19
   },
-  "authority_conflicts": 3,
+  "authority_conflicts": "Directions selected; six coordinated amendment packages prepared, not applied",
   "preservation_preflight": {
     "inventory_paths": 244,
     "full_payloads_matching_in_primary": 244,
@@ -128,5 +198,13 @@
     "resolution": "Read primary payloads with --source-root; no hydration or writes"
   },
   "authority_evidence_manifest": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/authority-evidence/manifest.json",
-  "historical_evidence_gap": "Original dirty RequirementsState payload efb2baae7b2cb79d5264d4d6ca824a163db8eded6586dc8a277a76ba807f5961 was not retained; current observation has different hash and is not substituted. Requirements and Bible source payloads match exact motion bindings."
+  "historical_evidence_gap": "Original dirty RequirementsState payload efb2baae7b2cb79d5264d4d6ca824a163db8eded6586dc8a277a76ba807f5961 was not retained; current observation has different hash and is not substituted. Requirements and Bible source payloads match exact motion bindings.",
+  "decision_completion": {
+    "target_items": 53,
+    "decided": 53,
+    "undecided": 0,
+    "production_evidence_items_pending": 53,
+    "owner_accepted": 0,
+    "boundary": "Design choices decided; original evidence dispositions retained historically. Decisions do not manufacture models, clips, tests, runtime changes or owner acceptance."
+  }
 }
