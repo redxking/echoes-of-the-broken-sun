@@ -27,6 +27,7 @@ namespace echoes::sim {
 
 using Tick = std::uint64_t;
 using EntityId = std::uint32_t;
+using ProductionItemId = std::uint64_t;
 using PlayerId = std::uint8_t;
 using ReplayCancellationCheck = std::function<bool()>;
 
@@ -36,12 +37,15 @@ inline constexpr std::int32_t kFixedScale = 1024;
 inline constexpr std::size_t kMaximumCommandLogEntries = 256U * 1024U;
 inline constexpr std::size_t kMaximumCommandResolutionReceipts = 4096;
 inline constexpr Tick kCommandResolutionReceiptRetentionTicks = 1200;
-// Schema 28 appends hostility masks to schema 27's Future Well capture and
-// protocol lifecycle state. Replay v25 independently adds the optional
-// terminal forfeit input; snapshot and gameplay-checksum schemas do not move.
-inline constexpr std::uint32_t kSnapshotVersion = 28;
+// Schema 30 appends Link repair/network authority and stable production item
+// identities. Replay v26 remains the fixed production-queue cutoff; replay
+// v27 selects Link mechanics and identity-checked cancellation.
+inline constexpr std::uint32_t kSnapshotVersion = 30;
 inline constexpr std::uint32_t kLegacyReplayVersion = 24;
-inline constexpr std::uint32_t kReplayVersion = 25;
+inline constexpr std::uint32_t kForfeitReplayVersion = 25;
+inline constexpr std::uint32_t kProductionReplayVersion = 26;
+inline constexpr std::uint32_t kLinkMechanicsReplayVersion = 27;
+inline constexpr std::uint32_t kReplayVersion = kLinkMechanicsReplayVersion;
 
 // Remembered permanent objects are bounded so a long match cannot grow an
 // unserializable ledger. When the bound is reached the oldest observation is
@@ -195,6 +199,7 @@ enum class OrderType : std::uint8_t {
     Hold = 8,
     Guard = 9,
     Patrol = 10,
+    Repair = 11,
 };
 
 enum class CommandType : std::uint8_t {
@@ -218,6 +223,11 @@ enum class CommandType : std::uint8_t {
     Research = 17,
     ReconcileToManifest = 18,
     ReconcileToPossible = 19,
+    CancelProduction = 20,
+    ReorderProduction = 21,
+    SetRallyRoute = 22,
+    Repair = 23,
+    CancelConstruction = 24,
 };
 
 /** Coarse authoritative result of resolving a structurally admitted command. */
@@ -291,6 +301,20 @@ enum class ProductionResult : std::uint8_t {
     InsufficientResources = 6,
     CapacityReached = 7,
     EntityCapacityReached = 8,
+    QueueFull = 9,
+};
+
+enum class ProductionStartBlockReason : std::uint8_t {
+    None = 0,
+    InvalidProducer = 1,
+    ProducerIncomplete = 2,
+    Busy = 3,
+    InsufficientMatter = 4,
+    InsufficientDawn = 5,
+    LogisticsCapacity = 6,
+    EntityCapacity = 7,
+    QueueFull = 8,
+    UnsupportedUnit = 9,
 };
 
 enum class ResearchResult : std::uint8_t {
@@ -591,6 +615,21 @@ struct Order final {
     friend bool operator==(const Order&, const Order&) = default;
 };
 
+/** One waiting manufacturing item. Waiting entries are uninvested by design;
+ * configured values are captured at admission so presentation and later
+ * activation never reprice an already queued order. */
+struct ProductionQueueItem final {
+    ProductionItemId itemId = 0;
+    EntityType unitType = EntityType::Worker;
+    ResourcePool configuredCost{};
+    std::int32_t requiredTicks = 0;
+    std::int32_t logisticsCost = 0;
+    ResourcePool investedCost{};
+
+    friend bool operator==(const ProductionQueueItem&,
+                           const ProductionQueueItem&) = default;
+};
+
 enum class HarvestState : std::uint8_t {
     Idle = 0,
     MovingToResource = 1,
@@ -621,6 +660,10 @@ struct Entity final {
     std::int32_t constructionProgress = 0;
     std::int32_t constructionRequired = 0;
     std::int32_t constructionSubProgress = 0;
+    ResourcePool constructionInvestedCost{};
+    Tick repairInterruptedUntilTick = 0;
+    std::int32_t repairRateRemainder = 0;
+    std::int32_t repairPaidHitPointCredit = 0;
     Tick harvestTicks = 0;
     EntityId assignedResourceNode = 0;
     HarvestState harvestState = HarvestState::Idle;
@@ -647,8 +690,19 @@ struct Entity final {
     Tick reshapeUntilTick = 0;
     std::uint8_t reshapeVariant = 0;
     EntityType productionType = EntityType::Worker;
+    ProductionItemId activeProductionItemId = 0;
     std::int32_t productionProgress = 0;
     std::int32_t productionRequired = 0;
+    ResourcePool productionInvestedCost{};
+    std::int32_t productionLogisticsCost = 0;
+    Tick productionSpawnBlockedTicks = 0;
+    bool productionPausedForSpawn = false;
+    bool productionSpawnBlockedAlert = false;
+    bool rallyRouteAlert = false;
+    static constexpr std::size_t kMaxProductionQueue = 4;
+    std::vector<ProductionQueueItem> productionQueue{};
+    static constexpr std::size_t kMaxRallyOrders = kMaxQueuedOrders;
+    std::vector<Order> rallyRoute{};
     bool deployed = false;
     Vec2 deploymentFacing = Vec2::FromRaw(kFixedScale, 0);
     bool relaySupplyActive = false;
@@ -667,6 +721,7 @@ struct Entity final {
     Terrain mineralCoverUnderlyingTerrain = Terrain::Open;
     Tick vibrationSignatureUntilTick = 0;
     bool aegisPowered = false;
+    bool networkOperational = false;
     ChoirIdentityState choirIdentityState = ChoirIdentityState::NotChoir;
     Tick choirIdentityResolveAtTick = 0;
     Tick choirIdentityNextAvailableTick = 0;
@@ -809,6 +864,91 @@ struct VibrationSignature final {
                            const VibrationSignature&) = default;
 };
 
+/** Player-scoped observation emitted only for Matter credited by ProcessDeliver
+ * during the most recently completed fixed tick. It is transient presentation
+ * evidence: snapshots, replays, and gameplay checksums do not retain it.
+ */
+struct MaterialDeliveryReceipt final {
+    Tick tick = 0;
+    EntityId worker = 0;
+    std::int32_t amount = 0;
+
+    friend bool operator==(const MaterialDeliveryReceipt&,
+                           const MaterialDeliveryReceipt&) = default;
+};
+
+enum class ConstructionTransition : std::uint8_t {
+    Created = 0,
+    Progressed = 1,
+    Completed = 2,
+    Cancelled = 3,
+};
+
+struct ConstructionReceipt final {
+    Tick tick = 0;
+    EntityId worker = 0;
+    EntityId structure = 0;
+    ConstructionTransition transition = ConstructionTransition::Progressed;
+    std::int32_t progressDelta = 0;
+    ResourcePool charged{};
+    ResourcePool refund{};
+    std::uint64_t commandSequence = 0;
+    friend bool operator==(const ConstructionReceipt&,
+                           const ConstructionReceipt&) = default;
+};
+
+struct RepairReceipt final {
+    Tick tick = 0;
+    EntityId worker = 0;
+    EntityId target = 0;
+    std::int32_t hitPointsRestored = 0;
+    std::int32_t matterSpent = 0;
+    friend bool operator==(const RepairReceipt&, const RepairReceipt&) = default;
+};
+
+enum class ProductionTransition : std::uint8_t {
+    Queued = 0,
+    Activated = 1,
+    Cancelled = 2,
+    Completed = 3,
+    SpawnBlocked = 4,
+    SpawnResumed = 5,
+};
+
+struct ProductionTransitionReceipt final {
+    Tick tick = 0;
+    EntityId producer = 0;
+    ProductionItemId itemId = 0;
+    EntityId spawnedEntity = 0;
+    EntityType unitType = EntityType::Worker;
+    ProductionTransition transition = ProductionTransition::Queued;
+    ProductionStartBlockReason blockReason = ProductionStartBlockReason::None;
+    ResourcePool charged{};
+    ResourcePool refunded{};
+    std::int32_t logisticsDelta = 0;
+    std::uint64_t commandSequence = 0;
+    friend bool operator==(const ProductionTransitionReceipt&,
+                           const ProductionTransitionReceipt&) = default;
+};
+
+/** Player-owned, read-only production state for UI/controllers. The first
+ * item is active when active is true; waiting contains only unactivated slots. */
+struct ProducerQueueState final {
+    EntityId producer = 0;
+    bool active = false;
+    ProductionQueueItem activeItem{};
+    std::int32_t activeProgress = 0;
+    Tick spawnBlockedTicks = 0;
+    bool pausedForSpawn = false;
+    bool spawnBlockedAlert = false;
+    bool rallyAlert = false;
+    std::vector<ProductionQueueItem> waiting{};
+    std::vector<Order> rallyRoute{};
+
+    friend bool operator==(const ProducerQueueState&,
+                           const ProducerQueueState&) = default;
+};
+
 // Materialized, visibility-scoped input for command producers. Construction is
 // restricted to Simulation so AI logic cannot acquire an authoritative-world
 // reference or fabricate information that the player has not observed.
@@ -828,6 +968,21 @@ public:
     }
     [[nodiscard]] const std::vector<VibrationSignature>& VibrationSignatures() const {
         return vibrationSignatures_;
+    }
+    [[nodiscard]] const std::vector<MaterialDeliveryReceipt>& MaterialDeliveries() const {
+        return materialDeliveries_;
+    }
+    [[nodiscard]] const std::vector<ProducerQueueState>& ProducerQueues() const {
+        return producerQueues_;
+    }
+    [[nodiscard]] const std::vector<RepairReceipt>& RepairReceipts() const {
+        return repairReceipts_;
+    }
+    [[nodiscard]] const std::vector<ConstructionReceipt>& ConstructionReceipts() const {
+        return constructionReceipts_;
+    }
+    [[nodiscard]] const std::vector<ProductionTransitionReceipt>& ProductionTransitions() const {
+        return productionTransitions_;
     }
     // Permanent objects the player remembers but cannot currently see. They
     // are deliberately kept out of Entities() so no consumer can target,
@@ -853,6 +1008,11 @@ private:
     std::vector<PlayerViewTile> tiles_{};
     std::vector<Entity> entities_{};
     std::vector<VibrationSignature> vibrationSignatures_{};
+    std::vector<MaterialDeliveryReceipt> materialDeliveries_{};
+    std::vector<ProducerQueueState> producerQueues_{};
+    std::vector<RepairReceipt> repairReceipts_{};
+    std::vector<ConstructionReceipt> constructionReceipts_{};
+    std::vector<ProductionTransitionReceipt> productionTransitions_{};
     std::vector<RememberedObject> rememberedObjects_{};
     std::vector<FutureWellTelegraph> publicFutureWellTelegraphs_{};
 };
@@ -1018,7 +1178,8 @@ public:
     EntityId SpawnEntity(PlayerId owner,
                          Faction faction,
                          EntityType type,
-                         Vec2 position);
+                         Vec2 position,
+                         std::optional<std::int32_t> initialHitPoints = std::nullopt);
     EntityId SpawnPublicInterface(Faction faction, Vec2 position);
     EntityId SpawnResourceNode(Vec2 position, std::int32_t amount);
     EntityId SpawnFutureWell(Vec2 position);
@@ -1065,6 +1226,13 @@ public:
         PlayerId player,
         EntityId producer,
         EntityType unitType) const;
+    [[nodiscard]] ProductionStartBlockReason ProductionStartBlockReasonFor(
+        PlayerId player,
+        EntityId producer,
+        EntityType unitType) const;
+    [[nodiscard]] std::optional<ProducerQueueState> ProducerQueueStateFor(
+        PlayerId player,
+        EntityId producer) const;
     [[nodiscard]] ResearchResult ValidateResearch(
         PlayerId player,
         EntityId producer,
@@ -1137,7 +1305,10 @@ public:
         AiPersonality personality = AiPersonality::Balanced);
 
     [[nodiscard]] std::uint64_t StateChecksum() const;
-    [[nodiscard]] std::vector<std::uint8_t> SaveSnapshot() const;
+    // Emits current-schema save state without mutating historical replay execution.
+    // Optional checksum describes the emitted state, which may be migrated from live replay rules.
+    [[nodiscard]] std::vector<std::uint8_t> SaveSnapshot(
+        std::uint64_t* snapshotStateChecksum = nullptr) const;
     [[nodiscard]] static std::optional<Simulation> LoadSnapshot(
         std::span<const std::uint8_t> bytes,
         std::string* error = nullptr,
@@ -1155,6 +1326,16 @@ public:
     bool ContinueReplayRecording(const ReplayRecord& prefix,
                                  std::string* error = nullptr);
     [[nodiscard]] ReplayRecord ExportReplay(std::string* error = nullptr) const;
+    /**
+     * Loads a replay baseline and installs its recorded execution and checksum
+     * compatibility before any incremental playback commands are admitted.
+     */
+    [[nodiscard]] static std::optional<Simulation> BeginReplaySimulation(
+        const ReplayRecord& replay,
+        std::string* error = nullptr,
+        const ReplayCancellationCheck& shouldCancel = {});
+    /** Hashes playback state with the authenticated baseline writer schema. */
+    [[nodiscard]] std::uint64_t ReplayStateChecksum() const;
     [[nodiscard]] static std::optional<Simulation> ReplayToEnd(
         const ReplayRecord& replay,
         std::string* error = nullptr,
@@ -1221,6 +1402,9 @@ private:
                                               EntityType type) const;
     [[nodiscard]] std::optional<Vec2> FindProductionSpawnPosition(
         const Entity& producer) const;
+    [[nodiscard]] bool TryActivateNextProduction(Entity& producer);
+    void ClearActiveProduction(Entity& producer);
+    void ApplyRallyRoute(Entity& unit, Entity& producer);
     [[nodiscard]] bool IsReshapedOpen(std::int32_t tileX,
                                       std::int32_t tileY) const;
     // Passability as the ordering player's own map records it. Unexplored
@@ -1251,6 +1435,8 @@ private:
         const Entity& entity) const;
     [[nodiscard]] bool IsAegisPost(const Entity& entity) const;
     [[nodiscard]] bool IsAegisNetworkPowered(const Entity& aegis) const;
+    [[nodiscard]] bool IsPositionInMeridianNetwork(PlayerId player,
+                                                   Vec2 position) const;
     [[nodiscard]] bool IsProtectedCommandCore(const Entity& entity) const;
     [[nodiscard]] bool IsChoirIdentityUnit(const Entity& entity) const;
     [[nodiscard]] bool IsChoirCoherenceStructure(const Entity& entity) const;
@@ -1324,6 +1510,7 @@ private:
     void ProcessGather(Entity& worker);
     void ProcessDeliver(Entity& worker);
     void ProcessBuild(Entity& worker);
+    void ProcessRepair(Entity& worker);
     void ProcessAttack(Entity& attacker,
                        std::vector<PendingDamage>& pendingDamage);
     void ProcessAttackMove(
@@ -1356,6 +1543,7 @@ private:
     SimulationConfig config_{};
     Tick currentTick_ = 0;
     EntityId nextEntityId_ = 1;
+    ProductionItemId nextProductionItemId_ = 1;
     DeterministicRng rng_{};
     std::array<PlayerState, kMaximumPlayers> players_{};
     std::vector<Terrain> terrain_{};
@@ -1369,11 +1557,22 @@ private:
     // Last observed permanent objects, per player, ordered by entity id.
     std::array<std::vector<RememberedObject>, kMaximumPlayers>
         rememberedObjects_{};
+    // Cleared at the start of every fixed step. These receipts expose only
+    // local delivery commits through PlayerView and never enter authority.
+    std::array<std::vector<MaterialDeliveryReceipt>, kMaximumPlayers>
+        materialDeliveryReceipts_{};
+    std::array<std::vector<RepairReceipt>, kMaximumPlayers> repairReceipts_{};
+    std::array<std::vector<ConstructionReceipt>, kMaximumPlayers>
+        constructionReceipts_{};
+    std::array<std::vector<ProductionTransitionReceipt>, kMaximumPlayers>
+        productionTransitionReceipts_{};
     std::vector<Entity> entities_{};
     std::vector<Command> pendingCommands_{};
     std::vector<Command> commandLog_{};
     std::deque<StoredCommandResolutionReceipt> commandResolutionReceipts_{};
     std::vector<std::uint8_t> replayInitialSnapshot_{};
+    std::uint32_t replayVersion_ = kReplayVersion;
+    std::uint32_t replayChecksumSnapshotVersion_ = kSnapshotVersion;
     PlayerId replayForfeitingPlayer_ = kNeutralPlayer;
     bool replayExportEnabled_ = true;
     std::array<std::uint64_t, kMaximumPlayers> lastExecutedSequence_{};
@@ -1381,6 +1580,8 @@ private:
     mutable std::map<std::size_t, PathFieldCacheEntry> pathFieldCache_{};
     std::vector<Projectile> projectiles_{};
     EntityId nextProjectileId_ = 1;
+    bool legacyProductionReplaySemantics_ = false;
+    bool legacyLinkReplaySemantics_ = false;
     void UpdateProjectiles();
     void SpawnBallisticProjectile(const Entity& attacker, const Entity& target, std::int32_t damage);
 };

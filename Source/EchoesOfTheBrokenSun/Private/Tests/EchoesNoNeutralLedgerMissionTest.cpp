@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 #include "EchoesCampaignLedgerProbe.h"
@@ -18,30 +19,7 @@
 
 namespace
 {
-struct FPreservedNoNeutralFile final
-{
-    explicit FPreservedNoNeutralFile(FString InPath) : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedNoNeutralFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedNoNeutralFile = FEchoesPreservedTestFile;
 
 uint8 NoNeutralChoiceMask(echoes::sim::FutureWellChoice Choice)
 {
@@ -338,19 +316,20 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
         TEXT("Campaign persistence uses the current schema"),
         FEchoesCampaignProgress::SchemaVersion,
         static_cast<uint16>(2));
-    // Schema 28 appends player-hostility masks after schema 27 lifecycle state.
-    // The replay envelope shape did not change and stays at 24; this assertion
-    // pins the native snapshot schema only.
+    // Schema 30 extends schema 29 with Link repair/construction identity.
     TestEqual(
-        TEXT("Simulation snapshot schema advances to twenty-eight"),
+        TEXT("Simulation snapshot schema advances to thirty"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(28));
+        static_cast<uint32>(30));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
     FPreservedNoNeutralFile PreservedPrimary(CampaignPath);
+    if (!PreservedPrimary.IsReady()) return false;
     FPreservedNoNeutralFile PreservedBackup(CampaignPath + TEXT(".bak"));
+    if (!PreservedBackup.IsReady()) return false;
     FPreservedNoNeutralFile PreservedTemporary(CampaignPath + TEXT(".tmp"));
+    if (!PreservedTemporary.IsReady()) return false;
     IFileManager::Get().Delete(*CampaignPath, false, true, true);
     IFileManager::Get().Delete(
         *(CampaignPath + TEXT(".bak")), false, true, true);
@@ -482,16 +461,22 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
         !QuickSavePath.IsEmpty() && !AlternateQuickSavePath.IsEmpty() &&
             QuickSavePath != AlternateQuickSavePath);
     FPreservedNoNeutralFile PreservedQuickSave(QuickSavePath);
+    if (!PreservedQuickSave.IsReady()) return false;
     FPreservedNoNeutralFile PreservedQuickSaveBackup(
         QuickSavePath + TEXT(".bak"));
+    if (!PreservedQuickSaveBackup.IsReady()) return false;
     FPreservedNoNeutralFile PreservedQuickSaveTemporary(
         QuickSavePath + TEXT(".tmp"));
+    if (!PreservedQuickSaveTemporary.IsReady()) return false;
     FPreservedNoNeutralFile PreservedAlternateQuickSave(
         AlternateQuickSavePath);
+    if (!PreservedAlternateQuickSave.IsReady()) return false;
     FPreservedNoNeutralFile PreservedAlternateQuickSaveBackup(
         AlternateQuickSavePath + TEXT(".bak"));
+    if (!PreservedAlternateQuickSaveBackup.IsReady()) return false;
     FPreservedNoNeutralFile PreservedAlternateQuickSaveTemporary(
         AlternateQuickSavePath + TEXT(".tmp"));
+    if (!PreservedAlternateQuickSaveTemporary.IsReady()) return false;
     for (const FString& Path : {
              QuickSavePath,
              QuickSavePath + TEXT(".bak"),

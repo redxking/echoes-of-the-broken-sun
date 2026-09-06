@@ -1,0 +1,35 @@
+{
+  "source_format": "echoes_training_staging",
+  "source_version": 1,
+  "author": "Angelis Pseftis",
+  "operation": "training-readiness",
+  "map_id": "campaign-map-01",
+  "link": {
+    "build_site": [
+      6,
+      14
+    ],
+    "rejected_site": [
+      19,
+      10
+    ],
+    "repair_target_site": [
+      6,
+      17
+    ],
+    "repair_initial_hp": 440,
+    "repair_max_hp": 450,
+    "completion_radius_sim_cm": 200
+  },
+  "foundry": {
+    "producer_site": [
+      14,
+      10
+    ],
+    "rally_site": [
+      14,
+      18
+    ]
+  },
+  "scope": "Training-only lesson staging. Campaign geometry and campaign health are unchanged."
+}

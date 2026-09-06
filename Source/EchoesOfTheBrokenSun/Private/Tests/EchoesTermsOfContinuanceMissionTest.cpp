@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 #include "EchoesContinuanceTestTactics.h"
@@ -23,31 +24,7 @@
 
 namespace
 {
-struct FPreservedContinuanceFile final
-{
-    explicit FPreservedContinuanceFile(FString InPath)
-        : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedContinuanceFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedContinuanceFile = FEchoesPreservedTestFile;
 
 uint8 ContinuanceChoiceMask(echoes::sim::FutureWellChoice Choice)
 {
@@ -429,8 +406,11 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
     FPreservedContinuanceFile PreservedPrimary(CampaignPath);
+    if (!PreservedPrimary.IsReady()) return false;
     FPreservedContinuanceFile PreservedBackup(CampaignPath + TEXT(".bak"));
+    if (!PreservedBackup.IsReady()) return false;
     FPreservedContinuanceFile PreservedTemporary(CampaignPath + TEXT(".tmp"));
+    if (!PreservedTemporary.IsReady()) return false;
     IFileManager::Get().Delete(*CampaignPath, false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".bak")), false, true, true);
     IFileManager::Get().Delete(*(CampaignPath + TEXT(".tmp")), false, true, true);
@@ -499,12 +479,16 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
         }
         FPreservedContinuanceFile PreservedBranchQuickSave(
             BranchQuickSavePath);
+        if (!PreservedBranchQuickSave.IsReady()) return false;
         FPreservedContinuanceFile PreservedBranchQuickSaveBackup(
             BranchQuickSavePath + TEXT(".bak"));
+        if (!PreservedBranchQuickSaveBackup.IsReady()) return false;
         FPreservedContinuanceFile PreservedBranchQuickSaveStagedBackup(
             BranchQuickSavePath + TEXT(".bak.tmp"));
+        if (!PreservedBranchQuickSaveStagedBackup.IsReady()) return false;
         FPreservedContinuanceFile PreservedBranchQuickSaveTemporary(
             BranchQuickSavePath + TEXT(".tmp"));
+        if (!PreservedBranchQuickSaveTemporary.IsReady()) return false;
         for (const FString& Path : {
                  BranchQuickSavePath,
                  BranchQuickSavePath + TEXT(".bak"),
@@ -1190,12 +1174,16 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
         ContinuanceQuickSavePath(LegacyTopologyProgress);
     FPreservedContinuanceFile PreservedLegacyTopologyQuickSave(
         LegacyTopologyQuickSavePath);
+    if (!PreservedLegacyTopologyQuickSave.IsReady()) return false;
     FPreservedContinuanceFile PreservedLegacyTopologyQuickSaveBackup(
         LegacyTopologyQuickSavePath + TEXT(".bak"));
+    if (!PreservedLegacyTopologyQuickSaveBackup.IsReady()) return false;
     FPreservedContinuanceFile PreservedLegacyTopologyStagedBackup(
         LegacyTopologyQuickSavePath + TEXT(".bak.tmp"));
+    if (!PreservedLegacyTopologyStagedBackup.IsReady()) return false;
     FPreservedContinuanceFile PreservedLegacyTopologyTemporary(
         LegacyTopologyQuickSavePath + TEXT(".tmp"));
+    if (!PreservedLegacyTopologyTemporary.IsReady()) return false;
     for (const FString& Path : {
              LegacyTopologyQuickSavePath,
              LegacyTopologyQuickSavePath + TEXT(".bak"),
@@ -1643,20 +1631,28 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                  !AlternateQuickSavePath.IsEmpty() &&
                  QuickSavePath != AlternateQuickSavePath);
     FPreservedContinuanceFile PreservedQuickSave(QuickSavePath);
+    if (!PreservedQuickSave.IsReady()) return false;
     FPreservedContinuanceFile PreservedQuickSaveBackup(
         QuickSavePath + TEXT(".bak"));
+    if (!PreservedQuickSaveBackup.IsReady()) return false;
     FPreservedContinuanceFile PreservedQuickSaveStagedBackup(
         QuickSavePath + TEXT(".bak.tmp"));
+    if (!PreservedQuickSaveStagedBackup.IsReady()) return false;
     FPreservedContinuanceFile PreservedQuickSaveTemporary(
         QuickSavePath + TEXT(".tmp"));
+    if (!PreservedQuickSaveTemporary.IsReady()) return false;
     FPreservedContinuanceFile PreservedAlternateQuickSave(
         AlternateQuickSavePath);
+    if (!PreservedAlternateQuickSave.IsReady()) return false;
     FPreservedContinuanceFile PreservedAlternateQuickSaveBackup(
         AlternateQuickSavePath + TEXT(".bak"));
+    if (!PreservedAlternateQuickSaveBackup.IsReady()) return false;
     FPreservedContinuanceFile PreservedAlternateQuickSaveStagedBackup(
         AlternateQuickSavePath + TEXT(".bak.tmp"));
+    if (!PreservedAlternateQuickSaveStagedBackup.IsReady()) return false;
     FPreservedContinuanceFile PreservedAlternateQuickSaveTemporary(
         AlternateQuickSavePath + TEXT(".tmp"));
+    if (!PreservedAlternateQuickSaveTemporary.IsReady()) return false;
     for (const FString& Path : {
              QuickSavePath,
              QuickSavePath + TEXT(".bak"),
@@ -2210,12 +2206,16 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
         ContinuanceQuickSavePath(Reloaded);
     FPreservedContinuanceFile PreservedReplayQuickSave(
         ReplayQuickSavePath);
+    if (!PreservedReplayQuickSave.IsReady()) return false;
     FPreservedContinuanceFile PreservedReplayQuickSaveBackup(
         ReplayQuickSavePath + TEXT(".bak"));
+    if (!PreservedReplayQuickSaveBackup.IsReady()) return false;
     FPreservedContinuanceFile PreservedReplayQuickSaveStagedBackup(
         ReplayQuickSavePath + TEXT(".bak.tmp"));
+    if (!PreservedReplayQuickSaveStagedBackup.IsReady()) return false;
     FPreservedContinuanceFile PreservedReplayQuickSaveTemporary(
         ReplayQuickSavePath + TEXT(".tmp"));
+    if (!PreservedReplayQuickSaveTemporary.IsReady()) return false;
     for (const FString& Path : {
              ReplayQuickSavePath,
              ReplayQuickSavePath + TEXT(".bak"),

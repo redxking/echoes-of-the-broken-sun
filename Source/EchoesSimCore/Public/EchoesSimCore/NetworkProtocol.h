@@ -11,7 +11,7 @@
 namespace echoes::sim::net {
 
 inline constexpr std::uint16_t kEnvelopeVersion = 1;
-inline constexpr std::uint32_t kProtocolVersion = 3;
+inline constexpr std::uint32_t kProtocolVersion = 4;
 inline constexpr std::uint32_t kPlayerViewSchemaVersion = 2;
 inline constexpr std::size_t kDigestBytes = 32;
 inline constexpr std::size_t kMaximumPacketBytes = 512;

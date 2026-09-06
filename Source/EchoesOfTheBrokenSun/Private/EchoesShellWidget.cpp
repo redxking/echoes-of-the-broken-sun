@@ -112,8 +112,8 @@ UEchoesShellActionButton::UEchoesShellActionButton(
     : Super(ObjectInitializer)
 {
     InitIsFocusable(true);
-    SetClickMethod(EButtonClickMethod::PreciseClick);
-    SetTouchMethod(EButtonTouchMethod::PreciseTap);
+    SetClickMethod(EButtonClickMethod::MouseDown);
+    SetTouchMethod(EButtonTouchMethod::Down);
     SetPressMethod(EButtonPressMethod::ButtonPress);
 }
 
@@ -136,12 +136,14 @@ void UEchoesShellActionButton::Configure(
 
 bool UEchoesShellActionButton::Activate()
 {
-    AEchoesPlayerController* Current = Controller.Get();
-    if (!GetIsEnabled() || Current == nullptr)
+    if (!GetIsEnabled())
     {
         return false;
     }
-    Current->HandleShellAction(Action, Argument);
+    if (AEchoesPlayerController* Current = Controller.Get())
+    {
+        Current->HandleShellAction(Action, Argument);
+    }
     return true;
 }
 
@@ -385,6 +387,21 @@ FReply UEchoesShellWidget::NativeOnKeyUp(
     return FReply::Handled();
 }
 
+FReply UEchoesShellWidget::NativeOnPreviewMouseButtonDown(
+    const FGeometry& InGeometry,
+    const FPointerEvent& InMouseEvent)
+{
+    if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton || InMouseEvent.IsTouchEvent())
+    {
+        const FVector2D ScreenPos = InMouseEvent.GetScreenSpacePosition();
+        if (ActivateButtonUnderLocation(ScreenPos))
+        {
+            return FReply::Handled();
+        }
+    }
+    return Super::NativeOnPreviewMouseButtonDown(InGeometry, InMouseEvent);
+}
+
 FReply UEchoesShellWidget::NativeOnMouseButtonDown(
     const FGeometry& InGeometry,
     const FPointerEvent& InMouseEvent)
@@ -579,7 +596,7 @@ void UEchoesShellWidget::RebuildView()
     SafeFrame->SetPadding(FMargin(24.0f * Scale));
     SafeFrame->SetHorizontalAlignment(bTransport ? HAlign_Right : HAlign_Center);
     SafeFrame->SetVerticalAlignment(bTransport ? VAlign_Top : VAlign_Fill);
-    if (bTransport) SafeFrame->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+    SafeFrame->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
     UOverlaySlot* SafeSlot = RootOverlay->AddChildToOverlay(SafeFrame);
     SafeSlot->SetHorizontalAlignment(HAlign_Fill);
     SafeSlot->SetVerticalAlignment(VAlign_Fill);

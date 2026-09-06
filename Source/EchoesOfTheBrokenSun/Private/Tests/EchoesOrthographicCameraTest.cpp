@@ -10,6 +10,7 @@
 #include "Engine/World.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "InputCoreTypes.h"
+#include "SceneView.h"
 #include "Tests/AutomationCommon.h"
 
 namespace
@@ -106,6 +107,16 @@ bool FEchoesOrthographicCameraTest::RunTest(const FString& Parameters)
     TestTrue(
         TEXT("Default orthographic width is finite and positive"),
         FMath::IsFinite(Camera->OrthoWidth) && Camera->OrthoWidth > 0.0f);
+    FMinimalViewInfo CameraView;
+    Camera->GetCameraView(0.0f, CameraView);
+    FSceneViewProjectionData Projection;
+    const FIntRect ViewRect(0, 0, 1280, 720);
+    Projection.SetViewRectangle(ViewRect);
+    FMinimalViewInfo::CalculateProjectionMatrixGivenViewRectangle(
+        CameraView, AspectRatio_MaintainYFOV, ViewRect, Projection);
+    TestTrue(TEXT("Actual engine projection preserves horizontal orthographic width despite local-player Y default"),
+        FMath::IsNearlyEqual(static_cast<float>(Projection.ProjectionMatrix.M[0][0]),
+            2.0f / Camera->OrthoWidth, 0.0000001f));
     TestTrue(
         TEXT("Default arm framing converts to the expected orthographic width"),
         FMath::IsNearlyEqual(
@@ -179,6 +190,35 @@ bool FEchoesOrthographicCameraTest::RunTest(const FString& Parameters)
             0.01f));
 
     const echoes::sim::Simulation* Simulation = Bridge->GetSimulation();
+    // Reconstruct the cursor's ground point from the independent footprint
+    // projection before and after zoom, including the spring-arm update.
+    const FVector2D ZoomViewport(1280.0f, 720.0f);
+    const FVector2D ZoomPoint(900.0f, 280.0f);
+    const auto GroundAtCursor = [&]()
+    {
+        SpringArm->TickComponent(0.0f, LEVELTICK_All, nullptr);
+        TArray<FVector> Corners;
+        if (!Pawn->GetBattlefieldFootprint(ZoomViewport, Corners) || Corners.Num() != 4)
+        {
+            AddError(TEXT("Cursor zoom requires a valid four-corner footprint"));
+            return FVector::ZeroVector;
+        }
+        return Corners[0] + (Corners[1] - Corners[0]) * (ZoomPoint.X / ZoomViewport.X) +
+            (Corners[3] - Corners[0]) * (ZoomPoint.Y / ZoomViewport.Y);
+    };
+    Pawn->SetActorLocation(FVector::ZeroVector);
+    Pawn->SetCameraFraming(3000.0f);
+    const FVector CursorGroundBefore = GroundAtCursor();
+    Pawn->ApplyZoomAtViewportPoint(-1.0f, ZoomPoint, ZoomViewport);
+    TestTrue(TEXT("Off-center cursor ground point stays fixed during zoom in"),
+        GroundAtCursor().Equals(CursorGroundBefore, 0.1f));
+    Pawn->ApplyZoomAtViewportPoint(1.0f, ZoomPoint, ZoomViewport);
+    TestTrue(TEXT("Off-center cursor ground point stays fixed during zoom out"),
+        GroundAtCursor().Equals(CursorGroundBefore, 0.1f));
+    TestTrue(TEXT("Cursor zoom round trip restores camera position"),
+        Pawn->GetActorLocation().Equals(FVector::ZeroVector, 0.1f));
+    Pawn->SetCameraFraming(1400.0f);
+    SpringArm->TickComponent(0.0f, LEVELTICK_All, nullptr);
     const uint64 TickBeforePan = Simulation != nullptr ? Simulation->CurrentTick() : 0;
     const uint64 ChecksumBeforePan = Simulation != nullptr ? Simulation->StateChecksum() : 0;
     Pawn->SetActorLocation(FVector::ZeroVector);
@@ -198,10 +238,24 @@ bool FEchoesOrthographicCameraTest::RunTest(const FString& Parameters)
         Simulation != nullptr ? Simulation->StateChecksum() : 0,
         ChecksumBeforePan);
 
+    const FVector EvacuationSite = Bridge->SimToWorld(
+        echoes::sim::Vec2::FromTiles(6, 17));
+    Pawn->PanToWorld(EvacuationSite);
+    FVector2D NavigationCenter;
+    TestTrue(TEXT("Boundary navigation exposes a finite center"),
+        Pawn->GetNavigationCenter(NavigationCenter));
+    TestTrue(TEXT("The evacuation boundary remains reachable within tutorial tolerance"),
+        FVector2D::Distance(
+            NavigationCenter,
+            FVector2D(EvacuationSite.X, EvacuationSite.Y)) <= 200.0f);
+
+    const uint64 BeforeNavigationRevision = Pawn->GetNavigationRevision();
     const FVector BeforeGrabPan = Pawn->GetActorLocation();
     Pawn->PanByScreenDelta(FVector2D(120.0f, -60.0f), 1600.0f);
     TestFalse(TEXT("Middle-drag translation changes presentation position"),
         Pawn->GetActorLocation().Equals(BeforeGrabPan, 0.01f));
+    TestTrue(TEXT("Middle-drag records player navigation provenance"),
+        Pawn->WasLastNavigationPlayerDriven() && Pawn->GetNavigationRevision() > BeforeNavigationRevision);
     TestEqual(TEXT("Middle-drag translation preserves simulation tick"),
         Simulation != nullptr ? Simulation->CurrentTick() : 0,
         TickBeforePan);
@@ -210,6 +264,7 @@ bool FEchoesOrthographicCameraTest::RunTest(const FString& Parameters)
         ChecksumBeforePan);
 
     Pawn->PanToWorld(FVector(100000.0f, 100000.0f, 0.0f));
+    TestFalse(TEXT("Programmatic reposition cannot claim player navigation"), Pawn->WasLastNavigationPlayerDriven());
     Footprint.Reset();
     TestTrue(TEXT("Boundary pan retains a valid ground footprint"),
         Pawn->GetBattlefieldFootprint(FVector2D(1600.0f, 900.0f), Footprint));
@@ -217,16 +272,25 @@ bool FEchoesOrthographicCameraTest::RunTest(const FString& Parameters)
         UEchoesSimulationSubsystem::TileWorldSize * 0.5f;
     const float MapHalfHeight = Bridge->GetMapHeightTiles() *
         UEchoesSimulationSubsystem::TileWorldSize * 0.5f;
+    TestTrue(TEXT("Out-of-map navigation clamps the camera target to map bounds"),
+        FMath::IsNearlyEqual(Pawn->GetActorLocation().X, MapHalfWidth, 0.1f) &&
+        FMath::IsNearlyEqual(Pawn->GetActorLocation().Y, MapHalfHeight, 0.1f));
     for (const FVector& Corner : Footprint)
     {
-        TestTrue(TEXT("Clamped orthographic footprint stays inside map X"),
-            Corner.X >= -MapHalfWidth - 0.1f &&
-            Corner.X <= MapHalfWidth + 0.1f);
-        TestTrue(TEXT("Clamped orthographic footprint stays inside map Y"),
-            Corner.Y >= -MapHalfHeight - 0.1f &&
-            Corner.Y <= MapHalfHeight + 0.1f);
+        TestTrue(TEXT("Edge navigation retains finite ground-plane footprint corners"),
+            !Corner.ContainsNaN() && FMath::IsNearlyZero(Corner.Z, 0.01f));
     }
 
+    int32 FixedCallbacks = 0;
+    const uint64 BeforeCatchUp = Simulation->CurrentTick();
+    const FDelegateHandle FixedHandle = Bridge->OnFixedStepObserved.AddLambda([&FixedCallbacks]() { ++FixedCallbacks; });
+    Bridge->SetScenarioPaused(false);
+    Bridge->Tick(0.2f);
+    Bridge->SetScenarioPaused(true);
+    Bridge->OnFixedStepObserved.Remove(FixedHandle);
+    TestTrue(TEXT("A low-frame-rate update advances multiple fixed steps"), FixedCallbacks >= 4);
+    TestEqual(TEXT("Every fixed step, including catch-up, reaches observers"),
+        static_cast<uint64>(FixedCallbacks), Simulation->CurrentTick() - BeforeCatchUp);
     Pawn->Destroy();
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);

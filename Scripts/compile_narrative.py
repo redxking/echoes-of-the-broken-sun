@@ -24,7 +24,7 @@ VALIDATOR_PATH = ROOT / "Content/Narrative/Schema/validate_narrative.py"
 SOURCE_DIR = ROOT / "Content/Narrative/Source"
 OUTPUT_PATH = ROOT / "Content/Narrative/Generated/EchoesNarrativePack.json"
 
-PACK_SCHEMA_VERSION = 1
+PACK_SCHEMA_VERSION = 2
 
 
 def load_validator():
@@ -52,6 +52,7 @@ def project_mission(mission: dict) -> dict:
         }
         for line in mission["lines"]
     ]
+    cinematic = mission["cinematic"]
     return {
         "content_id": mission["content_id"],
         "mission_id": mission["runtime_binding"]["mission_id"],
@@ -75,6 +76,25 @@ def project_mission(mission: dict) -> dict:
             for variant in mission["failure_retry"]["failure_variants"]
         },
         "retry": mission["failure_retry"]["retry_copy"]["source_text"],
+        "cinematic": {
+            "id": cinematic["id"],
+            "trigger_id": cinematic["trigger_id"],
+            "signal": triggers[cinematic["trigger_id"]],
+            "format": cinematic["format"],
+            "named_character_physical_presence_asserted": cinematic[
+                "named_character_physical_presence_asserted"
+            ],
+            "shots": [
+                {
+                    "id": shot["id"],
+                    "editorial_target_seconds": shot["editorial_target_seconds"],
+                    "line_ids": shot["line_ids"],
+                    "visual_hook_ids": shot["visual_hook_ids"],
+                    "audio_hook_ids": shot["audio_hook_ids"],
+                }
+                for shot in cinematic["shots"]
+            ],
+        },
     }
 
 

@@ -1,10 +1,12 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 
 #include "EchoesEntityView.h"
+#include "EchoesMatchReplay.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTerrainView.h"
@@ -16,31 +18,7 @@
 
 namespace
 {
-struct FPreservedFile final
-{
-    explicit FPreservedFile(FString InPath)
-        : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedFile = FEchoesPreservedTestFile;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -60,34 +38,45 @@ bool FEchoesQuickSaveLoadTest::RunTest(const FString& Parameters)
         return false;
     }
 
+    const auto ClearFixtureFile = [this](const FString& Path)
+    {
+        if (IFileManager::Get().FileExists(*Path))
+            IFileManager::Get().Delete(*Path, false, true, true);
+        return TestFalse(*FString::Printf(TEXT("Fixture path is absent before use: %s"), *Path),
+            IFileManager::Get().FileExists(*Path));
+    };
     const FString SavePath = UEchoesSimulationSubsystem::GetQuickSavePath();
     const FString PrologueSavePath = FPaths::Combine(
         FPaths::GetPath(SavePath),
         TEXT("EchoesQuickSaveWhatTheLedgerKeeps.bin"));
     FPreservedFile PreservedPrimary(SavePath);
+    if (!PreservedPrimary.IsReady()) return false;
     FPreservedFile PreservedBackup(SavePath + TEXT(".bak"));
+    if (!PreservedBackup.IsReady()) return false;
     FPreservedFile PreservedBackupTemporary(
         SavePath + TEXT(".bak.tmp"));
+    if (!PreservedBackupTemporary.IsReady()) return false;
     FPreservedFile PreservedTemporary(SavePath + TEXT(".tmp"));
+    if (!PreservedTemporary.IsReady()) return false;
     FPreservedFile PreservedProloguePrimary(PrologueSavePath);
+    if (!PreservedProloguePrimary.IsReady()) return false;
     FPreservedFile PreservedPrologueBackup(
         PrologueSavePath + TEXT(".bak"));
+    if (!PreservedPrologueBackup.IsReady()) return false;
     FPreservedFile PreservedPrologueBackupTemporary(
         PrologueSavePath + TEXT(".bak.tmp"));
+    if (!PreservedPrologueBackupTemporary.IsReady()) return false;
     FPreservedFile PreservedPrologueTemporary(
         PrologueSavePath + TEXT(".tmp"));
-    IFileManager::Get().Delete(*SavePath, false, true, true);
-    IFileManager::Get().Delete(*(SavePath + TEXT(".bak")), false, true, true);
-    IFileManager::Get().Delete(
-        *(SavePath + TEXT(".bak.tmp")), false, true, true);
-    IFileManager::Get().Delete(*(SavePath + TEXT(".tmp")), false, true, true);
-    IFileManager::Get().Delete(*PrologueSavePath, false, true, true);
-    IFileManager::Get().Delete(
-        *(PrologueSavePath + TEXT(".bak")), false, true, true);
-    IFileManager::Get().Delete(
-        *(PrologueSavePath + TEXT(".bak.tmp")), false, true, true);
-    IFileManager::Get().Delete(
-        *(PrologueSavePath + TEXT(".tmp")), false, true, true);
+    if (!PreservedPrologueTemporary.IsReady()) return false;
+    if (!ClearFixtureFile(SavePath)) return false;
+    if (!ClearFixtureFile((SavePath + TEXT(".bak")))) return false;
+    if (!ClearFixtureFile((SavePath + TEXT(".bak.tmp")))) return false;
+    if (!ClearFixtureFile((SavePath + TEXT(".tmp")))) return false;
+    if (!ClearFixtureFile(PrologueSavePath)) return false;
+    if (!ClearFixtureFile((PrologueSavePath + TEXT(".bak")))) return false;
+    if (!ClearFixtureFile((PrologueSavePath + TEXT(".bak.tmp")))) return false;
+    if (!ClearFixtureFile((PrologueSavePath + TEXT(".tmp")))) return false;
 
     FTestWorldWrapper WorldWrapper;
     if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
@@ -562,6 +551,95 @@ bool FEchoesQuickSaveLoadTest::RunTest(const FString& Parameters)
         InvalidGenerationFeedback.Contains(
             TEXT("[LOAD_NO_VALID_CHECKPOINT]")) &&
             InvalidGenerationFeedback.Contains(TEXT("staged=")));
+
+    // Real schema29 writer output: do not relabel or project a current snapshot.
+    // This must traverse the game adapter, including generated-save validation.
+    TArray<uint8> HistoricalSnapshot;
+    const FString HistoricalPath = FPaths::Combine(FPaths::ProjectDir(),
+        TEXT("Tests/Native/Fixtures/LegacyReplay/schema29-checkpoint-baseline.bin"));
+    if (!TestTrue(TEXT("Authentic schema29 checkpoint fixture loads"),
+        FFileHelper::LoadFileToArray(HistoricalSnapshot, *HistoricalPath)))
+    {
+        Bridge->StopPrototypeScenario();
+        return false;
+    }
+    echoes::sim::ReplayRecord HistoricalPrefix;
+    HistoricalPrefix.version = echoes::sim::kProductionReplayVersion;
+    HistoricalPrefix.initialSnapshot.assign(HistoricalSnapshot.GetData(),
+        HistoricalSnapshot.GetData() + HistoricalSnapshot.Num());
+    HistoricalPrefix.finalTick = 0;
+    HistoricalPrefix.finalChecksum = 5897829099007494806ULL;
+    TArray<uint8> HistoricalBound;
+    FString HistoricalFeedback;
+    if (!TestTrue(TEXT("Authentic checkpoint replay binding verifies"),
+        FEchoesMatchReplayStore::BindCheckpointPayload(HistoricalSnapshot,
+            HistoricalPrefix, HistoricalBound, HistoricalFeedback)))
+    {
+        AddError(HistoricalFeedback);
+        Bridge->StopPrototypeScenario();
+        return false;
+    }
+    // Remove only isolated fixture generations so fallback cannot mask a failure.
+    for (const FString& Suffix : {FString(), FString(TEXT(".bak")), FString(TEXT(".bak.tmp"))})
+    {
+        if (!ClearFixtureFile(SavePath + Suffix))
+        {
+            Bridge->StopPrototypeScenario();
+            return false;
+        }
+    }
+    if (!TestTrue(TEXT("Historical checkpoint is staged"),
+            FFileHelper::SaveArrayToFile(HistoricalBound, *SavePath)) ||
+        !TestTrue(TEXT("Historical checkpoint resumes through the game adapter"),
+            Bridge->QuickLoadScenario(HistoricalFeedback)))
+    {
+        AddError(HistoricalFeedback);
+        Bridge->StopPrototypeScenario();
+        return false;
+    }
+    const auto* HistoricalAegis = Bridge->GetSimulation()->FindEntity(3);
+    if (!TestNotNull(TEXT("Historical Aegis exists"), HistoricalAegis))
+    {
+        Bridge->StopPrototypeScenario();
+        return false;
+    }
+    TestFalse(TEXT("Historical continuation retains historical relay rules"), HistoricalAegis->aegisPowered);
+    if (!TestTrue(TEXT("Historical continuation saves a valid current-schema checkpoint"),
+            Bridge->QuickSaveScenario(HistoricalFeedback)))
+    {
+        AddError(HistoricalFeedback);
+        Bridge->StopPrototypeScenario();
+        return false;
+    }
+    // The save rotated the historical fixture into backup. Exclude it so the
+    // second load cannot conceal a broken newly written primary by recovering.
+    for (const FString& Suffix : {FString(TEXT(".bak")), FString(TEXT(".bak.tmp")), FString(TEXT(".tmp"))})
+    {
+        if (!ClearFixtureFile(SavePath + Suffix))
+        {
+            Bridge->StopPrototypeScenario();
+            return false;
+        }
+    }
+    if (!TestTrue(TEXT("The current-schema primary resumes its historical replay"),
+            Bridge->QuickLoadScenario(HistoricalFeedback)))
+    {
+        AddError(HistoricalFeedback);
+        Bridge->StopPrototypeScenario();
+        return false;
+    }
+    const auto* ResumedAegis = Bridge->GetSimulation()->FindEntity(3);
+    if (!TestNotNull(TEXT("Resumed historical Aegis exists"), ResumedAegis))
+    {
+        Bridge->StopPrototypeScenario();
+        return false;
+    }
+    TestFalse(TEXT("Second load restores historical relay behavior"), ResumedAegis->aegisPowered);
+    const auto ResumedPrefix = Bridge->GetSimulation()->ExportReplay();
+    TestTrue(TEXT("Resave retains the authentic historical replay prefix and checksum"),
+        ResumedPrefix.version == HistoricalPrefix.version &&
+        ResumedPrefix.initialSnapshot == HistoricalPrefix.initialSnapshot &&
+        ResumedPrefix.finalChecksum == HistoricalPrefix.finalChecksum);
 
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);

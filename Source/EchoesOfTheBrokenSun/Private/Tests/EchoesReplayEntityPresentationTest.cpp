@@ -7,6 +7,7 @@
 #include "EchoesMatchReplay.h"
 #include "EchoesNetworkSession.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesSkirmishSetup.h"
 #include "EchoesTestSaveEnvironment.h"
 #include "Engine/World.h"
 #include "Misc/Guid.h"
@@ -124,15 +125,56 @@ bool FEchoesReplayEntityPresentationTest::RunTest(const FString& Parameters)
         return false;
     }
 
+    echoes::sim::Simulation* M01Simulation =
+        const_cast<echoes::sim::Simulation*>(Bridge->GetSimulation());
+    if (!TestNotNull(TEXT("M01 replay fixture owns simulation"), M01Simulation))
+    {
+        Bridge->StopPrototypeScenario();
+        return false;
+    }
     const echoes::sim::EntityId M01CarrierId = Bridge->GetArchiveCarrierId();
+    const echoes::sim::Vec2 M01CarrierPosition =
+        echoes::sim::Vec2::FromTiles(15, 6);
+    const echoes::sim::Vec2 LaterScoutPosition =
+        echoes::sim::Vec2::FromTiles(18, 16);
+    const echoes::sim::EntityId LaterScoutId = M01Simulation->SpawnEntity(
+        UEchoesSimulationSubsystem::LocalPlayerId,
+        echoes::sim::Faction::MeridianCompact,
+        echoes::sim::EntityType::ScoutUnit,
+        LaterScoutPosition);
+    if (!TestTrue(
+            TEXT("Replay identity fixture adds a distinct local Relay Skiff"),
+            LaterScoutId != 0))
+    {
+        Bridge->StopPrototypeScenario();
+        return false;
+    }
+    M01Simulation->CaptureReplayBaseline();
+    const echoes::sim::Entity* M01Carrier =
+        M01Simulation->FindEntity(M01CarrierId);
+    const echoes::sim::Entity* LaterScout =
+        M01Simulation->FindEntity(LaterScoutId);
     std::string ExportError;
     const echoes::sim::ReplayRecord M01Replay =
-        Bridge->GetSimulation()->ExportReplay(&ExportError);
+        M01Simulation->ExportReplay(&ExportError);
     if (!TestTrue(TEXT("M01 replay source exports"), M01Replay.version != 0) ||
-        !TestEqual(
-            TEXT("M01 canonical replay carrier identity is stable"),
-            M01CarrierId,
-            static_cast<echoes::sim::EntityId>(11)))
+        !TestTrue(
+            TEXT("M01 carrier is the authored local Relay Skiff"),
+            M01Carrier != nullptr &&
+            M01Carrier->owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+            M01Carrier->faction == echoes::sim::Faction::MeridianCompact &&
+            M01Carrier->type == echoes::sim::EntityType::ScoutUnit &&
+            M01Carrier->position == M01CarrierPosition) ||
+        !TestTrue(
+            TEXT("Additional Relay Skiff retains its separate fixture identity"),
+            LaterScoutId != M01CarrierId && LaterScout != nullptr &&
+            LaterScout->owner ==
+                UEchoesSimulationSubsystem::LocalPlayerId &&
+            LaterScout->faction ==
+                echoes::sim::Faction::MeridianCompact &&
+            LaterScout->type ==
+                echoes::sim::EntityType::ScoutUnit &&
+            LaterScout->position == LaterScoutPosition))
     {
         AddError(UTF8_TO_TCHAR(ExportError.c_str()));
         Bridge->StopPrototypeScenario();
@@ -142,7 +184,40 @@ bool FEchoesReplayEntityPresentationTest::RunTest(const FString& Parameters)
     if (!TestTrue(
             TEXT("Skirmish source scenario starts"),
             Bridge->SelectOperationMode(
-                EEchoesOperationMode::Skirmish, Feedback)) ||
+                EEchoesOperationMode::Skirmish, Feedback)))
+    {
+        AddError(Feedback);
+        Bridge->StopPrototypeScenario();
+        return false;
+    }
+    const FEchoesSkirmishSetup SkirmishSetup =
+        Bridge->GetActiveSkirmishSetup();
+    const TArray<FIntPoint> SkirmishLocalSpawns =
+        FEchoesSkirmishSetupModel::LocalSpawnTiles(
+            SkirmishSetup.MapPreset);
+    echoes::sim::EntityId SkirmishScoutId = 0;
+    for (const echoes::sim::Entity& Entity :
+         Bridge->GetSimulation()->Entities())
+    {
+        if (Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId ||
+            Entity.faction != SkirmishSetup.LocalFaction ||
+            Entity.type != echoes::sim::EntityType::ScoutUnit)
+        {
+            continue;
+        }
+        for (const FIntPoint& AuthoredTile : SkirmishLocalSpawns)
+        {
+            if (Entity.position == echoes::sim::Vec2::FromTiles(
+                    AuthoredTile.X, AuthoredTile.Y))
+            {
+                SkirmishScoutId = Entity.id;
+                break;
+            }
+        }
+    }
+    if (!TestTrue(
+            TEXT("Skirmish replay fixture resolves its authored local scout"),
+            SkirmishScoutId != 0) ||
         !TestTrue(
             TEXT("Skirmish reaches a normal terminal result for archival"),
             Bridge->ConcedeOfflineMatch(Feedback)))
@@ -204,6 +279,17 @@ bool FEchoesReplayEntityPresentationTest::RunTest(const FString& Parameters)
                 CarrierView->GetDisplayName(),
                 FString(TEXT("Archive Carrier")));
         }
+        const AEchoesEntityView* LaterScoutView =
+            Bridge->FindEntityView(LaterScoutId);
+        if (TestNotNull(
+                TEXT("M01 replay presents the post-objective Relay Skiff"),
+                LaterScoutView))
+        {
+            TestNotEqual(
+                TEXT("A later Relay Skiff does not inherit the carrier role"),
+                LaterScoutView->GetDisplayName(),
+                FString(TEXT("Archive Carrier")));
+        }
         Bridge->EndReplay();
     }
     else
@@ -220,19 +306,26 @@ bool FEchoesReplayEntityPresentationTest::RunTest(const FString& Parameters)
         Bridge->StopPrototypeScenario();
         return false;
     }
-    const echoes::sim::EntityId LiveCarrierId = Bridge->GetArchiveCarrierId();
     if (TestTrue(TEXT("Skirmish replay opens over live M01"),
                  Bridge->BeginReplay(SkirmishPath, Feedback)))
     {
-        const AEchoesEntityView* SameIdSkirmishView =
-            Bridge->FindEntityView(LiveCarrierId);
+        const AEchoesEntityView* SkirmishScoutView =
+            Bridge->FindEntityView(SkirmishScoutId);
         if (TestNotNull(
-                TEXT("Skirmish replay presents the live carrier numeric ID"),
-                SameIdSkirmishView))
+                TEXT("Skirmish replay presents its authored local scout"),
+                SkirmishScoutView))
         {
+            TestTrue(
+                TEXT("Skirmish replay retains the scout owner, faction and role"),
+                SkirmishScoutView->GetOwnerPlayerId() ==
+                    UEchoesSimulationSubsystem::LocalPlayerId &&
+                SkirmishScoutView->GetEntityFaction() ==
+                    SkirmishSetup.LocalFaction &&
+                SkirmishScoutView->GetEntityType() ==
+                    echoes::sim::EntityType::ScoutUnit);
             TestNotEqual(
-                TEXT("Live M01 ID does not rename a skirmish replay entity"),
-                SameIdSkirmishView->GetDisplayName(),
+                TEXT("A skirmish scout does not inherit M01's carrier role"),
+                SkirmishScoutView->GetDisplayName(),
                 FString(TEXT("Archive Carrier")));
         }
         Bridge->EndReplay();

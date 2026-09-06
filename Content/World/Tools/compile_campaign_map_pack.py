@@ -28,8 +28,10 @@ TILE_RAW = 1024
 MISSION_CODES = tuple(f"M{number:02d}" for number in range(1, 16))
 DOCTRINES = ("Harvest", "Preserve", "Reshape")
 DOCTRINE_MASKS = {"Harvest": 1, "Preserve": 2, "Reshape": 4}
-# StartScenario's ordinary campaign force.  The rectangles are the maximum
-# occupied tile ranges for every candidate faction's current catalog archetype:
+# StartScenario's ordinary campaign force. M01 replaces only its local side
+# below to honor SPEC-PLAN-001; M02--M15 retain this ordinary deployment. The
+# rectangles are the maximum occupied tile ranges for every candidate faction's
+# current catalog archetype:
 # a command core is 5x5, a barracks 4x4, and the remaining ordinary entities
 # occupy their 2x2 terrain cells.  They deliberately model footprint terrain
 # clearance, not entity-v-entity overlap; the latter is an existing runtime
@@ -58,6 +60,22 @@ ORDINARY_SCENARIO_DEPLOYMENTS = (
     ("opponent", "heavy-unit", 56, 57, 57, 58),
     ("opponent", "scout-unit", 48, 49, 57, 58),
     ("opponent", "utility-structure", 57, 58, 52, 53),
+)
+M01_LOCAL_SCENARIO_DEPLOYMENTS = (
+    ("local", "command-core", 7, 12, 7, 12),
+    ("local", "barracks", 12, 15, 8, 11),
+    ("local", "dropoff", 5, 6, 16, 17),
+    ("local", "worker-a", 7, 8, 12, 13),
+    ("local", "worker-b", 10, 11, 13, 14),
+    ("local", "worker-c", 13, 14, 11, 12),
+    ("local", "worker-d", 7, 8, 15, 16),
+    ("local", "worker-e", 10, 11, 16, 17),
+    ("local", "worker-f", 13, 14, 14, 15),
+    ("local", "soldier-a", 7, 8, 7, 8),
+    ("local", "soldier-b", 11, 12, 6, 7),
+    ("local", "heavy-unit", 6, 7, 5, 6),
+    ("local", "scout-unit", 14, 15, 5, 6),
+    ("local", "utility-structure", 5, 6, 10, 11),
 )
 OPERATION_MODES = (
     "CampaignPrologue",
@@ -297,8 +315,17 @@ def parse_clearance(value: Any, blocked: set[int], label: str) -> None:
                     )
 
 
-def require_common_scenario_spawns(blocked: set[int], label: str) -> None:
-    for team, entity, x0, x1, y0, y1 in ORDINARY_SCENARIO_DEPLOYMENTS:
+def require_scenario_spawns(
+    blocked: set[int], mission_code: str, label: str
+) -> None:
+    deployments = ORDINARY_SCENARIO_DEPLOYMENTS
+    if mission_code == "M01":
+        deployments = M01_LOCAL_SCENARIO_DEPLOYMENTS + tuple(
+            deployment
+            for deployment in ORDINARY_SCENARIO_DEPLOYMENTS
+            if deployment[0] == "opponent"
+        )
+    for team, entity, x0, x1, y0, y1 in deployments:
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1):
                 if y * GRID_WIDTH + x in blocked:
@@ -352,7 +379,9 @@ def parse_source(source: dict[str, Any], source_digest: str, manifest_row: dict[
         require_connected(blocked, f"{label}.{doctrine}")
         parse_assertions(source.get("required_passable"), blocked, f"{label}.required_passable")
         parse_clearance(source["required_clearance"], blocked, f"{label}.required_clearance")
-        require_common_scenario_spawns(blocked, f"{label}.{doctrine}")
+        require_scenario_spawns(
+            blocked, manifest_row["mission_code"], f"{label}.{doctrine}"
+        )
         compiled_variants.append({"doctrine": doctrine, "movement_mask": [0 if index in blocked else 1 for index in range(CELL_COUNT)], "blocked_cell_count": len(blocked)})
     if tuple(item["doctrine"] for item in compiled_variants) != DOCTRINES:
         raise CompileError(f"{label}.founding_doctrine_variants: canonical order must be {list(DOCTRINES)}")

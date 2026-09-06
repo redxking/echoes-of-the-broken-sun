@@ -1159,7 +1159,7 @@
   "shots": [
    {
     "id": "nar_m01_shot_001",
-    "editorial_target_seconds": 5,
+    "editorial_target_seconds": 10.7,
     "visual_direction": "Hold on the Glass Scar and the evacuation corridor. Show objective geometry, not a named character body.",
     "line_ids": [
      "nar_m01_line_talar_001",
@@ -1174,7 +1174,7 @@
    },
    {
     "id": "nar_m01_shot_002",
-    "editorial_target_seconds": 4,
+    "editorial_target_seconds": 6.7,
     "visual_direction": "Move to the recovery-site marker at tile 22,18 and the anonymous archive-carrier contact. Keep Mara as command voice only.",
     "line_ids": [
      "nar_m01_line_talar_002"
@@ -1188,7 +1188,7 @@
    },
    {
     "id": "nar_m01_shot_003",
-    "editorial_target_seconds": 6,
+    "editorial_target_seconds": 9.9,
     "visual_direction": "Frame the Future Well and a legible propagation line toward the Kharuun birthing cavern. Oruun remains radio-only.",
     "line_ids": [
      "nar_m01_line_oruun_001",
@@ -1203,7 +1203,7 @@
    },
    {
     "id": "nar_m01_shot_004",
-    "editorial_target_seconds": 3,
+    "editorial_target_seconds": 5.4,
     "visual_direction": "Return immediately to the tactical view on Mara's carrier-first order and restore full player control without implying a pre-rendered sequence.",
     "line_ids": [
      "nar_m01_line_mara_002"

@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 #include "EchoesCampaignLedgerProbe.h"
@@ -18,30 +19,7 @@
 
 namespace
 {
-struct FPreservedLumeReachFile final
-{
-    explicit FPreservedLumeReachFile(FString InPath) : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedLumeReachFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedLumeReachFile = FEchoesPreservedTestFile;
 
 uint8 LumeReachChoiceMask(echoes::sim::FutureWellChoice Choice)
 {
@@ -275,8 +253,11 @@ bool FEchoesChoirAtLumeReachMissionTest::RunTest(const FString& Parameters)
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
     FPreservedLumeReachFile PreservedPrimary(CampaignPath);
+    if (!PreservedPrimary.IsReady()) return false;
     FPreservedLumeReachFile PreservedBackup(CampaignPath + TEXT(".bak"));
+    if (!PreservedBackup.IsReady()) return false;
     FPreservedLumeReachFile PreservedTemporary(CampaignPath + TEXT(".tmp"));
+    if (!PreservedTemporary.IsReady()) return false;
     IFileManager::Get().Delete(*CampaignPath, false, true, true);
     IFileManager::Get().Delete(
         *(CampaignPath + TEXT(".bak")), false, true, true);
@@ -420,16 +401,22 @@ bool FEchoesChoirAtLumeReachMissionTest::RunTest(const FString& Parameters)
             !AlternateQuickSavePath.IsEmpty() &&
             QuickSavePath != AlternateQuickSavePath);
     FPreservedLumeReachFile PreservedQuickSave(QuickSavePath);
+    if (!PreservedQuickSave.IsReady()) return false;
     FPreservedLumeReachFile PreservedQuickSaveBackup(
         QuickSavePath + TEXT(".bak"));
+    if (!PreservedQuickSaveBackup.IsReady()) return false;
     FPreservedLumeReachFile PreservedQuickSaveTemporary(
         QuickSavePath + TEXT(".tmp"));
+    if (!PreservedQuickSaveTemporary.IsReady()) return false;
     FPreservedLumeReachFile PreservedAlternateQuickSave(
         AlternateQuickSavePath);
+    if (!PreservedAlternateQuickSave.IsReady()) return false;
     FPreservedLumeReachFile PreservedAlternateQuickSaveBackup(
         AlternateQuickSavePath + TEXT(".bak"));
+    if (!PreservedAlternateQuickSaveBackup.IsReady()) return false;
     FPreservedLumeReachFile PreservedAlternateQuickSaveTemporary(
         AlternateQuickSavePath + TEXT(".tmp"));
+    if (!PreservedAlternateQuickSaveTemporary.IsReady()) return false;
     IFileManager::Get().Delete(*QuickSavePath, false, true, true);
     IFileManager::Get().Delete(
         *(QuickSavePath + TEXT(".bak")), false, true, true);

@@ -2053,11 +2053,14 @@ condition; Conquest is a separate mode, not a new skirmish victory selector. His
 Control/Conquest skirmish selectors are not a scope decision. Every format needs its actual spawn/map,
 fairness, full-load performance/soak, session recovery, security, package and human evidence.
 
-**TBR-DOC-003 — Dialogue ducking — OPEN, owner choice pending.** `REL-AUD-022` lowers Music/SFX by6dB
+**TBR-DOC-003 — Dialogue ducking — RESOLVED by owner on 2026-09-06.**
+Angelis selected "Music −6 dB / ambience −4 dB; preserve combat and interface (recommended)",
+including the presented 150 ms attack / 500 ms release. REL-AUD-023 controls; REL-AUD-022 is superseded.
+Historical conflict: `REL-AUD-022` lowers Music/SFX by6dB
 with300ms attack/500ms release for critical dialogue; `REL-AUD-023` lowers Music6dB/Ambience4dB within150ms,
 keeps combat/interface cues and restores over500ms. Triggers overlap, so neither policy is implicitly
-selected by position, title or an old AudioDirection recipe. A choice is pending from the owner. Both
-policy records are **BLOCKED** for dependent mix implementation/qualification; other audio work may proceed.
+selected by position, title or an old AudioDirection recipe. The owner has now selected REL-AUD-023.
+The former policy-choice block is lifted; playback binding and mix qualification remain open.
 
 **TBR-DOC-004 — Economy alternatives — OPEN, owner choice pending.** Restored `SPEC-ECO-002/004/005`
 specify three workers, assigned/round-trip delivery and a200-tick exhausted marker. `SPEC-RES-003/005/006`
@@ -2182,7 +2185,9 @@ those missing states. Current M01 narrative consumers bind sequence/text IDs, wh
 authored voice delivery, cinematic timing, listening and audiovisual synchronization
 remain unverified. Record these gaps through B3/B4 and keep their requirements open.
 
-**TBR-M01-ROSTER-001 — OPEN:** `SPEC-PLAN-001` describes6 Surveyors/2 Lancers, while the
+**TBR-M01-ROSTER-001 — RESOLVED by owner on 2026-09-06:**
+Angelis chose "Use the required 6 Surveyors / 2 Lancers (recommended)". SPEC-PLAN-001 controls the deployed M01 force; implementation and pacing verification remain in progress.
+Historical discrepancy: `SPEC-PLAN-001` describes6 Surveyors/2 Lancers, while the
 current M01 source and approved spatial brief preserve3 workers/3 line units. This
 visual pass preserves the current deployment and does not silently rebalance the
 mission. Resolve the authoritative starting-force discrepancy separately.
@@ -2927,3 +2932,238 @@ Retain actual screenshots and event receipts, fix any reproducible game defect, 
 against a new source receipt only if code changes. The See Loop capture path works, but Gemini still needs
 a valid locally configured API key; no key value is stored in the evidence. P3 curriculum/mastery awards,
 P4 packaged journey/owner play and P7 distribution remain their own packages.
+
+### 2026-09-06 — P3 Survey observation foundation (implementation in progress)
+
+Author: Angelis Pseftis
+
+Owner instruction: push all existing work to main, then start P3. Remote main was verified at
+`1a60cb1fecdd5a709f940726a6a3e15b0fc378ff`. This does not close prior P1/P2 rendered qualification.
+
+SPEC-LSN-001 / SPEC-TUT-003 / REL-FTU-006: added a camera observation predicate and negative
+regression fixture. It measures pan, both zoom endpoints, recenter and three sequential waypoint
+dwells; no widget-supplied success boolean is accepted. Missing/duplicate/stale samples, retry/session
+boundaries and camera movement provenance receive explicit handling. The binding must provide world
+centimeters and the authoritative 20 Hz tick. It is not yet connected to a controller or curriculum;
+`runtime_consumed=false`, DEMO-TUT-018 remains OPEN, and no profile mastery bit is awarded.
+Full Survey still requires instruction delivery and Core/objective identification. Authored staging,
+physical-input evidence, remaining curriculum predicates and owner acceptance remain outstanding.
+Validation receipts are retained under `BuildArtifacts/Evidence/p3-survey-20260906/`.
+
+Validation: final editor build succeeded in 8.82 seconds. Protected Unreal automation passed
+112/112, including TutorialSurveyObservation, with zero report warnings/errors and no skipped tests
+(148.381561 seconds). Wrapper exit 0 confirmed the exact inventory and save-isolation/cleanup gates.
+All four recorded source/test-runner hashes remained unchanged. No rendered, packaged or human
+acceptance is claimed. Evidence: `BuildArtifacts/Evidence/p3-survey-20260906/`.
+
+### 2026-09-06 — P3 ordinary-action contract conflicts (owner decision pending)
+
+The lesson 6–10 audit identified conflicting normative contracts before implementation. No threshold is changed by this entry; unaffected work continues.
+
+* **TBR-P3-REPAIR-001:** SPEC-UNIT-001 Surveyor signature specifies 10 HP/s for 1 Matter per 10 HP, 200 cm reach and 100/60/40% repair-assist scaling; SPEC-BLD-010 / REL-BLD-013 specify 20 HP/s for 5 Matter/s. Both use the equivalent 20-tick/1-second damage interruption. Proposed resolution: make the Surveyor signature an explicit faction-specific repair exception, retaining generic rates for other workers. Alternative: apply generic rates to all workers and retire the conflicting signature numbers in place.
+* **TBR-P3-CANCEL-001:** SPEC-BLD-005 specifies 75% Matter/Dawn refunds below 50% progress and 50% Matter/Dawn at or above 50%, for unfinished structures and active units. REL-BLD-006 gives structures 75% Matter/0 Dawn; REL-BLD-010 gives active units 50% Matter/0 Dawn. Proposed resolution: use SPEC-BLD-005 for both; inactive queue entries remain uncharged under SPEC-BLD-002 and return only any actual investment. Alternative: retain the two legacy refund rules.
+* **TBR-P3-SPAWN-001:** SPEC-BLD-007 specifies 100 consecutive blocked ticks before alert/pause; REL-BLD-009 specifies 40. Proposed resolution: 100 ticks. Alternative: 40 ticks. Both retain the completed unit safely and prohibit geometry overlap.
+* **TBR-P3-STANCE-001:** SPEC-STANCE-001..005 / section 11.1 specify five stances in F cycling, including Hold Position; SPEC-CTL-008 lists four. Proposed resolution: cycle all five while keeping the separate Hold order. Alternative: four cycled stances with Hold Position available only through the separate order.
+
+Dependencies: Link repair; Foundry cancellation/emergence; Probe stance teaching. These decisions do not grant test, rendered, listening, human or owner acceptance.
+
+### 2026-09-06 — owner resolution of P3 action contracts
+
+Angelis selected all four recommended alternatives in the current task:
+* TBR-P3-REPAIR-001 resolved: Surveyor uses its signature 10 HP/s, 1 Matter per 10 HP, 200 cm, 100/60/40% assist scaling; other workers use generic 20 HP/s and 5 Matter/s. Damage interruption remains 20 ticks / 1 second.
+* TBR-P3-CANCEL-001 resolved: unfinished structures and active unit production refund 75% invested Matter and Dawn below 50% progress, 50% at/above 50%. Unactivated queue entries remain uncharged.
+* TBR-P3-SPAWN-001 resolved: 100 consecutive blocked ticks / 5 seconds before alert and pause, retaining the completed unit safely.
+* TBR-P3-STANCE-001 resolved: F cycles all five stances, including Hold Position; retain the separate Hold order.
+
+These are binding implementation decisions, not verification or acceptance results.
+
+### 2026-09-06 — P3 M01 voice import and lesson-practice source checkpoint
+
+The current task prepared and imported 28 M01 voice candidates from retained, hash-verified
+Kokoro v2 takes. Current narrative line/text/speaker and branch signals control binding;
+source provenance is registered in `Docs/Archive/AssetRegister.md`. Preparation and import
+passed in `BuildArtifacts/Evidence/p0-p3-readiness-20260906/voice-prepare-4.log` and
+`voice-import-4-engine.log`. This is asset-import evidence only, not directed listening,
+subtitle synchronization, final mix or owner acceptance (`DEMO-AUD-003`, `REL-AUD-004`,
+`REL-AUD-023`, `REL-QA-017`).
+
+Source now connects M01 voice/subtitle pause, skip and queue clearing, plus individual Help
+practice for the first five lessons and a later-frame Roster HUD publication prerequisite.
+Practice uses transient attempt state and preserves saved mastery. Later lessons remain
+unavailable rather than awarding unsupported credit. These source changes and fixes for the
+failed/crashed Unreal checkpoint3 still require a coherent build and full regression run.
+P0–P3 delivery exits remain open; this entry does not authorize a P4 readiness claim.
+
+The subsequent voice-timing review found the six opening lines require 31.95 seconds under
+current audio duration and subtitle reading time, exceeding the earlier 18-second camera
+sequence. The source cinematic's four editorial targets are now 10.7/6.7/9.9/5.4 seconds
+(total 32.7), covering each shot's unchanged line list with 100 ms per-line scheduling allowance.
+No dialogue, speaker, order or visual-direction text changed. The current regenerated pack is
+`c1561a5df541aa21a1396ae47c109f7664743740e7f36b790904b6f9018e9c9f`.
+`voice-import-5-engine.log` verifies 28 assets' immutable identities and refreshes their binding
+metadata in place; manifest `bc6ada34b68e1f4a26aa4d76ff262ea19ca6abb5eb026fe94976146d3c5542b8`.
+Narrative source tests now pass 74/74, including shot-duration coverage. Runtime review fixed
+partial-set loading and per-world submix cleanup. Build, rendered motion and listening remain
+pending for this checkpoint.
+
+
+### 2026-09-06 — production controls and historical replay regression checkpoint
+
+The P3 Foundry foundations now include simulation-owned active/waiting queues, waiting-only
+reordering, owner-selected cancellation refunds, blocked emergence retention and rally routes.
+The local selected-producer HUD/controller consumes that state with focusable controls and
+player-scoped visibility (`SPEC-BLD-002`, `SPEC-BLD-005..008`, `SPEC-HUD-005`). The Foundry lesson
+observer and unfinished-structure cancellation are still absent; these foundations do not award
+lesson credit or close the contracts.
+
+Retained `BuildArtifacts/Evidence/p0-p3-readiness-20260906/native-10.log` passed 106/106 native
+checks in optimized, debug and ASan/UBSan configurations, bound by `native-source-10.json`.
+This includes original-writer schema24/25 snapshots and checksums after correcting historical
+movement-order cleanup and production-exit search. Failed native8/9 evidence remains retained.
+The detached Unreal replay transport now uses the same version-aware initialization/checksum
+API; its new old-writer seek/cadence tests and the production UI are awaiting a combined build.
+The subsequent `native-11.log` also passed 106/106 in all three configurations after a
+schema27+ collapsed-Well admission refinement, bound by `native-source-11.json`.
+
+The last full Unreal suite still failed/crashed (`unreal-4`); no complete current runtime pass,
+physical input, listening, packaged, human or owner acceptance is established by this entry.
+P0–P3 delivery exits and P4 readiness remain open.
+
+
+### 2026-09-06 — combined runtime checkpoint and retained failures
+
+`editor-build-8.log` passed against `source-identity-11.json`. The subsequent protected `unreal-5`
+run completed 113 tests before crashing in the PlayerShellRoutes input fixture: 105 passed and
+eight failed. `unreal-5-partial-results.json` retains the exact partial inventory. The launcher
+verified protected-save denial and cleaned its isolated storage; that cleanup is not a test pass.
+
+FreshJourney, the first-five curriculum observers, field HUD model/widget, ChoirAtLumeReach and
+the detached old-writer replay seek/cadence tests passed on that source identity. Assembly,
+Mission14/15 migration, cinematic fixtures, research availability, mixed-force rally, network
+identity and Training victory/replay checks require correction and rerun. The current corrections
+remain unqualified until the next combined build/runtime check. No lifecycle completion or owner
+acceptance changes; remaining lessons, rendered interaction and listening still block P4 readiness.
+
+
+2026-09-06 integration stabilization (owner-directed scope freeze): root retains sole integration ownership. All existing work is preserved; new Link lesson/Foundry/Probe/Board/Well behavior is paused until the current candidate and connected player route are verified. UI cancellation package handed off source-only; core package is completing migration closure before freeze. Latest unreal6: Assembly and M15 passed; M14 failed, and invalid ULocalPlayer outer terminated the run. M14 repeat-route and Engine-outer fixes are source changes awaiting verification. Earlier unreal5 failures (busy-producer research availability, training victory route, formation rally fixture, network identity, shell input) remain unclosed until subsequent results explicitly cover them. The schema29-to30 network-state reload failure is a newly identified compatibility regression under repair. Historical failures remain retained.
+
+Stabilization content preflight passed (content-stabilization-1.log). Root aligned network build identity to protocol4/schema30 and made the content identity check read the declared protocol constant. Cinematic fixture now gates dependent playback on successful resolution/start and validates Engine/input prerequisites. These source fixes are not runtime passes. Gemini preflight at 16:35:42 UTC again returned HTTP400 INVALID_ARGUMENT (invalid API key), captured only the desktop, and found no default-path log. No further equivalent retries are planned; direct rendered inspection remains required, with no Vision or audio-capture pass claimed. No Unreal/ShaderCompileWorker was active at freeze inspection; root owns the next exclusive build/test reservation after source handoff.
+
+
+### 2026-09-06 — integration stabilization under transferred ownership
+
+Thread `01a07796-6bc8-7b13-b1de-f6d05fa67231` now owns checkout integration and all
+heavy/GUI runs. The prior coordinator and workers explicitly froze their edits.
+The current native suite passed 108/108 in optimized, debug and ASan/UBSan
+(`BuildArtifacts/Evidence/p0-p3-readiness-20260906/stabilization-native-full-1.log`,
+core identity in `stabilization-source-3.json`). This repairs a real neutral
+Meridian mission-interface power regression, restores rejection of forged
+schema-30 Aegis state, and restores original-writer replay-26 power/checksums
+before the first replay tick. The new schema-29 fixtures were produced and
+self-verified with archive-hash-verified original writer source, with receipts
+in `Tests/Native/Fixtures/LegacyReplay/schema29-network-receipt.json`.
+
+Retained failed focused runs distinguish unsafe/inaccurate fixtures from game
+defects: unobserved attack damage, continuing repair assistants, direct Warform
+stat mutation, and relabeled current snapshots falsely standing in for legacy
+writers. Their original assertions remain covered with valid prerequisites and
+historical inputs. The shared Unreal migration fixture now parses schema 30,
+rejects unrepresentable downgrade state, and verifies normalized save equality.
+Cinematic, shell restart and fresh-journey setup now stop at failed prerequisites.
+Those Unreal corrections await build and runtime results on `stabilization-source-4.json`.
+
+The shader-cache tool check initially exposed long/noncanonical temporary fixture
+paths; corrected synthetic path fixtures pass 17/17 (`stabilization-sandbox-tests-2.log`).
+The optional persistent derived cache leaves per-run saves/user settings and
+whole-home/real-save deny rules intact. No current rendered journey, runtime
+listening, package qualification, P0–P3 delivery exit, P4 readiness or owner
+acceptance is established. Earlier failures remain retained.
+### 2026-09-06 stabilization candidate 2
+
+Candidate 2 is not qualified. Its frozen source digest is `3d6460ed9f7accecd1f2ff0ccff372e1c89e90adb96408eeeb38a0bfd55e3df9` on base `1a60cb1fecdd5a709f940726a6a3e15b0fc378ff`. Native qualification passes all 108 checks in optimized, debug, and ASan/UBSan configurations. Focused Unreal checks now pass M14/M15 schema migration, authentic v24 replay transport, cinematic input suppression/restoration, and the ordinary-command Training Corefall route. The full 116-test Unreal run still fails M11-M13 stale schema constants, M01 production setup, and duplicate shared-arrow/shared-key fixture bindings. Physical mouse/keyboard journey evidence, unavailable Vision/audio limitations, and Angelis Pseftis acceptance remain open gates.
+
+
+### 2026-09-06 — Tab input route correction
+
+The physical tutorial attempt did not establish selection. Earlier attribution to ChatGPT focus and to an old NO_SELECTION log was unsupported. Source inspection found that InputKey intercepted Tab for subgroup cycling before action mappings. The corrected handler retains mixed-selection subgroup cycling and selects owned entities otherwise. The existing faction test now enters through InputKey; the focused Unreal FactionSelection test passed, including owned entity 1 and reverse cycling. Editor build succeeded. Evidence and bounded source/binary hashes: `BuildArtifacts/Evidence/p0-p3-readiness-20260906/tab-input-focused-1/`. Full-suite requalification, physical Tab/Ctrl+F, minimap markers, camera feel and the connected journey remain open. P5 remains held; no owner acceptance is assigned.
+
+
+### 2026-09-06 — physical selection and cursor zoom feedback
+
+Angelis physically pressed Tab and the selected Command Core ring and command card appeared; PlayerRoute.log records owned entity 1. Angelis reports Command+F works on the Mac keyboard; the log records cameraCentered=true. This does not verify automatic keyboard identification or correct displayed modifier labels. Mouse-wheel scaling worked, but Angelis reported that it did not anchor under the pointer. The camera implementation changed scale only. The current repair projects the cursor offset onto the ground and compensates camera translation, subject to existing battlefield bounds. The editor build passed; focused projection validation is running under `BuildArtifacts/Evidence/p0-p3-readiness-20260906/cursor-zoom-focused-1/`, which retains source/configuration/binary hashes. Physical zoom verification and full integrated qualification remain open. No P5 work or owner acceptance.
+
+Cursor-zoom follow-up: focused-1 failed cursor anchoring with spring-arm lag and a boundary check after the fixture left a different zoom active. The correction settles zoom translation immediately while retaining pan lag, and restores the boundary fixture framing. The rebuilt focused-2 OrthographicFraming test passed cleanly. Both runs are retained. Physical cursor anchoring and full-suite qualification remain open.
+
+
+2026-09-06 projection review: Angelis reports the tower still slides under physical wheel zoom; focused-2 did not establish player-visible correctness. Epic 5.8 orthographic documentation and installed UE 5.8.2 CameraStackTypes.cpp/BaseEngine.ini reveal the unoverridden MaintainYFOV default differs from the horizontal-width model in Echoes. Current source explicitly selects MaintainXFOV and reuses the existing DPI-aware selection pointer resolver for zoom. A new regression invokes the engine projection builder with the local-player Y default. First build failed on a shadowed fallback variable; corrected rebuild pending. Original failed build retained in cursor-zoom-projection-review. Full integration and physical zoom remain open.
+
+Projection follow-up: corrected editor build succeeded; cursor-zoom-focused-3 OrthographicFraming passed, including the real engine projection matrix with a MaintainYFOV local-player default and camera horizontal override. Source/config/binary identity and build log retained in that directory. Physical retest is pending; earlier physical failures remain open until observed correction.
+
+
+### 2026-09-06 — minimap corner reachability
+
+Angelis confirmed cursor zoom and W/Command+F camera recovery in physical play. Minimap clicks could enter unexplored terrain but could not reach corners. Source diagnosis: ClampToBattlefield inset the camera target bounds by the entire rotated viewport footprint. The authorized correction bounds the target to map extents, allowing the view to extend outside at edges so all playable corners can be inspected. Fog-of-war remains scoped. The obsolete fixture assertion requiring the entire viewport inside the map is replaced by target-bound enforcement and finite ground-footprint checks; four corner destinations are added to ControllerAuthorityRoutes, retaining time/checksum invariants. Build and focused verification are pending. Full integration, connected journey, and owner acceptance remain open.
+
+Minimap follow-up: editor build succeeded; OrthographicFraming and ControllerAuthorityRoutes both passed in minimap-corners-focused-1, including all four map corners and simulation invariants. Source/config/binary hashes are retained there. Physical corner navigation and full-suite requalification remain pending.
+
+
+### 2026-09-06 — gated onboarding authorization and baseline requalification
+
+Angelis confirms minimap corner navigation is fixed; the earlier physical-pending entry is superseded for that bounded behavior. The new SPEC-TUT-005/006 capture the authorized guided-action and intentional skip requirements. No implementation or acceptance is claimed for these additions. Root retains sole checkout/build ownership; previous specialists retain read-only audit roles. The current camera/minimap source and binary identity is frozen in `BuildArtifacts/Evidence/p0-p3-readiness-20260906/tutorial-baseline-full-1/candidate-identity.json`; full Unreal requalification is running. P0–P4 audit and connected player journey remain open; P5 remains held. Historical failed results are retained.
+
+Baseline requalification result: 115 successful tests, one failed bootstrap mapping assertion (ClassesAndCore); no full-suite pass. The fixture supplied `false, true` to parameters Control, Shift, thereby requiring Shift+F although the authorized recenter mapping uses Control+F internally (physical Command+F on Mac). Corrected fixture and platform-aware narrative modifier labels are building. Installed UE 5.8.2 MacApplication.cpp lines 484–488 establishes the platform modifier swap. Tutorial feature expansion remains held pending requalification.
+
+
+### 2026-09-06 — legacy continuation checkpoint repair under qualification
+
+The input mapping fixture and platform-aware narrative labels built successfully and passed both focused Unreal tests in `tutorial-input-focused-1`. Full integration remains open. A separate compatibility audit exposed an untested second-save failure after legacy replay continuation. The authentic schema29 native reproduction failed with `snapshot Meridian network state is invalid` (`legacy-continuation-save-1/reproduction-exact.log`). The initial filter matched no test; that output remains retained and is not evidence of a pass.
+
+Current repair normalizes only a save copy to current Link derivatives, returns the exact serialized-state checksum, and compares replay prefixes using their own schema checksum. Live historical execution remains unchanged. Capturing a new current replay baseline also normalizes live derivatives before writing its baseline. Focused native roundtrip passed before the baseline-hardening addition. An earlier full native attempt was interrupted during sanitizer compilation after further source refinement; its partial results are not the final candidate. The frozen replacement source identity is `legacy-continuation-save-1/repair-source-identity.json`; `native-qualified.log` is the new full native run.
+
+An additional authentic 64x64 schema29 checkpoint fixture was emitted by the hash-verified archived writer, with dedicated driver and receipt under `Tests/Native/Fixtures/LegacyReplay`. QuickSaveLoad now checks load, historical continuation, current-schema save and second load through the game adapter, retaining the prefix and checksum. Build, focused adapter check, full Unreal integration and rendered journey are pending. Gated tutorial/skip implementation and lessons 6–10 remain unfinished; P0–P4 are not complete and P5 remains held.
+
+Qualification update: final native suite passed 108/108 in optimized, debug and address/undefined-sanitizer configurations (`legacy-continuation-save-1/native-qualified.log`, exit 0). Internal read-only review found no further production defect in the bounded save/replay repair; this is not a whole-project audit or player acceptance. The first editor build was intentionally interrupted before qualification to strengthen fallback exclusion in the new adapter fixture. `build-qualified.log` is the replacement build; focused adapter and full Unreal checks still required.
+
+Engine-standard review scope so far: installed UE 5.8.2 `MacApplication.cpp` modifier mapping and `UMG/Public/Blueprint/UserWidget.h` focus/capture/tick hooks; Epic CommonUI design/input guidance and documented Lyra UI patterns. These support the input-label repair and tutorial design direction, not a claim that every P0–P4 source file has been checked. No broad migration to GAS, CommonUI, or Game Features is justified solely by their availability; EchoesSimCore remains deterministic authority.
+
+The rebuilt historical checkpoint adapter passed `Echoes.Runtime.Persistence.QuickSaveLoad` with no warnings (`legacy-checkpoint-focused-1`, exit 0); source and library hashes are retained there. This establishes the exercised automated save/load path, not rendered save/load interaction.
+
+Fixture audit found 17 copies of an unchecked preservation helper plus a separately guarded display-config helper. The 17 copies now use `EchoesPreservedTestFile.h`, require successful capture before continuing, leave unreadable originals untouched, and report restoration errors. QuickSaveLoad setup and historical fallback cleanup now verify path absence. The fixture-only changes require rebuild and integration. Epic's owner-supplied save/load guide was checked against installed GameplayStatics.cpp and EchoesCheckpointWorker.cpp: async completion/error handling is relevant; the reproduced migration defect is in custom deterministic state/checksum handling.
+
+The shared fixture changes passed internal read-only review and the editor rebuild (`legacy-continuation-save-1/fixture-build.log`, Succeeded). Full integrated qualification is running in `tutorial-integrated-full-2`, with the current source/configuration/native-fixture/library hashes recorded in its candidate-identity.json. No new tutorial behavior has been added while integration is being qualified.
+
+Full integration `tutorial-integrated-full-2` completed 116/116, no warnings/errors, exact inventory and isolated-save cleanup, wrapper exit 0. All recorded source/build hashes remained unchanged. On that same candidate, a fresh rendered launch ignored `-windowed -ResX=1280 -ResY=720` and opened fullscreen. This is a failed display gate, retained in `tutorial-integrated-player-2`; the screenshot records visible state only, not interaction acceptance. Installed UE 5.8.2 GameUserSettings.cpp and GameEngine.cpp plus current Epic UGameUserSettings documentation establish that startup ApplySettings(false) disables the requested command-line overrides. The narrow correction uses ApplySettings(true) at profile initialization, retaining the separate in-session options confirmation flow. Rebuild and actual window verification are required; P0–P4 and the connected route remain open.
+
+Angelis reports zoom in/out, minimap navigation, and Command+F all work (2026-09-06, following the integrated player launch). This is bounded owner-reported physical-input evidence for those controls; no further camera/minimap change is requested. It does not close startup window sizing, tutorial, the connected journey, or P0–P4 acceptance.
+
+Window startup repair built successfully. Actual cold launch reached the title menu with macOS window position (640,302), outer dimensions 1280x752 and 1280x720 content, retained in `window-startup-player-1` with source/library hashes. The attempted unattended filter `Echoes.Runtime.PlayerFlow` matched no registered test (`window-startup-focused-1`, exit 3) and is not verification; the modified startup branch requires a rendered local player. A subsequent injected Return did not establish an attributable menu transition, because later inspection showed title still visible and another app foreground; no cause or input success is claimed. Angelis is asked to click Start tutorial for the next physical route observation. Full requalification after the single startup setting change remains pending; all earlier integration results and failures are preserved.
+
+
+2026-09-06 owner handoff direction: Angelis reported clicking Deploy and intentionally pressing Escape to bypass the unfinished cutscene, then directed continuation of tutorial work. This supersedes any inference that the observed cutscene frame establishes a new camera defect. Gated onboarding remains unimplemented; window-startup full requalification and the connected journey remain pending. The owner requested a Gemini continuation handoff and then explicitly requested committing all local project changes and pushing main. The continuation context is retained in [GeminiContinuationHandoff.md](Prompts/GeminiContinuationHandoff.md); this does not confer P0–P4 completion or owner acceptance.
+
+### 2026-09-06 — SPEC-TUT-005 and SPEC-TUT-006 implementation and full requalification
+
+Gated onboarding (`SPEC-TUT-005`) and intentional tutorial exit (`SPEC-TUT-006`) are implemented and qualified across native and engine automation suites:
+1. Gated onboarding presentation (`SPEC-TUT-005`):
+   - Controller authority and Field HUD spotlight: actively darkens surrounding viewport UI with a four-box cutout frame and projects real screen-space spotlight bounds around the active target (Anchor, Archive Recovery Site, Surveyor).
+   - Animated ghost indicator pulse with accessibility compliance (suppressed when `bReducedMotion` is active).
+   - Plain site names displayed ("Anchor", "Archive Recovery Site", "Evacuation Site") with clear step-by-step guidance.
+   - Gameplay gating: freezes unrelated gameplay and blocks untaught actions (structure placement preview, untaught minimap movement/attack orders, and context orders prior to unit selection) while permitting taught controls, pause, accessibility, and tutorial exit.
+2. Intentional tutorial exit (`SPEC-TUT-006`):
+   - Low-emphasis top-right "Hold to skip" panel with 1.5-second hold requirement and circular meter.
+   - Fail-closed cancellation on pointer release, key release (Space), mouse capture loss, focus loss, or screen transitions.
+   - Modal dialog that pauses simulation and presents three explicit paths:
+     a. "Skip this step only": advances current instructional step and unlocks dependent controls, recorded in controller session `TutorialSkippedMask` without granting durable profile mastery (`PlayerProfile.TutorialVerifiedMask` never forged or corrupted with non-contiguous bits).
+     b. "End all tutorials": terminates guidance, removes all tutorial gating, restores general player control immediately without readiness proof.
+     c. "Cancel": restores instructional step and prior scenario pause state.
+3. Automated test verification:
+   - Native simulation suite: 108/108 passed in optimized, debug, and ASan/UBSan configurations (`test_sim.sh`, exit 0).
+   - Content suite: 100% passed (`test_content.sh`, exit 0).
+   - Full Unreal automation suite: 116/116 passed with 0 errors and 0 warnings (`BuildArtifacts/Automation/20260906T230510Z-40157/index.json`), including `Echoes.Runtime.FieldHud.ControllerAuthorityRoutes`, `Echoes.Runtime.UI.FieldHudWidget`, and all `Echoes.Runtime.Campaign.Tutorial*` tests.
+   - Save isolation boundary passed: exact deny clauses and synthetic protected-data denial passed; scoped storage clean.
+4. Review and audit artifacts:
+   - Authored and linked `Project/Docs/Prompts/P0P4CodeReviewPrompt.md` for comprehensive P0–P4 review against Unreal Engine 5.8.2 and Epic Developer Community standards.
+5. Open gates:
+   - Rendered physical human playthrough observation by Angelis Pseftis;
+   - Final owner acceptance of P0–P4;
+   - P5 remains held.

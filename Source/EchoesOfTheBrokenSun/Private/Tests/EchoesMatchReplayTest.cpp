@@ -5,6 +5,7 @@
 #include "EchoesTestSaveEnvironment.h"
 
 #include "EchoesMatchReplay.h"
+#include "../../../../Tests/Native/Fixtures/LegacyReplay/LegacyReplayOracles.h"
 #include "EchoesNetworkSession.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesSkirmishSetup.h"
@@ -222,6 +223,54 @@ bool FEchoesMatchReplayTest::RunTest(const FString& Parameters)
     if (!TestSaveEnvironment.IsReady())
     {
         return false;
+    }
+
+    // Authentic old writers supply these bytes/checksums. This exercises the
+    // detached incremental transport, separately from metadata admission.
+    for (int32 Schema : {24, 25})
+    {
+        using namespace echoes::sim;
+        using namespace EchoesLegacyReplayOracles;
+        ReplayRecord Old;
+        Old.version = 24;
+        if (Schema == 24) Old.initialSnapshot.assign(Schema24Baseline.begin(), Schema24Baseline.end());
+        else Old.initialSnapshot.assign(Schema25Baseline.begin(), Schema25Baseline.end());
+        Old.finalTick = 100;
+        Old.finalChecksum = Schema == 24 ? Schema24OverlapChecksum : Schema25OverlapChecksum;
+        Command Produce;
+        Produce.player = 0; Produce.sequence = 1; Produce.type = CommandType::Produce;
+        Produce.actor = 1; Produce.buildType = EntityType::Worker;
+        Command Move;
+        Move.player = 0; Move.sequence = 2; Move.type = CommandType::Move;
+        Move.actor = 3; Move.position = Vec2::FromTiles(7, 7);
+        Command Busy = Produce;
+        Busy.executeTick = 1; Busy.sequence = 3;
+        Old.commands = {Produce, Move, Busy};
+        std::string CoreError;
+        auto Baseline = Simulation::BeginReplaySimulation(Old, &CoreError);
+        FString TransportError;
+        FEchoesReplayPlaybackSession OldPlayback;
+        if (!TestTrue(TEXT("Historical transport initializes with original replay context"),
+            OldPlayback.InitializeRecord(Old, MoveTemp(Baseline), TransportError, {})))
+        {
+            AddError(TransportError);
+            return false;
+        }
+        TestTrue(TEXT("Historical seek preserves busy-producer semantics and checksum"),
+            OldPlayback.Seek(100, TransportError));
+        if (!TestTrue(TEXT("Historical transport can rewind to baseline"), OldPlayback.Seek(0, TransportError))) return false;
+        OldPlayback.SetPaused(false);
+        for (int32 Tick = 0; Tick < 100; ++Tick)
+        {
+            if (!TestTrue(TEXT("Historical incremental playback remains valid"), OldPlayback.AdvanceOneCadence(TransportError)))
+            {
+                AddError(TransportError);
+                return false;
+            }
+        }
+        TestEqual(TEXT("Historical playback reaches its recorded end"), OldPlayback.GetCurrentTick(), uint64(100));
+        TestEqual(TEXT("Historical playback reproduces the old writer's checksum"),
+            OldPlayback.GetSimulation()->ReplayStateChecksum(), Old.finalChecksum);
     }
 
     const echoes::sim::ReplayRecord Replay = MakeTerminalReplay();
@@ -490,9 +539,31 @@ bool FEchoesMatchReplayTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Replay-prefix checksum round-trips exactly"),
               PrefixRoundTrip.finalChecksum, Replay.finalChecksum);
 
-    echoes::sim::ReplayRecord LegacyReplay = Replay;
+    // A current replay cannot be made historical by relabeling its version:
+    // the initial snapshot and checksum must come from the original writer.
+    using namespace EchoesLegacyReplayOracles;
+    echoes::sim::ReplayRecord LegacyReplay;
     LegacyReplay.version = echoes::sim::kLegacyReplayVersion;
-    LegacyReplay.forfeitingPlayer = echoes::sim::kNeutralPlayer;
+    LegacyReplay.initialSnapshot.assign(
+        Schema24Baseline.begin(), Schema24Baseline.end());
+    LegacyReplay.finalTick = 100;
+    LegacyReplay.finalChecksum = Schema24OverlapChecksum;
+    echoes::sim::Command LegacyProduce;
+    LegacyProduce.player = 0;
+    LegacyProduce.sequence = 1;
+    LegacyProduce.type = echoes::sim::CommandType::Produce;
+    LegacyProduce.actor = 1;
+    LegacyProduce.buildType = echoes::sim::EntityType::Worker;
+    echoes::sim::Command LegacyMove;
+    LegacyMove.player = 0;
+    LegacyMove.sequence = 2;
+    LegacyMove.type = echoes::sim::CommandType::Move;
+    LegacyMove.actor = 3;
+    LegacyMove.position = echoes::sim::Vec2::FromTiles(7, 7);
+    echoes::sim::Command LegacyBusy = LegacyProduce;
+    LegacyBusy.executeTick = 1;
+    LegacyBusy.sequence = 3;
+    LegacyReplay.commands = {LegacyProduce, LegacyMove, LegacyBusy};
     TArray<uint8> LegacyPrefixBytes;
     echoes::sim::ReplayRecord LegacyRoundTrip;
     if (!TestTrue(TEXT("Legacy v24 replay prefix remains encodable"),

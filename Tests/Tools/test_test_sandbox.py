@@ -25,8 +25,11 @@ SPEC.loader.exec_module(SANDBOX)
 
 class EchoesTestSandboxPolicyTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.temporary = tempfile.TemporaryDirectory(prefix="EchoesSandboxPolicy.")
-        self.root = Path(self.temporary.name)
+        # These are synthetic path-policy fixtures. Use a short canonical
+        # root so macOS /var aliases and caller TMPDIR do not change which
+        # policy branch is exercised or exhaust Unreal's DDC path budget.
+        self.temporary = tempfile.TemporaryDirectory(prefix="EchoesSandboxPolicy.", dir="/tmp")
+        self.root = Path(self.temporary.name).resolve()
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
@@ -219,6 +222,30 @@ class EchoesTestSandboxPolicyTest(unittest.TestCase):
         ddc = ROOT / "BuildArtifacts" / "TestIO" / "EAT.12345678" / "DDC"
         self.assertLessEqual(
             len(str(ddc)), SANDBOX.UNREAL_DDC_MAX_PATH_LENGTH)
+
+    def test_persistent_ddc_is_fixed_separate_and_reused(self) -> None:
+        project = self.root / "Project" / "Echoes.uproject"
+        project.parent.mkdir()
+        project.write_text("{}")
+        home = self.root / "home"
+        cache = SANDBOX._prepare_persistent_local_ddc(project, home)
+        self.assertEqual(cache, project.parent / "BuildArtifacts" / "AutomationDDC")
+        self.assertNotIn("TestIO", cache.parts)
+        (cache / "derived-fixture").write_text("shader bytes")
+        self.assertEqual(SANDBOX._prepare_persistent_local_ddc(project, home), cache)
+        self.assertEqual((cache / "derived-fixture").read_text(), "shader bytes")
+
+    def test_persistent_ddc_rejects_symlink_and_home_routes(self) -> None:
+        project = self.root / "Project" / "Echoes.uproject"
+        project.parent.mkdir()
+        project.write_text("{}")
+        home = self.root / "home"
+        storage = SANDBOX._prepare_automation_storage_root(project, home)
+        (storage.parent / "AutomationDDC").symlink_to(self.root, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            SANDBOX._prepare_persistent_local_ddc(project, home)
+        with self.assertRaisesRegex(ValueError, "home"):
+            SANDBOX._prepare_persistent_local_ddc(project, self.root)
 
     @unittest.skipUnless(sys.platform == "darwin" and shutil.which("sandbox-exec"),
                          "sandbox-exec is unavailable on this host")

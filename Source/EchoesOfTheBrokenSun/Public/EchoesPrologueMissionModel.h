@@ -20,7 +20,9 @@ enum class EEchoesOperationMode : uint8
     CampaignFutureThatWon,
     CampaignAssemblyOfTheMissing,
     CampaignSeveralVoicesOneCommand,
-    CampaignTheBrokenSun
+    CampaignTheBrokenSun,
+    /** Passive-AI onboarding mastery drill; never a campaign ledger mission. */
+    TrainingReadiness
 };
 
 /** Reconstructable objective state for What the Ledger Keeps. */

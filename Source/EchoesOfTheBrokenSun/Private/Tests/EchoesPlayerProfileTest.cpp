@@ -97,6 +97,12 @@ bool FEchoesPlayerProfileTest::RunTest(const FString& Parameters)
               FString(TEXT("Profile.sav")));
     TestTrue(TEXT("Profile storage is independent of campaign storage"),
              ProfilePath != FEchoesCampaignProgressStore::GetDefaultPath());
+    TestEqual(TEXT("Readiness proof uses player-profile schema two"),
+              FEchoesPlayerProfile::SchemaVersion,
+              static_cast<uint16>(2));
+    TestEqual(TEXT("Player-profile schema one remains readable"),
+              FEchoesPlayerProfile::MinimumSupportedSchemaVersion,
+              static_cast<uint16>(1));
     RemoveProfileGenerations(ProfilePath);
 
     FString Feedback;
@@ -113,9 +119,26 @@ bool FEchoesPlayerProfileTest::RunTest(const FString& Parameters)
     const FEchoesPlayerProfile First = MakeProfile(2, 0x001F);
     TestFalse(TEXT("Partial verified curriculum does not grant mastery"),
               First.IsTutorialMasteryComplete());
-    TestTrue(TEXT("A full authoritative curriculum derives mastery"),
-             MakeProfile(2, FEchoesPlayerProfile::AllTutorialLessonsMask)
-                 .IsTutorialMasteryComplete());
+    FEchoesPlayerProfile LessonsOnly =
+        MakeProfile(2, FEchoesPlayerProfile::AllTutorialLessonsMask);
+    TestFalse(TEXT("Ten verified lessons do not grant readiness mastery"),
+              LessonsOnly.IsTutorialMasteryComplete());
+    FEchoesPlayerProfile Mastered = LessonsOnly;
+    Mastered.bReadinessOperationVerified = true;
+    TestTrue(TEXT("Lessons plus readiness-operation proof derive mastery"),
+             Mastered.IsTutorialMasteryComplete());
+    FEchoesPlayerProfile ImpossibleReadiness = First;
+    ImpossibleReadiness.bReadinessOperationVerified = true;
+    const FString ImpossibleReadinessPath = FPaths::Combine(
+        TestSaveEnvironment.Directory,
+        TEXT("ProfileImpossibleReadiness.sav"));
+    TestFalse(TEXT("Readiness proof without all lessons is refused"),
+              FEchoesPlayerProfileStore::SaveAtomic(
+                  ImpossibleReadinessPath, ImpossibleReadiness, Feedback));
+    TestTrue(TEXT("Impossible readiness proof reports its invariant"),
+             Feedback.Contains(TEXT("PROFILE_READINESS_STATE_INVALID")));
+    TestFalse(TEXT("Impossible readiness proof is not persisted"),
+              IFileManager::Get().FileExists(*ImpossibleReadinessPath));
     FEchoesPlayerProfile NonContiguous = First;
     NonContiguous.TutorialVerifiedMask = 0x0005;
     TestFalse(TEXT("A noncontiguous lesson mask cannot derive mastery"),
@@ -134,6 +157,44 @@ bool FEchoesPlayerProfileTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("The primary profile is reported present"), bExists);
     TestTrue(TEXT("The binary round trip preserves every profile field"),
              Loaded == First);
+
+    const FString ReadinessPath = FPaths::Combine(
+        TestSaveEnvironment.Directory,
+        TEXT("ProfileReadiness.sav"));
+    TestTrue(TEXT("A readiness-proven profile commits"),
+             FEchoesPlayerProfileStore::SaveAtomic(
+                 ReadinessPath, Mastered, Feedback));
+    FEchoesPlayerProfile LoadedReadiness;
+    TestTrue(TEXT("Schema two round trip preserves readiness proof"),
+             FEchoesPlayerProfileStore::LoadWithBackup(
+                 ReadinessPath, LoadedReadiness, bExists, Feedback) &&
+                 bExists && LoadedReadiness == Mastered &&
+                 LoadedReadiness.IsTutorialMasteryComplete());
+
+    const FString LegacyPath = FPaths::Combine(
+        TestSaveEnvironment.Directory,
+        TEXT("ProfileLegacyV1.sav"));
+    TestTrue(TEXT("A legacy-source profile is staged in the current schema"),
+             FEchoesPlayerProfileStore::SaveAtomic(
+                 LegacyPath, LessonsOnly, Feedback));
+    TArray<uint8> LegacyBytes;
+    TestTrue(TEXT("The legacy-source profile bytes can be inspected"),
+             FFileHelper::LoadFileToArray(LegacyBytes, *LegacyPath));
+    WriteProfileU16(
+        LegacyBytes,
+        8,
+        FEchoesPlayerProfile::MinimumSupportedSchemaVersion);
+    RefreshProfileChecksum(LegacyBytes);
+    TestTrue(TEXT("A checksum-valid schema one fixture is written"),
+             FFileHelper::SaveArrayToFile(LegacyBytes, *LegacyPath));
+    FEchoesPlayerProfile MigratedLegacy;
+    TestTrue(TEXT("Schema one settings and lesson progress migrate exactly"),
+             FEchoesPlayerProfileStore::LoadWithBackup(
+                 LegacyPath, MigratedLegacy, bExists, Feedback) &&
+                 bExists && MigratedLegacy == LessonsOnly);
+    TestTrue(TEXT("Schema one migration never fabricates readiness proof"),
+             !MigratedLegacy.bReadinessOperationVerified &&
+                 !MigratedLegacy.IsTutorialMasteryComplete());
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
@@ -215,6 +276,24 @@ bool FEchoesPlayerProfileTest::RunTest(const FString& Parameters)
     VerifyRejectedBytes(TEXT("Noncontiguous tutorial mask"), InvalidMask,
                         TEXT("PROFILE_TUTORIAL_MASK_INVALID"));
 
+    TArray<uint8> InvalidReadiness = FirstBytes;
+    InvalidReadiness[13] |= 1u << 7;
+    RefreshProfileChecksum(InvalidReadiness);
+    VerifyRejectedBytes(TEXT("Readiness proof without all lessons"),
+                        InvalidReadiness,
+                        TEXT("PROFILE_READINESS_STATE_INVALID"));
+
+    TArray<uint8> ForgedLegacyReadiness = FirstBytes;
+    WriteProfileU16(
+        ForgedLegacyReadiness,
+        8,
+        FEchoesPlayerProfile::MinimumSupportedSchemaVersion);
+    ForgedLegacyReadiness[13] |= 1u << 7;
+    RefreshProfileChecksum(ForgedLegacyReadiness);
+    VerifyRejectedBytes(TEXT("Schema one readiness flag"),
+                        ForgedLegacyReadiness,
+                        TEXT("PROFILE_FLAGS_INVALID"));
+
     TArray<uint8> InvalidOnboarding = FirstBytes;
     InvalidOnboarding[13] &= static_cast<uint8>(~(1u << 0));
     InvalidOnboarding[13] |= 1u << 1;
@@ -229,7 +308,10 @@ bool FEchoesPlayerProfileTest::RunTest(const FString& Parameters)
                         TEXT("PROFILE_PRESENTATION_SETTING_INVALID"));
 
     TArray<uint8> InvalidSchema = FirstBytes;
-    WriteProfileU16(InvalidSchema, 8, 2);
+    WriteProfileU16(
+        InvalidSchema,
+        8,
+        static_cast<uint16>(FEchoesPlayerProfile::SchemaVersion + 1));
     RefreshProfileChecksum(InvalidSchema);
     VerifyRejectedBytes(TEXT("Unsupported schema"), InvalidSchema,
                         TEXT("PROFILE_VERSION_UNSUPPORTED"));
@@ -472,6 +554,9 @@ bool FEchoesPlayerProfileTest::RunTest(const FString& Parameters)
              SettingsAfterRejectedApply == SettingsBeforeRejectedApply);
 
     RemoveProfileGenerations(ProfilePath);
+    RemoveProfileGenerations(ReadinessPath);
+    RemoveProfileGenerations(LegacyPath);
+    RemoveProfileGenerations(ImpossibleReadinessPath);
     return TestSaveEnvironment.Finish();
 }
 

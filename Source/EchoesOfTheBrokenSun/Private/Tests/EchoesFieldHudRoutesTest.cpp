@@ -198,6 +198,7 @@ bool FEchoesFieldHudRoutesTest::RunTest(const FString& Parameters)
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
+    Controller->InitInputSystem();
     Controller->Possess(Camera);
     if (Controller->IsTitleScreenVisible())
     {
@@ -222,6 +223,29 @@ bool FEchoesFieldHudRoutesTest::RunTest(const FString& Parameters)
         TEXT("Deployed field view is live and player scoped"),
         View.Surface == EEchoesFieldHudSurface::Battlefield &&
             View.Authority == EEchoesFieldHudAuthority::LivePlayerView);
+
+    // SPEC-TUT-006 Tutorial skip modal routes
+    Controller->SetTutorialOperationAuthorized(true);
+    Controller->OpenTutorialSkipModal();
+    TestTrue(TEXT("Tutorial skip modal is visible after open"), Controller->IsTutorialSkipModalVisible());
+    View = Controller->BuildFieldHudView();
+    TestTrue(TEXT("Tutorial skip modal is reflected in field HUD view"), View.TutorialSkipModal.bVisible);
+    TestEqual(TEXT("Tutorial skip modal has 3 action controls"), View.TutorialSkipModal.Controls.Num(), 3);
+
+    Controller->HandleFieldHudAction(EEchoesFieldHudAction::TutorialSkipCurrentStep);
+    TestFalse(TEXT("Skip current step closes modal"), Controller->IsTutorialSkipModalVisible());
+    TestTrue(TEXT("Skip current step records in session skipped mask"), (Controller->GetTutorialSkippedMask() & 1) != 0);
+    TestEqual(TEXT("Skip current step does not grant durable profile mastery"), Controller->GetPlayerProfile().TutorialVerifiedMask, static_cast<uint16>(0));
+
+    Controller->OpenTutorialSkipModal();
+    Controller->HandleFieldHudAction(EEchoesFieldHudAction::TutorialCancelSkipModal);
+    TestFalse(TEXT("Cancel closes tutorial skip modal"), Controller->IsTutorialSkipModalVisible());
+
+    Controller->OpenTutorialSkipModal();
+    Controller->HandleFieldHudAction(EEchoesFieldHudAction::TutorialEndAll);
+    TestFalse(TEXT("End all tutorials turns off tutorial authorization"), Controller->IsTutorialOperationAuthorized());
+    TestFalse(TEXT("End all tutorials closes skip modal"), Controller->IsTutorialSkipModalVisible());
+    TestEqual(TEXT("End all tutorials does not grant durable profile mastery"), Controller->GetPlayerProfile().TutorialVerifiedMask, static_cast<uint16>(0));
 
     // A model-emitted command-card action reaches the existing controller
     // authority and nowhere else.
@@ -309,6 +333,18 @@ bool FEchoesFieldHudRoutesTest::RunTest(const FString& Parameters)
         TEXT("Normalized minimap left click pans the camera to map center"),
         FMath::IsNearlyEqual(Camera->GetActorLocation().X, ExpectedCenter.X, 0.1f) &&
             FMath::IsNearlyEqual(Camera->GetActorLocation().Y, ExpectedCenter.Y, 0.1f));
+    for (const FVector2D Corner : {FVector2D(0, 0), FVector2D(1, 0),
+                                   FVector2D(0, 1), FVector2D(1, 1)})
+    {
+        TestTrue(TEXT("Each minimap corner accepts navigation"),
+            Controller->HandleFieldHudPointer(Corner, false));
+        const FVector Target = Bridge->SimToWorld(echoes::sim::Vec2::FromTiles(
+            Corner.X * Simulation->Config().mapWidthTiles,
+            Corner.Y * Simulation->Config().mapHeightTiles));
+        TestTrue(TEXT("Each minimap corner is reachable as the camera target"),
+            FVector2D::Distance(FVector2D(Camera->GetActorLocation()),
+                               FVector2D(Target)) < 1.0f);
+    }
     TestEqual(TEXT("Minimap pan preserves simulation tick"),
               Simulation->CurrentTick(), TickBeforePan);
     TestEqual(TEXT("Minimap pan preserves simulation checksum"),
@@ -512,6 +548,221 @@ bool FEchoesFieldHudRoutesTest::RunTest(const FString& Parameters)
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
+
+    echoes::sim::Entity* ProducerFixture =
+        MutableSimulation->MutableEntityForTesting(LocalBarracks);
+    if (!TestNotNull(TEXT("Selected production structure remains mutable"),
+                     ProducerFixture))
+    {
+        Controller->Destroy();
+        Camera->Destroy();
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    ProducerFixture->productionType = echoes::sim::EntityType::Worker;
+    ProducerFixture->activeProductionItemId = 8101;
+    ProducerFixture->productionProgress = 10;
+    ProducerFixture->productionRequired = 60;
+    ProducerFixture->productionInvestedCost = {50, 20};
+    ProducerFixture->productionLogisticsCost = 1;
+    ProducerFixture->productionQueue.clear();
+    echoes::sim::ProductionQueueItem FirstWaiting;
+    FirstWaiting.itemId = 8102;
+    FirstWaiting.unitType = echoes::sim::EntityType::Soldier;
+    FirstWaiting.configuredCost = {85, 20};
+    FirstWaiting.requiredTicks = 100;
+    FirstWaiting.logisticsCost = 2;
+    ProducerFixture->productionQueue.push_back(FirstWaiting);
+    echoes::sim::ProductionQueueItem SecondWaiting;
+    SecondWaiting.itemId = 8103;
+    SecondWaiting.unitType = echoes::sim::EntityType::HeavyUnit;
+    SecondWaiting.configuredCost = {130, 25};
+    SecondWaiting.requiredTicks = 140;
+    SecondWaiting.logisticsCost = 3;
+    ProducerFixture->productionQueue.push_back(SecondWaiting);
+
+    View = Controller->BuildFieldHudView();
+    TestTrue(TEXT("Selected owned producer emits active and waiting queue controls"),
+        View.Production.bVisible &&
+        View.Production.ProducerId == LocalBarracks &&
+        View.Production.Items.Num() == 3);
+    const int32 BeforeDisabledReorder =
+        static_cast<int32>(Simulation->PendingCommands().size());
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionMoveUp, 1);
+    TestEqual(TEXT("Disabled first-slot move-up emits no command"),
+        static_cast<int32>(Simulation->PendingCommands().size()),
+        BeforeDisabledReorder);
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionMoveDown, 1);
+    TestTrue(TEXT("Enabled waiting reorder reaches the local command bridge"),
+        Simulation->PendingCommands().size() ==
+                static_cast<size_t>(BeforeDisabledReorder + 1) &&
+        Simulation->PendingCommands().back().type ==
+            echoes::sim::CommandType::ReorderProduction &&
+        Simulation->PendingCommands().back().actor == LocalBarracks &&
+        Simulation->PendingCommands().back().target ==
+            (1U | (2U << 8U)));
+    const int32 BeforeCancellation =
+        static_cast<int32>(Simulation->PendingCommands().size());
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancel, 0);
+    View = Controller->BuildFieldHudView();
+    TestEqual(TEXT("Opening active cancellation does not queue a command"),
+        static_cast<int32>(Simulation->PendingCommands().size()),
+        BeforeCancellation);
+    TestTrue(TEXT("Active cancellation pauses locally and quotes both exact refunds"),
+        Bridge->IsScenarioPaused() &&
+        Controller->IsProductionCancellationConfirmationVisible() &&
+        View.Production.Cancellation.bVisible &&
+        View.Production.Cancellation.ItemId == 8101 &&
+        View.Production.Cancellation.ProgressPercent == 16 &&
+        View.Production.Cancellation.RefundPercent == 75 &&
+        View.Production.Cancellation.InvestedMatter == 50 &&
+        View.Production.Cancellation.InvestedDawn == 20 &&
+        View.Production.Cancellation.RefundMatter == 37 &&
+        View.Production.Cancellation.RefundDawn == 15);
+    TestTrue(TEXT("Cancellation modal exposes focusable Back and Confirm actions"),
+        View.Production.Controls.Num() == 2 &&
+        View.Production.Controls[0].Action ==
+            EEchoesFieldHudAction::ProductionCancelBack &&
+        View.Production.Controls[0].bPrimary &&
+        View.Production.Controls[1].Action ==
+            EEchoesFieldHudAction::ProductionCancelConfirm);
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancelBack);
+    TestTrue(TEXT("Back keeps the active item and restores the prior running state"),
+        !Controller->IsProductionCancellationConfirmationVisible() &&
+        !Bridge->IsScenarioPaused() &&
+        Simulation->PendingCommands().size() ==
+            static_cast<size_t>(BeforeCancellation));
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancelConfirm);
+    TestEqual(TEXT("A closed confirmation callback emits no command"),
+        static_cast<int32>(Simulation->PendingCommands().size()),
+        BeforeCancellation);
+
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancel, 0);
+    ProducerFixture->activeProductionItemId = 8199;
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancelConfirm);
+    TestTrue(TEXT("A replacement active item closes stale review without mutation"),
+        !Controller->IsProductionCancellationConfirmationVisible() &&
+        Simulation->PendingCommands().size() ==
+            static_cast<size_t>(BeforeCancellation));
+    ProducerFixture->activeProductionItemId = 8101;
+
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancel, 0);
+    ProducerFixture->owner = 1;
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancelConfirm);
+    TestTrue(TEXT("A selection that no longer has local authority cannot cancel"),
+        !Controller->IsProductionCancellationConfirmationVisible() &&
+        Simulation->PendingCommands().size() ==
+            static_cast<size_t>(BeforeCancellation));
+    ProducerFixture->owner = UEchoesSimulationSubsystem::LocalPlayerId;
+
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancel, 1);
+    View = Controller->BuildFieldHudView();
+    TestTrue(TEXT("Waiting review explicitly quotes an uncharged zero refund"),
+        View.Production.Cancellation.bVisible &&
+        !View.Production.Cancellation.bActive &&
+        View.Production.Cancellation.ItemId == 8102 &&
+        View.Production.Cancellation.RefundMatter == 0 &&
+        View.Production.Cancellation.RefundDawn == 0);
+    std::swap(
+        ProducerFixture->productionQueue[0],
+        ProducerFixture->productionQueue[1]);
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancelConfirm);
+    TestTrue(TEXT("A shifted waiting slot cannot cancel its replacement"),
+        !Controller->IsProductionCancellationConfirmationVisible() &&
+        Simulation->PendingCommands().size() ==
+            static_cast<size_t>(BeforeCancellation));
+    std::swap(
+        ProducerFixture->productionQueue[0],
+        ProducerFixture->productionQueue[1]);
+
+    ProducerFixture->productionProgress = 30;
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancel, 0);
+    View = Controller->BuildFieldHudView();
+    TestTrue(TEXT("Half-progress active review quotes the exact lower refund band"),
+        View.Production.Cancellation.bVisible &&
+        View.Production.Cancellation.ProgressPercent == 50 &&
+        View.Production.Cancellation.RefundPercent == 50 &&
+        View.Production.Cancellation.RefundMatter == 25 &&
+        View.Production.Cancellation.RefundDawn == 10);
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancelBack);
+    ProducerFixture->productionProgress = 10;
+
+    Bridge->SetScenarioPaused(true);
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancel, 0);
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancelBack);
+    TestTrue(TEXT("Cancellation review preserves an already paused scenario"),
+        Bridge->IsScenarioPaused());
+    Bridge->SetScenarioPaused(false);
+
+    const TOptional<uint64> BeforeCancellationSequence =
+        Bridge->GetLastAcceptedLocalCommandSequence();
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancel, 0);
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancelConfirm);
+    const TOptional<uint64> AfterCancellationSequence =
+        Bridge->GetLastAcceptedLocalCommandSequence();
+    const echoes::sim::Command* CancellationCommand =
+        Simulation->PendingCommands().empty()
+            ? nullptr
+            : &Simulation->PendingCommands().back();
+    const uint64 EncodedCancellationItemId = CancellationCommand != nullptr
+        ? static_cast<uint64>(static_cast<uint32>(
+              CancellationCommand->position.x.Raw())) |
+              (static_cast<uint64>(static_cast<uint32>(
+                   CancellationCommand->position.y.Raw())) << 32U)
+        : 0;
+    TestTrue(TEXT("Confirm admits exactly one stable-item cancellation command"),
+        Simulation->PendingCommands().size() ==
+                static_cast<size_t>(BeforeCancellation + 1) &&
+        CancellationCommand != nullptr &&
+        CancellationCommand->type ==
+            echoes::sim::CommandType::CancelProduction &&
+        CancellationCommand->actor == LocalBarracks &&
+        CancellationCommand->target == 0 &&
+        EncodedCancellationItemId == 8101 &&
+        AfterCancellationSequence.IsSet() &&
+        (!BeforeCancellationSequence.IsSet() ||
+         AfterCancellationSequence.GetValue() ==
+             BeforeCancellationSequence.GetValue() + 1) &&
+        !Bridge->IsScenarioPaused());
+    const int32 BeforeRally =
+        static_cast<int32>(Simulation->PendingCommands().size());
+    TestTrue(TEXT("Producer minimap context action is consumed"),
+        Controller->HandleFieldHudPointer(FVector2D(0.5f, 0.5f), true));
+    TestTrue(TEXT("Selected producer context sets rally instead of issuing a unit move"),
+        Simulation->PendingCommands().size() ==
+                static_cast<size_t>(BeforeRally + 1) &&
+        Simulation->PendingCommands().back().type ==
+            echoes::sim::CommandType::SetRallyRoute &&
+        Simulation->PendingCommands().back().actor == LocalBarracks &&
+        Simulation->PendingCommands().back().target == 0);
+    Controller->TogglePauseMenu();
+    const int32 BeforeStaleQueueAction =
+        static_cast<int32>(Simulation->PendingCommands().size());
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancel, 1);
+    TestEqual(TEXT("Modal shell rejects stale producer queue callbacks"),
+        static_cast<int32>(Simulation->PendingCommands().size()),
+        BeforeStaleQueueAction);
+    Controller->TogglePauseMenu();
+
     Controller->HandleFieldHudAction(
         EEchoesFieldHudAction::CommandDeck,
         static_cast<int32>(EEchoesCommandDeckAction::ToggleTechnology));
@@ -519,7 +770,40 @@ bool FEchoesFieldHudRoutesTest::RunTest(const FString& Parameters)
     TestTrue(
         TEXT("Command-card technology action opens the semantic archive"),
         Controller->IsTechnologyPanelVisible() &&
-            View.Technology.bVisible && View.Technology.Tiers.Num() == 2);
+            View.Technology.bVisible && View.Technology.Tiers.Num() == 2 &&
+            !View.Production.bVisible);
+    TestTrue(
+        TEXT("Active production disables research instead of advertising a command the authority will reject"),
+        View.Technology.Tiers.Num() == 2 &&
+            !View.Technology.Tiers[0].bEnabled &&
+            View.Technology.Tiers[0].State.ToString().Contains(TEXT("PRODUCTION IS ACTIVE")));
+    const int32 BeforeTechnologyQueueCallback =
+        static_cast<int32>(Simulation->PendingCommands().size());
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancel, 1);
+    TestEqual(TEXT("Technology archive rejects hidden queue callbacks"),
+        static_cast<int32>(Simulation->PendingCommands().size()),
+        BeforeTechnologyQueueCallback);
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::TechnologyResearchTier, 0);
+    TestEqual(TEXT("Production-busy technology callback appends no command"),
+        static_cast<int32>(Simulation->PendingCommands().size()),
+        BeforeTechnologyQueueCallback);
+
+    // The production controls above intentionally use a direct queue-state
+    // fixture. Clear that fixture before testing the independent ready-research
+    // route so the semantic control and bridge validate the same producer.
+    ProducerFixture->productionType = echoes::sim::EntityType::Worker;
+    ProducerFixture->activeProductionItemId = 0;
+    ProducerFixture->productionProgress = 0;
+    ProducerFixture->productionRequired = 0;
+    ProducerFixture->productionInvestedCost = {};
+    ProducerFixture->productionLogisticsCost = 0;
+    ProducerFixture->productionQueue.clear();
+    View = Controller->BuildFieldHudView();
+    TestTrue(TEXT("Idle selected producer exposes the enabled first technology"),
+        View.Technology.Tiers.Num() == 2 &&
+            View.Technology.Tiers[0].bEnabled);
     Controller->HandleFieldHudAction(EEchoesFieldHudAction::TechnologyNext);
     TestEqual(TEXT("Semantic next-tier action updates exact focus"),
               Controller->GetTechnologyPanelFocusedTier(), 1);
@@ -551,6 +835,10 @@ bool FEchoesFieldHudRoutesTest::RunTest(const FString& Parameters)
         static_cast<int32>(Simulation->PendingCommands().size());
     Controller->HandleFieldHudAction(
         EEchoesFieldHudAction::TechnologyResearchTier, 1);
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancel, 0);
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancelConfirm);
     TestEqual(TEXT("Hidden technology callback appends no command"),
               static_cast<int32>(Simulation->PendingCommands().size()),
               BeforeStaleTier);
@@ -612,6 +900,10 @@ bool FEchoesFieldHudRoutesTest::RunTest(const FString& Parameters)
         static_cast<int32>(EEchoesCommandDeckAction::Hold));
     Controller->HandleFieldHudAction(
         EEchoesFieldHudAction::TechnologyResearchTier, 1);
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancel, 0);
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancelConfirm);
     TestTrue(
         TEXT("Replay minimap right click is consumed as read-only"),
         Controller->HandleFieldHudPointer(FVector2D(0.5f, 0.5f), true));
@@ -620,13 +912,45 @@ bool FEchoesFieldHudRoutesTest::RunTest(const FString& Parameters)
         Simulation->CurrentTick() == LiveTickBeforeReplayInput &&
             Simulation->StateChecksum() == LiveChecksumBeforeReplayInput &&
             static_cast<int32>(Simulation->PendingCommands().size()) ==
-                LiveCommandsBeforeReplayInput);
+                LiveCommandsBeforeReplayInput &&
+            !Controller->IsProductionCancellationConfirmationVisible());
     Bridge->EndReplay();
     TestTrue(
         TEXT("Leaving replay returns to the same live field state"),
         Bridge->GetSimulation() == Simulation &&
             Simulation->CurrentTick() == LiveTickBeforeReplayInput &&
             Simulation->StateChecksum() == LiveChecksumBeforeReplayInput);
+
+    ProducerFixture->activeProductionItemId = 8201;
+    ProducerFixture->productionType = echoes::sim::EntityType::Worker;
+    ProducerFixture->productionProgress = 5;
+    ProducerFixture->productionRequired = 60;
+    ProducerFixture->productionInvestedCost = {50, 20};
+    TestTrue(TEXT("Producer is selected again for authority reset review"),
+        SelectExactOwnedEntity(
+            *Controller,
+            LocalBarracks,
+            static_cast<int32>(Simulation->Entities().size()) + 2));
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancel, 0);
+    const uint64 ReviewAuthority = Bridge->GetScenarioAuthorityGeneration();
+    TestTrue(TEXT("Authority reset fixture opens a stable cancellation review"),
+        Controller->IsProductionCancellationConfirmationVisible());
+    Bridge->StopPrototypeScenario();
+    TestTrue(TEXT("Replacement scenario starts for stale callback isolation"),
+        Bridge->StartPrototypeScenario());
+    const echoes::sim::Simulation* ReplacementSimulation = Bridge->GetSimulation();
+    const int32 ReplacementCommandCount = ReplacementSimulation != nullptr
+        ? static_cast<int32>(ReplacementSimulation->PendingCommands().size())
+        : -1;
+    Controller->HandleFieldHudAction(
+        EEchoesFieldHudAction::ProductionCancelConfirm);
+    TestTrue(TEXT("Authority replacement closes review without touching the new scenario"),
+        ReplacementSimulation != nullptr &&
+        Bridge->GetScenarioAuthorityGeneration() != ReviewAuthority &&
+        !Controller->IsProductionCancellationConfirmationVisible() &&
+        static_cast<int32>(ReplacementSimulation->PendingCommands().size()) ==
+            ReplacementCommandCount);
 
     // Campaign-map actions are accepted only while that semantic surface is
     // current; a disabled locked-sector deploy cannot escape the map.

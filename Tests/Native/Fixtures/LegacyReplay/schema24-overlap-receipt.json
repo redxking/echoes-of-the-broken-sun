@@ -1,0 +1,21 @@
+{
+  "snapshot_version": 24,
+  "replay_version": 24,
+  "final_tick": 100,
+  "final_checksum": 7528106729185991639,
+  "core": 1,
+  "worker": 3,
+  "commands": 3,
+  "author": "Angelis Pseftis",
+  "source_commit": "e6c0c3dd3f149069b34f0a4ce9da10f79357abeb",
+  "baseline_sha256": "e83fc058c3c4e4fb23c8794e8950e1f2d2a7fc5cedcf638c3cb4aecbc593b3bc",
+  "driver_sha256": "9de93f9269e547f607161dcf3e89a40f8b4ad89e7a383ef0cd589ec04fa6ce10",
+  "overlapping_command": {
+    "execute_tick": 1,
+    "player": 0,
+    "sequence": 3,
+    "type": "Produce",
+    "actor": 1,
+    "build_type": "Worker"
+  }
+}

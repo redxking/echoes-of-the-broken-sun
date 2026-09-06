@@ -83,6 +83,8 @@ AEchoesRTSCameraPawn::AEchoesRTSCameraPawn()
     Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
     Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
     Camera->ProjectionMode = ECameraProjectionMode::Orthographic;
+    Camera->bOverrideAspectRatioAxisConstraint = true;
+    Camera->SetAspectRatioAxisConstraint(AspectRatio_MaintainXFOV);
     SetCameraFraming(3800.0f);
 
 }
@@ -824,8 +826,14 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
     const FVector PanDelta =
         (ViewForward * AppliedForward + ViewRight * AppliedRight) *
         PanSpeed * PanSpeedScale * DeltaSeconds;
+    const FVector PriorLocation = GetActorLocation();
     AddActorWorldOffset(PanDelta, false, nullptr, ETeleportType::None);
     ClampToBattlefield();
+    if (!GetActorLocation().Equals(PriorLocation))
+    {
+        ++NavigationRevision;
+        bLastNavigationPlayerDriven = true;
+    }
 }
 
 void AEchoesRTSCameraPawn::SetForwardInput(float Value)
@@ -844,8 +852,14 @@ void AEchoesRTSCameraPawn::PanToWorld(const FVector& WorldPosition)
     if (WorldPosition.ContainsNaN()) return;
     FVector Location = WorldPosition;
     Location.Z = GetActorLocation().Z;
+    const FVector PriorLocation = GetActorLocation();
     SetActorLocation(Location);
     ClampToBattlefield();
+    if (!GetActorLocation().Equals(PriorLocation))
+    {
+        ++NavigationRevision;
+        bLastNavigationPlayerDriven = false;
+    }
 }
 
 void AEchoesRTSCameraPawn::PanByScreenDelta(const FVector2D& DeltaPixels, float ViewportWidth)
@@ -857,7 +871,7 @@ void AEchoesRTSCameraPawn::PanByScreenDelta(const FVector2D& DeltaPixels, float 
     const float PitchScale = FMath::Max(.1f, FMath::Abs(FMath::Sin(FMath::DegreesToRadians(View.Pitch))));
     const FVector Delta = -FRotationMatrix(Flat).GetUnitAxis(EAxis::Y) * DeltaPixels.X * UnitsPerPixel +
         Flat.Vector() * DeltaPixels.Y * UnitsPerPixel / PitchScale;
-    PanToWorld(GetActorLocation() + Delta);
+    PanFromPlayerInput(GetActorLocation() + Delta);
 }
 
 bool AEchoesRTSCameraPawn::GetBattlefieldFootprint(
@@ -921,6 +935,30 @@ void AEchoesRTSCameraPawn::ZoomOut()
 
 void AEchoesRTSCameraPawn::ApplyZoom(float Direction)
 {
+    FVector2D Point = FVector2D::ZeroVector;
+    FVector2D Size = FVector2D::ZeroVector;
+    if (AEchoesPlayerController* Controller = Cast<AEchoesPlayerController>(GetController()))
+    {
+        if (!Controller->ResolvePointerScreenPosition(Point, &Size))
+            Size = FVector2D::ZeroVector;
+    }
+    else if (APlayerController* FallbackController = Cast<APlayerController>(GetController()))
+    {
+        int32 Width = 0, Height = 0;
+        FallbackController->GetViewportSize(Width, Height);
+        float X = 0.0f, Y = 0.0f;
+        if (FallbackController->GetMousePosition(X, Y))
+        {
+            Point = FVector2D(X, Y);
+            Size = FVector2D(Width, Height);
+        }
+    }
+    ApplyZoomAtViewportPoint(Direction, Point, Size);
+}
+
+void AEchoesRTSCameraPawn::ApplyZoomAtViewportPoint(
+    float Direction, const FVector2D& Point, const FVector2D& ViewportSize)
+{
     if (const AEchoesPlayerController* EchoesController =
             Cast<AEchoesPlayerController>(GetController());
         EchoesController != nullptr && EchoesController->IsModalOverlayVisible())
@@ -930,10 +968,42 @@ void AEchoesRTSCameraPawn::ApplyZoom(float Direction)
     const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
     const float ZoomScale =
         Settings != nullptr ? Settings->GetCameraZoomScale() : 1.0f;
+    const uint64 PriorRevision = NavigationRevision;
+    const float PriorWidth = Camera->OrthoWidth;
     SetCameraFraming(FMath::Clamp(
         SpringArm->TargetArmLength + ZoomStep * ZoomScale * Direction,
         MinimumZoom,
-        MaximumZoom));
+        MaximumZoom), ActiveFramingFieldOfViewDegrees);
+    if (NavigationRevision != PriorRevision &&
+        !Point.ContainsNaN() && !ViewportSize.ContainsNaN() &&
+        ViewportSize.X > 0.0f && ViewportSize.Y > 0.0f &&
+        Point.X >= 0.0f && Point.X <= ViewportSize.X &&
+        Point.Y >= 0.0f && Point.Y <= ViewportSize.Y)
+    {
+        // Orthographic rays are parallel. Project the change in the cursor's
+        // view-plane offset onto the ground, without using a stale camera cache.
+        const FVector Ray = Camera->GetForwardVector();
+        if (!FMath::IsNearlyZero(Ray.Z))
+        {
+            const float WidthDelta = PriorWidth - Camera->OrthoWidth;
+            const FVector Offset = Camera->GetRightVector() *
+                ((Point.X / ViewportSize.X - 0.5f) * WidthDelta) +
+                Camera->GetUpVector() *
+                ((0.5f - Point.Y / ViewportSize.Y) * WidthDelta *
+                    ViewportSize.Y / ViewportSize.X);
+            const FVector GroundOffset = Offset - Ray * (Offset.Z / Ray.Z);
+            SetActorLocation(GetActorLocation() + GroundOffset);
+            // Zoom changes scale immediately, so its anchor translation must
+            // also settle immediately; retain the player's lag setting for pan.
+            const bool bSavedCameraLag = SpringArm->bEnableCameraLag;
+            SpringArm->bEnableCameraLag = false;
+            SpringArm->TickComponent(0.0f, LEVELTICK_All, nullptr);
+            ClampToBattlefield();
+            SpringArm->TickComponent(0.0f, LEVELTICK_All, nullptr);
+            SpringArm->bEnableCameraLag = bSavedCameraLag;
+        }
+    }
+    if (NavigationRevision != PriorRevision) bLastNavigationPlayerDriven = true;
 }
 
 void AEchoesRTSCameraPawn::SetCameraFraming(
@@ -943,6 +1013,12 @@ void AEchoesRTSCameraPawn::SetCameraFraming(
     check(SpringArm != nullptr);
     check(Camera != nullptr);
 
+    if (!FMath::IsNearlyEqual(SpringArm->TargetArmLength, LegacyArmLength) ||
+        !FMath::IsNearlyEqual(ActiveFramingFieldOfViewDegrees, LegacyFieldOfViewDegrees))
+    {
+        ++NavigationRevision;
+        bLastNavigationPlayerDriven = false;
+    }
     ActiveFramingFieldOfViewDegrees = LegacyFieldOfViewDegrees;
     SpringArm->TargetArmLength = FMath::Max(0.0f, LegacyArmLength);
     SynchronizeOrthographicFraming();
@@ -989,51 +1065,28 @@ void AEchoesRTSCameraPawn::ClampToBattlefield()
         static_cast<float>(Bridge->GetMapHeightTiles()) *
         UEchoesSimulationSubsystem::TileWorldSize * 0.5f;
     FVector Location = GetActorLocation();
-    float MinimumCameraX = -HalfWidth;
-    float MaximumCameraX = HalfWidth;
-    float MinimumCameraY = -HalfHeight;
-    float MaximumCameraY = HalfHeight;
-    FVector2D ViewportSize(16.0f, 9.0f);
-    if (const APlayerController* Controller =
-            Cast<APlayerController>(GetController()))
-    {
-        int32 Width = 0;
-        int32 Height = 0;
-        Controller->GetViewportSize(Width, Height);
-        if (Width > 0 && Height > 0)
-        {
-            ViewportSize = FVector2D(Width, Height);
-        }
-    }
-    TArray<FVector> Footprint;
-    if (GetBattlefieldFootprint(ViewportSize, Footprint) &&
-        Footprint.Num() == 4)
-    {
-        float MinimumOffsetX = MAX_flt;
-        float MaximumOffsetX = -MAX_flt;
-        float MinimumOffsetY = MAX_flt;
-        float MaximumOffsetY = -MAX_flt;
-        for (const FVector& Corner : Footprint)
-        {
-            MinimumOffsetX = FMath::Min(MinimumOffsetX, Corner.X - Location.X);
-            MaximumOffsetX = FMath::Max(MaximumOffsetX, Corner.X - Location.X);
-            MinimumOffsetY = FMath::Min(MinimumOffsetY, Corner.Y - Location.Y);
-            MaximumOffsetY = FMath::Max(MaximumOffsetY, Corner.Y - Location.Y);
-        }
-        MinimumCameraX = -HalfWidth - MinimumOffsetX;
-        MaximumCameraX = HalfWidth - MaximumOffsetX;
-        MinimumCameraY = -HalfHeight - MinimumOffsetY;
-        MaximumCameraY = HalfHeight - MaximumOffsetY;
-        if (MinimumCameraX > MaximumCameraX)
-        {
-            MinimumCameraX = MaximumCameraX = 0.0f;
-        }
-        if (MinimumCameraY > MaximumCameraY)
-        {
-            MinimumCameraY = MaximumCameraY = 0.0f;
-        }
-    }
-    Location.X = FMath::Clamp(Location.X, MinimumCameraX, MaximumCameraX);
-    Location.Y = FMath::Clamp(Location.Y, MinimumCameraY, MaximumCameraY);
+    // Bound the navigation target, not the entire rotated viewport. Keeping
+    // every viewport corner inside the map makes map corners unreachable.
+    Location.X = FMath::Clamp(Location.X, -HalfWidth, HalfWidth);
+    Location.Y = FMath::Clamp(Location.Y, -HalfHeight, HalfHeight);
     SetActorLocation(Location);
+}
+
+float AEchoesRTSCameraPawn::GetNavigationZoom() const
+{
+    return SpringArm ? SpringArm->TargetArmLength : 0.0f;
+}
+
+bool AEchoesRTSCameraPawn::GetNavigationCenter(FVector2D& OutCenter) const
+{
+    const FVector Location = GetActorLocation();
+    OutCenter = FVector2D(Location.X, Location.Y);
+    return !OutCenter.ContainsNaN();
+}
+
+void AEchoesRTSCameraPawn::PanFromPlayerInput(const FVector& WorldPosition)
+{
+    const uint64 PriorRevision = NavigationRevision;
+    PanToWorld(WorldPosition);
+    if (NavigationRevision != PriorRevision) bLastNavigationPlayerDriven = true;
 }

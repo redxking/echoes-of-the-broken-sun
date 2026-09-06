@@ -354,6 +354,67 @@
  "operations": {
   "CampaignAssemblyOfTheMissing": {
    "briefing": "The missing have an assembly, and the assembly has no record. Establish paired readback at both public-record interfaces, raise a Listening Spine within reach of the Crownfall index, and complete one public observation receipt from separate witness sites.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m13_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m13_ambience_assembly"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m13_shot_convergence",
+      "line_ids": [
+       "nar_m13_line_op_missing_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m13_converging_absences"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m13_ambience_assembly"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m13_shot_records",
+      "line_ids": [
+       "nar_m13_line_op_receipt_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m13_public_records"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m13_ambience_assembly"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m13_shot_spine",
+      "line_ids": [
+       "nar_m13_line_op_witness_003"
+      ],
+      "visual_hook_ids": [
+       "vis_m13_index_link"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m13_ambience_assembly"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m13_shot_witnesses",
+      "line_ids": [
+       "nar_m13_line_op_care_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m13_separate_witnesses"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignAssemblyOfTheMissing:EstablishPublicRecordReadback",
+    "trigger_id": "nar_m13_evt_operation_started"
+   },
    "content_id": "nar_m13_assembly_of_the_missing",
    "failure_lines": {
     "generic": "nar_m13_line_fail_generic_006",
@@ -492,6 +553,67 @@
   },
   "CampaignChoirAtLumeReach": {
    "briefing": "Lume Reach holds a Well, a Choir presence that answers, and the liability our Mission 09 deferral left standing. Establish contact on the inherited approach, resolve the liability, raise both anchors, and commit a new Well protocol — then stand at its public resolution.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m10_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m10_ambience_reach"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m10_shot_reach",
+      "line_ids": [
+       "nar_m10_line_op_reach_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m10_lume_reach_evening"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m10_ambience_reach"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m10_shot_quarantine",
+      "line_ids": [
+       "nar_m10_line_op_liaison_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m10_quarantine_line"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m10_ambience_reach"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m10_shot_liability",
+      "line_ids": [
+       "nar_m10_line_op_liability_003"
+      ],
+      "visual_hook_ids": [
+       "vis_m10_standing_liability"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m10_ambience_reach"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m10_shot_well",
+      "line_ids": [
+       "nar_m10_line_op_choice_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m10_lume_well_offers"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignChoirAtLumeReach:EstablishContact",
+    "trigger_id": "nar_m10_evt_operation_started"
+   },
    "content_id": "nar_m10_the_choir_at_lume_reach",
    "failure_lines": {
     "future_well_lost": "nar_m10_line_fail_well_004",
@@ -695,6 +817,67 @@
   },
   "CampaignCityReserve": {
    "briefing": "The ark-city grid is on reserve and failing. The founding decision fixed the order the districts come back: reconnect each district interface in that order and keep every structure standing. The order is inherited; the work is now.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m03_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m03_ambience_reserve"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m03_shot_skyline",
+      "line_ids": [
+       "nar_m03_line_op_grid_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m03_district_skyline"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m03_ambience_reserve"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m03_shot_gridmap",
+      "line_ids": [
+       "nar_m03_line_op_order_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m03_grid_schematic"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m03_ambience_reserve"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m03_shot_crews",
+      "line_ids": [
+       "nar_m03_line_op_method_003"
+      ],
+      "visual_hook_ids": [
+       "vis_m03_worker_column"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m03_ambience_reserve"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m03_shot_interface",
+      "line_ids": [
+       "nar_m03_line_op_stakes_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m03_district_interface"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignCityReserve:StabilizePriority",
+    "trigger_id": "nar_m03_evt_operation_started"
+   },
    "content_id": "nar_m03_a_city_on_reserve",
    "failure_lines": {
     "district_structure_lost": "nar_m03_line_fail_district_002",
@@ -817,6 +1000,67 @@
   },
   "CampaignFutureThatWon": {
    "briefing": "The Chancellor's apparatus demonstrates a future in public, and the record it points at is ours. Establish independent readback at both interfaces, verify the recorded inputs, bind only the recorded protocol, hold the fixed window, and watch both districts read it back.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m12_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m12_ambience_plaza"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m12_shot_apparatus",
+      "line_ids": [
+       "nar_m12_line_op_won_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m12_demonstrator_plaza"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m12_ambience_plaza"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m12_shot_audit",
+      "line_ids": [
+       "nar_m12_line_op_apparatus_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m12_audit_column"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m12_ambience_plaza"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m12_shot_interfaces",
+      "line_ids": [
+       "nar_m12_line_op_method_003"
+      ],
+      "visual_hook_ids": [
+       "vis_m12_paired_readbacks"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m12_ambience_plaza"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m12_shot_well",
+      "line_ids": [
+       "nar_m12_line_op_exact_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m12_separate_well"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignFutureThatWon:EstablishIndependentReadback",
+    "trigger_id": "nar_m12_evt_operation_started"
+   },
    "content_id": "nar_m12_the_future_that_won",
    "failure_lines": {
     "conflicting_protocol_bound": "nar_m12_line_fail_conflict_006",
@@ -997,6 +1241,67 @@
   },
   "CampaignNamesWithoutBirths": {
    "briefing": "Somewhere in this district, names were recorded that no birth explains, and then the record of them was erased. Follow the trace the founding decision left reachable: locate the census, power the archive, shelter who the search exposes, and take the evidence out whole.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m06_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m06_ambience_records"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m06_shot_register",
+      "line_ids": [
+       "nar_m06_line_op_names_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m06_register_void"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m06_ambience_records"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m06_shot_trace",
+      "line_ids": [
+       "nar_m06_line_op_method_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m06_trace_overlay"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m06_ambience_records"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m06_shot_residences",
+      "line_ids": [
+       "nar_m06_line_op_care_003"
+      ],
+      "visual_hook_ids": [
+       "vis_m06_exposed_residences"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m06_ambience_records"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m06_shot_erasure",
+      "line_ids": [
+       "nar_m06_line_op_quiet_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m06_erasure_marks"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignNamesWithoutBirths:LocateCensus",
+    "trigger_id": "nar_m06_evt_operation_started"
+   },
    "content_id": "nar_m06_names_without_births",
    "failure_lines": {
     "archive_lost": "nar_m06_line_fail_archive_003",
@@ -1148,6 +1453,67 @@
   },
   "CampaignNoNeutralLedger": {
    "briefing": "Ten records, no neutral reading. The doctrine picks our route, the allocation our contributors, the Lume protocol itself. Walk it exactly: secure, integrate, attest both neutral interfaces, apply only what was recorded, and rally the coalition where the protocol says.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m11_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m11_ambience_ledger"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m11_shot_ledger",
+      "line_ids": [
+       "nar_m11_line_op_ledger_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m11_ten_records"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m11_ambience_ledger"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m11_shot_lattice",
+      "line_ids": [
+       "nar_m11_line_op_plans_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m11_plan_lattice"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m11_ambience_ledger"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m11_shot_interfaces",
+      "line_ids": [
+       "nar_m11_line_op_witness_003"
+      ],
+      "visual_hook_ids": [
+       "vis_m11_paired_interfaces"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m11_ambience_ledger"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m11_shot_well",
+      "line_ids": [
+       "nar_m11_line_op_exact_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m11_recorded_well"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignNoNeutralLedger:SecureInheritedRoute",
+    "trigger_id": "nar_m11_evt_operation_started"
+   },
    "content_id": "nar_m11_no_neutral_ledger",
    "failure_lines": {
     "conflicting_protocol_applied": "nar_m11_line_fail_conflict_007",
@@ -1344,6 +1710,69 @@
   },
   "CampaignPrologue": {
    "briefing": "Recover the displaced archive convoy at tile 22,18, commit one visible Future Well protocol while the carrier holds the site, then evacuate the carrier to Lume Reach at tile 6,17.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m01_cin_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m01_ambience_glass_scar"
+      ],
+      "editorial_target_seconds": 10.7,
+      "id": "nar_m01_shot_001",
+      "line_ids": [
+       "nar_m01_line_talar_001",
+       "nar_m01_line_mara_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m01_glass_scar_overview"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m01_ambience_glass_scar"
+      ],
+      "editorial_target_seconds": 6.7,
+      "id": "nar_m01_shot_002",
+      "line_ids": [
+       "nar_m01_line_talar_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m01_archive_route_overlay"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m01_ambience_glass_scar"
+      ],
+      "editorial_target_seconds": 9.9,
+      "id": "nar_m01_shot_003",
+      "line_ids": [
+       "nar_m01_line_oruun_001",
+       "nar_m01_line_oruun_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m01_future_well_propagation"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m01_ambience_glass_scar"
+      ],
+      "editorial_target_seconds": 5.4,
+      "id": "nar_m01_shot_004",
+      "line_ids": [
+       "nar_m01_line_mara_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m01_tactical_handoff"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignPrologue:RecoverArchive",
+    "trigger_id": "nar_m01_evt_operation_started"
+   },
    "content_id": "nar_m01_what_the_ledger_keeps",
    "failure_lines": {
     "archive_carrier_lost": "nar_m01_line_talar_fail_carrier",
@@ -1546,6 +1975,67 @@
   },
   "CampaignReserveAuthority": {
    "briefing": "The reserve cannot carry three districts. The doctrine we inherited recommends an order; the choice is ours, and it will not be reversible. Secure the authority site, power exactly two districts, and Mara confirms the one we defer, standing in it.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m09_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m09_ambience_reserve_hall"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m09_shot_gauges",
+      "line_ids": [
+       "nar_m09_line_op_reserve_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m09_reserve_gauges"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m09_ambience_reserve_hall"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m09_shot_doctrine",
+      "line_ids": [
+       "nar_m09_line_op_doctrine_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m09_advisory_overlay"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m09_ambience_reserve_hall"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m09_shot_authority",
+      "line_ids": [
+       "nar_m09_line_op_authority_003"
+      ],
+      "visual_hook_ids": [
+       "vis_m09_allocation_console"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m09_ambience_reserve_hall"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m09_shot_district",
+      "line_ids": [
+       "nar_m09_line_op_weight_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m09_reserve_street"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignReserveAuthority:SecureAuthority",
+    "trigger_id": "nar_m09_evt_operation_started"
+   },
    "content_id": "nar_m09_reserve_authority",
    "failure_lines": {
     "district_structure_lost": "nar_m09_line_fail_district_003",
@@ -1683,6 +2173,68 @@
   },
   "CampaignSevenAccounts": {
    "briefing": "The migration moves today, and the seven inherited accounts disagree about the ground. Hold the route, root the Waystone at the anchor the founding decision left, and bring the memory bearer to the account site.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m02_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m02_ambience_route"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m02_shot_basin",
+      "line_ids": [
+       "nar_m02_line_oruun_op_orders_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m02_migration_basin"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m02_ambience_route"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m02_shot_accounts",
+      "line_ids": [
+       "nar_m02_line_oruun_op_accounts_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m02_account_overlays"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m02_ambience_route"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m02_shot_waystone",
+      "line_ids": [
+       "nar_m02_line_oruun_op_waystone_003",
+       "nar_m02_line_oruun_op_stakes_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m02_waystone_uproot"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m02_ambience_route"
+      ],
+      "editorial_target_seconds": 6,
+      "id": "nar_m02_shot_ridge",
+      "line_ids": [
+       "nar_m02_line_oruun_op_humor_005"
+      ],
+      "visual_hook_ids": [
+       "vis_m02_argued_ridge"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignSevenAccounts:EstablishWaystone",
+    "trigger_id": "nar_m02_evt_operation_started"
+   },
    "content_id": "nar_m02_seven_accounts_of_rain",
    "failure_lines": {
     "generic": "nar_m02_line_oruun_fail_generic_005",
@@ -1818,6 +2370,67 @@
   },
   "CampaignSeveralVoicesOneCommand": {
    "briefing": "The Choir asks to be commanded, once, precisely: a Soldier voice resolving Possible, a Heavy voice holding Manifest, Neme at the command site, and a Phase Anchor at the crisis. Research both looms, place every voice exactly, and hold the contract for one hundred sixty fixed ticks.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m14_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m14_ambience_crisis"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m14_shot_choir",
+      "line_ids": [
+       "nar_m14_line_op_voices_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m14_choir_formation"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m14_ambience_crisis"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m14_shot_sites",
+      "line_ids": [
+       "nar_m14_line_op_terms_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m14_separate_sites"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m14_ambience_crisis"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m14_shot_loom",
+      "line_ids": [
+       "nar_m14_line_op_loom_003"
+      ],
+      "visual_hook_ids": [
+       "vis_m14_research_loom"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m14_ambience_crisis"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m14_shot_crisis",
+      "line_ids": [
+       "nar_m14_line_op_precision_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m14_crisis_socket"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignSeveralVoicesOneCommand:ResearchHeldAlternatives",
+    "trigger_id": "nar_m14_evt_operation_started"
+   },
    "content_id": "nar_m14_several_voices_one_command",
    "failure_lines": {
     "crisis_contract_breached": "nar_m14_line_fail_contract_005",
@@ -1990,6 +2603,67 @@
   },
   "CampaignShapeBesideUs": {
    "briefing": "Something walks beside our proxies through ground that exists twice. Neme offers guidance through the overlap; the offer is the first reciprocal contact we can act on. Reach the first echo, raise the relay, traverse both paired states, and Talar walks to the convergence.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m08_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m08_ambience_overlap"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m08_shot_overlap",
+      "line_ids": [
+       "nar_m08_line_op_beside_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m08_doubled_ground"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m08_ambience_overlap"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m08_shot_address",
+      "line_ids": [
+       "nar_m08_line_op_offer_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m08_repeating_edge"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m08_ambience_overlap"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m08_shot_terms",
+      "line_ids": [
+       "nar_m08_line_op_terms_003"
+      ],
+      "visual_hook_ids": [
+       "vis_m08_proxy_file"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m08_ambience_overlap"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m08_shot_echo",
+      "line_ids": [
+       "nar_m08_line_op_neme_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m08_first_echo"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignShapeBesideUs:ReachFirstEcho",
+    "trigger_id": "nar_m08_evt_operation_started"
+   },
    "content_id": "nar_m08_the_shape_beside_us",
    "failure_lines": {
     "generic": "nar_m08_line_fail_generic_005",
@@ -2133,6 +2807,67 @@
   },
   "CampaignShapeOfSilence": {
    "briefing": "The Compact lost a census. Our communal memory lost a neighborhood, and lost the memory of losing it. The two silences correspond. Root the Waystone, raise the Spine, set two witnesses where the accounts thin, and Oruun walks to the confluence to hear the shape.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m07_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m07_ambience_hollow"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m07_shot_hollow",
+      "line_ids": [
+       "nar_m07_line_op_silence_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m07_quiet_span"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m07_ambience_hollow"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m07_shot_overlay",
+      "line_ids": [
+       "nar_m07_line_op_census_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m07_corresponding_voids"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m07_ambience_hollow"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m07_shot_order",
+      "line_ids": [
+       "nar_m07_line_op_method_003"
+      ],
+      "visual_hook_ids": [
+       "vis_m07_processional_column"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m07_ambience_hollow"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m07_shot_witnesses",
+      "line_ids": [
+       "nar_m07_line_op_witness_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m07_standing_witnesses"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignShapeOfSilence:RootWaystone",
+    "trigger_id": "nar_m07_evt_operation_started"
+   },
    "content_id": "nar_m07_the_shape_of_silence",
    "failure_lines": {
     "generic": "nar_m07_line_fail_generic_006",
@@ -2284,6 +3019,67 @@
   },
   "CampaignTermsOfContinuance": {
    "briefing": "Drafted ceasefire terms are ready to read, and nobody has signed them. Synchronize our relay with the Kharuun spine, hold the continuance window for its full span while the terms read out, and take both witnesses off the field alive.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m05_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m05_ambience_accord"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m05_shot_draft",
+      "line_ids": [
+       "nar_m05_line_op_terms_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m05_draft_unsigned"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m05_ambience_accord"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m05_shot_networks",
+      "line_ids": [
+       "nar_m05_line_op_networks_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m05_two_masts"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m05_ambience_accord"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m05_shot_window",
+      "line_ids": [
+       "nar_m05_line_sync_window_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m05_held_field"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m05_ambience_accord"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m05_shot_witnesses",
+      "line_ids": [
+       "nar_m05_line_op_witnesses_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m05_witness_walk"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignTermsOfContinuance:SynchronizeNetworks",
+    "trigger_id": "nar_m05_evt_operation_started"
+   },
    "content_id": "nar_m05_terms_of_continuance",
    "failure_lines": {
     "continuance_window_compromised": "nar_m05_line_fail_window_005",
@@ -2430,6 +3226,68 @@
   },
   "CampaignTheBrokenSun": {
    "briefing": "The Crownfall is the last contract. Secure the approach, assemble all three accords with the witnesses protected, confirm the earned ending twice — it cannot be unsaid — raise its Resolution Conduit, and hold everything the contract names until the sky believes you.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m15_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m15_ambience_crownfall"
+      ],
+      "editorial_target_seconds": 10,
+      "id": "nar_m15_shot_sky",
+      "line_ids": [
+       "nar_m15_line_op_crownfall_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m15_crownfall_sky"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m15_ambience_crownfall"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m15_shot_witnesses",
+      "line_ids": [
+       "nar_m15_line_op_mara_002",
+       "nar_m15_line_op_oruun_003"
+      ],
+      "visual_hook_ids": [
+       "vis_m15_witness_stations"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m15_ambience_crownfall"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m15_shot_register",
+      "line_ids": [
+       "nar_m15_line_op_talar_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m15_open_register"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m15_ambience_crownfall"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m15_shot_approach",
+      "line_ids": [
+       "nar_m15_line_op_crownfall_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m15_approach_path"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignTheBrokenSun:SecureCrownfallApproach",
+    "trigger_id": "nar_m15_evt_operation_started"
+   },
    "content_id": "nar_m15_the_broken_sun",
    "failure_lines": {
     "command_force_lost": "nar_m15_line_fail_force_003",
@@ -2630,6 +3488,67 @@
   },
   "CampaignUnburiedRoad": {
    "briefing": "A memory shard is missing from the record, and the road to it runs subsurface. Take the road the founding decision selected: root the Waystone at the roadhead, raise a Listening Spine over the vaults, and walk the bearer to the shard.",
+   "cinematic": {
+    "format": "in_engine_storyboard",
+    "id": "nar_m04_cine_opening",
+    "named_character_physical_presence_asserted": false,
+    "shots": [
+     {
+      "audio_hook_ids": [
+       "aud_m04_ambience_vaults"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m04_shot_record",
+      "line_ids": [
+       "nar_m04_line_op_road_001"
+      ],
+      "visual_hook_ids": [
+       "vis_m04_record_gap"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m04_ambience_vaults"
+      ],
+      "editorial_target_seconds": 9,
+      "id": "nar_m04_shot_roads",
+      "line_ids": [
+       "nar_m04_line_op_inherit_002"
+      ],
+      "visual_hook_ids": [
+       "vis_m04_three_roads"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m04_ambience_vaults"
+      ],
+      "editorial_target_seconds": 7,
+      "id": "nar_m04_shot_waystone",
+      "line_ids": [
+       "nar_m04_line_op_method_003"
+      ],
+      "visual_hook_ids": [
+       "vis_m04_waystone_column"
+      ]
+     },
+     {
+      "audio_hook_ids": [
+       "aud_m04_ambience_vaults"
+      ],
+      "editorial_target_seconds": 8,
+      "id": "nar_m04_shot_vaults",
+      "line_ids": [
+       "nar_m04_line_op_vaults_004"
+      ],
+      "visual_hook_ids": [
+       "vis_m04_vault_ceiling"
+      ]
+     }
+    ],
+    "signal": "operation_ready:CampaignUnburiedRoad:EstablishRoadhead",
+    "trigger_id": "nar_m04_evt_operation_started"
+   },
    "content_id": "nar_m04_the_unburied_road",
    "failure_lines": {
     "generic": "nar_m04_line_fail_generic_005",
@@ -2760,5 +3679,5 @@
   }
  },
  "pack_format": "echoes-narrative-pack",
- "pack_version": 1
+ "pack_version": 2
 }

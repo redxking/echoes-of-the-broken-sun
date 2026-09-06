@@ -178,6 +178,15 @@ bool FEchoesReplayBrowserTest::RunTest(const FString& Parameters)
         Wrapper.ForwardErrorMessages(this);
         return false;
     }
+    Controller->InitInputSystem();
+    if (!TestNotNull(TEXT("Replay browser controller initializes input"),
+                     Controller->PlayerInput.Get()))
+    {
+        Controller->Destroy();
+        Bridge->StopPrototypeScenario();
+        Wrapper.ForwardErrorMessages(this);
+        return false;
+    }
     Controller->PresentTitleScreen();
     TestEqual(TEXT("Browser opens through the normal title action"),
         Controller->BuildShellView().Screen, EEchoesShellScreen::Title);

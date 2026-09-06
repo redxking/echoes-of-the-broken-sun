@@ -1,0 +1,13 @@
+{
+  "snapshot_version": 25,
+  "replay_version": 24,
+  "final_tick": 100,
+  "final_checksum": 4983431485298820942,
+  "core": 1,
+  "worker": 3,
+  "commands": 2,
+  "author": "Angelis Pseftis",
+  "source_commit": "04be980b725a4c72b4f054dd114b71a024752aba",
+  "final_snapshot_sha256": "83bfdec05c9e0b5c04d97c28d4c4e02543688ec7f70ee6a85de65b7e53baea3e",
+  "driver_sha256": "f528e30da23ed7dde6d2b47af88bb717e8cd9dfb6caf8dc49cbe151984a47df1"
+}

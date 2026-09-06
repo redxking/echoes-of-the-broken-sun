@@ -229,8 +229,22 @@ struct FDispatchRun final
         WorldWrapper.ForwardErrorMessages(&Test);
         return false;
     }
+    Controller->InitInputSystem();
+    if (Controller->PlayerInput == nullptr)
+    {
+        Test.AddError(FString::Printf(
+            TEXT("%s could not initialize player input."),
+            Scope));
+        Controller->Destroy();
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(&Test);
+        return false;
+    }
 
-    Controller->SetupInputComponent();
+    if (Controller->InputComponent == nullptr)
+    {
+        Controller->SetupInputComponent();
+    }
     UInputComponent* InputComponent = Controller->InputComponent;
     if (InputComponent == nullptr)
     {

@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 #include "EchoesBrokenSunTestTactics.h"
@@ -23,31 +24,7 @@ namespace
 {
 using namespace EchoesBrokenSunTestTactics;
 
-struct FPreservedBrokenSunFile final
-{
-    explicit FPreservedBrokenSunFile(FString InPath)
-        : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedBrokenSunFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedBrokenSunFile = FEchoesPreservedTestFile;
 
 uint8 BrokenSunWellMask(echoes::sim::FutureWellChoice Choice)
 {
@@ -329,9 +306,12 @@ bool RunBrokenSunResolutionPersistenceCase(
     const FString CampaignBackupPath = CampaignPath + TEXT(".bak");
     const FString CampaignTemporaryPath = CampaignPath + TEXT(".tmp");
     FPreservedBrokenSunFile PreservedCampaign(CampaignPath);
+    if (!PreservedCampaign.IsReady()) return false;
     FPreservedBrokenSunFile PreservedCampaignBackup(CampaignBackupPath);
+    if (!PreservedCampaignBackup.IsReady()) return false;
     FPreservedBrokenSunFile PreservedCampaignTemporary(
         CampaignTemporaryPath);
+    if (!PreservedCampaignTemporary.IsReady()) return false;
     for (const FString& Path : {
              CampaignPath,
              CampaignBackupPath,
@@ -1714,10 +1694,13 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
     FPreservedBrokenSunFile PreservedCampaign(CampaignPath);
+    if (!PreservedCampaign.IsReady()) return false;
     FPreservedBrokenSunFile PreservedCampaignBackup(
         CampaignPath + TEXT(".bak"));
+    if (!PreservedCampaignBackup.IsReady()) return false;
     FPreservedBrokenSunFile PreservedCampaignTemporary(
         CampaignPath + TEXT(".tmp"));
+    if (!PreservedCampaignTemporary.IsReady()) return false;
     for (const FString& Path : {
              CampaignPath,
              CampaignPath + TEXT(".bak"),
@@ -1764,12 +1747,16 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
     const FString QuickSavePath =
         BrokenSunQuickSavePath(FourteenRecords);
     FPreservedBrokenSunFile PreservedQuickSave(QuickSavePath);
+    if (!PreservedQuickSave.IsReady()) return false;
     FPreservedBrokenSunFile PreservedQuickSaveBackup(
         QuickSavePath + TEXT(".bak"));
+    if (!PreservedQuickSaveBackup.IsReady()) return false;
     FPreservedBrokenSunFile PreservedQuickSaveStagedBackup(
         QuickSavePath + TEXT(".bak.tmp"));
+    if (!PreservedQuickSaveStagedBackup.IsReady()) return false;
     FPreservedBrokenSunFile PreservedQuickSaveTemporary(
         QuickSavePath + TEXT(".tmp"));
+    if (!PreservedQuickSaveTemporary.IsReady()) return false;
     for (const FString& Path : {
              QuickSavePath,
              QuickSavePath + TEXT(".bak"),
@@ -2019,14 +2006,14 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         TEXT("The approach contract exposes a valid construction footprint"),
         FindBuildSite(RuntimePlan.CrownfallApproachSite, 3,
                       ApproachBuildSite));
-    // Schema 28 appends player-hostility masks after schema 27 lifecycle state.
-    // The replay envelope shape did not change and stays at 24; every schema
-    // named below is the native snapshot schema this build saves.
+    // Schema 29 appends production state after schema 28 hostility masks.
+    // Replay versioning is independent; every schema named below is the native
+    // snapshot schema this build saves.
     const auto NativeBuildSequence =
         Bridge->GetSimulation()->NextCommandSequence(
             UEchoesSimulationSubsystem::LocalPlayerId);
     TestTrue(
-        TEXT("The schema-28 approach build has a stable receipt sequence"),
+        TEXT("The schema-29 approach build has a stable receipt sequence"),
         NativeBuildSequence.has_value());
     TestTrue(
         TEXT("The exact approach anchor accepts an ordinary worker build"),
@@ -2050,7 +2037,7 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         Objective.bBrokenSunApproachSecured &&
             Objective.BrokenSunApproachAnchorId != 0);
     TestTrue(
-        TEXT("The native schema-28 source retains the approach-build receipt"),
+        TEXT("The native schema-29 source retains the approach-build receipt"),
         NativeBuildSequence.has_value() &&
             Bridge->GetSimulation()->FindCommandResolutionReceipt(
                 UEchoesSimulationSubsystem::LocalPlayerId,
@@ -2071,11 +2058,11 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
     EEchoesCampaignMapCheckpointFailure MapFailure{};
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         NativeLayout;
-    // The checkpoint saved just above is native schema 28. The shared helpers
-    // parse and remove hostility masks, then lifecycle state, before traversing
-    // 26 to 25 to 24 to 23 to 22 with the real loader validating each step.
+    // The checkpoint saved just above is native schema 30. The shared helpers
+    // prove its production state is losslessly representable at 28, then remove
+    // hostility and lifecycle state before the older migration chain.
     TestTrue(
-        TEXT("The Mission 15 schema-28 checkpoint exposes bounded receipt, lifecycle, and hostility blocks"),
+        TEXT("The Mission 15 schema-30 checkpoint exposes bounded receipt, lifecycle, hostility, and production blocks"),
         FFileHelper::LoadFileToArray(NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, NativeCheckpoint, MapFailure) &&
             ExtractReplayCheckpointPayloadForTest(NativeCheckpoint, Feedback) &&
@@ -2096,7 +2083,31 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             NativeLayout.Schema28AppendSize ==
                 static_cast<int32>(echoes::sim::kMaximumPlayers) &&
             NativeLayout.Schema28HostilityMasks ==
-                EchoesSnapshotMigrationTestHelpers::Mission15HostilityMasks);
+                EchoesSnapshotMigrationTestHelpers::Mission15HostilityMasks &&
+            NativeLayout.Schema29AppendOffset ==
+                NativeLayout.Schema28AppendOffset +
+                    NativeLayout.Schema28AppendSize &&
+            NativeLayout.Schema29AppendSize >= 4 &&
+            NativeLayout.Schema30AppendOffset == NativeLayout.Schema29AppendOffset + NativeLayout.Schema29AppendSize &&
+            NativeLayout.Schema30AppendSize >= 12 &&
+            NativeLayout.PendingCommandOffset != INDEX_NONE);
+    TArray<uint8> LosslessV28Projection = NativeCheckpoint;
+    TestTrue(
+        TEXT("Mission 15 production state is losslessly representable by schema 28"),
+        EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV30ToV29(
+            LosslessV28Projection, 38, 30, 34, EchoesSnapshotMigrationTestHelpers::Mission15HostilityMasks) &&
+        EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV29ToV28(
+            LosslessV28Projection,
+            38,
+            30,
+            34,
+            EchoesSnapshotMigrationTestHelpers::Mission15HostilityMasks) &&
+            EchoesSnapshotMigrationTestHelpers::Mission15SnapshotVersion(
+                LosslessV28Projection) == 28U &&
+            NativeCheckpoint.Num() - LosslessV28Projection.Num() ==
+                NativeLayout.Schema29AppendSize +
+                    NativeLayout.Schema30AppendSize +
+                    static_cast<int32>(NativeLayout.PendingCommandCount));
     const uint64 BeforeWrongMaskTick =
         Bridge->GetSimulation()->CurrentTick();
     const uint64 BeforeWrongMaskChecksum =
@@ -2193,9 +2204,12 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         static_cast<uint64>(NativeLayout.MemoryLedgerSize) +
         static_cast<uint64>(NativeLayout.Schema26AppendSize) +
         static_cast<uint64>(NativeLayout.Schema27AppendSize) +
-        static_cast<uint64>(NativeLayout.Schema28AppendSize);
+        static_cast<uint64>(NativeLayout.Schema28AppendSize) +
+        static_cast<uint64>(NativeLayout.Schema29AppendSize) +
+        static_cast<uint64>(NativeLayout.Schema30AppendSize) +
+        static_cast<uint64>(NativeLayout.PendingCommandCount);
     TestTrue(
-        TEXT("The Mission 15 checkpoint converts through every schema from 28 to its genuine schema-22 shape"),
+        TEXT("The Mission 15 checkpoint converts through every schema from 30 to its synthetic schema-22 shape"),
         EchoesSnapshotMigrationTestHelpers::
                 ConvertMission15EnvelopeSnapshotToV22(V22Checkpoint) &&
             EchoesSnapshotMigrationTestHelpers::Mission15SnapshotVersion(
@@ -2463,16 +2477,16 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
                 EEchoesFinalResolution::ControlledStabilization &&
             Objective.BrokenSunFinalResolution ==
                 EEchoesFinalResolution::None);
-    // Resaving writes native schema 28; the replay envelope is untouched here
+    // Resaving writes native schema 30; the replay envelope is untouched here
     // and stays at its independent replay schema.
     TestTrue(
-        TEXT("The legacy-loaded Mission 15 state resaves as native schema 28"),
+        TEXT("The legacy-loaded Mission 15 state resaves as native schema 30"),
         Bridge->QuickSaveScenario(Feedback));
     TArray<uint8> ResavedNativePrimary;
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         ResavedNativeLayout;
     TestTrue(
-        TEXT("The Mission 15 primary records native schema 28 after legacy load"),
+        TEXT("The Mission 15 primary records native schema 30 after legacy load"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, ResavedNativePrimary, MapFailure) &&
@@ -2504,11 +2518,11 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             Bridge->GetBrokenSunPhase() ==
                 EEchoesBrokenSunPhase::ChooseFinalResolution);
     TArray<uint8> RetainedV22Backup;
-    // Only the resave moved to native schema 28. The retained backup is
+    // Only the resave moved to native schema 30. The retained backup is
     // the deliberately built schema-22 generation this test loaded, so it
     // stays at 22: that is the backward-compatibility coverage.
     TestTrue(
-        TEXT("The first schema-28 resave retains the valid schema-22 Mission 15 generation"),
+        TEXT("The first schema-30 resave retains the valid schema-22 Mission 15 generation"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope,
             *(QuickSavePath + TEXT(".bak"))) &&
@@ -2710,7 +2724,7 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::TheBrokenSun);
     // The runtime stamps echoes::sim::kSnapshotVersion into the decision
-    // record; the replay envelope remains at schema 24.
+    // record; replay versioning remains independent.
     TestTrue(
         TEXT("Mission 15 stores the exact resolution projection and native provenance"),
         MissionRecord != nullptr &&

@@ -236,7 +236,7 @@ void AppendIntegrity(Writer& writer) {
 }
 
 [[nodiscard]] bool IsValidCommandTypeEncoding(std::uint8_t value) {
-    return value <= static_cast<std::uint8_t>(CommandType::ReconcileToPossible);
+    return value <= static_cast<std::uint8_t>(CommandType::CancelConstruction);
 }
 
 [[nodiscard]] bool IsValidEntityTypeEncoding(std::uint8_t value) {

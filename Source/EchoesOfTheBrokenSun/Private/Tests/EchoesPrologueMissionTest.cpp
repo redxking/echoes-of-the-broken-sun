@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 
@@ -8,6 +9,7 @@
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesNarrativeSubsystem.h"
+#include "Algo/AnyOf.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
@@ -16,31 +18,7 @@
 
 namespace
 {
-struct FPreservedPrologueCampaignFile final
-{
-    explicit FPreservedPrologueCampaignFile(FString InPath)
-        : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedPrologueCampaignFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedPrologueCampaignFile = FEchoesPreservedTestFile;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -63,10 +41,13 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
     FPreservedPrologueCampaignFile PreservedCampaign(CampaignPath);
+    if (!PreservedCampaign.IsReady()) return false;
     FPreservedPrologueCampaignFile PreservedBackup(
         CampaignPath + TEXT(".bak"));
+    if (!PreservedBackup.IsReady()) return false;
     FPreservedPrologueCampaignFile PreservedTemporary(
         CampaignPath + TEXT(".tmp"));
+    if (!PreservedTemporary.IsReady()) return false;
     IFileManager::Get().Delete(*CampaignPath, false, true, true);
     IFileManager::Get().Delete(
         *(CampaignPath + TEXT(".bak")), false, true, true);
@@ -140,6 +121,15 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
+    Controller->InitInputSystem();
+    if (!TestNotNull(TEXT("Campaign controller initializes input"),
+                     Controller->PlayerInput.Get()))
+    {
+        Controller->Destroy();
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
     Controller->PresentTitleScreen();
     Controller->CycleOperation();
     TestTrue(TEXT("F9 path selects the campaign prologue"),
@@ -160,20 +150,60 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
     echoes::sim::EntityId WorkerId = 0;
     echoes::sim::EntityId BarracksId = 0;
     echoes::sim::EntityId WellId = 0;
+    int32 LocalWorkerCount = 0;
+    int32 LocalSoldierCount = 0;
+    int32 LocalHeavyCount = 0;
+    int32 LocalScoutCount = 0;
+    int32 LocalCommandCoreCount = 0;
+    int32 LocalBarracksCount = 0;
+    int32 LocalDropoffCount = 0;
+    int32 LocalUtilityCount = 0;
+    TArray<FIntPoint> WorkerTiles;
+    TArray<FIntPoint> SoldierTiles;
     if (Simulation != nullptr)
     {
         for (const echoes::sim::Entity& Entity : Simulation->Entities())
         {
-            if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
-                Entity.type == echoes::sim::EntityType::Worker && WorkerId == 0)
+            if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId)
             {
-                WorkerId = Entity.id;
-            }
-            if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
-                Entity.type == echoes::sim::EntityType::Barracks &&
-                BarracksId == 0)
-            {
-                BarracksId = Entity.id;
+                switch (Entity.type)
+                {
+                    case echoes::sim::EntityType::Worker:
+                        ++LocalWorkerCount;
+                        WorkerId = WorkerId == 0 ? Entity.id : WorkerId;
+                        WorkerTiles.Add(FIntPoint(
+                            Entity.position.x.FloorToInt(),
+                            Entity.position.y.FloorToInt()));
+                        break;
+                    case echoes::sim::EntityType::Soldier:
+                        ++LocalSoldierCount;
+                        SoldierTiles.Add(FIntPoint(
+                            Entity.position.x.FloorToInt(),
+                            Entity.position.y.FloorToInt()));
+                        break;
+                    case echoes::sim::EntityType::HeavyUnit:
+                        ++LocalHeavyCount;
+                        break;
+                    case echoes::sim::EntityType::ScoutUnit:
+                        ++LocalScoutCount;
+                        break;
+                    case echoes::sim::EntityType::CommandCore:
+                        ++LocalCommandCoreCount;
+                        break;
+                    case echoes::sim::EntityType::Barracks:
+                        ++LocalBarracksCount;
+                        BarracksId = BarracksId == 0 ? Entity.id : BarracksId;
+                        break;
+                    case echoes::sim::EntityType::Dropoff:
+                        ++LocalDropoffCount;
+                        break;
+                    case echoes::sim::EntityType::UtilityStructure:
+                        ++LocalUtilityCount;
+                        break;
+                    case echoes::sim::EntityType::ResourceNode:
+                    case echoes::sim::EntityType::FutureWell:
+                        break;
+                }
             }
             if (Entity.type == echoes::sim::EntityType::FutureWell)
             {
@@ -186,6 +216,31 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
     TestTrue(
         TEXT("The mission retains a worker, Barracks, and central Future Well"),
         WorkerId != 0 && BarracksId != 0 && WellId != 0);
+    TestTrue(
+        TEXT("SPEC-PLAN-001 starts M01 with six Surveyors and two Lancers"),
+        LocalWorkerCount == 6 && LocalSoldierCount == 2);
+    TestTrue(
+        TEXT("M01 preserves every other local starting role count"),
+        LocalCommandCoreCount == 1 && LocalBarracksCount == 1 &&
+        LocalDropoffCount == 1 && LocalHeavyCount == 1 &&
+        LocalScoutCount == 1 && LocalUtilityCount == 1);
+    WorkerTiles.Sort([](const FIntPoint& Left, const FIntPoint& Right)
+    {
+        return Left.Y == Right.Y ? Left.X < Right.X : Left.Y < Right.Y;
+    });
+    SoldierTiles.Sort([](const FIntPoint& Left, const FIntPoint& Right)
+    {
+        return Left.Y == Right.Y ? Left.X < Right.X : Left.Y < Right.Y;
+    });
+    TArray<FIntPoint> ExpectedWorkerTiles{
+        {14, 12}, {8, 13}, {11, 14}, {14, 15}, {8, 16}, {11, 17}};
+    TArray<FIntPoint> ExpectedSoldierTiles{{12, 7}, {8, 8}};
+    TestTrue(
+        TEXT("M01 Surveyor deployment uses the source-cleared starting tiles"),
+        WorkerTiles == ExpectedWorkerTiles);
+    TestTrue(
+        TEXT("M01 Lancer deployment preserves the two authored starting tiles"),
+        SoldierTiles == ExpectedSoldierTiles);
     const echoes::sim::PlayerState* ProloguePlayer =
         Simulation != nullptr
             ? Simulation->FindPlayer(
@@ -270,6 +325,45 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
         return Predicate();
     };
     Bridge->SetScenarioPaused(false);
+
+    // The approved M01 force begins two Logistics above the Anchor's capacity.
+    // Extend the live grid to the evacuation Power Link through the ordinary
+    // construction path before exercising production and Dawn accounting.
+    const echoes::sim::Vec2 ConnectingLinkSite =
+        echoes::sim::Vec2::FromTiles(13, 17);
+    Feedback.Reset();
+    if (!TestTrue(
+            TEXT("A Surveyor accepts the connecting Power Link construction"),
+            Bridge->IssueBuildCommand(
+                WorkerId,
+                echoes::sim::EntityType::Dropoff,
+                Bridge->SimToWorld(ConnectingLinkSite),
+                Feedback)))
+    {
+        AddError(FString::Printf(
+            TEXT("M01 connecting Power Link admission failed: %s"), *Feedback));
+        return false;
+    }
+    TestTrue(
+        TEXT("Ordinary construction completes the connecting Power Link"),
+        TickUntil(
+            [Bridge, ConnectingLinkSite]()
+            {
+                const echoes::sim::Simulation* Current =
+                    Bridge->GetSimulation();
+                return Current != nullptr &&
+                    Algo::AnyOf(
+                        Current->Entities(),
+                        [ConnectingLinkSite](const echoes::sim::Entity& Entity)
+                        {
+                            return Entity.owner ==
+                                       UEchoesSimulationSubsystem::LocalPlayerId &&
+                                Entity.type == echoes::sim::EntityType::Dropoff &&
+                                Entity.position == ConnectingLinkSite &&
+                                Entity.completed && Entity.networkOperational;
+                        });
+            },
+            500));
     Feedback.Reset();
     TestTrue(
         TEXT("The archive carrier accepts an ordinary move to the rendezvous"),
@@ -331,12 +425,17 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
         VisibleWell->reshapeUntilTick = PriorUntil;
     }
     Feedback.Reset();
-    TestTrue(
-        TEXT("Ordinary Soldier production queues before the Well decision"),
-        Bridge->IssueProductionCommand(
-            BarracksId,
-            echoes::sim::EntityType::Soldier,
-            Feedback));
+    if (!TestTrue(
+            TEXT("Ordinary Soldier production queues before the Well decision"),
+            Bridge->IssueProductionCommand(
+                BarracksId,
+                echoes::sim::EntityType::Soldier,
+                Feedback)))
+    {
+        AddError(FString::Printf(
+            TEXT("M01 production admission failed: %s"), *Feedback));
+        return false;
+    }
     TestTrue(
         TEXT("Queued production executes and reduces Dawn below Reshape cost"),
         TickUntil(

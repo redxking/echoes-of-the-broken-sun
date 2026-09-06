@@ -10,6 +10,7 @@ enum class EEchoesReplayOperationType : uint8
 {
     Skirmish = 0,
     Campaign = 1,
+    Training = 2,
 };
 
 enum class EEchoesReplayPerspective : uint8
@@ -40,6 +41,8 @@ enum class EEchoesReplayOperationResult : uint8
     Player3Victory = 5,
     CampaignSuccess = 6,
     CampaignFailure = 7,
+    TrainingSuccess = 8,
+    TrainingFailure = 9,
 };
 
 enum class EEchoesReplayOutcomeCause : uint8
@@ -167,7 +170,8 @@ private:
 class ECHOESOFTHEBROKENSUN_API FEchoesMatchReplayStore final
 {
 public:
-    static constexpr uint16 SchemaVersion = 4;
+    static constexpr uint16 MinimumSchemaVersion = 4;
+    static constexpr uint16 SchemaVersion = 5;
 
     [[nodiscard]] static FString GetReplayDirectory();
 
@@ -305,6 +309,7 @@ public:
     [[nodiscard]] uint64 GetFinalTick() const { return ReplayRecord.finalTick; }
 
 private:
+    friend class FEchoesMatchReplayTest;
     bool InitializeRecord(
         const echoes::sim::ReplayRecord& Replay,
         std::optional<echoes::sim::Simulation> Baseline,

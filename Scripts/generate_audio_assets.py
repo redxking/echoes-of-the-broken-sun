@@ -149,8 +149,8 @@ def main() -> None:
     ):
         raise RuntimeError("Registered audio audit failed")
 
-    # Dialogue ships as on-screen text with subtitles; the demo authorizes no
-    # spoken or synthesized speech, so its category is legitimately empty.
+    # This generator covers procedural cues only. Authorized narrative voice
+    # uses import_narrative_voice.py; its completeness is audited separately.
     missing = [
         name
         for name, count in per_category.items()

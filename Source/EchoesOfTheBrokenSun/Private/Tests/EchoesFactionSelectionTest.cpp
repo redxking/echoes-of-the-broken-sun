@@ -65,6 +65,15 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
+    Controller->InitInputSystem();
+    if (!TestNotNull(TEXT("Faction controller initializes input"),
+                     Controller->PlayerInput.Get()))
+    {
+        Controller->Destroy();
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
 
     const echoes::sim::Simulation* DefaultSimulation =
         Bridge->GetSimulation();
@@ -484,7 +493,10 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
         TEXT("The reviewed setup returns active authority to Kharuun"),
         Bridge->GetLocalFaction() ==
             echoes::sim::Faction::KharuunAssemblies);
-    Controller->CyclePlayableFaction();
+    TestTrue(
+        TEXT("Live Tab is consumed by the gameplay input route"),
+        Controller->InputKey(FInputKeyEventArgs::CreateSimulated(
+            EKeys::Tab, IE_Pressed, 1.0f)));
     TestEqual(TEXT("Live Tab selects one owned entity without a pointer"),
               Controller->GetSelectedEntityIds().Num(), 1);
     const uint32 FirstKeyboardSelection =
@@ -688,6 +700,16 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
                 return Mapping.Contains(
                            TEXT("ActionName=\"SnapKeyboardTargetToSelection\"")) &&
                        Mapping.Contains(TEXT("Key=End"));
+            }));
+    TestTrue(
+        TEXT("Ctrl+F selected-view target-snap mapping is present"),
+        InputMappings.ContainsByPredicate(
+            [](const FString& Mapping)
+            {
+                return Mapping.Contains(
+                           TEXT("ActionName=\"SnapKeyboardTargetToSelection\"")) &&
+                       Mapping.Contains(TEXT("bCtrl=True")) &&
+                       Mapping.Contains(TEXT("Key=F"));
             }));
     TestTrue(
         TEXT("F7 combat-force selection mapping is present"),

@@ -32,7 +32,10 @@ constexpr TCHAR MasterSubmixName[] = TEXT("EchoesMasterSubmix");
 void UEchoesAudioMixSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
-    CurrentDuckingGain = 1.0f;
+    for (float& Gain : CurrentDuckingGains)
+    {
+        Gain = 1.0f;
+    }
     bDialogueDuckingActive = false;
     BuildGraph();
     ApplyPlayerVolumes();
@@ -151,10 +154,7 @@ void UEchoesAudioMixSubsystem::ApplyVolumes(
             bReducedDynamicRange);
         BaseAppliedGains[Index] = Gain;
 
-        const float DuckMultiplier =
-            EchoesAudioMix::IsCategoryDuckedByDialogue(Category)
-                ? CurrentDuckingGain
-                : 1.0f;
+        const float DuckMultiplier = CurrentDuckingGains[Index];
         AppliedGains[Index] = Gain * DuckMultiplier;
 
         USoundSubmix* Submix = CategorySubmixes.IsValidIndex(Index)
@@ -244,30 +244,31 @@ void UEchoesAudioMixSubsystem::SetDialogueDuckingActive(const bool bActive)
 
 void UEchoesAudioMixSubsystem::AdvanceDucking(const float DeltaSeconds)
 {
-    const float TargetGain = bDialogueDuckingActive
-        ? EchoesAudioMix::DialogueDuckingGainMultiplier
-        : 1.0f;
+    for (const EEchoesAudioCategory Category : EchoesAudioCategories)
+    {
+        const int32 Index = EchoesAudioMix::CategoryIndex(Category);
+        const float TargetGain = bDialogueDuckingActive
+            ? EchoesAudioMix::DialogueDuckingGainForCategory(Category)
+            : 1.0f;
+        float& CurrentGain = CurrentDuckingGains[Index];
 
-    if (FMath::IsNearlyEqual(CurrentDuckingGain, TargetGain, 0.0001f))
-    {
-        CurrentDuckingGain = TargetGain;
-        RefreshSubmixVolumes();
-        return;
-    }
+        if (FMath::IsNearlyEqual(CurrentGain, TargetGain, 0.0001f))
+        {
+            CurrentGain = TargetGain;
+            continue;
+        }
 
-    if (CurrentDuckingGain > TargetGain)
-    {
-        // Attack phase (gain dropping toward -9 dB target)
-        const float Rate = (1.0f - EchoesAudioMix::DialogueDuckingGainMultiplier) /
-            EchoesAudioMix::DialogueDuckingAttackSeconds;
-        CurrentDuckingGain = FMath::Max(TargetGain, CurrentDuckingGain - Rate * DeltaSeconds);
-    }
-    else
-    {
-        // Release phase (gain rising toward unity 1.0)
-        const float Rate = (1.0f - EchoesAudioMix::DialogueDuckingGainMultiplier) /
-            EchoesAudioMix::DialogueDuckingReleaseSeconds;
-        CurrentDuckingGain = FMath::Min(TargetGain, CurrentDuckingGain + Rate * DeltaSeconds);
+        const float Duration = CurrentGain > TargetGain
+            ? EchoesAudioMix::DialogueDuckingAttackSeconds
+            : EchoesAudioMix::DialogueDuckingReleaseSeconds;
+        // Attack and release traverse the same category attenuation span.
+        // The release target is unity, so deriving its rate from TargetGain
+        // would produce zero and leave the category permanently ducked.
+        const float Rate = FMath::Abs(1.0f -
+            EchoesAudioMix::DialogueDuckingGainForCategory(Category)) / Duration;
+        CurrentGain = CurrentGain > TargetGain
+            ? FMath::Max(TargetGain, CurrentGain - Rate * DeltaSeconds)
+            : FMath::Min(TargetGain, CurrentGain + Rate * DeltaSeconds);
     }
 
     RefreshSubmixVolumes();
@@ -288,11 +289,7 @@ void UEchoesAudioMixSubsystem::RefreshSubmixVolumes()
     for (const EEchoesAudioCategory Category : EchoesAudioCategories)
     {
         const int32 Index = EchoesAudioMix::CategoryIndex(Category);
-        const float DuckMultiplier =
-            EchoesAudioMix::IsCategoryDuckedByDialogue(Category)
-                ? CurrentDuckingGain
-                : 1.0f;
-        AppliedGains[Index] = BaseAppliedGains[Index] * DuckMultiplier;
+        AppliedGains[Index] = BaseAppliedGains[Index] * CurrentDuckingGains[Index];
 
         USoundSubmix* Submix = CategorySubmixes.IsValidIndex(Index)
             ? CategorySubmixes[Index].Get()

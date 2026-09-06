@@ -292,6 +292,19 @@ bool FEchoesShellWidgetTest::RunTest(const FString& Parameters)
             TEXT("Left click moves focus to the pointed shell action"),
             Widget->GetFocusedButtonIndex(),
             1);
+        TestTrue(
+            TEXT("ActivateButtonUnderLocation directly activates the pointed button"),
+            Widget->ActivateButtonUnderLocation(Center));
+        TestEqual(
+            TEXT("Direct button activation maintains focused index"),
+            Widget->GetFocusedButtonIndex(),
+            1);
+        const FPointerEvent PreviewLeftClick(
+            0, Center, Center, TSet<FKey>{EKeys::LeftMouseButton},
+            EKeys::LeftMouseButton, 0.0f, FModifierKeysState());
+        TestTrue(
+            TEXT("Preview left click inside a shell action is consumed"),
+            PointerSlate->OnPreviewMouseButtonDown(PaintGeometry, PreviewLeftClick).IsEventHandled());
     }
 
     WorldWrapper.ForwardErrorMessages(this);

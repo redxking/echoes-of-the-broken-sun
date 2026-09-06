@@ -21,7 +21,7 @@ bool AEchoesPlayerController::RequireOperationMastery(EEchoesOperationMode Opera
     if (GetLocalPlayer() == nullptr && !bPlayerProfileInitialized) return true;
     if (!bPlayerProfileInitialized) InitializePlayerProfile();
     if (bPlayerProfileAvailable && (PlayerProfile.IsTutorialMasteryComplete() ||
-            (Operation == EEchoesOperationMode::CampaignPrologue &&
+            (Operation == EEchoesOperationMode::TrainingReadiness &&
                 (bTutorialOperationAuthorized || bLearningCheckpoint))))
     {
         return true;
@@ -66,7 +66,9 @@ bool AEchoesPlayerController::InitializePlayerProfile()
         if (GetLocalPlayer() && !FApp::IsUnattended())
         {
             if (GetWorld()->WorldType == EWorldType::PIE) Settings->ApplyNonResolutionSettings();
-            else Settings->ApplySettings(false);
+            // Startup must honor explicit window/resolution launch overrides.
+            // In-session options retain their separate user-confirmation flow.
+            else Settings->ApplySettings(true);
         }
     }
     PlayerProfile = Candidate;
@@ -198,6 +200,7 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
         Button(LOCTEXT("Skirmish", "Skirmish"), EEchoesShellAction::Modes);
         Button(LOCTEXT("ReplayArchive", "Replays"), EEchoesShellAction::OpenReplayBrowser);
         Button(LOCTEXT("Options", "Options"), EEchoesShellAction::Options);
+        Button(LOCTEXT("Help", "Help and lesson practice"), EEchoesShellAction::Help);
         Button(LOCTEXT("Journeys", "Journeys and recovery"), EEchoesShellAction::SaveLoad);
         Button(LOCTEXT("Credits", "Credits"), EEchoesShellAction::Credits);
         Button(LOCTEXT("Quit", "Quit"), EEchoesShellAction::Quit);
@@ -230,7 +233,7 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
         View.Title = Bridge ? FText::FromString(Bridge->GetOperationLabel()) : LOCTEXT("Brief", "Mission briefing");
         View.Body = FText::FromString(GetStatusMessage());
         const bool bUnlocked = bPlayerProfileAvailable && Bridge &&
-            ((Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue && bTutorialOperationAuthorized) || PlayerProfile.IsTutorialMasteryComplete());
+            ((Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness && bTutorialOperationAuthorized) || PlayerProfile.IsTutorialMasteryComplete());
         Button(LOCTEXT("Deploy", "Deploy"), EEchoesShellAction::Primary, Bridge && Bridge->IsScenarioReady() && bUnlocked);
         if (!bUnlocked && bPlayerProfileAvailable)
         {
@@ -244,6 +247,7 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
         View.Body = LOCTEXT("PauseBody", "The battlefield is held. Resume when you are ready.");
         Button(LOCTEXT("Resume", "Resume"), EEchoesShellAction::Resume);
         Button(LOCTEXT("Options", "Options"), EEchoesShellAction::Options);
+        Button(LOCTEXT("Help", "Help and lesson practice"), EEchoesShellAction::Help);
         Button(LOCTEXT("SaveLoad", "Save and load"), EEchoesShellAction::SaveLoad);
         Button(LOCTEXT("Restart", "Restart mission"), EEchoesShellAction::Restart);
         if (Bridge && Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish)
@@ -305,6 +309,34 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
         View.Title = LOCTEXT("Credits", "Credits");
         View.Body = LOCTEXT("Creator", "Echoes of the Broken Sun\nCreated by Angelis Pseftis");
         Back(); break;
+    case EEchoesShellScreen::Help:
+    {
+        View.Title = LOCTEXT("HelpTitle", "Help and lesson practice");
+        View.Body = LOCTEXT("HelpBody",
+            "Choose a readiness lesson to practice. Your saved progress stays intact.");
+        static const TCHAR* LessonLabels[] = {
+            TEXT("Survey"), TEXT("Roster"), TEXT("Muster"),
+            TEXT("Route"), TEXT("Reserve"), TEXT("Link restoration"),
+            TEXT("Array Foundry"), TEXT("Probe"), TEXT("Board"),
+            TEXT("Future Well")};
+        for (int32 Index = 0; Index < UE_ARRAY_COUNT(LessonLabels); ++Index)
+        {
+            const uint16 Bit = static_cast<uint16>(1u << Index);
+            const bool bImplemented =
+                (Bit & FEchoesTutorialPracticeState::ImplementedLessonMask) != 0;
+            const bool bMastered =
+                (PlayerProfile.TutorialVerifiedMask & Bit) != 0;
+            const FString Suffix = !bImplemented ? TEXT(" — unavailable")
+                : bMastered ? TEXT(" — mastered; practice again")
+                            : TEXT(" — practice");
+            Button(FText::FromString(FString::Printf(TEXT("%s%s"),
+                    LessonLabels[Index], *Suffix)),
+                EEchoesShellAction::PracticeTutorialLesson,
+                bImplemented, Bit);
+        }
+        Back();
+        break;
+    }
     case EEchoesShellScreen::DisplayConfirmation:
         View.Title = LOCTEXT("KeepDisplayTitle", "Keep these display settings?");
         View.Body = LOCTEXT("KeepDisplayBody", "Choose Keep to save this display mode. It will revert automatically after 15 seconds.");
@@ -410,13 +442,33 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
         return false;
     };
     FString Feedback;
-    const auto StartTutorial = [&]()
+    const auto StartTutorial = [&](uint16 PracticeBit)
     {
-        const FEchoesPlayerProfile PriorProfile = PlayerProfile;
-        PlayerProfile.bOnboardingOffered = true;
-        if (!CommitPlayerProfile()) { PlayerProfile = PriorProfile; Fail(ShellMessage); return; }
-        if (!Bridge->SelectOperationMode(EEchoesOperationMode::CampaignPrologue, Feedback)) { Fail(Feedback); return; }
+        if (PracticeBit != 0)
+        {
+            if (!TutorialPractice.Begin(PracticeBit)) return;
+        }
+        else
+        {
+            TutorialPractice.Reset();
+            const FEchoesPlayerProfile PriorProfile = PlayerProfile;
+            PlayerProfile.bOnboardingOffered = true;
+            if (!CommitPlayerProfile())
+            {
+                PlayerProfile = PriorProfile;
+                Fail(ShellMessage);
+                return;
+            }
+        }
+        const bool bRestartTraining = Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness;
+        if (!Bridge->SelectOperationMode(EEchoesOperationMode::TrainingReadiness, Feedback)) { Fail(Feedback); return; }
+        if (!(bRestartTraining ? Bridge->RestartPrototypeScenario() : Bridge->StartPrototypeScenario()))
+        {
+            Fail(LOCTEXT("TrainingStartFailed", "The readiness check could not start. Return to the title menu and try again.").ToString());
+            return;
+        }
         bTutorialOperationAuthorized = true;
+        ResetTutorialObservation();
         PlayerFlow.ClearOverlays();
         PresentMissionBriefing();
     };
@@ -427,6 +479,7 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
     {
         if (PlayerFlow.Current() == EEchoesShellScreen::DisplayConfirmation) { RevertPendingDisplay(); break; }
         const bool bCancellingProfileReset = PlayerFlow.Current() == EEchoesShellScreen::Confirmation && !bPlayerProfileAvailable;
+        const bool bLeavingHelp = PlayerFlow.Current() == EEchoesShellScreen::Help;
         ShellMessage.Reset();
         if (bCancellingProfileReset) ShellMessage = LOCTEXT("ProfileStillUnavailable", "The player profile is still unavailable. Retry loading it or create a new local profile.").ToString();
         if (!PlayerFlow.Back())
@@ -440,6 +493,10 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
                 PlayerFlow.Push(EEchoesShellScreen::Confirmation);
             }
         }
+        else if (bLeavingHelp && TutorialPractice.IsActive())
+        {
+            TutorialPractice.Reset();
+        }
         break;
     }
     case EEchoesShellAction::Primary:
@@ -450,7 +507,14 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
         }
         else ConfirmPrimaryAction();
         break;
-    case EEchoesShellAction::Tutorial: StartTutorial(); break;
+    case EEchoesShellAction::Tutorial: StartTutorial(0); break;
+    case EEchoesShellAction::Help:
+        ShellMessage.Reset();
+        PlayerFlow.Push(EEchoesShellScreen::Help);
+        break;
+    case EEchoesShellAction::PracticeTutorialLesson:
+        StartTutorial(static_cast<uint16>(Argument));
+        break;
     case EEchoesShellAction::Campaign:
     case EEchoesShellAction::Modes:
         if (Action == EEchoesShellAction::Campaign && !RequireOperationMastery(EEchoesOperationMode::Skirmish))
@@ -563,8 +627,8 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
         else
         {
             PlayerFlow.ClearOverlays();
-            if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
-                bTutorialOperationAuthorized = true;
+            ResetTutorialObservation();
+            bTutorialOperationAuthorized = Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness;
             if (!RequireOperationMastery(Bridge->GetOperationMode()))
             {
                 PresentMissionBriefing();

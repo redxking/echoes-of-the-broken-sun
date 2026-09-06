@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 
@@ -11,31 +12,7 @@
 
 namespace
 {
-struct FPreservedCampaignFile final
-{
-    explicit FPreservedCampaignFile(FString InPath)
-        : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedCampaignFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedCampaignFile = FEchoesPreservedTestFile;
 
 FEchoesCampaignDecisionRecord MakeDecision(
     echoes::sim::FutureWellChoice Choice,
@@ -203,8 +180,11 @@ bool FEchoesCampaignProgressTest::RunTest(const FString& Parameters)
         TestSaveEnvironment.Directory,
         TEXT("EchoesCampaignProgressTest.bin"));
     FPreservedCampaignFile Primary(TestPath);
+    if (!Primary.IsReady()) return false;
     FPreservedCampaignFile Backup(TestPath + TEXT(".bak"));
+    if (!Backup.IsReady()) return false;
     FPreservedCampaignFile Temporary(TestPath + TEXT(".tmp"));
+    if (!Temporary.IsReady()) return false;
     IFileManager::Get().Delete(*TestPath, false, true, true);
     IFileManager::Get().Delete(*(TestPath + TEXT(".bak")), false, true, true);
     IFileManager::Get().Delete(*(TestPath + TEXT(".tmp")), false, true, true);

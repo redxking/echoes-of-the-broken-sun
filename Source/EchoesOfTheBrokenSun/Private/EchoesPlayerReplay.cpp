@@ -18,6 +18,12 @@ FText ReplayMapDisplayName(const FString& MapId)
     {
         return LOCTEXT("ReplayMapGlassScar", "Glass Scar");
     }
+    if (MapId == TEXT("glass-scar-evacuation-margin"))
+    {
+        return LOCTEXT(
+            "ReplayMapGlassScarEvacuationMargin",
+            "Glass Scar — Evacuation Margin");
+    }
     if (MapId == TEXT("crownfall-basin"))
     {
         return LOCTEXT("ReplayMapCrownfallBasin", "Crownfall Basin");
@@ -47,6 +53,10 @@ FText ReplayResultDisplayName(EEchoesReplayOperationResult Result)
             return LOCTEXT("ReplayResultCampaignSuccess", "Operation completed");
         case EEchoesReplayOperationResult::CampaignFailure:
             return LOCTEXT("ReplayResultCampaignFailure", "Operation failed");
+        case EEchoesReplayOperationResult::TrainingSuccess:
+            return LOCTEXT("ReplayResultTrainingSuccess", "Readiness drill completed");
+        case EEchoesReplayOperationResult::TrainingFailure:
+            return LOCTEXT("ReplayResultTrainingFailure", "Readiness drill failed");
         case EEchoesReplayOperationResult::Unknown:
             return LOCTEXT("ReplayResultUnavailable", "Result unavailable");
     }
@@ -166,9 +176,16 @@ FText ReplayRecordedUtc(const FDateTime& RecordedUtc)
 
 FText ReplayOperationTypeDisplayName(EEchoesReplayOperationType OperationType)
 {
-    return OperationType == EEchoesReplayOperationType::Campaign
-        ? LOCTEXT("ReplayOperationCampaign", "Campaign")
-        : LOCTEXT("ReplayOperationSkirmish", "Skirmish");
+    switch (OperationType)
+    {
+        case EEchoesReplayOperationType::Campaign:
+            return LOCTEXT("ReplayOperationCampaign", "Campaign");
+        case EEchoesReplayOperationType::Training:
+            return LOCTEXT("ReplayOperationTraining", "Training readiness");
+        case EEchoesReplayOperationType::Skirmish:
+            return LOCTEXT("ReplayOperationSkirmish", "Skirmish");
+    }
+    return LOCTEXT("ReplayOperationUnavailable", "Operation unavailable");
 }
 
 int32 ReplayMapFilterIndex(const FString& MapId)

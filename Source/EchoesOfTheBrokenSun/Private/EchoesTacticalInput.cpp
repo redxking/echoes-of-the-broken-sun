@@ -233,6 +233,11 @@ void AEchoesPlayerController::BeginBuildPlacement(
         SetStatusMessage(LOCTEXT("OnlinePlacementUnavailable", "[BUILD_PREVIEW_OFFLINE_ONLY] Online construction waits for the authoritative placement path.").ToString());
         return;
     }
+    if (bTutorialOperationAuthorized)
+    {
+        SetStatusMessage(LOCTEXT("TutorialBuildUnavailable", "[TUTORIAL] Construction is unavailable during guided onboarding.").ToString());
+        return;
+    }
     const std::optional<echoes::sim::PlayerView> ScopedView =
         Bridge != nullptr && Bridge->GetSimulation() != nullptr
             ? Bridge->GetSimulation()->CreatePlayerView(
@@ -414,7 +419,7 @@ bool AEchoesPlayerController::HandleFieldHudPointer(
         const echoes::sim::Vec2 Position{
             echoes::sim::Fixed::FromRaw(FMath::Clamp(FMath::RoundToInt(Unit.X * Keyframe->mapWidthTiles * echoes::sim::kFixedScale), 0, Keyframe->mapWidthTiles * echoes::sim::kFixedScale - 1)),
             echoes::sim::Fixed::FromRaw(FMath::Clamp(FMath::RoundToInt(Unit.Y * Keyframe->mapHeightTiles * echoes::sim::kFixedScale), 0, Keyframe->mapHeightTiles * echoes::sim::kFixedScale - 1))};
-        if (auto* Camera = Cast<AEchoesRTSCameraPawn>(GetPawn())) Camera->PanToWorld(NetworkSimToWorld(Position));
+        if (auto* Camera = Cast<AEchoesRTSCameraPawn>(GetPawn())) Camera->PanFromPlayerInput(NetworkSimToWorld(Position));
         bSelectionButtonDown = false;
         return true;
     }
@@ -436,7 +441,7 @@ bool AEchoesPlayerController::HandleFieldHudPointer(
     const FVector Destination = Bridge->SimToWorld(Position);
     if (!bIssueOrder)
     {
-        if (auto* Camera = Cast<AEchoesRTSCameraPawn>(GetPawn())) Camera->PanToWorld(Destination);
+        if (auto* Camera = Cast<AEchoesRTSCameraPawn>(GetPawn())) Camera->PanFromPlayerInput(Destination);
         bSelectionButtonDown = false;
         return true;
     }
@@ -445,10 +450,42 @@ bool AEchoesPlayerController::HandleFieldHudPointer(
         SetStatusMessage(LOCTEXT("ReplayOrdersReadOnly", "REPLAY VIEW — tactical orders are read-only.").ToString());
         return true;
     }
+    if (bTutorialOperationAuthorized && ((PlayerProfile.TutorialVerifiedMask | TutorialSkippedMask) & 2) == 0)
+    {
+        SetStatusMessage(LOCTEXT("TutorialUntaughtMinimap", "[TUTORIAL] Follow the active tutorial step before issuing orders.").ToString());
+        return true;
+    }
     // P2's offline adapter consumes only the local scoped view. Hidden markers
     // cannot turn a minimap move into a direct attack on an undiscovered entity.
     PruneSelection();
     if (SelectedEntityIds.IsEmpty()) { SetStatusMessage(LOCTEXT("SelectBeforeOrder", "Select units before issuing an order.").ToString()); return true; }
+    if (SelectedEntityIds.Num() == 1)
+    {
+        echoes::sim::ProducerQueueState ProducerState;
+        const uint32 ProducerId = SelectedEntityIds[0];
+        if (Bridge->GetLocalProducerQueueState(ProducerId, ProducerState))
+        {
+            const bool bAppend = IsInputKeyDown(EKeys::LeftShift) ||
+                IsInputKeyDown(EKeys::RightShift);
+            FString RallyFeedback;
+            if (Bridge->IssueRallyCommand(
+                    ProducerId, 0, Destination, bAppend, RallyFeedback))
+            {
+                ShowAcceptedCommandMarker(
+                    Destination, EEchoesCommandMarkerType::Move, 1);
+                SetStatusMessage(
+                    bAppend
+                        ? LOCTEXT("MinimapRallyExtended", "Rally route extended.").ToString()
+                        : LOCTEXT("MinimapRallySet", "Rally point set.").ToString());
+            }
+            else
+            {
+                SetStatusMessage(LOCTEXT(
+                    "MinimapRallyRefused", "Choose an open rally point.").ToString());
+            }
+            return true;
+        }
+    }
     uint32 Target = 0;
     int64 Nearest = MAX_int64;
     // Context targeting is in map space so HUD scaling cannot change which

@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesPreservedTestFile.h"
 
 #include "EchoesTestSaveEnvironment.h"
 
@@ -17,31 +18,7 @@
 
 namespace
 {
-struct FPreservedAssemblyFile final
-{
-    explicit FPreservedAssemblyFile(FString InPath)
-        : Path(MoveTemp(InPath))
-    {
-        bExisted = IFileManager::Get().FileExists(*Path);
-        if (bExisted)
-        {
-            FFileHelper::LoadFileToArray(Contents, *Path);
-        }
-    }
-
-    ~FPreservedAssemblyFile()
-    {
-        IFileManager::Get().Delete(*Path, false, true, true);
-        if (bExisted)
-        {
-            FFileHelper::SaveArrayToFile(Contents, *Path);
-        }
-    }
-
-    FString Path;
-    TArray<uint8> Contents;
-    bool bExisted = false;
-};
+using FPreservedAssemblyFile = FEchoesPreservedTestFile;
 
 uint8 AssemblyChoiceMask(echoes::sim::FutureWellChoice Choice)
 {
@@ -273,12 +250,11 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
     TestEqual(TEXT("Mission 13 uses the current campaign schema"),
               FEchoesCampaignProgress::SchemaVersion,
               static_cast<uint16>(2));
-    // Schema 28 appends player-hostility masks after schema 27 lifecycle state.
-    // The replay envelope shape did not change and stays at 24; this assertion
-    // pins the native snapshot schema only.
+    // Schema 30 extends production/rally state with Link repair and
+    // construction identity. This assertion pins the native schema only.
     TestEqual(TEXT("Mission 13 accepts the current native snapshot schema"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(28));
+              static_cast<uint32>(30));
 
     FString Feedback;
     FEchoesCampaignProgress TwelveRecords = MakeAssemblyPrerequisites(
@@ -350,10 +326,13 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
     FPreservedAssemblyFile PreservedCampaign(CampaignPath);
+    if (!PreservedCampaign.IsReady()) return false;
     FPreservedAssemblyFile PreservedCampaignBackup(
         CampaignPath + TEXT(".bak"));
+    if (!PreservedCampaignBackup.IsReady()) return false;
     FPreservedAssemblyFile PreservedCampaignTemporary(
         CampaignPath + TEXT(".tmp"));
+    if (!PreservedCampaignTemporary.IsReady()) return false;
     IFileManager::Get().Delete(*CampaignPath, false, true, true);
     IFileManager::Get().Delete(
         *(CampaignPath + TEXT(".bak")), false, true, true);
@@ -394,10 +373,13 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
 
     const FString QuickSavePath = AssemblyQuickSavePath(TwelveRecords);
     FPreservedAssemblyFile PreservedQuickSave(QuickSavePath);
+    if (!PreservedQuickSave.IsReady()) return false;
     FPreservedAssemblyFile PreservedQuickSaveBackup(
         QuickSavePath + TEXT(".bak"));
+    if (!PreservedQuickSaveBackup.IsReady()) return false;
     FPreservedAssemblyFile PreservedQuickSaveTemporary(
         QuickSavePath + TEXT(".tmp"));
+    if (!PreservedQuickSaveTemporary.IsReady()) return false;
     for (const FString& Path : {
              QuickSavePath,
              QuickSavePath + TEXT(".bak"),
@@ -594,10 +576,9 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
                     EEchoesAssemblyOfTheMissingPhase::LinkCrownfallIndex;
             },
             6000));
-    // Quick save writes native schema 28; the replay envelope is untouched
-    // here and stays at schema 24.
+    // Quick save writes native schema 29, including production pipeline state.
     TestTrue(
-        TEXT("The paired readback reconstructs through schema-28 quick load"),
+        TEXT("The paired readback reconstructs through schema-29 quick load"),
         Bridge->QuickSaveScenario(Feedback) &&
             Bridge->QuickLoadScenario(Feedback) &&
             Bridge->GetLocalObjectiveSnapshot().
@@ -618,15 +599,57 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
             EntityType::UtilityStructure,
             Bridge->SimToWorld(LinkSite),
             Feedback));
+    // The paired readback sites are forward of the local force. Preserve the
+    // ordinary hostile AI while the worker crosses the map by withdrawing the
+    // two required witnesses through normal player commands after the build
+    // has been admitted. The completed link then retains the public readback
+    // fact without making either witness invulnerable.
+    TestTrue(
+        TEXT("Oruun withdraws while the Crownfall link is assembled"),
+        Bridge->IssueCommand(
+            echoes::sim::CommandType::Move,
+            Start.AssemblyOruunId,
+            0,
+            Bridge->SimToWorld(Vec2::FromTiles(15, 6)),
+            FutureWellChoice::Dormant,
+            Feedback));
+    TestTrue(
+        TEXT("The verifier withdraws while the Crownfall link is assembled"),
+        Bridge->IssueCommand(
+            echoes::sim::CommandType::Move,
+            Start.AssemblyVerifierId,
+            0,
+            Bridge->SimToWorld(Vec2::FromTiles(18, 22)),
+            FutureWellChoice::Dormant,
+            Feedback));
+    const bool bReachedAssemblyObservation = TickUntil(
+        [Bridge]()
+        {
+            return Bridge->GetAssemblyOfTheMissingPhase() ==
+                EEchoesAssemblyOfTheMissingPhase::ObserveAssembly;
+        },
+        7000);
     TestTrue(
         TEXT("The completed link opens independent assembly observation"),
-        TickUntil(
-            [Bridge]()
-            {
-                return Bridge->GetAssemblyOfTheMissingPhase() ==
-                    EEchoesAssemblyOfTheMissingPhase::ObserveAssembly;
-            },
-            7000));
+        bReachedAssemblyObservation);
+    if (!bReachedAssemblyObservation)
+    {
+        const FEchoesObjectiveSnapshot Failure =
+            Bridge->GetLocalObjectiveSnapshot();
+        const echoes::sim::Entity* FailedOruun =
+            Bridge->FindEntity(Start.AssemblyOruunId);
+        const echoes::sim::Entity* FailedVerifier =
+            Bridge->FindEntity(Start.AssemblyVerifierId);
+        AddError(FString::Printf(
+            TEXT("Mission 13 did not reach observation: phase=%u interfaces=%s readback=%s linked=%s oruunHp=%d verifierHp=%d outcome=%u."),
+            static_cast<uint8>(Failure.AssemblyOfTheMissingPhase),
+            Failure.bAssemblyPublicInterfacesIntact ? TEXT("true") : TEXT("false"),
+            Failure.bAssemblyPublicRecordReadbackEstablished ? TEXT("true") : TEXT("false"),
+            Failure.bAssemblyCrownfallIndexLinked ? TEXT("true") : TEXT("false"),
+            FailedOruun != nullptr ? FailedOruun->hitPoints : 0,
+            FailedVerifier != nullptr ? FailedVerifier->hitPoints : 0,
+            static_cast<uint8>(Bridge->GetMatchOutcome())));
+    }
     TestTrue(
         TEXT("Two observation-state saves retain a valid prior generation"),
         Bridge->QuickSaveScenario(Feedback) &&
@@ -683,10 +706,9 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
     const FEchoesCampaignDecisionRecord* MissionRecord =
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::AssemblyOfTheMissing);
-    // The commit stamps current native schema-28 provenance; the replay
-    // envelope stays at schema 24.
+    // The commit stamps current native schema-29 provenance.
     TestTrue(
-        TEXT("Mission 13 stores one protocol, all facts, and schema-28 provenance"),
+        TEXT("Mission 13 stores one protocol, all facts, and schema-29 provenance"),
         MissionRecord != nullptr &&
             MissionRecord->WellChoice == FutureWellChoice::Preserve &&
             MissionRecord->AvailableWellChoices ==

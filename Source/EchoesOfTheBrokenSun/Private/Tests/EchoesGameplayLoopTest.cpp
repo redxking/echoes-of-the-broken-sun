@@ -132,7 +132,22 @@ bool FEchoesGameplayLoopTest::RunTest(const FString& Parameters)
     const echoes::sim::Tick PausedTick = Initial->CurrentTick();
     AEchoesPlayerController* BriefingController =
         World->SpawnActor<AEchoesPlayerController>();
-    if (TestNotNull(TEXT("Mission briefing controller can be created"), BriefingController))
+    if (!TestNotNull(TEXT("Mission briefing controller can be created"),
+                     BriefingController))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    BriefingController->InitInputSystem();
+    if (!TestNotNull(TEXT("Mission briefing controller initializes input"),
+                     BriefingController->PlayerInput.Get()))
+    {
+        BriefingController->Destroy();
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
     {
         BriefingController->PresentTitleScreen();
         TestTrue(TEXT("Title screen is visible at interactive launch"),

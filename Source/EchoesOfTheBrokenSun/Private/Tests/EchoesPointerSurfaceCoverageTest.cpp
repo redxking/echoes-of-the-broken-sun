@@ -293,6 +293,15 @@ bool FEchoesPointerSurfaceCoverageTest::RunTest(const FString& Parameters)
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
+    Controller->InitInputSystem();
+    if (Controller->PlayerInput == nullptr)
+    {
+        AddError(TEXT("Pointer coverage could not initialize player input."));
+        Controller->Destroy();
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
 
     const FVector2D ViewportSize(1920.0f, 1080.0f);
     const FEchoesHudLayout HudLayout =

@@ -1,0 +1,19 @@
+{
+  "snapshot_version": 29,
+  "replay_version": 26,
+  "final_tick": 0,
+  "final_checksum": 5897829099007494806,
+  "aegis_id": 3,
+  "self_verified": true,
+  "source_identity": "BuildArtifacts/Evidence/p0-p3-readiness-20260906/source-identity-12.json",
+  "source_archive_sha256": "8d66e298d9148e7a482a80665a36b299af839ebf0c89343fc04d5c617a40cf4e",
+  "source_files": {
+    "Source/EchoesSimCore/Private/Simulation.cpp": "77671d04888089ff52125520dc9cbdf9c5c33b2510d884151ae769818b0a153f",
+    "Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h": "45c636fa269d29c3ddeed0ec30f918583814a9fdf75efaca46464e3e08abdc21"
+  },
+  "author": "Angelis Pseftis",
+  "utc": "2026-09-06T21:36:39.903648+00:00",
+  "scope": "Authentic archived schema29/replay26 writer; default 64x64 Glass Scar checkpoint context; legacy Barracks relay delta; zero-tick self-verified",
+  "fixture_sha256": "dfc1da044bcc8585b21c91fb515b0c4fee7fdba2cdeb602c8357d8065572bb72",
+  "driver_sha256": "66448792a06b3f6c5919d749655d4b9db5d76c067697f9b2dfc2a3e299af83c3"
+}

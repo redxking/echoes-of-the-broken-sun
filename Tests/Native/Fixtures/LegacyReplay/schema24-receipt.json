@@ -1,0 +1,25 @@
+{
+  "snapshot_version": 24,
+  "replay_version": 24,
+  "final_tick": 100,
+  "final_checksum": 7869839117225865629,
+  "core": 1,
+  "worker": 3,
+  "commands": 2,
+  "author": "Angelis Pseftis",
+  "source_commit": "e6c0c3dd3f149069b34f0a4ce9da10f79357abeb",
+  "source_archive_sha256": "3a921a5517177d425c7368e53879dcda66c326c7b75aaa3cddc12c7485585b1e",
+  "baseline_sha256": "e83fc058c3c4e4fb23c8794e8950e1f2d2a7fc5cedcf638c3cb4aecbc593b3bc",
+  "compile_command": [
+    "clang++",
+    "-std=c++20",
+    "-O0",
+    "-I",
+    "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/p0-p3-readiness-20260906/legacy-writer-oracles/e6c0c3d/Source/EchoesSimCore/Public",
+    "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/p0-p3-readiness-20260906/legacy-writer-oracles/e6c0c3d/Source/EchoesSimCore/Private/Simulation.cpp",
+    "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/p0-p3-readiness-20260906/legacy-writer-oracles/e6c0c3d/writer.cpp",
+    "-o",
+    "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/p0-p3-readiness-20260906/legacy-writer-oracles/e6c0c3d/writer"
+  ],
+  "driver_sha256": "06a7a1fc7595ab6f6b8082989d2c25c02ecd02ca8d5a1e18294ca23947596d13"
+}
