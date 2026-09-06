@@ -238,3 +238,32 @@ disposition, reviewer and date. This verifies the recorded binding, not the auth
 approval. Only an actual owner instruction can create that record. Maturity advancement requires a
 matching stage receipt and allocated production record. Dirty source bytes are explicitly distinguished
 from the HEAD baseline; unsmudged LFS pointers are identified without treating pointer bytes as artwork.
+
+## Visual direction review board
+
+Run from the isolated concept worktree, pointing at the checkout with retained original image bytes:
+
+```sh
+python3 Docs/VisualAssetPipeline/review_board.py --source-root '/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project'
+```
+
+Open <http://127.0.0.1:8846>. The first review covers 34 objects in 21 subjects: eight original
+unit designs, twenty building studies, and six linked Future Well views. Approximate object regions
+are shown alongside access to the full original. This is the priority review subset, not the entire
+162-object register. Hollow Choir units lack dedicated retained concept sheets.
+
+Keep retains a visual direction for further development; Rework preserves specified elements;
+Replace flags a placeholder needing a better concept. Suggestions are assessment only. No choices
+are preselected. Choose a disposition or press Save notes to persist edits. Family notes apply to
+the Future Well as a whole. Navigation retains pending edits; reload requires saved edits.
+
+The server reads artwork and writes only `review-selections.json`, a separate draft review record
+with exact source hashes, timestamps and revision history. It does not modify the concept register,
+canon, production maturity or Unreal assets. Export downloads a snapshot of saved review input.
+The board rejects stale writes and register snapshot changes; reconcile existing decisions explicitly
+before using a changed register. Run only one server per review record. The local session is not an
+authenticated approval system. The server verifies source image hashes and accepts writes only from
+its local browser session. Stop it with Ctrl-C when finished.
+
+Run `python3 Docs/VisualAssetPipeline/test_review_board.py` for persistence checks. Browser interaction
+checks use a separate synthetic record under the evidence directory, never the owner's live record.
