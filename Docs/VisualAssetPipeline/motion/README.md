@@ -212,3 +212,6 @@ The export manifest records dirty-path observations for both the isolated docume
 The exact inspected Requirements and Development Bible payloads are retained under `motion-preparation/authority-evidence/` as `EVIDENCE_COPY_NOT_AUTHORITY`, with full-file hashes and original paths. This matters because the inspected primary Requirements file was dirty and differs from the isolated checkout. Those evidence copies preserve the basis of the motion decisions; the primary documents remain the sole design authority.
 
 Evidence limit: the earlier dirty RequirementsState payload was not captured before another workstream changed it. Its historical hash is retained, but the archive cannot reconstruct that exact state document. A separately labeled current observation is preserved without claiming equivalence. The exact Requirements and Bible payloads underlying the motion packages were successfully retained with matching hashes.
+## Unreal technical sources
+
+[UnrealReferences.md](../UnrealReferences.md) is the maintained Epic documentation and installed-engine reference library for future model, animation, material, VFX, audio and validation work. It maps references to all 21 production packages and records version and evidence limits.

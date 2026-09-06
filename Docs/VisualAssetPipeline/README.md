@@ -347,3 +347,7 @@ validate from another workspace location.
 ## Candidate correction and motion references
 
 The [motion handoff](motion/README.md) consolidates the 21 generated candidate receipts, open gaps and animation interfaces. The [interactive review](motion/motion-review.html) contains eleven schematic motion studies; these are reference proposals, not Unreal animations or acceptance evidence.
+
+## Unreal technical sources
+
+[UnrealReferences.md](UnrealReferences.md) is the maintained Epic documentation and installed-engine reference library for future model, animation, material, VFX, audio and validation work. It maps references to all 21 production packages and records version and evidence limits.
