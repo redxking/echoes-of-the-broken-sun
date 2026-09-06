@@ -229,3 +229,61 @@ remaining failures before advancing dependent integration. Reshape's required 18
 (`REL-WEL-010` / `SPEC-WELLP-003`) remains an explicit P0/P3 gameplay gap. The next assignment starts from
 this successful native receipt, not from the earlier compile failure. No packaged-play or owner-acceptance
 gate has closed, and the earlier audit remains a historical assessment of its stated source snapshot.
+
+
+### 2026-09-05 execution follow-up — integrated P0 repair
+
+The P0 automated baseline is qualified on the local dirty source based on `main` at `15008d55`.
+Reshape now has its pending public warning and delayed activation; schema 28 preserves the authored
+hostility relation, and same-frame movement/research scheduling is corrected. Native tests pass
+**101/101** in optimized, debug and ASan+UBSan configurations. Generated-source checks and the current
+editor build pass. The final protected Unreal run passes **92/92**, including all four FreshJourney
+routes, ending conflict and reset/restore checks. Save protections and cleanup pass. All 356 candidate
+inputs and seven native inputs matched their retained evidence at qualification.
+
+Exact source manifests, retained failures, final `p0-qualification.json`, and the evidence boundary are in
+[RequirementsState.md](RequirementsState.md#2026-09-05--p0-integrated-continuation-and-reshape-warning-repair).
+This closes the local automated P0 integration gate, not requirement or owner acceptance. The latest
+owner instruction keeps this continuation within P0; P1/P2 were not started. M01 geometry, packaged
+play, physical interaction, rendered/audio review and owner acceptance remain separate open gates.
+
+
+### 2026-09-05 execution follow-up — P1 authorized and underway
+
+The owner subsequently instructed “Proceed to P1,” superseding the preceding P0-only scope note.
+The active increment implements the shell coordinator, UMG menu routes, independent profile storage,
+three selected journey slots and recovery controls. The current local editor build and protected suite pass 95/95;
+rendered checks have verified the title, scale/contrast changes and keyboard modal navigation. The full
+pointer/display matrix and remaining options controls keep P1 open. Requirement acceptance,
+Shipping HUD migration, P2 result telemetry, P3 curriculum integration and packaged/owner gates
+remain open. See the P1 entry in [RequirementsState.md](RequirementsState.md).
+
+
+### 2026-09-05 execution follow-up — P1/P2 completion continuation
+
+The owner authorized continuous implementation and verification through both P1 and P2. The selected
+AI contract is Story / Standard / Veteran / Sovereign with equal combat rules and reaction delays of
+3.0 / 1.5 / 0.9 / 0.5 seconds. Current source adds the full modular field HUD, asynchronous checkpoints,
+recovery repairs, Corefall match/result routes and detached replay transport. Native qualification passed
+102/102 in three configurations including replay/snapshot cancellation, streaming-history differential coverage, dense-tick receipt
+retention and 64-bit APM.
+Candidate 20 compiled and passed all 111 registered Unreal fixtures with zero test warnings/errors.
+All 501 runtime input hashes, exact test inventory and save-isolation gates passed. Mac Shipping also
+compiled, linked and received an ad-hoc local signature; this is not a fresh cooked or distributable package. The suite covers canonical
+interrupted skirmish recovery, display/profile/mastery routes, normal victory/defeat, replay fidelity and
+non-primary mouse refusal. The current 401-entity save measured 44 µs capture, 471 µs main-thread initiation
+and 20.768 ms total completion; the tick-52,764 loss measured 181 µs, 653 µs and 3.139 seconds respectively.
+These are development-fixture measurements on this host.
+
+The implemented P1/P2 changes pass automated checks; their delivery exit remains open for the
+rendered mouse/keyboard, actual display/HUD-scale endpoint and focus/control matrix. Candidate 19 rendered
+Options at 80%/150% and exercised tutorial deployment and HUD production with native Slate input. OS/CUA
+pointer evidence was inconsistent. A later standalone candidate-20 session received Quit/Confirm input
+while the coordinator was reading metadata and exited normally, so live input is paused for an idle
+computer window. No editor or heavy runner remains active. The next action is the coordinated standalone
+input/display pass, followed by targeted repair/reverification where evidence requires it. Gemini See Loop
+captures work, but analysis returned `API_KEY_INVALID` and is not claimed as visual QA.
+
+Historical failed runs remain retained. See the current P1/P2 integration entry in
+[RequirementsState.md](RequirementsState.md). This continuation does not advance P3/P4/P7 package,
+distribution or owner-acceptance gates.

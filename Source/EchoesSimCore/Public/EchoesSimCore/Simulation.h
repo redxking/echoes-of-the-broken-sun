@@ -11,6 +11,7 @@
 #include <compare>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <limits>
 #include <map>
 #include <optional>
@@ -27,6 +28,7 @@ namespace echoes::sim {
 using Tick = std::uint64_t;
 using EntityId = std::uint32_t;
 using PlayerId = std::uint8_t;
+using ReplayCancellationCheck = std::function<bool()>;
 
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
@@ -34,11 +36,12 @@ inline constexpr std::int32_t kFixedScale = 1024;
 inline constexpr std::size_t kMaximumCommandLogEntries = 256U * 1024U;
 inline constexpr std::size_t kMaximumCommandResolutionReceipts = 4096;
 inline constexpr Tick kCommandResolutionReceiptRetentionTicks = 1200;
-// Schema 27 appends Future Well capture and protocol lifecycle state after
-// schema 26's work and projectile records. The replay envelope shape is
-// unchanged, so kReplayVersion does not move with it.
-inline constexpr std::uint32_t kSnapshotVersion = 27;
-inline constexpr std::uint32_t kReplayVersion = 24;
+// Schema 28 appends hostility masks to schema 27's Future Well capture and
+// protocol lifecycle state. Replay v25 independently adds the optional
+// terminal forfeit input; snapshot and gameplay-checksum schemas do not move.
+inline constexpr std::uint32_t kSnapshotVersion = 28;
+inline constexpr std::uint32_t kLegacyReplayVersion = 24;
+inline constexpr std::uint32_t kReplayVersion = 25;
 
 // Remembered permanent objects are bounded so a long match cannot grow an
 // unserializable ledger. When the bound is reached the oldest observation is
@@ -672,11 +675,12 @@ struct Entity final {
     friend bool operator==(const Entity&, const Entity&) = default;
 };
 
-/** Public-only Harvest telegraph authority for HUD and map-ping presentation. */
+/** Public-only protocol warning; it exposes no capture, unit or resource state. */
 struct FutureWellTelegraph final {
     EntityId wellId = 0;
     Vec2 position{};
     Tick remainingTicks = 0;
+    FutureWellChoice choice = FutureWellChoice::Dormant;
 
     friend bool operator==(const FutureWellTelegraph&,
                            const FutureWellTelegraph&) = default;
@@ -733,6 +737,9 @@ struct Projectile final {
     friend bool operator==(const Projectile&, const Projectile&) = default;
 };
 
+using PlayerHostilityMasks = std::array<std::uint8_t, kMaximumPlayers>;
+inline constexpr PlayerHostilityMasks kDefaultHostilityMasks{0x0E, 0x0D, 0x0B, 0x07};
+
 struct SimulationConfig final {
     std::int32_t mapWidthTiles = 64;
     std::int32_t mapHeightTiles = 64;
@@ -744,6 +751,25 @@ struct SimulationConfig final {
     // contract; deterministic endurance fixtures opt in explicitly.
     std::uint8_t protectedCommandCorePlayerMask = 0;
     bool enableBallisticProjectiles = false;
+    // Ownership remains command authority. These symmetric relationships only
+    // determine legal threats and damage; they do not share units or fog.
+    PlayerHostilityMasks hostilityMasks = kDefaultHostilityMasks;
+
+    [[nodiscard]] bool IsHostile(PlayerId source, PlayerId target) const {
+        return source < kMaximumPlayers && target < kMaximumPlayers &&
+            (hostilityMasks[source] & static_cast<std::uint8_t>(1U << target)) != 0;
+    }
+    [[nodiscard]] bool HasValidHostilityMasks() const {
+        constexpr auto validBits = static_cast<std::uint8_t>((1U << kMaximumPlayers) - 1U);
+        for (PlayerId player = 0; player < kMaximumPlayers; ++player) {
+            if ((hostilityMasks[player] & static_cast<std::uint8_t>(~validBits)) != 0 ||
+                IsHostile(player, player)) return false;
+            for (PlayerId other = 0; other < kMaximumPlayers; ++other) {
+                if (IsHostile(player, other) != IsHostile(other, player)) return false;
+            }
+        }
+        return true;
+    }
 
     friend bool operator==(const SimulationConfig&,
                            const SimulationConfig&) = default;
@@ -797,6 +823,9 @@ public:
         return populationCapacity_;
     }
     [[nodiscard]] const std::vector<Entity>& Entities() const { return entities_; }
+    [[nodiscard]] const std::vector<FutureWellTelegraph>& PublicFutureWellTelegraphs() const {
+        return publicFutureWellTelegraphs_;
+    }
     [[nodiscard]] const std::vector<VibrationSignature>& VibrationSignatures() const {
         return vibrationSignatures_;
     }
@@ -825,6 +854,7 @@ private:
     std::vector<Entity> entities_{};
     std::vector<VibrationSignature> vibrationSignatures_{};
     std::vector<RememberedObject> rememberedObjects_{};
+    std::vector<FutureWellTelegraph> publicFutureWellTelegraphs_{};
 };
 
 struct ReplayRecord final {
@@ -835,6 +865,119 @@ struct ReplayRecord final {
     std::vector<Command> commands{};
     Tick finalTick = 0;
     std::uint64_t finalChecksum = 0;
+    // Replay-only terminal input. A concession is authoritative but occurs
+    // outside the normal command queue at finalTick. Legacy v24 records omit
+    // this field and therefore decode as kNeutralPlayer.
+    PlayerId forfeitingPlayer = kNeutralPlayer;
+};
+
+/** Fixed one-minute buckets used by the results APM graph. */
+inline constexpr Tick kMatchReportApmIntervalTicks = 60U * 20U;
+
+enum class ReplayTimelineEventType : std::uint8_t {
+    FirstCombatContact = 0,
+    FutureWellProtocol = 1,
+    CommandCoreLoss = 2,
+    MajorArmyClash = 3,
+};
+
+enum class MatchOutcomeCause : std::uint8_t {
+    None = 0,
+    CommandCoreLoss = 1,
+    PlayerForfeit = 2,
+};
+
+struct MatchCommandRecord final {
+    Tick tick = 0;
+    PlayerId player = 0;
+    std::uint64_t sequence = 0;
+    CommandType type = CommandType::Stop;
+    bool resolved = false;
+    CommandResolutionOutcome outcome = CommandResolutionOutcome::NoEffect;
+
+    friend bool operator==(const MatchCommandRecord&,
+                           const MatchCommandRecord&) = default;
+};
+
+struct MatchApmSample final {
+    Tick startTick = 0;
+    Tick endTick = 0;
+    PlayerId player = 0;
+    std::uint32_t commandCount = 0;
+    // Hundredths of an action per minute. Integer representation keeps the
+    // report portable and lets presentation choose its own decimal format.
+    std::uint64_t actionsPerMinuteX100 = 0;
+
+    friend bool operator==(const MatchApmSample&,
+                           const MatchApmSample&) = default;
+};
+
+struct MatchWellDecisionRecord final {
+    Tick tick = 0;
+    PlayerId player = 0;
+    EntityId wellId = 0;
+    FutureWellChoice choice = FutureWellChoice::Dormant;
+
+    friend bool operator==(const MatchWellDecisionRecord&,
+                           const MatchWellDecisionRecord&) = default;
+};
+
+struct ReplayTimelineEvent final {
+    Tick tick = 0;
+    ReplayTimelineEventType type = ReplayTimelineEventType::FirstCombatContact;
+    PlayerId player = kNeutralPlayer;
+    EntityId subject = 0;
+
+    friend bool operator==(const ReplayTimelineEvent&,
+                           const ReplayTimelineEvent&) = default;
+};
+
+struct MatchPlayerStatistics final {
+    bool active = false;
+    Faction faction = Faction::MeridianCompact;
+    std::uint32_t unitsTrained = 0;
+    std::uint32_t unitsLost = 0;
+    std::uint64_t materialCollected = 0;
+    std::uint64_t materialDelivered = 0;
+    std::uint32_t admittedCommands = 0;
+
+    friend bool operator==(const MatchPlayerStatistics&,
+                           const MatchPlayerStatistics&) = default;
+};
+
+/** Cumulative counters sampled at the same one-minute boundaries as APM. */
+struct MatchTimelineSample final {
+    Tick tick = 0;
+    std::array<std::uint32_t, kMaximumPlayers> unitsTrained{};
+    std::array<std::uint32_t, kMaximumPlayers> unitsLost{};
+    std::array<std::uint64_t, kMaximumPlayers> materialCollected{};
+    std::array<std::uint64_t, kMaximumPlayers> materialDelivered{};
+    std::array<std::uint32_t, kMaximumPlayers> admittedCommands{};
+
+    friend bool operator==(const MatchTimelineSample&,
+                           const MatchTimelineSample&) = default;
+};
+
+/**
+ * Post-match and replay-observer evidence rebuilt from the replay authority.
+ * It is intentionally absent from PlayerView and does not enter snapshots or
+ * gameplay checksums, so a live player cannot obtain opponent information
+ * through the normal presentation boundary.
+ */
+struct MatchReport final {
+    Tick baselineTick = 0;
+    Tick finalTick = 0;
+    Tick durationTicks = 0;
+    MatchOutcome outcome = MatchOutcome::Ongoing;
+    MatchOutcomeCause outcomeCause = MatchOutcomeCause::None;
+    PlayerId forfeitingPlayer = kNeutralPlayer;
+    std::uint64_t finalChecksum = 0;
+    std::array<MatchPlayerStatistics, kMaximumPlayers> players{};
+    std::vector<MatchCommandRecord> commands{};
+    std::vector<MatchApmSample> apmSamples{};
+    std::vector<MatchWellDecisionRecord> wellDecisions{};
+    std::vector<ReplayTimelineEvent> events{};
+    std::vector<MatchTimelineSample> timelineSamples{};
 };
 
 class ECHOESSIMCORE_API Simulation final {
@@ -847,6 +990,10 @@ public:
     [[nodiscard]] const std::vector<Projectile>& Projectiles() const { return projectiles_; }
     [[nodiscard]] const std::vector<Command>& CommandLog() const {
         return commandLog_;
+    }
+    /** Authority-adapter inspection for deterministic deferred-input budgets. */
+    [[nodiscard]] std::span<const Command> PendingCommands() const {
+        return pendingCommands_;
     }
     [[nodiscard]] std::optional<std::uint64_t> NextCommandSequence(
         PlayerId player) const;
@@ -993,17 +1140,29 @@ public:
     [[nodiscard]] std::vector<std::uint8_t> SaveSnapshot() const;
     [[nodiscard]] static std::optional<Simulation> LoadSnapshot(
         std::span<const std::uint8_t> bytes,
-        std::string* error = nullptr);
+        std::string* error = nullptr,
+        PlayerHostilityMasks legacyHostilityMasks = kDefaultHostilityMasks,
+        const ReplayCancellationCheck& shouldCancel = {});
 
     // Capture after deterministic map/scenario setup and before player commands.
     void CaptureReplayBaseline();
     // One-way runtime gate for fixtures whose out-of-band state transitions
     // cannot be represented by the deterministic replay command stream.
     void DisableReplayExport();
+    // Reattaches a replay prefix retained alongside a mid-match snapshot.
+    // The prefix must reproduce this exact tick and state before recording
+    // can continue; invalid or mismatched provenance fails closed.
+    bool ContinueReplayRecording(const ReplayRecord& prefix,
+                                 std::string* error = nullptr);
     [[nodiscard]] ReplayRecord ExportReplay(std::string* error = nullptr) const;
     [[nodiscard]] static std::optional<Simulation> ReplayToEnd(
         const ReplayRecord& replay,
-        std::string* error = nullptr);
+        std::string* error = nullptr,
+        const ReplayCancellationCheck& shouldCancel = {});
+    [[nodiscard]] static std::optional<MatchReport> BuildMatchReport(
+        const ReplayRecord& replay,
+        std::string* error = nullptr,
+        const ReplayCancellationCheck& shouldCancel = {});
 
 #if defined(ECHOES_SIMCORE_PROFILE)
     // Compiled only into the native profiler so subsystem costs can be isolated.
@@ -1013,7 +1172,8 @@ public:
 
 private:
     template <typename Writer>
-    void WriteSnapshotPayload(Writer& writer) const;
+    void WriteSnapshotPayload(Writer& writer,
+                              std::uint32_t version = kSnapshotVersion) const;
 
     struct PathFieldCacheEntry final {
         std::vector<std::size_t> distanceToGoal{};
@@ -1036,6 +1196,11 @@ private:
     struct StoredCommandResolutionReceipt final {
         std::uint64_t sequence = 0;
         CommandResolutionReceipt receipt{};
+    };
+
+    struct ReplayCommandSchedule final {
+        std::vector<Command> baselinePending{};
+        std::vector<Command> recorded{};
     };
 
     [[nodiscard]] bool IsInsideMap(Vec2 position,
@@ -1118,8 +1283,9 @@ private:
     [[nodiscard]] std::uint64_t DistanceSquaredRaw(Vec2 first, Vec2 second) const;
     [[nodiscard]] bool TryAllocateEntityId(EntityId& id);
 
-    void UpdateVisibility();
-    void UpdateRememberedObjects();
+    bool UpdateVisibility(const ReplayCancellationCheck& shouldCancel = {});
+    bool UpdateRememberedObjects(
+        const ReplayCancellationCheck& shouldCancel = {});
     void ResolveExpiredReshapes();
     void ResolveExpiredRelaySupply();
     void ResolveWaystoneTransitions();
@@ -1128,12 +1294,24 @@ private:
     void ResolveAegisPower();
     void ResolveChoirIdentities();
     void ResolveChoirCoherence();
-    void ProcessCommandsForCurrentTick();
+    [[nodiscard]] bool PrepareReplayCommandSchedule(
+        const ReplayRecord& replay,
+        ReplayCommandSchedule& schedule,
+        std::string* rejectionReason,
+        const ReplayCancellationCheck& shouldCancel);
+    void AdmitPreparedReplayCommand(const Command& command, bool recorded);
+    void Step(std::map<std::pair<PlayerId, std::uint64_t>,
+                       CommandResolutionOutcome>* resolutionSink);
+    void ProcessCommandsForCurrentTick(
+        std::map<std::pair<PlayerId, std::uint64_t>,
+                 CommandResolutionOutcome>* resolutionSink = nullptr);
     [[nodiscard]] CommandResolutionOutcome ApplyCommand(
         const Command& command);
     void RecordCommandResolutionReceipt(
         const Command& command,
-        CommandResolutionOutcome outcome);
+        CommandResolutionOutcome outcome,
+        std::map<std::pair<PlayerId, std::uint64_t>,
+                 CommandResolutionOutcome>* resolutionSink = nullptr);
     void PruneCommandResolutionReceipts();
     void ProcessEntityOrders();
     [[nodiscard]] bool HasLineOfFire(const Entity& attacker, const Entity& target) const;
@@ -1196,6 +1374,7 @@ private:
     std::vector<Command> commandLog_{};
     std::deque<StoredCommandResolutionReceipt> commandResolutionReceipts_{};
     std::vector<std::uint8_t> replayInitialSnapshot_{};
+    PlayerId replayForfeitingPlayer_ = kNeutralPlayer;
     bool replayExportEnabled_ = true;
     std::array<std::uint64_t, kMaximumPlayers> lastExecutedSequence_{};
     std::array<bool, kMaximumPlayers> hasExecutedSequence_{};

@@ -56,6 +56,18 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestTrue(
         *FString::Printf(TEXT("Canonical data maps to deterministic rules: %s"), *RulesError),
         Catalog.BuildSimulationRules(20, Rules, RulesError));
+    for (const bool bHarvest : {true, false})
+    {
+        auto Unsupported = Catalog;
+        if (bHarvest) Unsupported.FutureWell.HarvestTelegraphTicks = 179;
+        else Unsupported.FutureWell.ReshapeTelegraphTicks = 181;
+        echoes::sim::SimulationRules RejectedRules;
+        FString RejectedError;
+        TestFalse(TEXT("Content cannot silently override pinned Well warning duration"),
+            Unsupported.BuildSimulationRules(20, RejectedRules, RejectedError));
+        TestEqual(TEXT("Unsupported warning duration has explicit failure"),
+            RejectedError, FString(TEXT("SIM_RULES_WELL_TELEGRAPH_UNSUPPORTED")));
+    }
     TestEqual(TEXT("Meridian Lancer health enters simulation rules"),
               Rules.archetypes[0][1].maxHitPoints, 145);
     TestEqual(TEXT("Kharuun Riftstalker range enters fixed-point rules"),

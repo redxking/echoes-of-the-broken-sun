@@ -53,6 +53,7 @@ constexpr std::int32_t kFutureWellCaptureRadiusRaw = 21 * kFixedScale / 5;
 constexpr std::int32_t kFutureWellScarRadiusRaw = 6 * kFixedScale;
 constexpr std::uint16_t kFutureWellCaptureRequiredTicks = 300;
 constexpr Tick kHarvestTelegraphTicks = 180;
+constexpr Tick kReshapeTelegraphTicks = 180;
 constexpr std::int32_t kMaximumMapDimension =
     std::numeric_limits<std::int32_t>::max() / kFixedScale;
 constexpr std::uint8_t kValidCommandCoreProtectionMask =
@@ -93,6 +94,22 @@ constexpr std::uint8_t kValidCommandCoreProtectionMask =
     std::uint64_t hash = kFnvOffset;
     for (const std::uint8_t byte : bytes) {
         hash ^= byte;
+        hash *= kFnvPrime;
+    }
+    return hash;
+}
+
+[[nodiscard]] std::optional<std::uint64_t> Fnv1a(
+    std::span<const std::uint8_t> bytes,
+    const ReplayCancellationCheck& shouldCancel) {
+    constexpr std::size_t kCancellationChunkBytes = 1024U * 1024U;
+    std::uint64_t hash = kFnvOffset;
+    for (std::size_t index = 0; index < bytes.size(); ++index) {
+        if ((index % kCancellationChunkBytes) == 0U && shouldCancel &&
+            shouldCancel()) {
+            return std::nullopt;
+        }
+        hash ^= bytes[index];
         hash *= kFnvPrime;
     }
     return hash;
@@ -1098,6 +1115,7 @@ Simulation::Simulation(SimulationConfig config)
         tileCount > kMaximumMapTiles ||
         (config_.protectedCommandCorePlayerMask &
          static_cast<std::uint8_t>(~kValidCommandCoreProtectionMask)) != 0 ||
+        !config_.HasValidHostilityMasks() ||
         !IsValidSimulationRules(config_.rules)) {
         throw std::invalid_argument("invalid deterministic simulation configuration");
     }
@@ -2223,7 +2241,7 @@ bool Simulation::ForfeitPlayer(PlayerId player) {
     // correctly refuses to load.
     RemoveDestroyedEntities();
     ClearInvalidOrders();
-    DisableReplayExport();
+    replayForfeitingPlayer_ = player;
     return true;
 }
 
@@ -2333,6 +2351,150 @@ bool Simulation::QueueCommand(const Command& command, std::string* rejectionReas
     pendingCommands_.push_back(command);
     commandLog_.push_back(command);
     return true;
+}
+
+bool Simulation::PrepareReplayCommandSchedule(
+    const ReplayRecord& replay,
+    ReplayCommandSchedule& schedule,
+    std::string* rejectionReason,
+    const ReplayCancellationCheck& shouldCancel) {
+    schedule = {};
+    if (rejectionReason != nullptr) {
+        rejectionReason->clear();
+    }
+    if (replay.commands.size() >
+            kMaximumSerializedCommands - pendingCommands_.size() ||
+        replay.commands.size() >
+            kMaximumSerializedCommands - commandLog_.size()) {
+        SetError(rejectionReason, "command capacity is exhausted");
+        return false;
+    }
+
+    schedule.baselinePending = pendingCommands_;
+    schedule.recorded = replay.commands;
+    std::sort(schedule.baselinePending.begin(),
+              schedule.baselinePending.end(), CommandLess);
+    std::sort(schedule.recorded.begin(), schedule.recorded.end(), CommandLess);
+    if (shouldCancel && shouldCancel()) {
+        SetError(rejectionReason, "replay validation cancelled");
+        schedule = {};
+        return false;
+    }
+
+    std::array<std::vector<const Command*>, kMaximumPlayers> byPlayer{};
+    std::size_t commandIndex = 0;
+    const auto Collect = [&](const std::vector<Command>& commands,
+                             bool validateEncoding) {
+        for (const Command& command : commands) {
+            if ((commandIndex++ & 0xffU) == 0U &&
+                shouldCancel && shouldCancel()) {
+                SetError(rejectionReason, "replay validation cancelled");
+                return false;
+            }
+            if (command.player >= kMaximumPlayers ||
+                FindPlayer(command.player) == nullptr) {
+                SetError(rejectionReason, "command player is not active");
+                return false;
+            }
+            if (command.executeTick < currentTick_ ||
+                command.executeTick > kMaximumSupportedTick) {
+                SetError(rejectionReason,
+                         "command tick is outside the supported range");
+                return false;
+            }
+            if (validateEncoding &&
+                (!IsValidCommandType(command.type) ||
+                 !IsValidEntityType(command.buildType) ||
+                 !IsValidWellChoice(command.wellChoice) ||
+                 !IsValidWarformAdaptation(command.warformAdaptation) ||
+                 !IsValidResearchType(command.researchType) ||
+                 command.actor == 0)) {
+                SetError(rejectionReason, "command encoding is invalid");
+                return false;
+            }
+            byPlayer[command.player].push_back(&command);
+        }
+        return true;
+    };
+    // Snapshot loading has already validated baseline-pending encodings. They
+    // still participate in the sequence frontier shared with recorded input.
+    if (!Collect(schedule.baselinePending, false) ||
+        !Collect(schedule.recorded, true)) {
+        schedule = {};
+        return false;
+    }
+
+    for (PlayerId player = 0; player < kMaximumPlayers; ++player) {
+        std::vector<const Command*>& commands = byPlayer[player];
+        std::sort(
+            commands.begin(), commands.end(),
+            [](const Command* lhs, const Command* rhs) {
+                return CommandLess(*lhs, *rhs);
+            });
+        Tick priorTick = 0;
+        std::uint64_t priorTickMaximumSequence = 0;
+        bool hasPriorTick = false;
+        std::uint64_t previousSequenceAtTick = 0;
+        bool hasSequenceAtTick = false;
+        for (std::size_t index = 0; index < commands.size(); ++index) {
+            if ((index & 0xffU) == 0U &&
+                shouldCancel && shouldCancel()) {
+                SetError(rejectionReason, "replay validation cancelled");
+                schedule = {};
+                return false;
+            }
+            const Command& command = *commands[index];
+            if (hasExecutedSequence_[player] &&
+                command.sequence <= lastExecutedSequence_[player]) {
+                SetError(rejectionReason,
+                         "command sequence is not newer than executed input");
+                schedule = {};
+                return false;
+            }
+            if (!hasPriorTick || command.executeTick != priorTick) {
+                if (hasPriorTick &&
+                    command.sequence <= priorTickMaximumSequence) {
+                    SetError(rejectionReason,
+                             "command sequence must increase across execution ticks");
+                    schedule = {};
+                    return false;
+                }
+                priorTick = command.executeTick;
+                priorTickMaximumSequence = command.sequence;
+                hasPriorTick = true;
+                previousSequenceAtTick = command.sequence;
+                hasSequenceAtTick = true;
+                continue;
+            }
+            if (hasSequenceAtTick && command.sequence == previousSequenceAtTick) {
+                SetError(rejectionReason,
+                         "player and sequence must identify one command");
+                schedule = {};
+                return false;
+            }
+            previousSequenceAtTick = command.sequence;
+            priorTickMaximumSequence = command.sequence;
+        }
+    }
+
+    if (shouldCancel && shouldCancel()) {
+        SetError(rejectionReason, "replay validation cancelled");
+        schedule = {};
+        return false;
+    }
+    pendingCommands_.clear();
+    commandLog_.clear();
+    replayInitialSnapshot_ = replay.initialSnapshot;
+    replayForfeitingPlayer_ = kNeutralPlayer;
+    return true;
+}
+
+void Simulation::AdmitPreparedReplayCommand(const Command& command,
+                                            bool recorded) {
+    pendingCommands_.push_back(command);
+    if (recorded) {
+        commandLog_.push_back(command);
+    }
 }
 
 std::uint64_t Simulation::DistanceSquaredRaw(Vec2 first, Vec2 second) const {
@@ -3305,7 +3467,7 @@ EntityId Simulation::FindNearestVisibleEnemy(PlayerId player,
     const std::uint64_t radiusSquared =
         static_cast<std::uint64_t>(radiusRaw) * radiusRaw;
     for (const Entity& entity : entities_) {
-        if (entity.owner == kNeutralPlayer || entity.owner == player ||
+        if (!config_.IsHostile(player, entity.owner) ||
             entity.hitPoints <= 0 || IsProtectedCommandCore(entity) ||
             !IsEntityVisibleTo(player, entity.id)) {
             continue;
@@ -3329,7 +3491,7 @@ EntityId Simulation::FindNearestVisibleEnemyInRange(
     EntityId nearest = 0;
     std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
     for (const Entity& entity : entities_) {
-        if (entity.owner == kNeutralPlayer || entity.owner == attacker.owner ||
+        if (!config_.IsHostile(attacker.owner, entity.owner) ||
             entity.hitPoints <= 0 || IsProtectedCommandCore(entity) ||
             !IsEntityVisibleTo(attacker.owner, entity.id) ||
             !InInteractionRange(attacker, entity, attacker.attackRangeRaw) ||
@@ -3377,7 +3539,7 @@ EntityId Simulation::FindNearestVisiblePatrolEnemy(
     const std::uint64_t visionSquared =
         static_cast<std::uint64_t>(visionRaw) * visionRaw;
     for (const Entity& entity : entities_) {
-        if (entity.owner == kNeutralPlayer || entity.owner == attacker.owner ||
+        if (!config_.IsHostile(attacker.owner, entity.owner) ||
             entity.hitPoints <= 0 || IsProtectedCommandCore(entity) ||
             !IsEntityVisibleTo(attacker.owner, entity.id) ||
             !IsInsidePatrolEnvelope(attacker.order, entity.position)) {
@@ -3445,7 +3607,9 @@ std::optional<Vec2> Simulation::FindProductionSpawnPosition(
     return std::nullopt;
 }
 
-void Simulation::ProcessCommandsForCurrentTick() {
+void Simulation::ProcessCommandsForCurrentTick(
+    std::map<std::pair<PlayerId, std::uint64_t>,
+             CommandResolutionOutcome>* resolutionSink) {
     std::vector<Command> due{};
     std::vector<Command> remaining{};
     due.reserve(pendingCommands_.size());
@@ -3457,7 +3621,7 @@ void Simulation::ProcessCommandsForCurrentTick() {
     pendingCommands_ = std::move(remaining);
     for (const Command& command : due) {
         const CommandResolutionOutcome outcome = ApplyCommand(command);
-        RecordCommandResolutionReceipt(command, outcome);
+        RecordCommandResolutionReceipt(command, outcome, resolutionSink);
         hasExecutedSequence_[command.player] = true;
         lastExecutedSequence_[command.player] = command.sequence;
     }
@@ -3465,7 +3629,9 @@ void Simulation::ProcessCommandsForCurrentTick() {
 
 void Simulation::RecordCommandResolutionReceipt(
     const Command& command,
-    CommandResolutionOutcome outcome) {
+    CommandResolutionOutcome outcome,
+    std::map<std::pair<PlayerId, std::uint64_t>,
+             CommandResolutionOutcome>* resolutionSink) {
     // QueueCommand and snapshot validation enforce unique, monotonically
     // executed player/sequence keys. Preserve that invariant here without an
     // O(receipt-count) duplicate scan on the authoritative due-command path.
@@ -3475,6 +3641,10 @@ void Simulation::RecordCommandResolutionReceipt(
     stored.receipt.commandType = command.type;
     stored.receipt.assignedExecutionTick = command.executeTick;
     stored.receipt.outcome = outcome;
+    if (resolutionSink != nullptr) {
+        resolutionSink->emplace(
+            std::make_pair(command.player, command.sequence), outcome);
+    }
     commandResolutionReceipts_.push_back(stored);
     if (commandResolutionReceipts_.size() >
         kMaximumCommandResolutionReceipts) {
@@ -3663,7 +3833,7 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
         case CommandType::Attack: {
             const Entity* target = FindEntity(command.target);
             if (actor->attackDamage > 0 && target != nullptr &&
-                target->owner != kNeutralPlayer && target->owner != command.player &&
+                config_.IsHostile(command.player, target->owner) &&
                 !IsProtectedCommandCore(*target) &&
                 IsEntityVisibleTo(command.player, target->id)) {
                 if (command.queue && actor->order.type != OrderType::None) {
@@ -3688,11 +3858,16 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
         }
         case CommandType::FutureWell: {
             const Entity* target = FindEntity(command.target);
+            const PlayerState* player = FindPlayer(command.player);
             if (actor->type == EntityType::Worker && target != nullptr &&
                 IsOperationalFutureWell(*target) &&
+                target->wellProtocolTicks == 0 &&
+                (command.wellChoice != FutureWellChoice::Reshape ||
+                 (player != nullptr && player->resources.dawnshards >=
+                    config_.rules.futureWell.reshapeDawnCost)) &&
                 (target->wellChoice == FutureWellChoice::Dormant ||
                  (target->wellChoice == FutureWellChoice::Preserve &&
-                  target->owner != command.player)) &&
+                  config_.IsHostile(command.player, target->owner))) &&
                 command.wellChoice != FutureWellChoice::Dormant &&
                 IsEntityVisibleTo(command.player, target->id)) {
                 if (command.queue && actor->order.type != OrderType::None) {
@@ -4360,6 +4535,7 @@ bool Simulation::HasLineOfFire(const Entity& attacker, const Entity& target) con
 void Simulation::TryFireAt(Entity& attacker, const Entity& target,
                            std::vector<PendingDamage>& pendingDamage) {
     if (attacker.attackCooldownTicks != 0 || target.hitPoints <= 0 ||
+        !config_.IsHostile(attacker.owner, target.owner) ||
         !HasLineOfFire(attacker, target)) {
         return;
     }
@@ -4375,8 +4551,7 @@ void Simulation::ProcessAttack(
     Entity& attacker,
     std::vector<PendingDamage>& pendingDamage) {
     Entity* target = MutableEntity(attacker.order.target);
-    if (target == nullptr || target->owner == kNeutralPlayer ||
-        target->owner == attacker.owner ||
+    if (target == nullptr || !config_.IsHostile(attacker.owner, target->owner) ||
         IsProtectedCommandCore(*target) ||
         !IsEntityVisibleTo(attacker.owner, target->id)) {
         attacker.order = {};
@@ -4428,8 +4603,7 @@ void Simulation::ProcessAttackMove(
     Entity* target = attacker.order.target != 0
                          ? MutableEntity(attacker.order.target)
                          : nullptr;
-    if (target == nullptr || target->owner == kNeutralPlayer ||
-        target->owner == attacker.owner ||
+    if (target == nullptr || !config_.IsHostile(attacker.owner, target->owner) ||
         (target != nullptr && IsProtectedCommandCore(*target)) ||
         !IsEntityVisibleTo(attacker.owner, target->id)) {
         attacker.order.target = 0;
@@ -4446,7 +4620,7 @@ void Simulation::ProcessAttackMove(
         EntityId priorityThreat = 0;
         std::uint64_t nearestThreatDist = std::numeric_limits<std::uint64_t>::max();
         for (const Entity& enemy : entities_) {
-            if (enemy.owner == kNeutralPlayer || enemy.owner == attacker.owner ||
+            if (!config_.IsHostile(attacker.owner, enemy.owner) ||
                 enemy.hitPoints <= 0 || IsProtectedCommandCore(enemy) ||
                 !IsEntityVisibleTo(attacker.owner, enemy.id) ||
                 !IsArmedOrMobile(enemy)) {
@@ -4499,8 +4673,7 @@ void Simulation::ProcessHold(
     Entity* target = attacker.order.target != 0
                          ? MutableEntity(attacker.order.target)
                          : nullptr;
-    if (target == nullptr || target->owner == kNeutralPlayer ||
-        target->owner == attacker.owner ||
+    if (target == nullptr || !config_.IsHostile(attacker.owner, target->owner) ||
         (target != nullptr && IsProtectedCommandCore(*target)) ||
         !IsEntityVisibleTo(attacker.owner, target->id) ||
         !InInteractionRange(attacker, *target, attacker.attackRangeRaw) ||
@@ -4572,8 +4745,7 @@ void Simulation::ProcessPatrol(
     Entity* target = attacker.order.target != 0
                          ? MutableEntity(attacker.order.target)
                          : nullptr;
-    if (target == nullptr || target->owner == kNeutralPlayer ||
-        target->owner == attacker.owner ||
+    if (target == nullptr || !config_.IsHostile(attacker.owner, target->owner) ||
         (target != nullptr && IsProtectedCommandCore(*target)) ||
         !IsEntityVisibleTo(attacker.owner, target->id) ||
         !IsInsidePatrolEnvelope(attacker.order, target->position)) {
@@ -4617,9 +4789,10 @@ void Simulation::ProcessAegisDefense(
 void Simulation::ProcessFutureWell(Entity& worker) {
     Entity* well = MutableEntity(worker.order.target);
     if (well == nullptr || !IsOperationalFutureWell(*well) ||
+        well->wellProtocolTicks > 0 ||
         (well->wellChoice != FutureWellChoice::Dormant &&
          (well->wellChoice != FutureWellChoice::Preserve ||
-          well->owner == worker.owner))) {
+          !config_.IsHostile(worker.owner, well->owner)))) {
         worker.order = {};
         return;
     }
@@ -4656,7 +4829,7 @@ bool Simulation::IsFutureWellContested(const Entity& well) const {
         return false;
     }
     for (const Entity& entity : entities_) {
-        if (entity.id != well.id && entity.owner != well.owner &&
+        if (entity.id != well.id && config_.IsHostile(well.owner, entity.owner) &&
             IsFutureWellZoneMember(well, entity)) {
             return true;
         }
@@ -4668,10 +4841,13 @@ std::vector<FutureWellTelegraph> Simulation::PublicFutureWellTelegraphs() const 
     std::vector<FutureWellTelegraph> telegraphs{};
     for (const Entity& entity : entities_) {
         if (entity.type == EntityType::FutureWell &&
-            entity.wellChoice == FutureWellChoice::Harvest &&
+            (entity.wellChoice == FutureWellChoice::Harvest ||
+             entity.wellPendingChoice == FutureWellChoice::Reshape) &&
             entity.wellProtocolTicks > 0) {
             telegraphs.push_back(
-                {entity.id, entity.position, entity.wellProtocolTicks});
+                {entity.id, entity.position, entity.wellProtocolTicks,
+                 entity.wellPendingChoice == FutureWellChoice::Reshape
+                     ? FutureWellChoice::Reshape : FutureWellChoice::Harvest});
         }
     }
     return telegraphs;
@@ -4679,7 +4855,18 @@ std::vector<FutureWellTelegraph> Simulation::PublicFutureWellTelegraphs() const 
 
 void Simulation::CompleteFutureWellCapture(Entity& well) {
     const PlayerState* player = FindPlayer(well.wellCapturePlayer);
-    if (player == nullptr || well.wellPendingChoice == FutureWellChoice::Dormant) {
+    if (player == nullptr || well.wellPendingChoice == FutureWellChoice::Dormant ||
+        (well.wellPendingChoice == FutureWellChoice::Reshape &&
+         player->resources.dawnshards < config_.rules.futureWell.reshapeDawnCost)) {
+        // Affordability may change during capture. Leave existing ownership
+        // and Preserve benefits intact; an unfunded attempt never commits.
+        const PlayerId claimant = well.wellCapturePlayer;
+        for (Entity& entity : entities_) {
+            if (entity.owner == claimant && entity.order.type == OrderType::FutureWell &&
+                entity.order.target == well.id) {
+                entity.order = {};
+            }
+        }
         well.wellCapturePlayer = kNeutralPlayer;
         well.wellCaptureProgress = 0;
         well.wellPendingChoice = FutureWellChoice::Dormant;
@@ -4698,23 +4885,14 @@ void Simulation::CompleteFutureWellCapture(Entity& well) {
         well.wellProtocolTicks = kHarvestTelegraphTicks;
     } else if (well.wellChoice == FutureWellChoice::Reshape) {
         PlayerState* mutablePlayer = MutablePlayer(well.owner);
-        if (mutablePlayer == nullptr || mutablePlayer->resources.dawnshards <
-                                         config_.rules.futureWell.reshapeDawnCost) {
-            well.owner = kNeutralPlayer;
-            well.faction = Faction::MeridianCompact;
-            well.wellChoice = FutureWellChoice::Dormant;
-            well.wellActivationTick = 0;
-            return;
-        }
         mutablePlayer->resources.dawnshards -=
             config_.rules.futureWell.reshapeDawnCost;
-        well.reshapeVariant = static_cast<std::uint8_t>(rng_.Uniform(4));
-        const Tick minimum = config_.rules.futureWell.reshapeDurationMinimumTicks;
-        const Tick maximum = config_.rules.futureWell.reshapeDurationMaximumTicks;
-        const Tick span = maximum - minimum + 1;
-        well.reshapeUntilTick = currentTick_ + minimum + rng_.Uniform(
-            static_cast<std::uint32_t>(span));
-        pathFieldCache_.clear();
+        // Keep the committed warning distinct from the manifested protocol.
+        // Mission reducers must not see an activated or expired route yet.
+        well.wellChoice = FutureWellChoice::Dormant;
+        well.wellPendingChoice = FutureWellChoice::Reshape;
+        well.wellActivationTick = 0;
+        well.wellProtocolTicks = kReshapeTelegraphTicks;
     }
     for (Entity& entity : entities_) {
         if (entity.order.type == OrderType::FutureWell &&
@@ -4756,6 +4934,24 @@ void Simulation::ProcessFutureWellLifecycles() {
         if (well.type != EntityType::FutureWell || IsCollapsedFutureWell(well)) {
             continue;
         }
+        if (well.wellPendingChoice == FutureWellChoice::Reshape &&
+            well.wellProtocolTicks > 0) {
+            // Capture is contestable until commitment. Reshape has no authored
+            // post-commit cancellation/refund rule; the paid public warning
+            // completes independently of worker orders or hostile presence.
+            if (--well.wellProtocolTicks == 0) {
+                well.wellChoice = FutureWellChoice::Reshape;
+                well.wellPendingChoice = FutureWellChoice::Dormant;
+                well.wellActivationTick = currentTick_ + 1;
+                well.reshapeVariant = static_cast<std::uint8_t>(rng_.Uniform(4));
+                const Tick minimum = config_.rules.futureWell.reshapeDurationMinimumTicks;
+                const Tick maximum = config_.rules.futureWell.reshapeDurationMaximumTicks;
+                well.reshapeUntilTick = well.wellActivationTick + minimum +
+                    rng_.Uniform(static_cast<std::uint32_t>(maximum - minimum + 1));
+                pathFieldCache_.clear();
+            }
+            continue;
+        }
         if (well.wellChoice == FutureWellChoice::Harvest) {
             if (IsFutureWellContested(well)) {
                 // A hostile breach interrupts the public telegraph before the
@@ -4784,7 +4980,7 @@ void Simulation::ProcessFutureWellLifecycles() {
                 continue;
             }
             for (PlayerId player = 0; player < players_.size(); ++player) {
-                if (player != entity.owner) {
+                if (config_.IsHostile(player, entity.owner)) {
                     hostilePresence[player] = true;
                 }
             }
@@ -4794,7 +4990,7 @@ void Simulation::ProcessFutureWellLifecycles() {
                 players_[entity.owner].active &&
                 entity.order.wellChoice != FutureWellChoice::Dormant &&
                 (well.wellChoice == FutureWellChoice::Dormant ||
-                 entity.owner != well.owner)) {
+                 config_.IsHostile(entity.owner, well.owner))) {
                 capturePlayers[entity.owner] = true;
                 if (captureChoices[entity.owner] == FutureWellChoice::Dormant) {
                     captureChoices[entity.owner] = entity.order.wellChoice;
@@ -5043,6 +5239,11 @@ void Simulation::ProcessEntityOrders() {
         while (index < pendingDamage.size() &&
                pendingDamage[index].target == targetId) {
             const Entity* attacker = FindEntity(pendingDamage[index].source);
+            if (attacker == nullptr || target == nullptr ||
+                !config_.IsHostile(attacker->owner, target->owner)) {
+                ++index;
+                continue;
+            }
             std::int32_t resolvedDamage =
                 attacker != nullptr && target != nullptr
                     ? DamageAfterDirectionalCover(
@@ -5138,15 +5339,20 @@ void Simulation::ClearInvalidOrders() {
                 if (const Entity* target = FindEntity(entity.order.target);
                     target == nullptr ||
                     (entity.order.type == OrderType::FutureWell &&
-                     !IsOperationalFutureWell(*target)) ||
+                     (!IsOperationalFutureWell(*target) ||
+                      (target->wellChoice != FutureWellChoice::Dormant &&
+                       (target->wellChoice != FutureWellChoice::Preserve ||
+                        !config_.IsHostile(entity.owner, target->owner))))) ||
                     (entity.order.type == OrderType::Attack &&
-                     IsProtectedCommandCore(*target))) {
+                     (!config_.IsHostile(entity.owner, target->owner) ||
+                      IsProtectedCommandCore(*target)))) {
                     entity.order = {};
                 }
                 break;
             case OrderType::AttackMove:
                 if (entity.order.target != 0 &&
                     (FindEntity(entity.order.target) == nullptr ||
+                     !config_.IsHostile(entity.owner, FindEntity(entity.order.target)->owner) ||
                      IsProtectedCommandCore(
                          *FindEntity(entity.order.target)))) {
                     entity.order.target = 0;
@@ -5155,6 +5361,7 @@ void Simulation::ClearInvalidOrders() {
             case OrderType::Hold:
                 if (entity.order.target != 0 &&
                     (FindEntity(entity.order.target) == nullptr ||
+                     !config_.IsHostile(entity.owner, FindEntity(entity.order.target)->owner) ||
                      IsProtectedCommandCore(
                          *FindEntity(entity.order.target)))) {
                     entity.order.target = 0;
@@ -5168,6 +5375,7 @@ void Simulation::ClearInvalidOrders() {
             case OrderType::Patrol:
                 if (entity.order.target != 0 &&
                     (FindEntity(entity.order.target) == nullptr ||
+                     !config_.IsHostile(entity.owner, FindEntity(entity.order.target)->owner) ||
                      IsProtectedCommandCore(
                          *FindEntity(entity.order.target)))) {
                     entity.order.target = 0;
@@ -5435,7 +5643,8 @@ void Simulation::ApplyResolvedDamage(
     Entity& target,
     std::int32_t damage,
     const Entity* attacker) {
-    if (IsProtectedCommandCore(target)) {
+    if (IsProtectedCommandCore(target) ||
+        (attacker != nullptr && !config_.IsHostile(attacker->owner, target.owner))) {
         return;
     }
     std::int32_t resolvedDamage =
@@ -5489,7 +5698,7 @@ void Simulation::UpdateProjectiles() {
         Entity* target = MutableEntity(projectile.target);
         const Entity* attacker = FindEntity(projectile.source);
         if (target == nullptr || target->hitPoints <= 0 ||
-            target->owner == projectile.owner || IsProtectedCommandCore(*target)) {
+            !config_.IsHostile(projectile.owner, target->owner) || IsProtectedCommandCore(*target)) {
             continue;
         }
         // Tracking is authoritative: a moving target cannot be damaged at its
@@ -5518,7 +5727,7 @@ void Simulation::UpdateProjectiles() {
             // the hit before the generic blocked-terrain rejection consumes it.
             for (Entity& cover : entities_) {
                 if (cover.temporaryMineralCover && cover.hitPoints > 0 &&
-                    cover.owner != projectile.owner &&
+                    config_.IsHostile(projectile.owner, cover.owner) &&
                     cover.position.x.FloorToInt() == point.x.FloorToInt() &&
                     cover.position.y.FloorToInt() == point.y.FloorToInt()) {
                     ApplyResolvedDamage(cover, projectile.damage, attacker);
@@ -5546,6 +5755,12 @@ void Simulation::UpdateProjectiles() {
 }
 
 void Simulation::Step() {
+    Step(nullptr);
+}
+
+void Simulation::Step(
+    std::map<std::pair<PlayerId, std::uint64_t>,
+             CommandResolutionOutcome>* resolutionSink) {
     if (currentTick_ >= kMaximumSupportedTick) {
         return;
     }
@@ -5557,7 +5772,7 @@ void Simulation::Step() {
     ResolveChoirCoherence();
     ResolveAegisPower();
     UpdateVisibility();
-    ProcessCommandsForCurrentTick();
+    ProcessCommandsForCurrentTick(resolutionSink);
     ProcessEntityOrders();
     ProcessFutureWellLifecycles();
     UpdateProjectiles();
@@ -5586,8 +5801,18 @@ void Simulation::Step(Tick tickCount) {
     }
 }
 
-void Simulation::UpdateVisibility() {
+bool Simulation::UpdateVisibility(
+    const ReplayCancellationCheck& shouldCancel) {
+    std::size_t cancellationWork = 0;
+    const auto cancelled = [&]() {
+        ++cancellationWork;
+        return (cancellationWork & 0xffU) == 0U && shouldCancel &&
+            shouldCancel();
+    };
     for (PlayerId player = 0; player < visible_.size(); ++player) {
+        if (shouldCancel && shouldCancel()) {
+            return false;
+        }
         std::fill(visible_[player].begin(), visible_[player].end(), 0);
     }
     // FOG information state: Explored is "remembered terrain ... no live unit
@@ -5598,6 +5823,9 @@ void Simulation::UpdateVisibility() {
     // entities_ is kept sorted by id.
     std::map<std::size_t, Terrain> temporaryCoverGround{};
     for (const Entity& entity : entities_) {
+        if (cancelled()) {
+            return false;
+        }
         if (!entity.temporaryMineralCover || entity.hitPoints <= 0) {
             continue;
         }
@@ -5619,14 +5847,17 @@ void Simulation::UpdateVisibility() {
     const auto markVisible = [&](PlayerId player, Vec2 position,
                                  std::int32_t radiusTiles) {
         if (player >= players_.size() || !players_[player].active) {
-            return;
+            return true;
         }
         const std::int32_t centerX = position.x.FloorToInt();
         const std::int32_t centerY = position.y.FloorToInt();
         for (std::int32_t offsetY = -radiusTiles; offsetY <= radiusTiles;
-             ++offsetY) {
+            ++offsetY) {
             for (std::int32_t offsetX = -radiusTiles; offsetX <= radiusTiles;
                  ++offsetX) {
+                if (cancelled()) {
+                    return false;
+                }
                 const std::int64_t distanceSquared =
                     static_cast<std::int64_t>(offsetX) * offsetX +
                     static_cast<std::int64_t>(offsetY) * offsetY;
@@ -5651,22 +5882,40 @@ void Simulation::UpdateVisibility() {
                 rememberedTerrain_[player][tile] = permanentTerrainAt(tile);
             }
         }
+        return true;
     };
     for (const Entity& entity : entities_) {
+        if (cancelled()) {
+            return false;
+        }
         if (entity.owner < players_.size() && players_[entity.owner].active) {
-            markVisible(entity.owner, entity.position, entity.visionTiles);
+            if (!markVisible(
+                    entity.owner, entity.position, entity.visionTiles)) {
+                return false;
+            }
             if (entity.type == EntityType::FutureWell &&
                 entity.wellChoice == FutureWellChoice::Preserve &&
                 !IsFutureWellContested(entity)) {
-                markVisible(entity.owner, entity.position,
-                            config_.rules.futureWell.preserveVisionTiles);
+                if (!markVisible(
+                        entity.owner,
+                        entity.position,
+                        config_.rules.futureWell.preserveVisionTiles)) {
+                    return false;
+                }
             }
         }
     }
-    UpdateRememberedObjects();
+    return UpdateRememberedObjects(shouldCancel);
 }
 
-void Simulation::UpdateRememberedObjects() {
+bool Simulation::UpdateRememberedObjects(
+    const ReplayCancellationCheck& shouldCancel) {
+    std::size_t cancellationWork = 0;
+    const auto cancelled = [&]() {
+        ++cancellationWork;
+        return (cancellationWork & 0xffU) == 0U && shouldCancel &&
+            shouldCancel();
+    };
     const auto tileIndex = [&](Vec2 position) {
         const std::int32_t tileX = std::clamp(
             position.x.FloorToInt(), 0, config_.mapWidthTiles - 1);
@@ -5675,6 +5924,9 @@ void Simulation::UpdateRememberedObjects() {
         return static_cast<std::size_t>(tileY * config_.mapWidthTiles + tileX);
     };
     for (PlayerId player = 0; player < players_.size(); ++player) {
+        if (shouldCancel && shouldCancel()) {
+            return false;
+        }
         std::vector<RememberedObject>& memory = rememberedObjects_[player];
         if (!players_[player].active) {
             memory.clear();
@@ -5683,7 +5935,12 @@ void Simulation::UpdateRememberedObjects() {
         // A memory is only ever corrected by looking. Standing on the
         // remembered tile and finding the object gone — destroyed, depleted,
         // or uprooted and walked away — clears it. Losing vision never does.
+        bool eraseCancelled = false;
         std::erase_if(memory, [&](const RememberedObject& remembered) {
+            if (cancelled()) {
+                eraseCancelled = true;
+                return false;
+            }
             const std::size_t tile = tileIndex(remembered.position);
             if (visible_[player][tile] == 0) {
                 return false;
@@ -5692,7 +5949,13 @@ void Simulation::UpdateRememberedObjects() {
             return live == nullptr || !IsRememberablePermanentObject(*live) ||
                    tileIndex(live->position) != tile;
         });
+        if (eraseCancelled) {
+            return false;
+        }
         for (const Entity& entity : entities_) {
+            if (cancelled()) {
+                return false;
+            }
             // A player's own objects are always live in their view; they need
             // no memory and must not be duplicated into one.
             if (entity.owner == player ||
@@ -5740,6 +6003,7 @@ void Simulation::UpdateRememberedObjects() {
             memory.insert(slot, observed);
         }
     }
+    return true;
 }
 
 #if defined(ECHOES_SIMCORE_PROFILE)
@@ -5820,6 +6084,7 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
     view.decisionSeed_ = config_.randomSeed;
     view.populationUsed_ = PopulationUsed(player);
     view.populationCapacity_ = PopulationCapacity(player);
+    view.publicFutureWellTelegraphs_ = PublicFutureWellTelegraphs();
     const std::size_t tileCount =
         static_cast<std::size_t>(config_.mapWidthTiles) *
         static_cast<std::size_t>(config_.mapHeightTiles);
@@ -5924,7 +6189,7 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
     const std::int32_t resolution =
         config_.rules.vibrationDetection.contactResolutionRaw;
     for (const Entity& source : entities_) {
-        if (source.owner == kNeutralPlayer || source.owner == player ||
+        if (!config_.IsHostile(player, source.owner) ||
             source.hitPoints <= 0 || source.movementPerTickRaw <= 0 ||
             source.vibrationSignatureUntilTick <= currentTick_ ||
             IsEntityVisibleTo(player, source.id)) {
@@ -6060,7 +6325,7 @@ std::vector<Command> Simulation::GenerateAiCommands(
     std::int32_t visibleMobileThreats = 0;
     std::int32_t committedPopulation = PopulationUsed(player);
     for (const Entity& entity : entities_) {
-        if (entity.owner != player && entity.owner != kNeutralPlayer) {
+        if (config_.IsHostile(player, entity.owner)) {
             if (entity.type == EntityType::HeavyUnit ||
                 IsBuildingType(entity.type)) {
                 ++visibleHeavyThreats;
@@ -6356,6 +6621,11 @@ std::vector<Command> Simulation::GenerateAiCommands(
             for (const Entity& candidate : entities_) {
                 if (candidate.type != EntityType::FutureWell ||
                     candidate.wellChoice != FutureWellChoice::Dormant ||
+                    std::any_of(view.PublicFutureWellTelegraphs().begin(),
+                        view.PublicFutureWellTelegraphs().end(),
+                        [&](const FutureWellTelegraph& event) {
+                            return event.wellId == candidate.id;
+                        }) ||
                     !IsEntityVisibleTo(player, candidate.id)) {
                     continue;
                 }
@@ -6436,8 +6706,7 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 std::uint64_t nearestThreatDistance =
                     std::numeric_limits<std::uint64_t>::max();
                 for (const Entity& candidate : entities_) {
-                    if (candidate.owner == kNeutralPlayer ||
-                        candidate.owner == player || candidate.hitPoints <= 0 ||
+                    if (!config_.IsHostile(player, candidate.owner) || candidate.hitPoints <= 0 ||
                         IsProtectedCommandCore(candidate) ||
                         !IsEntityVisibleTo(player, candidate.id)) {
                         continue;
@@ -6595,7 +6864,7 @@ std::vector<Command> Simulation::GenerateAiCommands(
             const Entity* nearestEnemy = nullptr;
             std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
             for (const Entity& candidate : entities_) {
-                if (candidate.owner == kNeutralPlayer || candidate.owner == player ||
+                if (!config_.IsHostile(player, candidate.owner) ||
                     candidate.hitPoints <= 0 ||
                     IsProtectedCommandCore(candidate) ||
                     !IsEntityVisibleTo(player, candidate.id)) {
@@ -6681,7 +6950,7 @@ std::vector<Command> Simulation::GenerateAiCommands(
         if (IsBarracksUnitType(actor.type)) {
             Vec2 marchTarget{};
             for (const RememberedObject& obj : view.RememberedObjects()) {
-                if (obj.owner != player && obj.owner != kNeutralPlayer &&
+                if (config_.IsHostile(player, obj.owner) &&
                     (obj.type == EntityType::CommandCore ||
                      obj.type == EntityType::Barracks ||
                      obj.type == EntityType::Dropoff)) {
@@ -6716,12 +6985,12 @@ std::vector<Command> Simulation::GenerateAiCommands(
 }
 
 template <typename Writer>
-void Simulation::WriteSnapshotPayload(Writer& writer) const {
+void Simulation::WriteSnapshotPayload(Writer& writer, std::uint32_t version) const {
     writer.U8('E');
     writer.U8('B');
     writer.U8('S');
     writer.U8('N');
-    writer.U32(kSnapshotVersion);
+    writer.U32(version);
     writer.I32(config_.mapWidthTiles);
     writer.I32(config_.mapHeightTiles);
     writer.U32(config_.ticksPerSecond);
@@ -6996,6 +7265,10 @@ void Simulation::WriteSnapshotPayload(Writer& writer) const {
         writer.U8(static_cast<std::uint8_t>(entity.wellPendingChoice));
         writer.U64(entity.wellProtocolTicks);
     }
+    // Schema 28 preserves explicit hostility without changing earlier blocks.
+    if (version >= 28) {
+        for (std::uint8_t mask : config_.hostilityMasks) writer.U8(mask);
+    }
 }
 
 std::vector<std::uint8_t> Simulation::SaveSnapshot() const {
@@ -7027,9 +7300,26 @@ std::uint64_t Simulation::StateChecksum() const {
 
 std::optional<Simulation> Simulation::LoadSnapshot(
     std::span<const std::uint8_t> bytes,
-    std::string* error) {
+    std::string* error,
+    PlayerHostilityMasks legacyHostilityMasks,
+    const ReplayCancellationCheck& shouldCancel) {
     if (error != nullptr) {
         error->clear();
+    }
+    const auto IsCancelled = [&]() {
+        if (shouldCancel && shouldCancel()) {
+            SetError(error, "snapshot load cancelled");
+            return true;
+        }
+        return false;
+    };
+    std::size_t cancellationWork = 0;
+    const auto IsCancelledAtInterval = [&]() {
+        ++cancellationWork;
+        return (cancellationWork & 0xffU) == 0U && IsCancelled();
+    };
+    if (IsCancelled()) {
+        return std::nullopt;
     }
     if (bytes.size() < 12) {
         SetError(error, "snapshot is truncated");
@@ -7042,7 +7332,13 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                              << shift;
     }
     const std::span<const std::uint8_t> payload = bytes.first(bytes.size() - 8);
-    if (Fnv1a(payload) != expectedIntegrity) {
+    const std::optional<std::uint64_t> actualIntegrity =
+        Fnv1a(payload, shouldCancel);
+    if (!actualIntegrity.has_value()) {
+        SetError(error, "snapshot load cancelled");
+        return std::nullopt;
+    }
+    if (*actualIntegrity != expectedIntegrity) {
         SetError(error, "snapshot integrity check failed");
         return std::nullopt;
     }
@@ -7061,6 +7357,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         return std::nullopt;
     }
     if (version != kSnapshotVersion &&
+        version != kFutureWellLifecycleSnapshotVersion &&
         version != kWorkStateSnapshotVersion &&
         version != kMemorySnapshotVersion &&
         version != kCommandResolutionReceiptSnapshotVersion &&
@@ -7069,6 +7366,13 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         version != kPriorSnapshotVersion && version != kLegacySnapshotVersion) {
         SetError(error, "snapshot version is unsupported");
         return std::nullopt;
+    }
+    if (version < 28) {
+        config.hostilityMasks = legacyHostilityMasks;
+        if (!config.HasValidHostilityMasks()) {
+            SetError(error, "legacy snapshot hostility migration is invalid");
+            return std::nullopt;
+        }
     }
     if (!reader.I32(config.mapWidthTiles) || !reader.I32(config.mapHeightTiles) ||
         !reader.U32(config.ticksPerSecond) || !reader.U64(config.randomSeed)) {
@@ -7221,6 +7525,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         return std::nullopt;
     }
 
+    if (IsCancelled()) {
+        return std::nullopt;
+    }
     Simulation simulation(config);
     if (!reader.U64(simulation.currentTick_) ||
         !reader.U32(simulation.nextEntityId_) ||
@@ -7303,6 +7610,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         return std::nullopt;
     }
     for (Terrain& terrain : simulation.terrain_) {
+        if (IsCancelledAtInterval()) {
+            return std::nullopt;
+        }
         std::uint8_t encoded = 0;
         if (!reader.U8(encoded) ||
             encoded > static_cast<std::uint8_t>(Terrain::Scarred)) {
@@ -7312,6 +7622,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         terrain = static_cast<Terrain>(encoded);
     }
     for (auto& explored : simulation.explored_) {
+        if (IsCancelled()) {
+            return std::nullopt;
+        }
         std::uint32_t count = 0;
         if (!reader.U32(count) || count != serializedTileCount) {
             SetError(error, "snapshot fog dimensions do not match the map");
@@ -7326,6 +7639,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
     }
     if (HasMemorySnapshotSchema(version)) {
         for (auto& remembered : simulation.rememberedTerrain_) {
+            if (IsCancelled()) {
+                return std::nullopt;
+            }
             std::uint32_t count = 0;
             if (!reader.U32(count) || count != serializedTileCount) {
                 SetError(error,
@@ -7333,6 +7649,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                 return std::nullopt;
             }
             for (Terrain& terrain : remembered) {
+                if (IsCancelledAtInterval()) {
+                    return std::nullopt;
+                }
                 std::uint8_t encoded = 0;
                 if (!reader.U8(encoded) ||
                     encoded > static_cast<std::uint8_t>(Terrain::Scarred)) {
@@ -7355,9 +7674,15 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                 return std::nullopt;
             }
             memory.clear();
+            if (IsCancelled()) {
+                return std::nullopt;
+            }
             memory.reserve(count);
             EntityId priorRememberedId = 0;
             for (std::uint32_t entry = 0; entry < count; ++entry) {
+                if (IsCancelledAtInterval()) {
+                    return std::nullopt;
+                }
                 RememberedObject remembered{};
                 std::uint8_t faction = 0;
                 std::uint8_t type = 0;
@@ -7407,6 +7732,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
              index < simulation.rememberedTerrain_.size(); ++index) {
             for (std::size_t tile = 0;
                  tile < simulation.rememberedTerrain_[index].size(); ++tile) {
+                if (IsCancelledAtInterval()) {
+                    return std::nullopt;
+                }
                 simulation.rememberedTerrain_[index][tile] =
                     simulation.explored_[index][tile] != 0
                         ? simulation.terrain_[tile]
@@ -7429,9 +7757,15 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         return std::nullopt;
     }
     simulation.entities_.clear();
+    if (IsCancelled()) {
+        return std::nullopt;
+    }
     simulation.entities_.reserve(entityCount);
     EntityId priorId = 0;
     for (std::uint32_t index = 0; index < entityCount; ++index) {
+        if (IsCancelledAtInterval()) {
+            return std::nullopt;
+        }
         Entity entity{};
         std::uint8_t faction = 0;
         std::uint8_t type = 0;
@@ -7812,6 +8146,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         }
     }
     for (const Entity& entity : simulation.entities_) {
+        if (IsCancelledAtInterval()) {
+            return std::nullopt;
+        }
         if (entity.aegisPowered !=
             simulation.IsAegisNetworkPowered(entity)) {
             SetError(error, "snapshot Aegis power state is invalid");
@@ -7820,6 +8157,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
     }
     std::map<std::pair<std::int32_t, std::int32_t>, EntityId> mineralCoverTiles;
     for (const Entity& entity : simulation.entities_) {
+        if (IsCancelledAtInterval()) {
+            return std::nullopt;
+        }
         if (!entity.temporaryMineralCover) {
             continue;
         }
@@ -7838,6 +8178,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         }
     }
     for (const Entity& entity : simulation.entities_) {
+        if (IsCancelledAtInterval()) {
+            return std::nullopt;
+        }
         if (!simulation.IsWarform(entity)) {
             continue;
         }
@@ -7868,6 +8211,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         }
     }
     for (const Entity& entity : simulation.entities_) {
+        if (IsCancelledAtInterval()) {
+            return std::nullopt;
+        }
         if (!simulation.IsChoirIdentityUnit(entity)) {
             continue;
         }
@@ -7889,8 +8235,14 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot command count is invalid");
         return std::nullopt;
     }
+    if (IsCancelled()) {
+        return std::nullopt;
+    }
     simulation.pendingCommands_.resize(commandCount);
     for (Command& command : simulation.pendingCommands_) {
+        if (IsCancelledAtInterval()) {
+            return std::nullopt;
+        }
         if (!ReadCommand(reader, command) ||
             command.player >= simulation.players_.size() ||
             !simulation.players_[command.player].active ||
@@ -7910,6 +8262,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
     std::array<Tick, kMaximumPlayers> lastPendingTick{};
     std::array<std::uint64_t, kMaximumPlayers> lastPendingSequence{};
     for (const Command& command : simulation.pendingCommands_) {
+        if (IsCancelledAtInterval()) {
+            return std::nullopt;
+        }
         const PlayerId player = command.player;
         if ((simulation.hasExecutedSequence_[player] &&
              command.sequence <= simulation.lastExecutedSequence_[player]) ||
@@ -7945,6 +8300,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         PlayerId lastReceiptPlayer = 0;
         std::uint64_t lastCanonicalReceiptSequence = 0;
         for (std::uint32_t index = 0; index < receiptCount; ++index) {
+            if (IsCancelledAtInterval()) {
+                return std::nullopt;
+            }
             StoredCommandResolutionReceipt stored{};
             std::uint8_t commandType = 0;
             std::uint8_t outcome = 0;
@@ -8017,6 +8375,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         }
         std::map<EntityId, std::size_t> heldSlots;
         for (Entity& entity : simulation.entities_) {
+            if (IsCancelledAtInterval()) {
+                return std::nullopt;
+            }
             EntityId id = 0;
             std::uint8_t state = 0, held = 0, queueCount = 0;
             if (!reader.U32(id) || !reader.U8(state) || !reader.U8(held) ||
@@ -8088,9 +8449,15 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         simulation.config_.enableBallisticProjectiles =
             ballisticProjectiles != 0;
         simulation.projectiles_.clear();
+        if (IsCancelled()) {
+            return std::nullopt;
+        }
         simulation.projectiles_.reserve(projectileCount);
         EntityId priorProjectileId = 0;
         for (std::uint32_t index = 0; index < projectileCount; ++index) {
+            if (IsCancelledAtInterval()) {
+                return std::nullopt;
+            }
             Projectile projectile{};
             std::int32_t positionX = 0;
             std::int32_t positionY = 0;
@@ -8153,6 +8520,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                 return std::nullopt;
             }
             for (Entity& entity : simulation.entities_) {
+                if (IsCancelledAtInterval()) {
+                    return std::nullopt;
+                }
                 EntityId id = 0;
                 std::uint8_t capturePlayer = kNeutralPlayer;
                 std::uint8_t pendingChoice = 0;
@@ -8189,17 +8559,27 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                      (protocolTicks == 0 || protocolTicks <= kHarvestTelegraphTicks));
                 const bool nonHarvestProtocolValid =
                     entity.wellChoice == FutureWellChoice::Harvest ||
+                    (entity.wellChoice == FutureWellChoice::Dormant &&
+                     pendingChoice == static_cast<std::uint8_t>(FutureWellChoice::Reshape)) ||
                     protocolTicks == 0;
                 // Committing Harvest clears capture state while retaining its
                 // public countdown. Save/load must preserve that valid phase.
                 const bool activeHarvestProtocolValid = inactiveCapture &&
                     entity.wellChoice == FutureWellChoice::Harvest &&
                     protocolTicks > 0 && protocolTicks <= kHarvestTelegraphTicks;
+                const bool activeReshapeProtocolValid =
+                    entity.wellChoice == FutureWellChoice::Dormant &&
+                    entity.owner != kNeutralPlayer &&
+                    entity.wellActivationTick == 0 && entity.reshapeUntilTick == 0 &&
+                    entity.reshapeVariant == 0 &&
+                    capturePlayer == kNeutralPlayer && progress == 0 &&
+                    pendingChoice == static_cast<std::uint8_t>(FutureWellChoice::Reshape) &&
+                    protocolTicks > 0 && protocolTicks <= kReshapeTelegraphTicks;
                 if (id != entity.id || !capturePlayerValid ||
                     pendingChoice > static_cast<std::uint8_t>(FutureWellChoice::Reshape) ||
                     (!futureWell && !inactiveLifecycle) ||
                     (futureWell && !(inactiveLifecycle || activeCaptureValid ||
-                                     activeHarvestProtocolValid)) ||
+                                     activeHarvestProtocolValid || activeReshapeProtocolValid)) ||
                     !harvestStateValid || !nonHarvestProtocolValid) {
                     SetError(error, "snapshot Future Well lifecycle is invalid");
                     return std::nullopt;
@@ -8216,6 +8596,9 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         // orders. Restart a known Gather; deliver legacy cargo then idle when
         // its source cannot be recovered. Never guess an original deposit.
         for (Entity& entity : simulation.entities_) {
+            if (IsCancelledAtInterval()) {
+                return std::nullopt;
+            }
             if (entity.type == EntityType::Worker && entity.order.type == OrderType::Gather) {
                 simulation.BeginGather(entity, entity.order.target);
             } else if (entity.type == EntityType::Worker && entity.order.type == OrderType::Deliver) {
@@ -8223,23 +8606,79 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             }
         }
     }
+    if (version >= 28) {
+        for (std::uint8_t& mask : simulation.config_.hostilityMasks) {
+            if (!reader.U8(mask)) {
+                SetError(error, "snapshot hostility masks are truncated");
+                return std::nullopt;
+            }
+        }
+        if (!simulation.config_.HasValidHostilityMasks()) {
+            SetError(error, "snapshot hostility masks are invalid");
+            return std::nullopt;
+        }
+    }
     if (!reader.AtEnd()) {
         SetError(error, "snapshot contains trailing payload data");
         return std::nullopt;
     }
+    if (version < 28 && legacyHostilityMasks != kDefaultHostilityMasks) {
+        simulation.ClearInvalidOrders();
+        std::erase_if(simulation.projectiles_, [&simulation](const Projectile& projectile) {
+            const Entity* target = simulation.FindEntity(projectile.target);
+            return target != nullptr &&
+                !simulation.config_.IsHostile(projectile.owner, target->owner);
+        });
+    }
+    if (IsCancelled()) {
+        return std::nullopt;
+    }
     simulation.commandLog_.clear();
     simulation.replayInitialSnapshot_.clear();
-    simulation.UpdateVisibility();
+    if (!simulation.UpdateVisibility(shouldCancel)) {
+        SetError(error, "snapshot load cancelled");
+        return std::nullopt;
+    }
     return simulation;
 }
 
 void Simulation::CaptureReplayBaseline() {
     replayInitialSnapshot_ = SaveSnapshot();
     commandLog_.clear();
+    replayForfeitingPlayer_ = kNeutralPlayer;
 }
 
 void Simulation::DisableReplayExport() {
     replayExportEnabled_ = false;
+}
+
+bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
+                                         std::string* error) {
+    if (error != nullptr) {
+        error->clear();
+    }
+    if (!replayExportEnabled_) {
+        SetError(error, "replay export is disabled");
+        return false;
+    }
+    if (prefix.finalTick != currentTick_) {
+        SetError(error, "replay prefix tick does not match restored state");
+        return false;
+    }
+    std::string replayError;
+    std::optional<Simulation> replayed = ReplayToEnd(prefix, &replayError);
+    if (!replayed.has_value()) {
+        SetError(error, "replay prefix is invalid: " + replayError);
+        return false;
+    }
+    if (replayed->StateChecksum() != StateChecksum()) {
+        SetError(error, "replay prefix state does not match restored state");
+        return false;
+    }
+    replayInitialSnapshot_ = prefix.initialSnapshot;
+    commandLog_ = prefix.commands;
+    replayForfeitingPlayer_ = prefix.forfeitingPlayer;
+    return true;
 }
 
 ReplayRecord Simulation::ExportReplay(std::string* error) const {
@@ -8259,16 +8698,26 @@ ReplayRecord Simulation::ExportReplay(std::string* error) const {
     std::sort(replay.commands.begin(), replay.commands.end(), CommandLess);
     replay.finalTick = currentTick_;
     replay.finalChecksum = StateChecksum();
+    replay.forfeitingPlayer = replayForfeitingPlayer_;
     return replay;
 }
 
 std::optional<Simulation> Simulation::ReplayToEnd(const ReplayRecord& replay,
-                                                  std::string* error) {
+                                                  std::string* error,
+                                                  const ReplayCancellationCheck& shouldCancel) {
     if (error != nullptr) {
         error->clear();
     }
-    if (replay.version != kReplayVersion) {
+    if (replay.version != kLegacyReplayVersion &&
+        replay.version != kReplayVersion) {
         SetError(error, "replay version is unsupported");
+        return std::nullopt;
+    }
+    if ((replay.version == kLegacyReplayVersion &&
+         replay.forfeitingPlayer != kNeutralPlayer) ||
+        (replay.forfeitingPlayer != kNeutralPlayer &&
+         replay.forfeitingPlayer >= kMaximumPlayers)) {
+        SetError(error, "replay forfeit marker is invalid");
         return std::nullopt;
     }
     if (replay.commands.size() > kMaximumSerializedCommands ||
@@ -8276,27 +8725,546 @@ std::optional<Simulation> Simulation::ReplayToEnd(const ReplayRecord& replay,
         SetError(error, "replay bounds are invalid");
         return std::nullopt;
     }
-    std::optional<Simulation> simulation = LoadSnapshot(replay.initialSnapshot, error);
+    if (shouldCancel && shouldCancel()) {
+        SetError(error, "replay validation cancelled");
+        return std::nullopt;
+    }
+    std::optional<Simulation> simulation = LoadSnapshot(
+        replay.initialSnapshot, error, kDefaultHostilityMasks, shouldCancel);
     if (!simulation.has_value()) {
+        if (error != nullptr && *error == "snapshot load cancelled") {
+            SetError(error, "replay validation cancelled");
+        }
         return std::nullopt;
     }
     if (replay.finalTick < simulation->CurrentTick()) {
         SetError(error, "replay final tick precedes its baseline");
         return std::nullopt;
     }
-    for (const Command& command : replay.commands) {
-        std::string rejection;
-        if (!simulation->QueueCommand(command, &rejection)) {
-            SetError(error, "replay command rejected: " + rejection);
+    ReplayCommandSchedule schedule;
+    std::string rejection;
+    if (!simulation->PrepareReplayCommandSchedule(
+            replay, schedule, &rejection, shouldCancel)) {
+        SetError(error, rejection == "replay validation cancelled"
+            ? rejection
+            : "replay command rejected: " + rejection);
+        return std::nullopt;
+    }
+    std::size_t baselineCommand = 0;
+    std::size_t recordedCommand = 0;
+    std::size_t admittedCommandCount = 0;
+    Tick ticksUntilCancellationCheck = 0;
+    while (simulation->CurrentTick() < replay.finalTick) {
+        if (ticksUntilCancellationCheck == 0) {
+            if (shouldCancel && shouldCancel()) {
+                SetError(error, "replay validation cancelled");
+                return std::nullopt;
+            }
+            ticksUntilCancellationCheck = 256;
+        }
+        --ticksUntilCancellationCheck;
+        const Tick executingTick = simulation->CurrentTick();
+        while (baselineCommand < schedule.baselinePending.size() &&
+               schedule.baselinePending[baselineCommand].executeTick ==
+                   executingTick) {
+            if ((admittedCommandCount++ & 0xffU) == 0U &&
+                shouldCancel && shouldCancel()) {
+                SetError(error, "replay validation cancelled");
+                return std::nullopt;
+            }
+            simulation->AdmitPreparedReplayCommand(
+                schedule.baselinePending[baselineCommand++], false);
+        }
+        while (recordedCommand < schedule.recorded.size() &&
+               schedule.recorded[recordedCommand].executeTick == executingTick) {
+            if ((admittedCommandCount++ & 0xffU) == 0U &&
+                shouldCancel && shouldCancel()) {
+                SetError(error, "replay validation cancelled");
+                return std::nullopt;
+            }
+            simulation->AdmitPreparedReplayCommand(
+                schedule.recorded[recordedCommand++], true);
+        }
+        simulation->Step();
+    }
+    if (shouldCancel && shouldCancel()) {
+        SetError(error, "replay validation cancelled");
+        return std::nullopt;
+    }
+    std::size_t futureCommandCount = 0;
+    while (baselineCommand < schedule.baselinePending.size()) {
+        if ((futureCommandCount++ & 0xffU) == 0U &&
+            shouldCancel && shouldCancel()) {
+            SetError(error, "replay validation cancelled");
             return std::nullopt;
         }
+        simulation->AdmitPreparedReplayCommand(
+            schedule.baselinePending[baselineCommand++], false);
     }
-    simulation->Step(replay.finalTick - simulation->CurrentTick());
-    if (simulation->StateChecksum() != replay.finalChecksum) {
+    while (recordedCommand < schedule.recorded.size()) {
+        if ((futureCommandCount++ & 0xffU) == 0U &&
+            shouldCancel && shouldCancel()) {
+            SetError(error, "replay validation cancelled");
+            return std::nullopt;
+        }
+        simulation->AdmitPreparedReplayCommand(
+            schedule.recorded[recordedCommand++], true);
+    }
+    if (shouldCancel && shouldCancel()) {
+        SetError(error, "replay validation cancelled");
+        return std::nullopt;
+    }
+    if (replay.forfeitingPlayer != kNeutralPlayer &&
+        !simulation->ForfeitPlayer(replay.forfeitingPlayer)) {
+        SetError(error, "replay forfeit marker could not be applied");
+        return std::nullopt;
+    }
+    // The baseline was integrity-checked by LoadSnapshot. Schema 27 has the
+    // exact same payload shape except the version word and hostility tail.
+    // Preserve its recorded final hash; do not claim this writer reproduces
+    // the older variable payload layouts.
+    const std::uint32_t baselineVersion =
+        static_cast<std::uint32_t>(replay.initialSnapshot[4]) |
+        (static_cast<std::uint32_t>(replay.initialSnapshot[5]) << 8U) |
+        (static_cast<std::uint32_t>(replay.initialSnapshot[6]) << 16U) |
+        (static_cast<std::uint32_t>(replay.initialSnapshot[7]) << 24U);
+    HashWriter replayChecksum;
+    simulation->WriteSnapshotPayload(replayChecksum,
+        baselineVersion == 27 ? 27 : kSnapshotVersion);
+    if (replayChecksum.Value() != replay.finalChecksum) {
         SetError(error, "replay final checksum does not match");
         return std::nullopt;
     }
+    if (shouldCancel && shouldCancel()) {
+        SetError(error, "replay validation cancelled");
+        return std::nullopt;
+    }
     return simulation;
+}
+
+std::optional<MatchReport> Simulation::BuildMatchReport(
+    const ReplayRecord& replay,
+    std::string* error,
+    const ReplayCancellationCheck& shouldCancel) {
+    if (error != nullptr) {
+        error->clear();
+    }
+    if (replay.version != kLegacyReplayVersion &&
+        replay.version != kReplayVersion) {
+        SetError(error, "replay version is unsupported");
+        return std::nullopt;
+    }
+    if ((replay.version == kLegacyReplayVersion &&
+         replay.forfeitingPlayer != kNeutralPlayer) ||
+        (replay.forfeitingPlayer != kNeutralPlayer &&
+         replay.forfeitingPlayer >= kMaximumPlayers)) {
+        SetError(error, "replay forfeit marker is invalid");
+        return std::nullopt;
+    }
+    if (replay.commands.size() > kMaximumSerializedCommands ||
+        replay.finalTick > kMaximumSupportedTick) {
+        SetError(error, "replay bounds are invalid");
+        return std::nullopt;
+    }
+    if (shouldCancel && shouldCancel()) {
+        SetError(error, "replay validation cancelled");
+        return std::nullopt;
+    }
+    std::optional<Simulation> simulation = LoadSnapshot(
+        replay.initialSnapshot, error, kDefaultHostilityMasks, shouldCancel);
+    if (!simulation.has_value()) {
+        if (error != nullptr && *error == "snapshot load cancelled") {
+            SetError(error, "replay validation cancelled");
+        }
+        return std::nullopt;
+    }
+    if (replay.finalTick < simulation->CurrentTick()) {
+        SetError(error, "replay final tick precedes its baseline");
+        return std::nullopt;
+    }
+
+    MatchReport report{};
+    report.baselineTick = simulation->CurrentTick();
+    report.finalTick = replay.finalTick;
+    report.durationTicks = replay.finalTick - report.baselineTick;
+    report.finalChecksum = replay.finalChecksum;
+    for (PlayerId player = 0; player < kMaximumPlayers; ++player) {
+        if (const PlayerState* state = simulation->FindPlayer(player);
+            state != nullptr) {
+            report.players[player].active = true;
+            report.players[player].faction = state->faction;
+        }
+    }
+
+    ReplayCommandSchedule schedule;
+    std::string rejection;
+    if (!simulation->PrepareReplayCommandSchedule(
+            replay, schedule, &rejection, shouldCancel)) {
+        SetError(error, rejection == "replay validation cancelled"
+            ? rejection
+            : "replay command rejected: " + rejection);
+        return std::nullopt;
+    }
+    const std::vector<Command>& commands = schedule.recorded;
+    report.commands.reserve(commands.size());
+    std::size_t commandIndex = 0;
+    for (const Command& command : commands) {
+        if ((commandIndex++ & 0xffU) == 0U &&
+            shouldCancel && shouldCancel()) {
+            SetError(error, "replay validation cancelled");
+            return std::nullopt;
+        }
+        MatchCommandRecord record{};
+        record.tick = command.executeTick;
+        record.player = command.player;
+        record.sequence = command.sequence;
+        record.type = command.type;
+        report.commands.push_back(record);
+    }
+
+    const auto IsUnit = [](EntityType type) {
+        return type == EntityType::Worker || type == EntityType::Soldier ||
+            type == EntityType::HeavyUnit || type == EntityType::ScoutUnit;
+    };
+    const auto IsArmedUnit = [&](const Entity& entity) {
+        return IsUnit(entity.type) && entity.attackDamage > 0 &&
+            entity.hitPoints > 0;
+    };
+    const auto MakeEntityMap = [](const std::vector<Entity>& entities) {
+        std::map<EntityId, Entity> result;
+        for (const Entity& entity : entities) {
+            result.emplace(entity.id, entity);
+        }
+        return result;
+    };
+    const auto AppendTimelineSample = [&report](Tick tick) {
+        MatchTimelineSample sample{};
+        sample.tick = tick;
+        for (PlayerId player = 0; player < kMaximumPlayers; ++player) {
+            const MatchPlayerStatistics& stats = report.players[player];
+            sample.unitsTrained[player] = stats.unitsTrained;
+            sample.unitsLost[player] = stats.unitsLost;
+            sample.materialCollected[player] = stats.materialCollected;
+            sample.materialDelivered[player] = stats.materialDelivered;
+            sample.admittedCommands[player] = stats.admittedCommands;
+        }
+        report.timelineSamples.push_back(sample);
+    };
+
+    AppendTimelineSample(report.baselineTick);
+    std::array<std::uint32_t, kMaximumPlayers> intervalCommands{};
+    Tick intervalStart = report.baselineTick;
+    std::size_t nextCommand = 0;
+    std::size_t nextBaselineCommand = 0;
+    std::size_t admittedCommandCount = 0;
+    bool firstCombatContactRecorded = false;
+    bool majorClashActive = false;
+
+    Tick ticksUntilCancellationCheck = 0;
+    while (simulation->CurrentTick() < replay.finalTick) {
+        if (ticksUntilCancellationCheck == 0) {
+            if (shouldCancel && shouldCancel()) {
+                SetError(error, "replay validation cancelled");
+                return std::nullopt;
+            }
+            ticksUntilCancellationCheck = 64;
+        }
+        --ticksUntilCancellationCheck;
+        const Tick executingTick = simulation->CurrentTick();
+        while (nextBaselineCommand < schedule.baselinePending.size() &&
+               schedule.baselinePending[nextBaselineCommand].executeTick ==
+                   executingTick) {
+            if ((admittedCommandCount++ & 0xffU) == 0U &&
+                shouldCancel && shouldCancel()) {
+                SetError(error, "replay validation cancelled");
+                return std::nullopt;
+            }
+            simulation->AdmitPreparedReplayCommand(
+                schedule.baselinePending[nextBaselineCommand++], false);
+        }
+        const std::size_t firstRecordedCommandThisTick = nextCommand;
+        while (nextCommand < commands.size() &&
+               commands[nextCommand].executeTick == executingTick) {
+            if ((admittedCommandCount++ & 0xffU) == 0U &&
+                shouldCancel && shouldCancel()) {
+                SetError(error, "replay validation cancelled");
+                return std::nullopt;
+            }
+            simulation->AdmitPreparedReplayCommand(commands[nextCommand], true);
+            ++nextCommand;
+        }
+        const std::map<EntityId, Entity> before =
+            MakeEntityMap(simulation->Entities());
+        const std::vector<Projectile> projectilesBefore =
+            simulation->Projectiles();
+        std::map<std::pair<PlayerId, std::uint64_t>,
+                 CommandResolutionOutcome> tickCommandResolutions;
+        simulation->Step(&tickCommandResolutions);
+        const std::map<EntityId, Entity> after =
+            MakeEntityMap(simulation->Entities());
+        std::vector<EntityId> appliedAttackTargets;
+
+        std::size_t resolvedCommand = firstRecordedCommandThisTick;
+        while (resolvedCommand < nextCommand) {
+            const Command& command = commands[resolvedCommand];
+            const auto receipt = tickCommandResolutions.find(
+                std::make_pair(command.player, command.sequence));
+            if (receipt == tickCommandResolutions.end()) {
+                SetError(error, "replay command has no resolution receipt");
+                return std::nullopt;
+            }
+            MatchCommandRecord& record = report.commands[resolvedCommand];
+            record.resolved = true;
+            record.outcome = receipt->second;
+            ++report.players[command.player].admittedCommands;
+            ++intervalCommands[command.player];
+            if (command.type == CommandType::Attack &&
+                receipt->second == CommandResolutionOutcome::Applied) {
+                appliedAttackTargets.push_back(command.target);
+            }
+            if (command.type == CommandType::FutureWell &&
+                receipt->second == CommandResolutionOutcome::Applied) {
+                report.wellDecisions.push_back({
+                    executingTick,
+                    command.player,
+                    command.target,
+                    command.wellChoice});
+                report.events.push_back({
+                    executingTick,
+                    ReplayTimelineEventType::FutureWellProtocol,
+                    command.player,
+                    command.target});
+            }
+            ++resolvedCommand;
+        }
+
+        bool hostileDamageThisTick = false;
+        for (const auto& [id, previous] : before) {
+            const auto currentIt = after.find(id);
+            const bool lost = currentIt == after.end();
+            if (lost && IsUnit(previous.type) &&
+                previous.owner < kMaximumPlayers) {
+                ++report.players[previous.owner].unitsLost;
+            }
+            if (lost && previous.type == EntityType::CommandCore &&
+                previous.owner < kMaximumPlayers) {
+                report.events.push_back({
+                    executingTick,
+                    ReplayTimelineEventType::CommandCoreLoss,
+                    previous.owner,
+                    previous.id});
+            }
+            if (!IsUnit(previous.type) || previous.owner >= kMaximumPlayers ||
+                currentIt == after.end()) {
+                continue;
+            }
+            const Entity& current = currentIt->second;
+            if (current.type == EntityType::Worker) {
+                if (current.cargo > previous.cargo) {
+                    report.players[current.owner].materialCollected +=
+                        static_cast<std::uint64_t>(current.cargo - previous.cargo);
+                } else if (current.cargo < previous.cargo) {
+                    // Cargo can leave a surviving worker only through the
+                    // authoritative depot-delivery path. Death/removal is
+                    // deliberately excluded so lost cargo is not delivered.
+                    report.players[current.owner].materialDelivered +=
+                        static_cast<std::uint64_t>(previous.cargo - current.cargo);
+                }
+            }
+        }
+        for (const auto& [id, current] : after) {
+            if (!before.contains(id) && IsUnit(current.type) &&
+                current.owner < kMaximumPlayers) {
+                ++report.players[current.owner].unitsTrained;
+            }
+        }
+
+        for (const auto& [id, previous] : before) {
+            const auto currentIt = after.find(id);
+            if (currentIt != after.end() &&
+                currentIt->second.hitPoints >= previous.hitPoints) {
+                continue;
+            }
+            const auto HasHostileAttacker = [&](const Entity& attacker) {
+                return attacker.attackDamage > 0 &&
+                    attacker.order.target == previous.id &&
+                    simulation->Config().IsHostile(
+                        attacker.owner, previous.owner);
+            };
+            hostileDamageThisTick = std::any_of(
+                simulation->Entities().begin(), simulation->Entities().end(),
+                HasHostileAttacker);
+            if (!hostileDamageThisTick) {
+                hostileDamageThisTick = std::find(
+                    appliedAttackTargets.begin(), appliedAttackTargets.end(),
+                    previous.id) != appliedAttackTargets.end();
+            }
+            if (!hostileDamageThisTick) {
+                hostileDamageThisTick = std::any_of(
+                    before.begin(), before.end(),
+                    [&](const auto& entry) {
+                        return HasHostileAttacker(entry.second);
+                    });
+            }
+            if (!hostileDamageThisTick) {
+                hostileDamageThisTick = std::any_of(
+                    projectilesBefore.begin(), projectilesBefore.end(),
+                    [&](const Projectile& projectile) {
+                        return projectile.target == previous.id &&
+                            simulation->Config().IsHostile(
+                                projectile.owner, previous.owner);
+                    });
+            }
+            if (hostileDamageThisTick) {
+                if (!firstCombatContactRecorded) {
+                    report.events.push_back({
+                        executingTick,
+                        ReplayTimelineEventType::FirstCombatContact,
+                        previous.owner,
+                        previous.id});
+                    firstCombatContactRecorded = true;
+                }
+                break;
+            }
+        }
+
+        std::array<std::uint32_t, kMaximumPlayers> engagedArmy{};
+        for (const auto& [id, entity] : after) {
+            if (!IsArmedUnit(entity) || entity.owner >= kMaximumPlayers ||
+                entity.order.target == 0) {
+                continue;
+            }
+            const auto targetIt = after.find(entity.order.target);
+            if (targetIt != after.end() && IsArmedUnit(targetIt->second) &&
+                simulation->Config().IsHostile(
+                    entity.owner, targetIt->second.owner)) {
+                ++engagedArmy[entity.owner];
+            }
+        }
+        bool majorClashNow = false;
+        for (PlayerId first = 0; first < kMaximumPlayers; ++first) {
+            if (engagedArmy[first] < 2) {
+                continue;
+            }
+            for (PlayerId second = static_cast<PlayerId>(first + 1);
+                 second < kMaximumPlayers; ++second) {
+                if (engagedArmy[second] >= 2 &&
+                    simulation->Config().IsHostile(first, second)) {
+                    majorClashNow = true;
+                }
+            }
+        }
+        if (majorClashNow && !majorClashActive) {
+            report.events.push_back({
+                executingTick,
+                ReplayTimelineEventType::MajorArmyClash,
+                kNeutralPlayer,
+                0});
+        }
+        majorClashActive = majorClashNow;
+
+        const Tick sampleTick = simulation->CurrentTick();
+        if (sampleTick - intervalStart == kMatchReportApmIntervalTicks ||
+            sampleTick == replay.finalTick) {
+            const Tick intervalTicks = sampleTick - intervalStart;
+            if (intervalTicks > 0) {
+                for (PlayerId player = 0; player < kMaximumPlayers; ++player) {
+                    if (!report.players[player].active) {
+                        continue;
+                    }
+                    const std::uint64_t scaled =
+                        static_cast<std::uint64_t>(intervalCommands[player]) *
+                        kMatchReportApmIntervalTicks * 100U;
+                    MatchApmSample sample{};
+                    sample.startTick = intervalStart;
+                    sample.endTick = sampleTick;
+                    sample.player = player;
+                    sample.commandCount = intervalCommands[player];
+                    sample.actionsPerMinuteX100 =
+                        scaled / intervalTicks;
+                    report.apmSamples.push_back(sample);
+                }
+            }
+            AppendTimelineSample(sampleTick);
+            intervalStart = sampleTick;
+            intervalCommands.fill(0);
+        }
+    }
+
+    if (shouldCancel && shouldCancel()) {
+        SetError(error, "replay validation cancelled");
+        return std::nullopt;
+    }
+    std::size_t futureCommandCount = 0;
+    while (nextBaselineCommand < schedule.baselinePending.size()) {
+        if ((futureCommandCount++ & 0xffU) == 0U &&
+            shouldCancel && shouldCancel()) {
+            SetError(error, "replay validation cancelled");
+            return std::nullopt;
+        }
+        simulation->AdmitPreparedReplayCommand(
+            schedule.baselinePending[nextBaselineCommand++], false);
+    }
+    while (nextCommand < commands.size()) {
+        if ((futureCommandCount++ & 0xffU) == 0U &&
+            shouldCancel && shouldCancel()) {
+            SetError(error, "replay validation cancelled");
+            return std::nullopt;
+        }
+        simulation->AdmitPreparedReplayCommand(commands[nextCommand++], true);
+    }
+    if (shouldCancel && shouldCancel()) {
+        SetError(error, "replay validation cancelled");
+        return std::nullopt;
+    }
+    if (replay.forfeitingPlayer != kNeutralPlayer) {
+        EntityId forfeitedCore = 0;
+        for (const Entity& entity : simulation->Entities()) {
+            if (entity.owner == replay.forfeitingPlayer &&
+                entity.type == EntityType::CommandCore &&
+                entity.hitPoints > 0) {
+                forfeitedCore = entity.id;
+                break;
+            }
+        }
+        if (!simulation->ForfeitPlayer(replay.forfeitingPlayer)) {
+            SetError(error, "replay forfeit marker could not be applied");
+            return std::nullopt;
+        }
+        report.forfeitingPlayer = replay.forfeitingPlayer;
+        report.outcomeCause = MatchOutcomeCause::PlayerForfeit;
+        report.events.push_back({
+            replay.finalTick,
+            ReplayTimelineEventType::CommandCoreLoss,
+            replay.forfeitingPlayer,
+            forfeitedCore});
+    }
+
+    // Commands scheduled after the recording stopped remain admitted replay
+    // inputs but have no resolution. Preserve them as resolved=false and keep
+    // them out of APM and Well-decision claims.
+    const std::uint32_t baselineVersion =
+        static_cast<std::uint32_t>(replay.initialSnapshot[4]) |
+        (static_cast<std::uint32_t>(replay.initialSnapshot[5]) << 8U) |
+        (static_cast<std::uint32_t>(replay.initialSnapshot[6]) << 16U) |
+        (static_cast<std::uint32_t>(replay.initialSnapshot[7]) << 24U);
+    HashWriter replayChecksum;
+    simulation->WriteSnapshotPayload(
+        replayChecksum, baselineVersion == 27 ? 27 : kSnapshotVersion);
+    if (replayChecksum.Value() != replay.finalChecksum) {
+        SetError(error, "replay final checksum does not match");
+        return std::nullopt;
+    }
+    report.outcome = simulation->Outcome();
+    if (report.outcomeCause == MatchOutcomeCause::None &&
+        report.outcome != MatchOutcome::Ongoing) {
+        report.outcomeCause = MatchOutcomeCause::CommandCoreLoss;
+    }
+    if (shouldCancel && shouldCancel()) {
+        SetError(error, "replay validation cancelled");
+        return std::nullopt;
+    }
+    return report;
 }
 
 }  // namespace echoes::sim

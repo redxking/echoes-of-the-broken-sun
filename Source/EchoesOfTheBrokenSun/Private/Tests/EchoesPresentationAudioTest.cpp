@@ -232,9 +232,10 @@ bool FEchoesPresentationAudioTest::RunTest(const FString& Parameters)
         return false;
     }
 
-    // Live-voice evidence: submission must leave an observable voice on the
-    // device, carrying the subsystem's own policy object inside a live
-    // concurrency group. Playback counters alone cannot prove this.
+    // Live-voice evidence: submission must leave an observable voice carrying
+    // this subsystem's own policy object inside a live concurrency group.
+    // The cue asset can be shared by unrelated systems on the audio device,
+    // so those voices are outside this test's concurrency-policy boundary.
     Audio->FlushAllVoicesForTest();
     Audio->ResetRateLimitsForTest();
     TestTrue(TEXT("Command playback is admitted on the live device"),
@@ -242,7 +243,7 @@ bool FEchoesPresentationAudioTest::RunTest(const FString& Parameters)
     const UEchoesPresentationAudioSubsystem::FLiveVoiceEvidenceForTest
         CommandEvidence = Audio->GatherLiveVoiceEvidenceForTest(
             EEchoesPresentationAudioCue::CommandConfirm);
-    TestEqual(TEXT("Exactly one live command voice exists after submission"),
+    TestEqual(TEXT("Exactly one policy-scoped command voice exists after submission"),
               CommandEvidence.MatchingActiveVoices,
               1);
     TestEqual(TEXT("The live command voice carries the subsystem policy"),
@@ -259,7 +260,7 @@ bool FEchoesPresentationAudioTest::RunTest(const FString& Parameters)
     const UEchoesPresentationAudioSubsystem::FLiveVoiceEvidenceForTest
         DestructionEvidence = Audio->GatherLiveVoiceEvidenceForTest(
             EEchoesPresentationAudioCue::DestructionKharuun);
-    TestEqual(TEXT("Exactly one live destruction voice exists after submission"),
+    TestEqual(TEXT("Exactly one policy-scoped destruction voice exists after submission"),
               DestructionEvidence.MatchingActiveVoices,
               1);
     TestEqual(TEXT("The live destruction voice carries the subsystem policy"),
@@ -278,10 +279,10 @@ bool FEchoesPresentationAudioTest::RunTest(const FString& Parameters)
     const UEchoesPresentationAudioSubsystem::FLiveVoiceEvidenceForTest
         FlushedDestructionEvidence = Audio->GatherLiveVoiceEvidenceForTest(
             EEchoesPresentationAudioCue::DestructionKharuun);
-    TestEqual(TEXT("Flushing releases every live command voice"),
+    TestEqual(TEXT("Flushing releases every policy-scoped command voice"),
               FlushedCommandEvidence.MatchingActiveVoices,
               0);
-    TestEqual(TEXT("Flushing releases every live destruction voice"),
+    TestEqual(TEXT("Flushing releases every policy-scoped destruction voice"),
               FlushedDestructionEvidence.MatchingActiveVoices,
               0);
     return true;

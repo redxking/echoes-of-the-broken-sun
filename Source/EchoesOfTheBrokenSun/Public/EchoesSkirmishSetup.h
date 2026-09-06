@@ -19,15 +19,19 @@ enum class EEchoesSkirmishResourceLevel : uint8
 
 enum class EEchoesSkirmishDifficulty : uint8
 {
-    Assisted,
-    Standard,
-    Challenging,
-    Sovereign
+    Story = 0,
+    Standard = 1,
+    Veteran = 2,
+    Sovereign = 3,
+    // Preserve source and serialized ordinal compatibility for prior checkpoints.
+    Assisted = Story,
+    Challenging = Veteran
 };
 
 enum class EEchoesSkirmishVictoryCondition : uint8
 {
     Corefall,
+    // Legacy ordinals remain readable but validation refuses unsupported rules.
     WellControl,
     Conquest
 };
@@ -45,9 +49,20 @@ enum class EEchoesSkirmishTeamSetup : uint8
     FreeForAll
 };
 
+/** Owner-selected SPEC-DIF policy; all tiers retain identical combat/economic rules. */
+struct FEchoesAiDifficultyPolicy final
+{
+    uint64 ReactionTicks = 30;
+    uint64 StrategicReviewTicks = 100;
+    int32 GroupCommandsPerSecond = 7;
+    static FEchoesAiDifficultyPolicy For(EEchoesSkirmishDifficulty Difficulty);
+};
+
 /** A complete, offline-only skirmish deployment request. */
 struct ECHOESOFTHEBROKENSUN_API FEchoesSkirmishSetup final
 {
+    /** Restart retains this seed; Rematch supplies a new nonzero seed. */
+    uint64 Seed = 0xE0C0B5A1ULL;
     echoes::sim::Faction LocalFaction =
         echoes::sim::Faction::MeridianCompact;
     echoes::sim::Faction OpponentFaction =

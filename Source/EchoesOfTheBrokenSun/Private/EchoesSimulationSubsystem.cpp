@@ -1,8 +1,11 @@
 #include "EchoesSimulationSubsystem.h"
 
 #include "EchoesBattlefieldPresentation.h"
+#include "EchoesAiDifficultyController.h"
 #include "EchoesCampaignTerrainBinding.h"
 #include "EchoesCampaignMapCheckpoint.h"
+#include "EchoesCheckpointWorker.h"
+#include "EchoesCinematicSubsystem.h"
 #include "EchoesCombatEffectView.h"
 #include "EchoesContentSubsystem.h"
 #include "EchoesDestructionView.h"
@@ -12,6 +15,7 @@
 #include "EchoesGameUserSettings.h"
 #include "EchoesGameplayAudioSubsystem.h"
 #include "EchoesInterfaceAudioSubsystem.h"
+#include "EchoesMatchReplay.h"
 #include "EchoesMusicSubsystem.h"
 #include "EchoesNarrativeSubsystem.h"
 #include "EchoesOfTheBrokenSun.h"
@@ -48,6 +52,17 @@
 
 namespace
 {
+constexpr uint64 AutosaveCadenceTicks = 6'000;
+
+echoes::sim::PlayerHostilityMasks OperationHostilityMasks(EEchoesOperationMode Operation)
+{
+    // Witnesses keep their own command owners. Non-hostility is a local
+    // protection rule, not shared command, faction consent, or damage immunity.
+    return Operation == EEchoesOperationMode::CampaignTheBrokenSun
+        ? echoes::sim::PlayerHostilityMasks{0x02, 0x0D, 0x02, 0x02}
+        : echoes::sim::kDefaultHostilityMasks;
+}
+
 #if WITH_EDITOR
 TAutoConsoleVariable<int32> CVarEchoesEditorPrologueCompletionChoice(
     TEXT("Echoes.EditorPrologueCompletionChoice"), 0,
@@ -150,7 +165,7 @@ constexpr uint8 BrokenSunQuickSaveEnvelopeVersion = 2;
 constexpr uint8 BrokenSunQuickSaveMagic[] = {
     'E', 'C', 'H', 'O', 'M', '1', '5', 'Q'};
 constexpr uint8 QuickSaveContainerMinimumVersion = 1;
-constexpr uint8 QuickSaveContainerVersion = 4;
+constexpr uint8 QuickSaveContainerVersion = 5;
 constexpr uint8 TermsOfContinuanceTopologyRevision = 2;
 constexpr uint8 NamesWithoutBirthsTopologyRevision = 2;
 constexpr uint8 ShapeOfSilenceTopologyRevision = 2;
@@ -353,7 +368,7 @@ enum class EQuickSaveContainerRead : uint8
         {
             return false;
         }
-        const uint8 SetupBytes[] = {
+        uint8 SetupBytes[] = {
             static_cast<uint8>(SkirmishSetup.LocalFaction),
             static_cast<uint8>(SkirmishSetup.OpponentFaction),
             static_cast<uint8>(SkirmishSetup.MapPreset),
@@ -362,7 +377,13 @@ enum class EQuickSaveContainerRead : uint8
             static_cast<uint8>(SkirmishSetup.Difficulty),
             static_cast<uint8>(SkirmishSetup.VictoryCondition),
             static_cast<uint8>(SkirmishSetup.GameSpeed),
-            static_cast<uint8>(SkirmishSetup.TeamSetup)};
+            static_cast<uint8>(SkirmishSetup.TeamSetup),
+            0, 0, 0, 0, 0, 0, 0, 0};
+        for (int32 Index = 0; Index < 8; ++Index)
+        {
+            SetupBytes[9 + Index] = static_cast<uint8>(
+                SkirmishSetup.Seed >> (Index * 8));
+        }
         const uint64 Hash = FXxHash64::HashBuffer(
             SetupBytes,
             UE_ARRAY_COUNT(SetupBytes)).Hash;
@@ -436,7 +457,7 @@ enum class EQuickSaveContainerRead : uint8
         return false;
     }
     OutContainer.Reserve(
-        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 29 + Payload.Num());
+        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 37 + Payload.Num());
     OutContainer.Append(
         QuickSaveContainerMagic,
         UE_ARRAY_COUNT(QuickSaveContainerMagic));
@@ -481,10 +502,11 @@ enum class EQuickSaveContainerRead : uint8
         OutContainer.Add(static_cast<uint8>(SkirmishSetup.VictoryCondition));
         OutContainer.Add(static_cast<uint8>(SkirmishSetup.GameSpeed));
         OutContainer.Add(static_cast<uint8>(SkirmishSetup.TeamSetup));
+        AppendUint64LittleEndian(OutContainer, SkirmishSetup.Seed);
     }
     else
     {
-        OutContainer.AddZeroed(9);
+        OutContainer.AddZeroed(17);
     }
     AppendUint32LittleEndian(
         OutContainer,
@@ -541,6 +563,8 @@ enum class EQuickSaveContainerRead : uint8
         UE_ARRAY_COUNT(QuickSaveContainerMagic) + 4 + 8 + 5 + 4;
     constexpr int32 VersionFourHeaderSize =
         UE_ARRAY_COUNT(QuickSaveContainerMagic) + 4 + 8 + 9 + 4;
+    constexpr int32 VersionFiveHeaderSize =
+        UE_ARRAY_COUNT(QuickSaveContainerMagic) + 4 + 8 + 17 + 4;
     constexpr int32 ChecksumSize = 4;
     if (Bytes.Num() < VersionOneHeaderSize + ChecksumSize)
     {
@@ -565,8 +589,10 @@ enum class EQuickSaveContainerRead : uint8
         OutError = TEXT("checkpoint container is truncated");
         return EQuickSaveContainerRead::Invalid;
     }
-    uint8 SetupBytes[9] = {};
-    const int32 SetupBytesLength = Version >= 4 ? 9 : (Version == 3 ? 5 : 0);
+    uint8 SetupBytes[17] = {};
+    const int32 SetupBytesLength = Version >= 5
+        ? 17
+        : Version >= 4 ? 9 : (Version == 3 ? 5 : 0);
     if (SetupBytesLength > 0)
     {
         if (Bytes.Num() - Offset < SetupBytesLength)
@@ -581,7 +607,9 @@ enum class EQuickSaveContainerRead : uint8
         Offset += SetupBytesLength;
     }
     uint32 PayloadLength = 0;
-    const int32 HeaderSize = Version >= 4
+    const int32 HeaderSize = Version >= 5
+        ? VersionFiveHeaderSize
+        : Version >= 4
         ? VersionFourHeaderSize
         : Version == 3
             ? VersionThreeHeaderSize
@@ -629,6 +657,17 @@ enum class EQuickSaveContainerRead : uint8
                 static_cast<EEchoesSkirmishGameSpeed>(SetupBytes[7]);
             RecoveredSetup.TeamSetup =
                 static_cast<EEchoesSkirmishTeamSetup>(SetupBytes[8]);
+            RecoveredSetup.Seed = PrototypeSeed;
+            if (Version >= 5)
+            {
+                RecoveredSetup.Seed = 0;
+                for (int32 Index = 0; Index < 8; ++Index)
+                {
+                    RecoveredSetup.Seed |=
+                        static_cast<uint64>(SetupBytes[9 + Index]) <<
+                        (Index * 8);
+                }
+            }
         }
         else
         {
@@ -651,7 +690,7 @@ enum class EQuickSaveContainerRead : uint8
                     : *SetupError);
             return EQuickSaveContainerRead::Invalid;
         }
-        if (Version >= 4)
+        if (Version >= 5)
         {
             if (!BuildQuickSaveBranchIdentity(
                     EEchoesOperationMode::Skirmish,
@@ -666,6 +705,16 @@ enum class EQuickSaveContainerRead : uint8
                     SetupError.IsEmpty()
                         ? TEXT("The checkpoint setup identity is inconsistent.")
                         : *SetupError);
+                return EQuickSaveContainerRead::Invalid;
+            }
+        }
+        else if (Version == 4)
+        {
+            const uint64 Hash = FXxHash64::HashBuffer(SetupBytes, 9).Hash;
+            RecoveredIdentity = Hash != 0 ? Hash : 1;
+            if (RecoveredIdentity != CampaignBranchIdentity)
+            {
+                OutError = TEXT("[LOAD_SKIRMISH_SETUP_INVALID] The v4 checkpoint setup hash does not match.");
                 return EQuickSaveContainerRead::Invalid;
             }
         }
@@ -847,20 +896,6 @@ enum class EQuickSaveContainerRead : uint8
         }
     }
     return true;
-}
-
-[[nodiscard]] bool AtomicReplaceFile(
-    const FString& Destination,
-    const FString& Source)
-{
-#if PLATFORM_MAC
-    return FPlatformFileManager::Get()
-        .GetPlatformFile()
-        .MoveFile(*Destination, *Source);
-#else
-    return IFileManager::Get().Move(
-        *Destination, *Source, true, true, true, true);
-#endif
 }
 
 [[nodiscard]] bool UsesCurrentSnapshotSchema(
@@ -2063,6 +2098,429 @@ enum class EQuickSaveContainerRead : uint8
     return true;
 }
 
+struct FEchoesImmutableCheckpointCapture final
+{
+    echoes::sim::Simulation Simulation;
+    FEchoesCampaignProgress CampaignProgress;
+    FEchoesSkirmishSetup SkirmishSetup;
+    EEchoesOperationMode Operation = EEchoesOperationMode::Skirmish;
+    Faction LocalFaction = Faction::MeridianCompact;
+    EEchoesFinalResolution PendingResolution = EEchoesFinalResolution::None;
+    EEchoesFinalResolution SelectedResolution = EEchoesFinalResolution::None;
+    bool bResolutionHoldStarted = false;
+    bool bResolutionContractFailed = false;
+    uint64 ResolutionStartTick = 0;
+    EntityId ApproachAnchorId = 0;
+    EntityId ResolutionConduitId = 0;
+    bool bCrisisHoldStarted = false;
+    bool bCrisisContractFailed = false;
+};
+
+[[nodiscard]] FEchoesCheckpointEncodeResult EncodeImmutableCheckpoint(
+    FEchoesImmutableCheckpointCapture&& Capture)
+{
+    FEchoesCheckpointEncodeResult Result;
+    Result.CapturedTick = Capture.Simulation.CurrentTick();
+    Result.CapturedChecksum = Capture.Simulation.StateChecksum();
+    const std::vector<uint8> Snapshot = Capture.Simulation.SaveSnapshot();
+    if (Snapshot.empty() || Snapshot.size() > MAX_int32)
+    {
+        Result.Error = TEXT(
+            "[SAVE_SNAPSHOT_INVALID] The deterministic snapshot could not be encoded.");
+        return Result;
+    }
+
+    TArray<uint8> SnapshotBytes;
+    SnapshotBytes.Append(
+        Snapshot.data(), static_cast<int32>(Snapshot.size()));
+    Result.Bytes = SnapshotBytes;
+    FString EnvelopeError;
+    bool bEnvelopeBuilt = true;
+    if (Capture.Operation == EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        bEnvelopeBuilt = BuildBrokenSunQuickSaveEnvelope(
+            Capture.CampaignProgress,
+            SnapshotBytes,
+            Capture.PendingResolution,
+            Capture.SelectedResolution,
+            Capture.bResolutionHoldStarted,
+            Capture.bResolutionContractFailed,
+            Capture.ResolutionStartTick,
+            Capture.ApproachAnchorId,
+            Capture.ResolutionConduitId,
+            Result.Bytes,
+            EnvelopeError);
+    }
+    else if (Capture.Operation ==
+             EEchoesOperationMode::CampaignChoirAtLumeReach)
+    {
+        bEnvelopeBuilt = BuildChoirAtLumeReachQuickSaveEnvelope(
+            Capture.CampaignProgress,
+            SnapshotBytes,
+            Result.Bytes,
+            EnvelopeError);
+    }
+    else if (Capture.Operation ==
+             EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        bEnvelopeBuilt = BuildSeveralVoicesOneCommandQuickSaveEnvelope(
+            Capture.CampaignProgress,
+            SnapshotBytes,
+            Capture.bCrisisHoldStarted,
+            Capture.bCrisisContractFailed,
+            Result.Bytes,
+            EnvelopeError);
+    }
+    else if (Capture.Operation ==
+             EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        bEnvelopeBuilt = BuildFutureThatWonQuickSaveEnvelope(
+            Capture.CampaignProgress,
+            SnapshotBytes,
+            Result.Bytes,
+            EnvelopeError);
+    }
+    else if (Capture.Operation ==
+             EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+    {
+        bEnvelopeBuilt = BuildAssemblyOfTheMissingQuickSaveEnvelope(
+            Capture.CampaignProgress,
+            SnapshotBytes,
+            Result.Bytes,
+            EnvelopeError);
+    }
+    else if (Capture.Operation ==
+             EEchoesOperationMode::CampaignNoNeutralLedger)
+    {
+        bEnvelopeBuilt = BuildNoNeutralLedgerQuickSaveEnvelope(
+            Capture.CampaignProgress,
+            SnapshotBytes,
+            Result.Bytes,
+            EnvelopeError);
+    }
+    if (!bEnvelopeBuilt)
+    {
+        Result.Bytes.Reset();
+        Result.Error = FString::Printf(
+            TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
+        return Result;
+    }
+
+    if (UsesQuickSaveContainer(Capture.Operation))
+    {
+        uint64 BranchIdentity = 0;
+        if (!BuildQuickSaveBranchIdentity(
+                Capture.Operation,
+                Capture.CampaignProgress,
+                Capture.SkirmishSetup,
+                BranchIdentity,
+                EnvelopeError))
+        {
+            Result.Bytes.Reset();
+            Result.Error = FString::Printf(
+                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
+            return Result;
+        }
+        TArray<uint8> ContainerBytes;
+        if (!BuildQuickSaveContainer(
+                Capture.Operation,
+                Capture.LocalFaction,
+                BranchIdentity,
+                Capture.SkirmishSetup,
+                Result.Bytes,
+                ContainerBytes,
+                EnvelopeError))
+        {
+            Result.Bytes.Reset();
+            Result.Error = FString::Printf(
+                TEXT("[SAVE_CONTAINER_FAILED] %s"), *EnvelopeError);
+            return Result;
+        }
+        Result.Bytes = MoveTemp(ContainerBytes);
+    }
+
+    std::string ReplayError;
+    const echoes::sim::ReplayRecord ReplayPrefix =
+        Capture.Simulation.ExportReplay(&ReplayError);
+    if (ReplayPrefix.version == 0)
+    {
+        Result.Bytes.Reset();
+        Result.Error = FString::Printf(
+            TEXT("[SAVE_REPLAY_BINDING_FAILED] New checkpoints require an authoritative replay prefix: %s"),
+            ReplayError.empty()
+                ? TEXT("replay export unavailable")
+                : UTF8_TO_TCHAR(ReplayError.c_str()));
+        return Result;
+    }
+    if (ReplayPrefix.finalTick != Result.CapturedTick ||
+        ReplayPrefix.finalChecksum != Result.CapturedChecksum)
+    {
+        Result.Bytes.Reset();
+        Result.Error = TEXT(
+            "[SAVE_REPLAY_BINDING_FAILED] The authoritative replay prefix does not match the captured snapshot tick and checksum.");
+        return Result;
+    }
+    {
+        TArray<uint8> BoundPayload;
+        if (!FEchoesMatchReplayStore::BindCheckpointPayload(
+                Result.Bytes,
+                ReplayPrefix,
+                BoundPayload,
+                Result.ValidatedReplayBytes,
+                EnvelopeError))
+        {
+            Result.Bytes.Reset();
+            Result.Error = FString::Printf(
+                TEXT("[SAVE_REPLAY_BINDING_FAILED] %s"), *EnvelopeError);
+            return Result;
+        }
+        Result.Bytes = MoveTemp(BoundPayload);
+    }
+
+    if (!TransformCampaignMapCheckpoint(
+            true,
+            Capture.Operation,
+            Capture.CampaignProgress,
+            Result.Bytes,
+            EnvelopeError))
+    {
+        Result.Bytes.Reset();
+        Result.Error = MoveTemp(EnvelopeError);
+    }
+    return Result;
+}
+
+[[nodiscard]] bool ValidateImmutableCheckpoint(
+    EEchoesOperationMode Operation,
+    Faction LocalFaction,
+    uint64 ExpectedBranchIdentity,
+    const FEchoesCampaignProgress& CampaignProgress,
+    const FEchoesSkirmishSetup& SkirmishSetup,
+    const TArray<uint8>& SourceBytes,
+    FString& OutFailure,
+    const TArray<uint8>* ExpectedValidatedReplayBytes = nullptr,
+    uint64 ExpectedCapturedTick = 0,
+    uint64 ExpectedCapturedChecksum = 0)
+{
+    TArray<uint8> CandidateBytes = SourceBytes;
+    if (!TransformCampaignMapCheckpoint(
+            false,
+            Operation,
+            CampaignProgress,
+            CandidateBytes,
+            OutFailure))
+    {
+        return false;
+    }
+
+    TArray<uint8> ReplayBoundPayload;
+    echoes::sim::ReplayRecord ReplayPrefix;
+    EEchoesCheckpointReplayBindingRead ReplayBinding =
+        EEchoesCheckpointReplayBindingRead::Bound;
+    if (ExpectedValidatedReplayBytes != nullptr)
+    {
+        if (!FEchoesMatchReplayStore::ExtractGeneratedCheckpointPayload(
+                CandidateBytes,
+                *ExpectedValidatedReplayBytes,
+                ReplayBoundPayload,
+                OutFailure))
+        {
+            return false;
+        }
+    }
+    else
+    {
+        ReplayBinding = FEchoesMatchReplayStore::ExtractCheckpointPayload(
+            CandidateBytes, ReplayBoundPayload, ReplayPrefix, OutFailure);
+    }
+    if (ReplayBinding == EEchoesCheckpointReplayBindingRead::Invalid)
+    {
+        return false;
+    }
+    CandidateBytes = MoveTemp(ReplayBoundPayload);
+
+    TArray<uint8> ContainerPayload;
+    const TArray<uint8>* OperationPayload = &CandidateBytes;
+    bool bRecoveredSkirmishSetup = false;
+    FEchoesSkirmishSetup RecoveredSkirmishSetup = SkirmishSetup;
+    if (UsesQuickSaveContainer(Operation))
+    {
+        const EQuickSaveContainerRead ContainerRead =
+            ExtractQuickSaveContainer(
+                Operation,
+                LocalFaction,
+                ExpectedBranchIdentity,
+                Operation != EEchoesOperationMode::Skirmish ||
+                    SkirmishSetup == FEchoesSkirmishSetupModel::DefaultSetup(),
+                CandidateBytes,
+                ContainerPayload,
+                bRecoveredSkirmishSetup,
+                RecoveredSkirmishSetup,
+                OutFailure);
+        if (ContainerRead == EQuickSaveContainerRead::Invalid)
+        {
+            return false;
+        }
+        if (Operation == EEchoesOperationMode::Skirmish &&
+            bRecoveredSkirmishSetup &&
+            RecoveredSkirmishSetup != SkirmishSetup)
+        {
+            OutFailure = TEXT(
+                "[LOAD_SKIRMISH_SETUP_MISMATCH] This recovery generation belongs to a different skirmish setup.");
+            return false;
+        }
+        if (ContainerRead == EQuickSaveContainerRead::Wrapped)
+        {
+            OperationPayload = &ContainerPayload;
+        }
+    }
+
+    TArray<uint8> SnapshotBytes;
+    const TArray<uint8>* SnapshotPayload = OperationPayload;
+    bool bEnvelopeValid = true;
+    if (Operation == EEchoesOperationMode::CampaignTheBrokenSun)
+    {
+        EEchoesFinalResolution Pending = EEchoesFinalResolution::None;
+        EEchoesFinalResolution Selected = EEchoesFinalResolution::None;
+        bool bHold = false;
+        bool bFailed = false;
+        uint64 StartTick = 0;
+        EntityId Approach = 0;
+        EntityId Conduit = 0;
+        bEnvelopeValid = ExtractBrokenSunQuickSaveSnapshot(
+            CampaignProgress,
+            *OperationPayload,
+            Pending,
+            Selected,
+            bHold,
+            bFailed,
+            StartTick,
+            Approach,
+            Conduit,
+            SnapshotBytes,
+            OutFailure);
+        SnapshotPayload = &SnapshotBytes;
+    }
+    else if (Operation == EEchoesOperationMode::CampaignChoirAtLumeReach)
+    {
+        bEnvelopeValid = ExtractChoirAtLumeReachQuickSaveSnapshot(
+            CampaignProgress, *OperationPayload, SnapshotBytes, OutFailure);
+        SnapshotPayload = &SnapshotBytes;
+    }
+    else if (Operation == EEchoesOperationMode::CampaignNoNeutralLedger)
+    {
+        bEnvelopeValid = ExtractNoNeutralLedgerQuickSaveSnapshot(
+            CampaignProgress, *OperationPayload, SnapshotBytes, OutFailure);
+        SnapshotPayload = &SnapshotBytes;
+    }
+    else if (Operation == EEchoesOperationMode::CampaignFutureThatWon)
+    {
+        bEnvelopeValid = ExtractFutureThatWonQuickSaveSnapshot(
+            CampaignProgress, *OperationPayload, SnapshotBytes, OutFailure);
+        SnapshotPayload = &SnapshotBytes;
+    }
+    else if (Operation == EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+    {
+        bEnvelopeValid = ExtractAssemblyOfTheMissingQuickSaveSnapshot(
+            CampaignProgress, *OperationPayload, SnapshotBytes, OutFailure);
+        SnapshotPayload = &SnapshotBytes;
+    }
+    else if (Operation ==
+             EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+    {
+        bool bHold = false;
+        bool bFailed = false;
+        bEnvelopeValid = ExtractSeveralVoicesOneCommandQuickSaveSnapshot(
+            CampaignProgress,
+            *OperationPayload,
+            bHold,
+            bFailed,
+            SnapshotBytes,
+            OutFailure);
+        SnapshotPayload = &SnapshotBytes;
+    }
+    if (!bEnvelopeValid)
+    {
+        return false;
+    }
+
+    std::string SnapshotError;
+    std::optional<echoes::sim::Simulation> Candidate =
+        echoes::sim::Simulation::LoadSnapshot(
+            std::span<const uint8>(
+                SnapshotPayload->GetData(),
+                static_cast<size_t>(SnapshotPayload->Num())),
+            &SnapshotError,
+            OperationHostilityMasks(Operation));
+    if (!Candidate.has_value())
+    {
+        OutFailure = SnapshotError.empty()
+            ? TEXT("checkpoint snapshot could not be reopened")
+            : UTF8_TO_TCHAR(SnapshotError.c_str());
+        return false;
+    }
+    if (ExpectedValidatedReplayBytes != nullptr)
+    {
+        if (Candidate->CurrentTick() != ExpectedCapturedTick ||
+            Candidate->StateChecksum() != ExpectedCapturedChecksum)
+        {
+            OutFailure = TEXT(
+                "generated checkpoint snapshot does not match the replay-bound capture tick and checksum");
+            return false;
+        }
+        Candidate->CaptureReplayBaseline();
+    }
+    else if (ReplayBinding == EEchoesCheckpointReplayBindingRead::Bound)
+    {
+        if (!Candidate->ContinueReplayRecording(ReplayPrefix, &SnapshotError))
+        {
+            OutFailure = FString::Printf(
+                TEXT("checkpoint replay history does not match snapshot: %s"),
+                UTF8_TO_TCHAR(SnapshotError.c_str()));
+            return false;
+        }
+    }
+    else
+    {
+        Candidate->CaptureReplayBaseline();
+    }
+    const echoes::sim::SimulationConfig& Config = Candidate->Config();
+    const Faction CandidateLocalFaction =
+        Operation == EEchoesOperationMode::Skirmish &&
+                bRecoveredSkirmishSetup
+            ? RecoveredSkirmishSetup.LocalFaction
+            : LocalFaction;
+    const echoes::sim::PlayerState* CandidateLocalPlayer =
+        Candidate->FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId);
+    if (Config.mapWidthTiles != PrototypeMapWidthTiles ||
+        Config.mapHeightTiles != PrototypeMapHeightTiles ||
+        Config.ticksPerSecond != PrototypeTicksPerSecond ||
+        Config.randomSeed !=
+            (Operation == EEchoesOperationMode::Skirmish
+                 ? (bRecoveredSkirmishSetup
+                        ? RecoveredSkirmishSetup.Seed
+                        : SkirmishSetup.Seed)
+                 : PrototypeSeed) ||
+        Config.protectedCommandCorePlayerMask != 0 ||
+        Config.hostilityMasks != OperationHostilityMasks(Operation) ||
+        !Candidate->NextCommandSequence(
+             UEchoesSimulationSubsystem::LocalPlayerId).has_value() ||
+        CandidateLocalPlayer == nullptr ||
+        CandidateLocalPlayer->faction != CandidateLocalFaction)
+    {
+        OutFailure = TEXT(
+            "checkpoint is not compatible with the selected operation and faction");
+        return false;
+    }
+    return Operation != EEchoesOperationMode::Skirmish ||
+        ValidateSkirmishSnapshotBinding(
+            *Candidate,
+            bRecoveredSkirmishSetup
+                ? RecoveredSkirmishSetup
+                : SkirmishSetup,
+            OutFailure);
+}
+
 [[nodiscard]] const TCHAR* FactionStableName(Faction Value)
 {
     switch (Value)
@@ -2345,6 +2803,9 @@ enum class EQuickSaveContainerRead : uint8
 void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
+    CheckpointCoordinator = MakeShared<FEchoesCheckpointCoordinator>();
+    NextCheckpointRequestId = 1;
+    LastCheckpointSaveStatus = FEchoesCheckpointSaveStatus();
     FreeEntityViews.Reset();
     ActiveDestructionViews.Reset();
     FreeDestructionViews.Reset();
@@ -2489,6 +2950,7 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
             CampaignPathOverride);
     }
 #endif
+    LegacyCampaignProgressPath = CampaignProgressPath;
     FString CampaignFeedback;
     bCampaignProgressAvailable =
         FEchoesCampaignProgressStore::LoadWithBackup(
@@ -2521,6 +2983,9 @@ void UEchoesSimulationSubsystem::Initialize(FSubsystemCollectionBase& Collection
 
 void UEchoesSimulationSubsystem::Deinitialize()
 {
+    DrainCheckpointSaves();
+    DrainReplayArchiveJobs();
+    CheckpointCoordinator.Reset();
     if (PreGarbageCollectHandle.IsValid())
     {
         FCoreUObjectDelegates::GetPreGarbageCollectDelegate().Remove(
@@ -2548,8 +3013,12 @@ TStatId UEchoesSimulationSubsystem::GetStatId() const
 bool UEchoesSimulationSubsystem::IsTickable() const
 {
     const UWorld* World = GetWorld();
-    return bScenarioReady && Simulation.IsValid() && World != nullptr &&
-           World->IsGameWorld() && !World->bIsTearingDown;
+    const bool bCheckpointWorkPending =
+        CheckpointCoordinator.IsValid() && CheckpointCoordinator->HasWork();
+    return (bCheckpointWorkPending ||
+            (bScenarioReady && Simulation.IsValid())) &&
+           World != nullptr && World->IsGameWorld() &&
+           !World->bIsTearingDown;
 }
 
 bool UEchoesSimulationSubsystem::StartPrototypeScenario()
@@ -3000,7 +3469,10 @@ bool UEchoesSimulationSubsystem::StartScenario(
     Config.mapWidthTiles = PrototypeMapWidthTiles;
     Config.mapHeightTiles = PrototypeMapHeightTiles;
     Config.ticksPerSecond = PrototypeTicksPerSecond;
-    Config.randomSeed = PrototypeSeed;
+    Config.randomSeed = SelectedOperation == EEchoesOperationMode::Skirmish
+        ? ActiveSkirmishSetup.Seed
+        : PrototypeSeed;
+    Config.hostilityMasks = OperationHostilityMasks(SelectedOperation);
     Config.protectedCommandCorePlayerMask =
         bUseSustainedStressScenario ? 0x0FU : 0U;
     FString RulesError;
@@ -5613,6 +6085,8 @@ bool UEchoesSimulationSubsystem::StartScenario(
     LastAutosavedPhase = GetCurrentOperationPhase();
     LastAutosavedTick = 0;
     LastAutosavedReason = EEchoesAutosaveReason::None;
+    LastAutosaveRequestedPhase = LastAutosavedPhase;
+    LastAutosaveRequestedTick = 0;
     if (!bSuppressAutosave && !bStressScenario && !bSustainedStressScenario && SelectedOperation != EEchoesOperationMode::Skirmish && Simulation.IsValid())
     {
         FString AutosaveFeedback;
@@ -5657,6 +6131,9 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
+#if WITH_DEV_AUTOMATION_TESTS
+    bAllowNextStressCheckpointForTesting = false;
+#endif
     bSustainedStressScenario = false;
     bSustainedStressFailed = false;
     bSustainedStressTimingReady = false;
@@ -5752,6 +6229,8 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     LastAutosavedPhase = 0;
     LastAutosavedTick = 0;
     LastAutosavedReason = EEchoesAutosaveReason::None;
+    LastAutosaveRequestedPhase = 0;
+    LastAutosaveRequestedTick = 0;
 }
 
 bool UEchoesSimulationSubsystem::RestartPrototypeScenario()
@@ -6684,7 +7163,7 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
             FCommandLine::Get(),
             TEXT("EchoesQuickSavePath="),
             QuickSavePathOverride) &&
-        !QuickSavePathOverride.IsEmpty())
+        !QuickSavePathOverride.IsEmpty() && ActiveJourneySlot == 1)
     {
         return FPaths::ConvertRelativePathToFull(QuickSavePathOverride);
     }
@@ -6706,37 +7185,37 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
                 LedgerBytes.GetData(),
                 LedgerBytes.Num() - static_cast<int32>(sizeof(uint32)));
             return FPaths::Combine(
-                FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+                GetJourneyCheckpointDirectory(),
                 FString::Printf(
                     TEXT("EchoesQuickSaveTheBrokenSun-%08X.bin"),
                     LedgerFingerprint));
         }
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesQuickSaveTheBrokenSun-InvalidLedger.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignPrologue)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesQuickSaveWhatTheLedgerKeeps.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesQuickSaveSevenAccountsOfRain.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignCityReserve)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesQuickSaveACityOnReserve.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesQuickSaveTheUnburiedRoad.bin"));
     }
     if (SelectedOperation ==
@@ -6802,11 +7281,11 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
                     ? TEXT("EchoesQuickSaveAssemblyOfTheMissing")
                     : TEXT("EchoesQuickSaveSeveralVoicesOneCommand");
             return FPaths::Combine(
-                FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+                GetJourneyCheckpointDirectory(),
                 FString::Printf(TEXT("%s-%08X.bin"), Prefix, LedgerFingerprint));
         }
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             SelectedOperation ==
                     EEchoesOperationMode::CampaignTermsOfContinuance
                 ? TEXT("EchoesQuickSaveTermsOfContinuance-InvalidLedger.bin")
@@ -6836,7 +7315,7 @@ FString UEchoesSimulationSubsystem::GetActiveQuickSavePath() const
                 ? TEXT("EchoesQuickSaveAssemblyOfTheMissing-InvalidLedger.bin")
                 : TEXT("EchoesQuickSaveSeveralVoicesOneCommand-InvalidLedger.bin"));
     }
-    return GetQuickSavePath();
+    return FPaths::Combine(GetJourneyCheckpointDirectory(), TEXT("EchoesQuickSave.bin"));
 }
 
 EEchoesCampaignCommitStatus UEchoesSimulationSubsystem::CommitPrologueCompletion(
@@ -8068,12 +8547,23 @@ bool UEchoesSimulationSubsystem::InspectSaveContainer(
         return false;
     }
 
-    const TArray<uint8>& Bytes = bMapEnvelope ? InnerBytes : InputBytes;
+    const TArray<uint8>& MapPayload = bMapEnvelope ? InnerBytes : InputBytes;
+    TArray<uint8> ReplayBoundPayload;
+    echoes::sim::ReplayRecord ReplayPrefix;
+    const EEchoesCheckpointReplayBindingRead ReplayBinding =
+        FEchoesMatchReplayStore::ExtractCheckpointPayload(
+            MapPayload, ReplayBoundPayload, ReplayPrefix, OutError);
+    if (ReplayBinding == EEchoesCheckpointReplayBindingRead::Invalid)
+    {
+        return false;
+    }
+    const TArray<uint8>& Bytes = ReplayBoundPayload;
     constexpr int32 MagicSize = 8;
     constexpr int32 VersionOneHeaderSize = MagicSize + 4 + 4;
     constexpr int32 VersionTwoHeaderSize = MagicSize + 4 + 8 + 4;
     constexpr int32 VersionThreeHeaderSize = MagicSize + 4 + 8 + 5 + 4;
     constexpr int32 VersionFourHeaderSize = MagicSize + 4 + 8 + 9 + 4;
+    constexpr int32 VersionFiveHeaderSize = MagicSize + 4 + 8 + 17 + 4;
     constexpr int32 ChecksumSize = 4;
 
     if (Bytes.Num() < VersionOneHeaderSize + ChecksumSize)
@@ -8125,7 +8615,16 @@ bool UEchoesSimulationSubsystem::InspectSaveContainer(
         return false;
     }
 
-    if (OutVersion >= 4)
+    if (OutVersion >= 5)
+    {
+        if (Bytes.Num() - Offset < 17)
+        {
+            OutError = TEXT("truncated skirmish setup");
+            return false;
+        }
+        Offset += 17;
+    }
+    else if (OutVersion >= 4)
     {
         if (Bytes.Num() - Offset < 9)
         {
@@ -8145,7 +8644,9 @@ bool UEchoesSimulationSubsystem::InspectSaveContainer(
     }
 
     uint32 PayloadLength = 0;
-    const int32 HeaderSize = OutVersion >= 4
+    const int32 HeaderSize = OutVersion >= 5
+        ? VersionFiveHeaderSize
+        : OutVersion >= 4
         ? VersionFourHeaderSize
         : OutVersion == 3
             ? VersionThreeHeaderSize
@@ -8171,13 +8672,25 @@ bool UEchoesSimulationSubsystem::ValidateCheckpointFileOnDisk(
     FString& OutFailure) const
 {
     TArray<uint8> CandidateBytes;
-    if (!FFileHelper::LoadFileToArray(CandidateBytes, *CandidatePath))
+    if (!IFileManager::Get().FileExists(*CandidatePath) ||
+        !FFileHelper::LoadFileToArray(CandidateBytes, *CandidatePath))
     {
         OutFailure = TEXT("file unavailable");
         return false;
     }
 
     if (!TransformCampaignMapCheckpoint(false, SelectedOperation, CampaignProgress, CandidateBytes, OutFailure)) return false;
+
+    TArray<uint8> ReplayBoundPayload;
+    echoes::sim::ReplayRecord ReplayPrefix;
+    const EEchoesCheckpointReplayBindingRead ReplayBinding =
+        FEchoesMatchReplayStore::ExtractCheckpointPayload(
+            CandidateBytes, ReplayBoundPayload, ReplayPrefix, OutFailure);
+    if (ReplayBinding == EEchoesCheckpointReplayBindingRead::Invalid)
+    {
+        return false;
+    }
+    CandidateBytes = MoveTemp(ReplayBoundPayload);
 
     TArray<uint8> ContainerPayload;
     const TArray<uint8>* OperationPayload = &CandidateBytes;
@@ -8301,13 +8814,27 @@ bool UEchoesSimulationSubsystem::ValidateCheckpointFileOnDisk(
             std::span<const uint8>(
                 SnapshotPayload->GetData(),
                 static_cast<size_t>(SnapshotPayload->Num())),
-            &SnapshotError);
+            &SnapshotError, OperationHostilityMasks(SelectedOperation));
     if (!Candidate.has_value())
     {
         OutFailure = SnapshotError.empty()
             ? TEXT("checkpoint snapshot could not be reopened")
             : UTF8_TO_TCHAR(SnapshotError.c_str());
         return false;
+    }
+    if (ReplayBinding == EEchoesCheckpointReplayBindingRead::Bound)
+    {
+        if (!Candidate->ContinueReplayRecording(ReplayPrefix, &SnapshotError))
+        {
+            OutFailure = FString::Printf(
+                TEXT("checkpoint replay history does not match snapshot: %s"),
+                UTF8_TO_TCHAR(SnapshotError.c_str()));
+            return false;
+        }
+    }
+    else
+    {
+        Candidate->CaptureReplayBaseline();
     }
     const echoes::sim::SimulationConfig& Config = Candidate->Config();
     const echoes::sim::PlayerState* CandidateLocalPlayer =
@@ -8320,8 +8847,14 @@ bool UEchoesSimulationSubsystem::ValidateCheckpointFileOnDisk(
     if (Config.mapWidthTiles != PrototypeMapWidthTiles ||
         Config.mapHeightTiles != PrototypeMapHeightTiles ||
         Config.ticksPerSecond != PrototypeTicksPerSecond ||
-        Config.randomSeed != PrototypeSeed ||
+        Config.randomSeed !=
+            (SelectedOperation == EEchoesOperationMode::Skirmish
+                 ? (bRecoveredSkirmishSetup
+                        ? RecoveredSkirmishSetup.Seed
+                        : ActiveSkirmishSetup.Seed)
+                 : PrototypeSeed) ||
         Config.protectedCommandCorePlayerMask != 0 ||
+        Config.hostilityMasks != OperationHostilityMasks(SelectedOperation) ||
         !Candidate->NextCommandSequence(LocalPlayerId).has_value() ||
         CandidateLocalPlayer == nullptr ||
         CandidateLocalPlayer->faction != CandidateLocalFaction)
@@ -8343,417 +8876,390 @@ bool UEchoesSimulationSubsystem::ValidateCheckpointFileOnDisk(
     return true;
 }
 
-bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback) const
+bool UEchoesSimulationSubsystem::QueueCheckpointSave(
+    EEchoesCheckpointWriteKind Kind,
+    EEchoesAutosaveReason Reason,
+    FString& OutFeedback)
 {
     OutFeedback.Reset();
     if (!bScenarioReady || !Simulation.IsValid())
     {
-        OutFeedback = TEXT("[SAVE_SIM_NOT_READY] No active scenario can be saved.");
+        OutFeedback = Kind == EEchoesCheckpointWriteKind::Autosave
+            ? TEXT("[AUTOSAVE_SIM_NOT_READY] No active scenario can be saved.")
+            : TEXT("[SAVE_SIM_NOT_READY] No active scenario can be saved.");
         return false;
     }
+    bool bStressCheckpointPermitted = false;
+#if WITH_DEV_AUTOMATION_TESTS
     if (bStressScenario)
     {
-        OutFeedback = TEXT(
-            "[SAVE_STRESS_DISABLED] Stress fixtures cannot overwrite player checkpoints.");
+        bStressCheckpointPermitted = bAllowNextStressCheckpointForTesting;
+        bAllowNextStressCheckpointForTesting = false;
+    }
+#endif
+    if (bStressScenario && !bStressCheckpointPermitted)
+    {
+        OutFeedback = Kind == EEchoesCheckpointWriteKind::Autosave
+            ? TEXT("[AUTOSAVE_STRESS_DISABLED] Stress fixtures cannot write autosaves.")
+            : TEXT("[SAVE_STRESS_DISABLED] Stress fixtures cannot overwrite player checkpoints.");
         return false;
     }
     if (bNetworkHumanOpponent)
     {
-        OutFeedback = TEXT(
-            "[SAVE_NETWORK_DISABLED] Online authority state cannot be written to a local checkpoint.");
+        OutFeedback = Kind == EEchoesCheckpointWriteKind::Autosave
+            ? TEXT("[AUTOSAVE_NETWORK_DISABLED] Online authority state cannot write local autosaves.")
+            : TEXT("[SAVE_NETWORK_DISABLED] Online authority state cannot be written to a local checkpoint.");
         return false;
     }
-
-    const std::vector<uint8> Snapshot = Simulation->SaveSnapshot();
-    if (Snapshot.empty() || Snapshot.size() > MAX_int32)
+    if (Kind == EEchoesCheckpointWriteKind::QuickSave)
     {
-        OutFeedback = TEXT("[SAVE_SNAPSHOT_INVALID] The deterministic snapshot could not be created.");
-        return false;
-    }
-    TArray<uint8> SnapshotBytes;
-    SnapshotBytes.Append(Snapshot.data(), static_cast<int32>(Snapshot.size()));
-    TArray<uint8> PersistedBytes = SnapshotBytes;
-    if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
-    {
-        FString EnvelopeError;
-        if (!BuildBrokenSunQuickSaveEnvelope(
-                CampaignProgress,
-                SnapshotBytes,
-                PendingBrokenSunResolution,
-                SelectedBrokenSunResolution,
-                bBrokenSunResolutionHoldStarted,
-                bBrokenSunResolutionContractFailed,
-                BrokenSunResolutionStartTick,
-                BrokenSunApproachAnchorId,
-                BrokenSunResolutionConduitId,
-                PersistedBytes,
-                EnvelopeError))
+        if (const UWorld* World = GetWorld())
         {
-            OutFeedback = FString::Printf(
-                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
-                *EnvelopeError);
-            return false;
+            if (const UEchoesCinematicSubsystem* Cinematics =
+                    World->GetSubsystem<UEchoesCinematicSubsystem>();
+                Cinematics != nullptr && Cinematics->IsSequenceActive())
+            {
+                OutFeedback = TEXT(
+                    "[SAVE_UNAVAILABLE_DURING_SEQUENCE] A checkpoint cannot start during an active cinematic.");
+                return false;
+            }
         }
-    }
-    else if (SelectedOperation ==
-        EEchoesOperationMode::CampaignChoirAtLumeReach)
-    {
-        FString EnvelopeError;
-        if (!BuildChoirAtLumeReachQuickSaveEnvelope(
-                CampaignProgress,
-                SnapshotBytes,
-                PersistedBytes,
-                EnvelopeError))
-        {
-            OutFeedback = FString::Printf(
-                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
-                *EnvelopeError);
-            return false;
-        }
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
-    {
-        FString EnvelopeError;
-        if (!BuildSeveralVoicesOneCommandQuickSaveEnvelope(
-                CampaignProgress,
-                SnapshotBytes,
-                bSeveralVoicesCrisisHoldStarted,
-                bSeveralVoicesCrisisContractFailed,
-                PersistedBytes,
-                EnvelopeError))
-        {
-            OutFeedback = FString::Printf(
-                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
-                *EnvelopeError);
-            return false;
-        }
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignFutureThatWon)
-    {
-        FString EnvelopeError;
-        if (!BuildFutureThatWonQuickSaveEnvelope(
-                CampaignProgress,
-                SnapshotBytes,
-                PersistedBytes,
-                EnvelopeError))
-        {
-            OutFeedback = FString::Printf(
-                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
-                *EnvelopeError);
-            return false;
-        }
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignAssemblyOfTheMissing)
-    {
-        FString EnvelopeError;
-        if (!BuildAssemblyOfTheMissingQuickSaveEnvelope(
-                CampaignProgress,
-                SnapshotBytes,
-                PersistedBytes,
-                EnvelopeError))
-        {
-            OutFeedback = FString::Printf(
-                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
-                *EnvelopeError);
-            return false;
-        }
-    }
-    else if (SelectedOperation ==
-             EEchoesOperationMode::CampaignNoNeutralLedger)
-    {
-        FString EnvelopeError;
-        if (!BuildNoNeutralLedgerQuickSaveEnvelope(
-                CampaignProgress,
-                SnapshotBytes,
-                PersistedBytes,
-                EnvelopeError))
-        {
-            OutFeedback = FString::Printf(
-                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
-                *EnvelopeError);
-            return false;
-        }
-    }
-    if (UsesQuickSaveContainer(SelectedOperation))
-    {
-        uint64 CampaignBranchIdentity = 0;
-        FString BranchIdentityError;
-        if (!BuildQuickSaveBranchIdentity(
-                SelectedOperation,
-                CampaignProgress,
-                ActiveSkirmishSetup,
-                CampaignBranchIdentity,
-                BranchIdentityError))
-        {
-            OutFeedback = FString::Printf(
-                TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
-                *BranchIdentityError);
-            return false;
-        }
-        TArray<uint8> ContainerBytes;
-        FString ContainerError;
-        if (!BuildQuickSaveContainer(
-                SelectedOperation,
-                LocalFaction,
-                CampaignBranchIdentity,
-                ActiveSkirmishSetup,
-                PersistedBytes,
-                ContainerBytes,
-                ContainerError))
-        {
-            OutFeedback = FString::Printf(
-                TEXT("[SAVE_CONTAINER_FAILED] %s"),
-                *ContainerError);
-            return false;
-        }
-        PersistedBytes = MoveTemp(ContainerBytes);
     }
 
-    if (!TransformCampaignMapCheckpoint(true, SelectedOperation, CampaignProgress, PersistedBytes, OutFeedback)) return false;
+    const double InitiationStarted = FPlatformTime::Seconds();
+    const double CaptureStarted = FPlatformTime::Seconds();
+    TUniquePtr<FEchoesImmutableCheckpointCapture> Capture =
+        MakeUnique<FEchoesImmutableCheckpointCapture>();
+    Capture->Simulation = *Simulation;
+    Capture->CampaignProgress = CampaignProgress;
+    Capture->SkirmishSetup = ActiveSkirmishSetup;
+    Capture->Operation = SelectedOperation;
+    Capture->LocalFaction = LocalFaction;
+    Capture->PendingResolution = PendingBrokenSunResolution;
+    Capture->SelectedResolution = SelectedBrokenSunResolution;
+    Capture->bResolutionHoldStarted = bBrokenSunResolutionHoldStarted;
+    Capture->bResolutionContractFailed = bBrokenSunResolutionContractFailed;
+    Capture->ResolutionStartTick = BrokenSunResolutionStartTick;
+    Capture->ApproachAnchorId = BrokenSunApproachAnchorId;
+    Capture->ResolutionConduitId = BrokenSunResolutionConduitId;
+    Capture->bCrisisHoldStarted = bSeveralVoicesCrisisHoldStarted;
+    Capture->bCrisisContractFailed = bSeveralVoicesCrisisContractFailed;
 
-    const FString SavePath = GetActiveQuickSavePath();
-    const FString SaveDirectory = FPaths::GetPath(SavePath);
-    const FString TemporaryPath = SavePath + TEXT(".tmp");
-    const FString BackupPath = SavePath + TEXT(".bak");
-    const FString BackupTemporaryPath = BackupPath + TEXT(".tmp");
-    IFileManager& Files = IFileManager::Get();
-    if (!Files.MakeDirectory(*SaveDirectory, true))
-    {
-        OutFeedback = TEXT("[SAVE_DIRECTORY_FAILED] The save directory could not be created.");
-        return false;
-    }
-    Files.Delete(*TemporaryPath, false, true, true);
-    if (!FFileHelper::SaveArrayToFile(PersistedBytes, *TemporaryPath))
-    {
-        OutFeedback = TEXT("[SAVE_WRITE_FAILED] The temporary checkpoint could not be written.");
-        return false;
-    }
-
-    uint64 ExpectedCampaignBranchIdentity = 0;
+    const EEchoesOperationMode CapturedOperation = Capture->Operation;
+    const Faction CapturedFaction = Capture->LocalFaction;
+    const FEchoesCampaignProgress CapturedProgress = Capture->CampaignProgress;
+    const FEchoesSkirmishSetup CapturedSetup = Capture->SkirmishSetup;
+    const uint64 CaptureMicroseconds = static_cast<uint64>(FMath::Max(
+        0.0,
+        (FPlatformTime::Seconds() - CaptureStarted) * 1'000'000.0));
+    uint64 ExpectedBranchIdentity = 0;
     FString BranchIdentityError;
     if (!BuildQuickSaveBranchIdentity(
-            SelectedOperation,
-            CampaignProgress,
-            ActiveSkirmishSetup,
-            ExpectedCampaignBranchIdentity,
+            CapturedOperation,
+            CapturedProgress,
+            CapturedSetup,
+            ExpectedBranchIdentity,
             BranchIdentityError))
     {
-        Files.Delete(*TemporaryPath, false, true, true);
         OutFeedback = FString::Printf(
             TEXT("[SAVE_LEDGER_BINDING_FAILED] %s"),
             *BranchIdentityError);
         return false;
     }
 
-    const auto ValidateCheckpointFile =
-        [this, ExpectedCampaignBranchIdentity](
-            const FString& CandidatePath,
+    if (!CheckpointCoordinator.IsValid())
+    {
+        CheckpointCoordinator = MakeShared<FEchoesCheckpointCoordinator>();
+    }
+
+    FEchoesCheckpointWriteRequest Request;
+    Request.RequestId = NextCheckpointRequestId++;
+    Request.Kind = Kind;
+    Request.Reason = static_cast<uint8>(Reason);
+    Request.Phase = GetCurrentOperationPhase();
+    Request.SimulationTick = Simulation->CurrentTick();
+    Request.CaptureMicroseconds = CaptureMicroseconds;
+    Request.RequestStartedSeconds = InitiationStarted;
+    Request.SavePath = Kind == EEchoesCheckpointWriteKind::Autosave
+        ? GetActiveAutosavePath()
+        : GetActiveQuickSavePath();
+    Request.Encode =
+        [Capture = MoveTemp(Capture)]() mutable
+        {
+            return EncodeImmutableCheckpoint(MoveTemp(*Capture));
+        };
+    Request.ValidateGenerated =
+        [CapturedOperation,
+         CapturedFaction,
+         ExpectedBranchIdentity,
+         CapturedProgress,
+         CapturedSetup](
+            const FEchoesCheckpointEncodeResult& Encoded,
             FString& OutFailure)
-    {
-        return ValidateCheckpointFileOnDisk(CandidatePath, ExpectedCampaignBranchIdentity, OutFailure);
-    };
-
-    FString TemporaryFailure;
-    if (!ValidateCheckpointFile(TemporaryPath, TemporaryFailure))
-    {
-        Files.Delete(*TemporaryPath, false, true, true);
-        OutFeedback = FString::Printf(
-            TEXT("[SAVE_VALIDATION_FAILED] %s"),
-            TemporaryFailure.IsEmpty()
-                ? TEXT("The temporary checkpoint could not be reopened.")
-                : *TemporaryFailure);
-        return false;
-    }
-
-    const bool bHadPriorSave = Files.FileExists(*SavePath);
-    FString PriorFailure;
-    const bool bPriorSaveValid =
-        bHadPriorSave && ValidateCheckpointFile(SavePath, PriorFailure);
-    const bool bHadPriorBackup = Files.FileExists(*BackupPath);
-    FString ExistingBackupFailure;
-    const bool bExistingBackupValid =
-        bHadPriorBackup &&
-        ValidateCheckpointFile(BackupPath, ExistingBackupFailure);
-    const bool bHadStagedBackup =
-        Files.FileExists(*BackupTemporaryPath);
-    FString ExistingStagedBackupFailure;
-    const bool bExistingStagedBackupValid =
-        bHadStagedBackup &&
-        ValidateCheckpointFile(
-            BackupTemporaryPath,
-            ExistingStagedBackupFailure);
-    bool bRetainedValidPrimary = false;
-    bool bBackupRotationDeferred = false;
-    if (bPriorSaveValid)
-    {
-        TArray<uint8> PriorPrimaryBytes;
-        if (!FFileHelper::LoadFileToArray(PriorPrimaryBytes, *SavePath) ||
-            PriorPrimaryBytes.IsEmpty() ||
-            !FFileHelper::SaveArrayToFile(
-                PriorPrimaryBytes,
-                *BackupTemporaryPath))
         {
-            Files.Delete(*TemporaryPath, false, true, true);
-            Files.Delete(*BackupTemporaryPath, false, true, true);
-            OutFeedback = TEXT(
-                "[SAVE_BACKUP_FAILED] The prior validated checkpoint could not be staged safely.");
-            return false;
-        }
-        FString StagedBackupFailure;
-        if (!ValidateCheckpointFile(
-                BackupTemporaryPath,
-                StagedBackupFailure))
+            return ValidateImmutableCheckpoint(
+                CapturedOperation,
+                CapturedFaction,
+                ExpectedBranchIdentity,
+                CapturedProgress,
+                CapturedSetup,
+                Encoded.Bytes,
+                OutFailure,
+                &Encoded.ValidatedReplayBytes,
+                Encoded.CapturedTick,
+                Encoded.CapturedChecksum);
+        };
+    Request.Validate =
+        [CapturedOperation,
+         CapturedFaction,
+         ExpectedBranchIdentity,
+         CapturedProgress,
+         CapturedSetup](const TArray<uint8>& Bytes, FString& OutFailure)
         {
-            Files.Delete(*TemporaryPath, false, true, true);
-            Files.Delete(*BackupTemporaryPath, false, true, true);
-            OutFeedback = FString::Printf(
-                TEXT("[SAVE_BACKUP_VALIDATION_FAILED] %s"),
-                StagedBackupFailure.IsEmpty()
-                    ? TEXT("The staged recovery checkpoint could not be reopened.")
-                    : *StagedBackupFailure);
-            return false;
-        }
-    }
-    else if (bHadPriorSave)
-    {
-        UE_LOG(
-            LogEchoes,
-            Display,
-            TEXT("[ECHOES_QUICK_SAVE_PRIMARY_REJECTED] detail=%s validRecoveryPreserved=%s backupDetail=%s stagedDetail=%s"),
-            PriorFailure.IsEmpty() ? TEXT("checkpoint invalid") : *PriorFailure,
-            bExistingBackupValid || bExistingStagedBackupValid
-                ? TEXT("true")
-                : TEXT("false"),
-            bHadPriorBackup
-                ? (ExistingBackupFailure.IsEmpty()
-                       ? TEXT("validated")
-                       : *ExistingBackupFailure)
-                : TEXT("not present"),
-            bHadStagedBackup
-                ? (ExistingStagedBackupFailure.IsEmpty()
-                       ? TEXT("validated")
-                       : *ExistingStagedBackupFailure)
-                : TEXT("not present"));
-    }
-    if (!AtomicReplaceFile(SavePath, TemporaryPath))
-    {
-        Files.Delete(*TemporaryPath, false, true, true);
-        OutFeedback = bPriorSaveValid
-            ? TEXT("[SAVE_COMMIT_FAILED] The validated checkpoint was not committed; the prior checkpoint remains active and its recovery copy remains staged.")
-            : TEXT("[SAVE_COMMIT_FAILED] The validated checkpoint was not committed.");
-        return false;
-    }
-    if (bPriorSaveValid)
-    {
-        bool bForceBackupRotationFailure = false;
+            return ValidateImmutableCheckpoint(
+                CapturedOperation,
+                CapturedFaction,
+                ExpectedBranchIdentity,
+                CapturedProgress,
+                CapturedSetup,
+                Bytes,
+                OutFailure);
+        };
 #if WITH_DEV_AUTOMATION_TESTS
-        bForceBackupRotationFailure =
-            bFailNextQuickSaveBackupRotationForTesting;
-        bFailNextQuickSaveBackupRotationForTesting = false;
+    Request.bForceBackupRotationFailure =
+        bFailNextQuickSaveBackupRotationForTesting;
+    bFailNextQuickSaveBackupRotationForTesting = false;
+    Request.bForceWriteFailure = bFailNextCheckpointWriteForTesting;
+    bFailNextCheckpointWriteForTesting = false;
 #endif
-        if (bForceBackupRotationFailure ||
-            !AtomicReplaceFile(BackupPath, BackupTemporaryPath))
-        {
-            bBackupRotationDeferred = true;
-            OutFeedback = TEXT(
-                "QUICK SAVE: the new primary committed; backup rotation was deferred and the prior validated checkpoint remains staged for recovery.");
-            UE_LOG(
-                LogEchoes,
-                Display,
-                TEXT("[ECHOES_QUICK_SAVE_BACKUP_ROTATION_DEFERRED] stagedRecovery=%s existingBackupValid=%s"),
-                *BackupTemporaryPath,
-                bExistingBackupValid ? TEXT("true") : TEXT("false"));
-        }
-        else
-        {
-            bRetainedValidPrimary = true;
-        }
+    Request.EnqueuedAtSeconds = FPlatformTime::Seconds();
+    Request.InitiationMicroseconds = static_cast<uint64>(FMath::Max(
+        0.0,
+        (FPlatformTime::Seconds() - InitiationStarted) * 1'000'000.0));
+
+    const uint64 RequestId = Request.RequestId;
+    const uint64 CapturedTick = Request.SimulationTick;
+    const uint8 CapturedPhase = Request.Phase;
+    const FString CapturedPath = Request.SavePath;
+    FString QueueFailure;
+    if (!CheckpointCoordinator->Enqueue(MoveTemp(Request), QueueFailure))
+    {
+        const uint64 FailedInitiationMicroseconds = static_cast<uint64>(
+            FMath::Max(
+                0.0,
+                (FPlatformTime::Seconds() - InitiationStarted) * 1'000'000.0));
+        LastCheckpointSaveStatus.State = EEchoesCheckpointSaveState::Failed;
+        LastCheckpointSaveStatus.CaptureMicroseconds = CaptureMicroseconds;
+        LastCheckpointSaveStatus.InitiationMicroseconds =
+            FailedInitiationMicroseconds;
+        LastCheckpointSaveStatus.Feedback = QueueFailure;
+        OutFeedback = MoveTemp(QueueFailure);
+        return false;
+    }
+    const uint64 InitiationMicroseconds = static_cast<uint64>(FMath::Max(
+        0.0,
+        (FPlatformTime::Seconds() - InitiationStarted) * 1'000'000.0));
+
+    LastCheckpointSaveStatus.State = EEchoesCheckpointSaveState::Pending;
+    LastCheckpointSaveStatus.RequestId = RequestId;
+    LastCheckpointSaveStatus.bAutosave =
+        Kind == EEchoesCheckpointWriteKind::Autosave;
+    LastCheckpointSaveStatus.Reason = Reason;
+    LastCheckpointSaveStatus.Phase = CapturedPhase;
+    LastCheckpointSaveStatus.SimulationTick = CapturedTick;
+    LastCheckpointSaveStatus.CaptureMicroseconds = CaptureMicroseconds;
+    LastCheckpointSaveStatus.InitiationMicroseconds =
+        InitiationMicroseconds;
+    LastCheckpointSaveStatus.QueueMicroseconds = 0;
+    LastCheckpointSaveStatus.EncodingMicroseconds = 0;
+    LastCheckpointSaveStatus.CompletionMicroseconds = 0;
+    LastCheckpointSaveStatus.TotalCompletionMicroseconds = 0;
+    LastCheckpointSaveStatus.SavePath = CapturedPath;
+    LastCheckpointSaveStatus.Feedback = TEXT("[SAVE_PENDING]");
+    if (Kind == EEchoesCheckpointWriteKind::Autosave)
+    {
+        LastAutosaveRequestedTick = CapturedTick;
+        LastAutosaveRequestedPhase = CapturedPhase;
     }
 
-    const unsigned long long CurrentTick =
-        static_cast<unsigned long long>(Simulation->CurrentTick());
-    if (!OutFeedback.IsEmpty())
-    {
-        // Preserve the explicit degraded-recovery result above.
-    }
-    else if (bHadPriorSave && !bPriorSaveValid && bExistingBackupValid)
-    {
-        OutFeedback = FString::Printf(
-            TEXT("QUICK SAVE: tick %llu committed; the existing validated recovery checkpoint was preserved."),
-            CurrentTick);
-    }
-    else if (bHadPriorSave && !bPriorSaveValid &&
-             bExistingStagedBackupValid)
-    {
-        OutFeedback = FString::Printf(
-            TEXT("QUICK SAVE: tick %llu committed; the validated staged recovery checkpoint was preserved."),
-            CurrentTick);
-    }
-    else if (bHadPriorSave && !bPriorSaveValid &&
-             (bHadPriorBackup || bHadStagedBackup))
-    {
-        OutFeedback = FString::Printf(
-            TEXT("QUICK SAVE: tick %llu committed; the prior primary and recovery generations were invalid, so this checkpoint is the only validated generation."),
-            CurrentTick);
-    }
-    else if (bHadPriorSave && !bPriorSaveValid)
-    {
-        OutFeedback = FString::Printf(
-            TEXT("QUICK SAVE: tick %llu committed; the prior primary was invalid and no validated recovery generation existed, so this checkpoint is the only validated generation."),
-            CurrentTick);
-    }
-    else
-    {
-        OutFeedback = FString::Printf(
-            TEXT("QUICK SAVE: tick %llu committed."),
-            CurrentTick);
-    }
+    OutFeedback = FString::Printf(
+        TEXT("[SAVE_PENDING] request=%llu tick=%llu capture_us=%llu initiation_us=%llu"),
+        static_cast<unsigned long long>(RequestId),
+        static_cast<unsigned long long>(CapturedTick),
+        static_cast<unsigned long long>(CaptureMicroseconds),
+        static_cast<unsigned long long>(InitiationMicroseconds));
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_QUICK_SAVE] tick=%llu bytes=%d backup=%s ledgerBound=%s"),
-        static_cast<unsigned long long>(Simulation->CurrentTick()),
-        PersistedBytes.Num(),
-        bRetainedValidPrimary
-            ? TEXT("rotated")
-        : bBackupRotationDeferred
-            ? TEXT("staged_rotation_deferred")
-        : bExistingBackupValid
-            ? TEXT("preserved_valid")
-        : bExistingStagedBackupValid
-            ? TEXT("preserved_valid_staged")
-        : bHadPriorBackup
-            ? TEXT("preserved_invalid")
-        : bHadStagedBackup
-            ? TEXT("preserved_invalid_staged")
-        : bHadPriorSave ? TEXT("none_invalid_primary") : TEXT("none"),
-        SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun ||
-            RequiresCampaignBranchBoundQuickSave(SelectedOperation) ||
-            SelectedOperation ==
-                EEchoesOperationMode::CampaignChoirAtLumeReach ||
-            SelectedOperation ==
-                EEchoesOperationMode::CampaignNoNeutralLedger ||
-            SelectedOperation ==
-                EEchoesOperationMode::CampaignFutureThatWon ||
-            SelectedOperation ==
-                EEchoesOperationMode::CampaignAssemblyOfTheMissing ||
-            SelectedOperation ==
-                EEchoesOperationMode::CampaignSeveralVoicesOneCommand
+        TEXT("[ECHOES_CHECKPOINT_PENDING] request=%llu autosave=%s reason=%u operation=%u tick=%llu phase=%u capture_us=%llu initiation_us=%llu path=%s"),
+        static_cast<unsigned long long>(RequestId),
+        Kind == EEchoesCheckpointWriteKind::Autosave
             ? TEXT("true")
-            : TEXT("false"));
+            : TEXT("false"),
+        static_cast<uint8>(Reason),
+        static_cast<uint8>(CapturedOperation),
+        static_cast<unsigned long long>(CapturedTick),
+        CapturedPhase,
+        static_cast<unsigned long long>(CaptureMicroseconds),
+        static_cast<unsigned long long>(InitiationMicroseconds),
+        *CapturedPath);
     return true;
 }
 
+void UEchoesSimulationSubsystem::ApplyCheckpointSaveResult(
+    const FEchoesCheckpointWriteResult& Result)
+{
+    if (Result.Kind == EEchoesCheckpointWriteKind::Autosave &&
+        Result.bSucceeded)
+    {
+        LastAutosavedTick = Result.SimulationTick;
+        LastAutosavedReason =
+            static_cast<EEchoesAutosaveReason>(Result.Reason);
+        LastAutosavedPhase = Result.Phase;
+    }
+    else if (Result.Kind == EEchoesCheckpointWriteKind::Autosave &&
+             LastAutosaveRequestedTick == Result.SimulationTick &&
+             LastAutosaveRequestedPhase == Result.Phase)
+    {
+        // Only roll back the request frontier that this failed completion
+        // represents. A newer queued autosave must retain its own frontier.
+        LastAutosaveRequestedTick = LastAutosavedTick;
+        LastAutosaveRequestedPhase = LastAutosavedPhase;
+    }
+    if (Result.RequestId >= LastCheckpointSaveStatus.RequestId)
+    {
+        const bool bWasTrackedRequest =
+            LastCheckpointSaveStatus.RequestId == Result.RequestId;
+        LastCheckpointSaveStatus.State = Result.bSucceeded
+            ? EEchoesCheckpointSaveState::Succeeded
+            : EEchoesCheckpointSaveState::Failed;
+        LastCheckpointSaveStatus.RequestId = Result.RequestId;
+        LastCheckpointSaveStatus.bAutosave =
+            Result.Kind == EEchoesCheckpointWriteKind::Autosave;
+        LastCheckpointSaveStatus.Reason =
+            static_cast<EEchoesAutosaveReason>(Result.Reason);
+        LastCheckpointSaveStatus.Phase = Result.Phase;
+        LastCheckpointSaveStatus.SimulationTick = Result.SimulationTick;
+        LastCheckpointSaveStatus.CaptureMicroseconds =
+            Result.CaptureMicroseconds;
+        if (!bWasTrackedRequest ||
+            LastCheckpointSaveStatus.InitiationMicroseconds == 0)
+        {
+            LastCheckpointSaveStatus.InitiationMicroseconds =
+                Result.InitiationMicroseconds;
+        }
+        LastCheckpointSaveStatus.QueueMicroseconds =
+            Result.QueueMicroseconds;
+        LastCheckpointSaveStatus.EncodingMicroseconds =
+            Result.EncodingMicroseconds;
+        LastCheckpointSaveStatus.CompletionMicroseconds =
+            Result.CompletionMicroseconds;
+        LastCheckpointSaveStatus.TotalCompletionMicroseconds =
+            Result.TotalCompletionMicroseconds;
+        LastCheckpointSaveStatus.SavePath = Result.SavePath;
+        LastCheckpointSaveStatus.Feedback = Result.Feedback;
+    }
+    const FString CompletionLog = FString::Printf(
+        TEXT("[ECHOES_CHECKPOINT_COMPLETE] request=%llu result=%s autosave=%s reason=%u tick=%llu phase=%u capture_us=%llu initiation_us=%llu queue_us=%llu encoding_us=%llu worker_us=%llu total_us=%llu bytes=%d backup=%s path=%s detail=%s"),
+        static_cast<unsigned long long>(Result.RequestId),
+        Result.bSucceeded ? TEXT("success") : TEXT("failure"),
+        Result.Kind == EEchoesCheckpointWriteKind::Autosave
+            ? TEXT("true")
+            : TEXT("false"),
+        Result.Reason,
+        static_cast<unsigned long long>(Result.SimulationTick),
+        Result.Phase,
+        static_cast<unsigned long long>(Result.CaptureMicroseconds),
+        static_cast<unsigned long long>(
+            LastCheckpointSaveStatus.RequestId == Result.RequestId
+                ? LastCheckpointSaveStatus.InitiationMicroseconds
+                : Result.InitiationMicroseconds),
+        static_cast<unsigned long long>(Result.QueueMicroseconds),
+        static_cast<unsigned long long>(Result.EncodingMicroseconds),
+        static_cast<unsigned long long>(Result.CompletionMicroseconds),
+        static_cast<unsigned long long>(Result.TotalCompletionMicroseconds),
+        Result.PersistedBytes,
+        Result.bBackupRotationDeferred ? TEXT("staged") : TEXT("rotated"),
+        *Result.SavePath,
+        *Result.Feedback);
+    if (Result.bSucceeded)
+    {
+        UE_LOG(LogEchoes, Display, TEXT("%s"), *CompletionLog);
+    }
+    else
+    {
+        UE_LOG(LogEchoes, Error, TEXT("%s"), *CompletionLog);
+    }
+}
+
+void UEchoesSimulationSubsystem::PollCheckpointSaves()
+{
+    if (!CheckpointCoordinator.IsValid())
+    {
+        return;
+    }
+    FEchoesCheckpointWriteResult Result;
+    while (CheckpointCoordinator->PollCompleted(Result))
+    {
+        ApplyCheckpointSaveResult(Result);
+    }
+}
+
+void UEchoesSimulationSubsystem::DrainCheckpointSaves()
+{
+    if (!CheckpointCoordinator.IsValid())
+    {
+        return;
+    }
+    TArray<FEchoesCheckpointWriteResult> Results;
+    CheckpointCoordinator->WaitForAll(Results);
+    for (const FEchoesCheckpointWriteResult& Result : Results)
+    {
+        ApplyCheckpointSaveResult(Result);
+    }
+}
+
+bool UEchoesSimulationSubsystem::QuickSaveScenario(FString& OutFeedback)
+{
+    // This legacy wrapper is a synchronous persistence boundary. Finish work
+    // already accepted by phase/cadence autosaves before submitting the manual
+    // checkpoint so an otherwise healthy bounded queue cannot reject it.
+    DrainCheckpointSaves();
+    if (!RequestQuickSaveScenario(OutFeedback))
+    {
+        return false;
+    }
+    return WaitForCheckpointSaves(OutFeedback);
+}
+
+bool UEchoesSimulationSubsystem::RequestQuickSaveScenario(
+    FString& OutFeedback)
+{
+    return QueueCheckpointSave(
+        EEchoesCheckpointWriteKind::QuickSave,
+        EEchoesAutosaveReason::Manual,
+        OutFeedback);
+}
+
+bool UEchoesSimulationSubsystem::WaitForCheckpointSaves(
+    FString& OutFeedback)
+{
+    DrainCheckpointSaves();
+    OutFeedback = LastCheckpointSaveStatus.Feedback;
+    return LastCheckpointSaveStatus.State ==
+        EEchoesCheckpointSaveState::Succeeded;
+}
 bool UEchoesSimulationSubsystem::QuickLoadScenario(FString& OutFeedback)
 {
+    // A load is an explicit synchronization boundary: finish any immutable
+    // checkpoint already accepted for this slot before selecting a generation.
+    DrainCheckpointSaves();
     return LoadScenarioFromPath(GetActiveQuickSavePath(), OutFeedback);
 }
 
 bool UEchoesSimulationSubsystem::LoadScenarioFromPath(const FString& SavePath, FString& OutFeedback)
 {
+    DrainCheckpointSaves();
     OutFeedback.Reset();
     if (!bScenarioReady || !Simulation.IsValid())
     {
@@ -8834,6 +9340,17 @@ bool UEchoesSimulationSubsystem::LoadScenarioFromPath(const FString& SavePath, F
             return false;
         }
         if (!TransformCampaignMapCheckpoint(false, SelectedOperation, CampaignProgress, Bytes, OutFailure)) return false;
+
+        TArray<uint8> ReplayBoundPayload;
+        echoes::sim::ReplayRecord ReplayPrefix;
+        const EEchoesCheckpointReplayBindingRead ReplayBinding =
+            FEchoesMatchReplayStore::ExtractCheckpointPayload(
+                Bytes, ReplayBoundPayload, ReplayPrefix, OutFailure);
+        if (ReplayBinding == EEchoesCheckpointReplayBindingRead::Invalid)
+        {
+            return false;
+        }
+        Bytes = MoveTemp(ReplayBoundPayload);
 
         TArray<uint8> ContainerPayload;
         const TArray<uint8>* OperationPayload = &Bytes;
@@ -8969,11 +9486,27 @@ bool UEchoesSimulationSubsystem::LoadScenarioFromPath(const FString& SavePath, F
                 std::span<const uint8>(
                     SnapshotPayload->GetData(),
                     static_cast<size_t>(SnapshotPayload->Num())),
-                &Error);
+                &Error, OperationHostilityMasks(SelectedOperation));
         if (!Candidate.has_value())
         {
             OutFailure = UTF8_TO_TCHAR(Error.c_str());
             return false;
+        }
+        if (ReplayBinding == EEchoesCheckpointReplayBindingRead::Bound)
+        {
+            if (!Candidate->ContinueReplayRecording(ReplayPrefix, &Error))
+            {
+                OutFailure = FString::Printf(
+                    TEXT("checkpoint replay history does not match snapshot: %s"),
+                    UTF8_TO_TCHAR(Error.c_str()));
+                return false;
+            }
+        }
+        else
+        {
+            // Legacy checkpoints remain compatible, while report coverage is
+            // explicitly limited to play after this loaded baseline.
+            Candidate->CaptureReplayBaseline();
         }
         const echoes::sim::SimulationConfig& Config = Candidate->Config();
         const Faction CandidateLocalFaction =
@@ -8984,8 +9517,14 @@ bool UEchoesSimulationSubsystem::LoadScenarioFromPath(const FString& SavePath, F
         if (Config.mapWidthTiles != PrototypeMapWidthTiles ||
             Config.mapHeightTiles != PrototypeMapHeightTiles ||
             Config.ticksPerSecond != PrototypeTicksPerSecond ||
-            Config.randomSeed != PrototypeSeed ||
+            Config.randomSeed !=
+                (SelectedOperation == EEchoesOperationMode::Skirmish
+                     ? (bCandidateSkirmishSetupRecovered
+                            ? CandidateSkirmishSetup.Seed
+                            : ActiveSkirmishSetup.Seed)
+                     : PrototypeSeed) ||
             Config.protectedCommandCorePlayerMask != 0 ||
+            Config.hostilityMasks != OperationHostilityMasks(SelectedOperation) ||
             !Candidate->NextCommandSequence(LocalPlayerId).has_value() ||
             Candidate->FindPlayer(LocalPlayerId) == nullptr ||
             Candidate->FindPlayer(LocalPlayerId)->faction !=
@@ -9859,7 +10398,7 @@ FString UEchoesSimulationSubsystem::GetActiveAutosavePath() const
             FCommandLine::Get(),
             TEXT("EchoesAutosavePath="),
             AutosavePathOverride) &&
-        !AutosavePathOverride.IsEmpty())
+        !AutosavePathOverride.IsEmpty() && ActiveJourneySlot == 1)
     {
         return FPaths::ConvertRelativePathToFull(AutosavePathOverride);
     }
@@ -9881,330 +10420,111 @@ FString UEchoesSimulationSubsystem::GetActiveAutosavePath() const
                 LedgerBytes.GetData(),
                 LedgerBytes.Num() - static_cast<int32>(sizeof(uint32)));
             return FPaths::Combine(
-                FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+                GetJourneyCheckpointDirectory(),
                 FString::Printf(
                     TEXT("EchoesAutoSaveTheBrokenSun-%08X.bin"),
                     LedgerFingerprint));
         }
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveTheBrokenSun-InvalidLedger.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignPrologue)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveWhatTheLedgerKeeps.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignSevenAccounts)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveSevenAccountsOfRain.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignCityReserve)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveACityOnReserve.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignUnburiedRoad)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveTheUnburiedRoad.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignTermsOfContinuance)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveTermsOfContinuance.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignNamesWithoutBirths)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveNamesWithoutBirths.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignShapeOfSilence)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveTheShapeOfSilence.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignShapeBesideUs)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveTheShapeBesideUs.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignReserveAuthority)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveReserveAuthority.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignChoirAtLumeReach)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveChoirAtLumeReach.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignNoNeutralLedger)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveNoNeutralLedger.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignFutureThatWon)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveTheFutureThatWon.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignAssemblyOfTheMissing)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveAssemblyOfTheMissing.bin"));
     }
     if (SelectedOperation == EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
     {
         return FPaths::Combine(
-            FEchoesCampaignProgressStore::GetSaveGameDirectory(),
+            GetJourneyCheckpointDirectory(),
             TEXT("EchoesAutoSaveSeveralVoicesOneCommand.bin"));
     }
-    return GetAutosavePath();
+    return FPaths::Combine(GetJourneyCheckpointDirectory(), TEXT("EchoesAutoSave.bin"));
 }
 
-bool UEchoesSimulationSubsystem::AutosaveScenario(EEchoesAutosaveReason Reason, FString& OutFeedback)
+bool UEchoesSimulationSubsystem::AutosaveScenario(
+    EEchoesAutosaveReason Reason,
+    FString& OutFeedback)
 {
-    OutFeedback.Reset();
-    if (!bScenarioReady || !Simulation.IsValid())
-    {
-        OutFeedback = TEXT("[AUTOSAVE_SIM_NOT_READY] No active scenario can be saved.");
-        return false;
-    }
-    if (bStressScenario)
-    {
-        OutFeedback = TEXT("[AUTOSAVE_STRESS_DISABLED] Stress fixtures cannot write autosaves.");
-        return false;
-    }
-    if (bNetworkHumanOpponent)
-    {
-        OutFeedback = TEXT("[AUTOSAVE_NETWORK_DISABLED] Online authority state cannot write local autosaves.");
-        return false;
-    }
-
-    const std::vector<uint8> Snapshot = Simulation->SaveSnapshot();
-    if (Snapshot.empty() || Snapshot.size() > MAX_int32)
-    {
-        OutFeedback = TEXT("[AUTOSAVE_SNAPSHOT_INVALID] The deterministic snapshot could not be created.");
-        return false;
-    }
-    TArray<uint8> SnapshotBytes;
-    SnapshotBytes.Append(Snapshot.data(), static_cast<int32>(Snapshot.size()));
-    TArray<uint8> PersistedBytes = SnapshotBytes;
-
-    if (SelectedOperation == EEchoesOperationMode::CampaignTheBrokenSun)
-    {
-        FString EnvelopeError;
-        if (!BuildBrokenSunQuickSaveEnvelope(
-                CampaignProgress,
-                SnapshotBytes,
-                PendingBrokenSunResolution,
-                SelectedBrokenSunResolution,
-                bBrokenSunResolutionHoldStarted,
-                bBrokenSunResolutionContractFailed,
-                BrokenSunResolutionStartTick,
-                BrokenSunApproachAnchorId,
-                BrokenSunResolutionConduitId,
-                PersistedBytes,
-                EnvelopeError))
-        {
-            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
-            return false;
-        }
-    }
-    else if (SelectedOperation == EEchoesOperationMode::CampaignChoirAtLumeReach)
-    {
-        FString EnvelopeError;
-        if (!BuildChoirAtLumeReachQuickSaveEnvelope(
-                CampaignProgress,
-                SnapshotBytes,
-                PersistedBytes,
-                EnvelopeError))
-        {
-            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
-            return false;
-        }
-    }
-    else if (SelectedOperation == EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
-    {
-        FString EnvelopeError;
-        if (!BuildSeveralVoicesOneCommandQuickSaveEnvelope(
-                CampaignProgress,
-                SnapshotBytes,
-                bSeveralVoicesCrisisHoldStarted,
-                bSeveralVoicesCrisisContractFailed,
-                PersistedBytes,
-                EnvelopeError))
-        {
-            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
-            return false;
-        }
-    }
-    else if (SelectedOperation == EEchoesOperationMode::CampaignFutureThatWon)
-    {
-        FString EnvelopeError;
-        if (!BuildFutureThatWonQuickSaveEnvelope(
-                CampaignProgress,
-                SnapshotBytes,
-                PersistedBytes,
-                EnvelopeError))
-        {
-            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
-            return false;
-        }
-    }
-    else if (SelectedOperation == EEchoesOperationMode::CampaignAssemblyOfTheMissing)
-    {
-        FString EnvelopeError;
-        if (!BuildAssemblyOfTheMissingQuickSaveEnvelope(
-                CampaignProgress,
-                SnapshotBytes,
-                PersistedBytes,
-                EnvelopeError))
-        {
-            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
-            return false;
-        }
-    }
-    else if (SelectedOperation == EEchoesOperationMode::CampaignNoNeutralLedger)
-    {
-        FString EnvelopeError;
-        if (!BuildNoNeutralLedgerQuickSaveEnvelope(
-                CampaignProgress,
-                SnapshotBytes,
-                PersistedBytes,
-                EnvelopeError))
-        {
-            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *EnvelopeError);
-            return false;
-        }
-    }
-
-    if (UsesQuickSaveContainer(SelectedOperation))
-    {
-        uint64 CampaignBranchIdentity = 0;
-        FString BranchIdentityError;
-        if (!BuildQuickSaveBranchIdentity(
-                SelectedOperation,
-                CampaignProgress,
-                ActiveSkirmishSetup,
-                CampaignBranchIdentity,
-                BranchIdentityError))
-        {
-            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *BranchIdentityError);
-            return false;
-        }
-        TArray<uint8> ContainerBytes;
-        FString ContainerError;
-        if (!BuildQuickSaveContainer(
-                SelectedOperation,
-                LocalFaction,
-                CampaignBranchIdentity,
-                ActiveSkirmishSetup,
-                PersistedBytes,
-                ContainerBytes,
-                ContainerError))
-        {
-            OutFeedback = FString::Printf(TEXT("[AUTOSAVE_CONTAINER_FAILED] %s"), *ContainerError);
-            return false;
-        }
-        PersistedBytes = MoveTemp(ContainerBytes);
-    }
-
-    if (!TransformCampaignMapCheckpoint(true, SelectedOperation, CampaignProgress, PersistedBytes, OutFeedback)) return false;
-
-    const FString SavePath = GetActiveAutosavePath();
-    const FString SaveDirectory = FPaths::GetPath(SavePath);
-    const FString TemporaryPath = SavePath + TEXT(".tmp");
-    const FString BackupPath = SavePath + TEXT(".bak");
-    const FString BackupTemporaryPath = BackupPath + TEXT(".tmp");
-    IFileManager& Files = IFileManager::Get();
-    if (!Files.MakeDirectory(*SaveDirectory, true))
-    {
-        OutFeedback = TEXT("[AUTOSAVE_DIRECTORY_FAILED] The save directory could not be created.");
-        return false;
-    }
-    Files.Delete(*TemporaryPath, false, true, true);
-    if (!FFileHelper::SaveArrayToFile(PersistedBytes, *TemporaryPath))
-    {
-        OutFeedback = TEXT("[AUTOSAVE_WRITE_FAILED] The temporary autosave could not be written.");
-        return false;
-    }
-
-    uint64 ExpectedCampaignBranchIdentity = 0;
-    FString BranchIdentityError;
-    if (!BuildQuickSaveBranchIdentity(
-            SelectedOperation,
-            CampaignProgress,
-            ActiveSkirmishSetup,
-            ExpectedCampaignBranchIdentity,
-            BranchIdentityError))
-    {
-        Files.Delete(*TemporaryPath, false, true, true);
-        OutFeedback = FString::Printf(TEXT("[AUTOSAVE_LEDGER_BINDING_FAILED] %s"), *BranchIdentityError);
-        return false;
-    }
-
-    FString ValidateError;
-    if (!ValidateCheckpointFileOnDisk(TemporaryPath, ExpectedCampaignBranchIdentity, ValidateError))
-    {
-        Files.Delete(*TemporaryPath, false, true, true);
-        OutFeedback = FString::Printf(TEXT("[AUTOSAVE_VALIDATION_FAILED] %s"), *ValidateError);
-        return false;
-    }
-
-    if (Files.FileExists(*SavePath))
-    {
-        Files.Delete(*BackupTemporaryPath, false, true, true);
-        TArray<uint8> ExistingBytes;
-        if (FFileHelper::LoadFileToArray(ExistingBytes, *SavePath))
-        {
-            FFileHelper::SaveArrayToFile(ExistingBytes, *BackupTemporaryPath);
-            Files.Delete(*BackupPath, false, true, true);
-            Files.Move(*BackupPath, *BackupTemporaryPath, true, true, false, true);
-        }
-    }
-
-    Files.Delete(*SavePath, false, true, true);
-    if (!Files.Move(*SavePath, *TemporaryPath, true, true, false, true))
-    {
-        Files.Delete(*TemporaryPath, false, true, true);
-        OutFeedback = TEXT("[AUTOSAVE_COMMIT_FAILED] The verified autosave could not be committed.");
-        return false;
-    }
-
-    LastAutosavedTick = Simulation->CurrentTick();
-    LastAutosavedReason = Reason;
-    LastAutosavedPhase = GetCurrentOperationPhase();
-
-    UE_LOG(
-        LogEchoes,
-        Display,
-        TEXT("[ECHOES_AUTOSAVE] reason=%u operation=%u tick=%llu phase=%u path=%s"),
-        static_cast<uint8>(Reason),
-        static_cast<uint8>(SelectedOperation),
-        static_cast<unsigned long long>(LastAutosavedTick),
-        LastAutosavedPhase,
-        *SavePath);
-
-    OutFeedback = TEXT("[AUTOSAVE_SUCCESS]");
-    return true;
+    return QueueCheckpointSave(
+        EEchoesCheckpointWriteKind::Autosave,
+        Reason,
+        OutFeedback);
 }
-
 uint8 UEchoesSimulationSubsystem::GetCurrentOperationPhase() const
 {
     switch (SelectedOperation)
@@ -10413,23 +10733,132 @@ bool UEchoesSimulationSubsystem::GetMissionIdForOperation(
 
 void UEchoesSimulationSubsystem::CheckPhaseTransitionAutosave()
 {
-    if (bSuppressAutosave || !bScenarioReady || !Simulation.IsValid() || bStressScenario || bNetworkHumanOpponent || SelectedOperation == EEchoesOperationMode::Skirmish)
+    if (bSuppressAutosave || !bScenarioReady || !Simulation.IsValid() ||
+        bStressScenario || bNetworkHumanOpponent)
     {
         return;
     }
+
+    PollCheckpointSaves();
     const uint8 CurrentPhase = GetCurrentOperationPhase();
-    if (CurrentPhase != 0 && CurrentPhase != 0xFF && !IsOperationPhaseTerminal(SelectedOperation, CurrentPhase))
+    if (SelectedOperation != EEchoesOperationMode::Skirmish &&
+        CurrentPhase != 0 && CurrentPhase != 0xFF &&
+        CurrentPhase != LastAutosaveRequestedPhase)
     {
-        if (LastAutosavedPhase != 0xFF && CurrentPhase != LastAutosavedPhase)
+        FString AutosaveFeedback;
+        if (AutosaveScenario(
+                EEchoesAutosaveReason::PhaseTransition,
+                AutosaveFeedback))
         {
-            FString AutosaveFeedback;
-            AutosaveScenario(EEchoesAutosaveReason::PhaseTransition, AutosaveFeedback);
-        }
-        else if (LastAutosavedPhase == 0xFF)
-        {
-            LastAutosavedPhase = CurrentPhase;
+            return;
         }
     }
+
+    const uint64 CurrentTick = Simulation->CurrentTick();
+    if (CurrentTick >= LastAutosaveRequestedTick + AutosaveCadenceTicks)
+    {
+        FString AutosaveFeedback;
+        AutosaveScenario(
+            EEchoesAutosaveReason::TickCadence,
+            AutosaveFeedback);
+    }
+}
+
+struct UEchoesSimulationSubsystem::FRecoveryCheckpointInspection final
+{
+    uint8 Version = 0;
+    EEchoesOperationMode Operation = EEchoesOperationMode::Skirmish;
+    Faction LocalFaction = Faction::MeridianCompact;
+    uint64 BranchIdentity = 0;
+    uint32 ContainerCrc = 0;
+    TArray<uint8> Payload;
+    bool bRecoveredSkirmishSetup = false;
+    FEchoesSkirmishSetup SkirmishSetup =
+        FEchoesSkirmishSetupModel::DefaultSetup();
+};
+
+bool UEchoesSimulationSubsystem::InspectRecoveryCheckpointFile(
+    const FString& CandidatePath,
+    FRecoveryCheckpointInspection& OutInspection,
+    FString& OutError)
+{
+    OutInspection = FRecoveryCheckpointInspection{};
+    OutError.Reset();
+
+    TArray<uint8> DiskBytes;
+    if (!IFileManager::Get().FileExists(*CandidatePath) ||
+        !FFileHelper::LoadFileToArray(DiskBytes, *CandidatePath))
+    {
+        OutError = TEXT("file unavailable");
+        return false;
+    }
+
+    FEchoesCampaignMapCheckpointIdentity ClaimedMap;
+    TArray<uint8> MapPayload;
+    EEchoesCampaignMapCheckpointFailure MapFailure{};
+    const bool bMapEnvelope = FEchoesCampaignMapCheckpoint::Inspect(
+        DiskBytes, ClaimedMap, MapPayload, MapFailure);
+    if (!bMapEnvelope &&
+        MapFailure != EEchoesCampaignMapCheckpointFailure::Unbound)
+    {
+        OutError = TEXT("campaign map envelope is malformed");
+        return false;
+    }
+
+    const TArray<uint8>& ReplayEnvelope =
+        bMapEnvelope ? MapPayload : DiskBytes;
+    TArray<uint8> QuickSaveBytes;
+    echoes::sim::ReplayRecord ReplayPrefix;
+    if (FEchoesMatchReplayStore::ExtractCheckpointPayload(
+            ReplayEnvelope,
+            QuickSaveBytes,
+            ReplayPrefix,
+            OutError) == EEchoesCheckpointReplayBindingRead::Invalid)
+    {
+        return false;
+    }
+
+    if (!UEchoesSimulationSubsystem::InspectSaveContainer(
+            QuickSaveBytes,
+            OutInspection.Version,
+            OutInspection.Operation,
+            OutInspection.LocalFaction,
+            OutInspection.BranchIdentity,
+            OutInspection.ContainerCrc,
+            OutInspection.Payload,
+            OutError))
+    {
+        return false;
+    }
+
+    if (OutInspection.Operation != EEchoesOperationMode::Skirmish)
+    {
+        return true;
+    }
+
+    TArray<uint8> CanonicalPayload;
+    const EQuickSaveContainerRead ContainerRead = ExtractQuickSaveContainer(
+        OutInspection.Operation,
+        OutInspection.LocalFaction,
+        OutInspection.BranchIdentity,
+        false,
+        QuickSaveBytes,
+        CanonicalPayload,
+        OutInspection.bRecoveredSkirmishSetup,
+        OutInspection.SkirmishSetup,
+        OutError);
+    if (ContainerRead != EQuickSaveContainerRead::Wrapped ||
+        !OutInspection.bRecoveredSkirmishSetup ||
+        CanonicalPayload != OutInspection.Payload)
+    {
+        if (OutError.IsEmpty())
+        {
+            OutError = TEXT(
+                "[RECOVERY_SKIRMISH_SETUP_UNBOUND] The checkpoint does not carry a complete canonical skirmish setup.");
+        }
+        return false;
+    }
+    return true;
 }
 
 bool UEchoesSimulationSubsystem::CheckInterruptedSessionRecovery(
@@ -10439,124 +10868,147 @@ bool UEchoesSimulationSubsystem::CheckInterruptedSessionRecovery(
     OutCandidate = FEchoesRecoveryCandidate();
     OutFeedback.Reset();
 
-    const FString SaveDirectory = FEchoesCampaignProgressStore::GetSaveGameDirectory();
+    const FString SaveDirectory = GetJourneyCheckpointDirectory();
     IFileManager& Files = IFileManager::Get();
 
+    TArray<FString> DirectoryFiles;
+    Files.FindFiles(
+        DirectoryFiles,
+        *FPaths::Combine(SaveDirectory, TEXT("Echoes*Save*.bin*")),
+        true,
+        false);
     TArray<FString> FoundFiles;
-    Files.FindFiles(FoundFiles, *SaveDirectory, TEXT("bin"));
+    for (const FString& FileName : DirectoryFiles)
+    {
+        FString PrimaryFileName;
+        if (FileName.EndsWith(TEXT(".bin")))
+        {
+            PrimaryFileName = FileName;
+        }
+        else if (FileName.EndsWith(TEXT(".bin.bak.tmp")))
+        {
+            PrimaryFileName = FileName.LeftChop(8);
+        }
+        else if (FileName.EndsWith(TEXT(".bin.bak")))
+        {
+            PrimaryFileName = FileName.LeftChop(4);
+        }
+        if (!PrimaryFileName.IsEmpty() &&
+            (PrimaryFileName.StartsWith(TEXT("EchoesAutoSave")) ||
+             PrimaryFileName.StartsWith(TEXT("EchoesQuickSave"))))
+        {
+            FoundFiles.AddUnique(MoveTemp(PrimaryFileName));
+        }
+    }
 
     FDateTime NewestTimestamp = FDateTime::MinValue();
     bool bFoundCorruptPrimaryWithoutBackup = false;
 
     for (const FString& FileName : FoundFiles)
     {
-        if (FileName.EndsWith(TEXT(".bak")) || FileName.EndsWith(TEXT(".tmp")))
-        {
-            continue;
-        }
-        if (!FileName.StartsWith(TEXT("EchoesAutoSave")) && !FileName.StartsWith(TEXT("EchoesQuickSave")))
-        {
-            continue;
-        }
-
         const FString FilePath = FPaths::Combine(SaveDirectory, FileName);
         const FString BackupPath = FilePath + TEXT(".bak");
+        const FString StagedBackupPath = BackupPath + TEXT(".tmp");
 
-        TArray<uint8> FileBytes;
-        bool bReadSuccess = FFileHelper::LoadFileToArray(FileBytes, *FilePath);
-        bool bUsedBackup = false;
-
-        uint8 Version = 0;
-        EEchoesOperationMode OpMode = EEchoesOperationMode::Skirmish;
-        echoes::sim::Faction LocalFac = echoes::sim::Faction::MeridianCompact;
-        uint64 BranchIdentity = 0;
-        uint32 Checksum = 0;
-        TArray<uint8> Payload;
+        FRecoveryCheckpointInspection Inspection;
         FString ContainerErr;
-
-        bool bContainerValid = bReadSuccess && InspectSaveContainer(
-            FileBytes, Version, OpMode, LocalFac, BranchIdentity, Checksum, Payload, ContainerErr);
-
-        if (!bContainerValid)
+        const auto TryContainer = [&Inspection, &ContainerErr](
+                                      const FString& CandidatePath)
         {
-            if (Files.FileExists(*BackupPath))
-            {
-                TArray<uint8> BackupBytes;
-                if (FFileHelper::LoadFileToArray(BackupBytes, *BackupPath) &&
-                    InspectSaveContainer(BackupBytes, Version, OpMode, LocalFac, BranchIdentity, Checksum, Payload, ContainerErr))
-                {
-                    bContainerValid = true;
-                    bUsedBackup = true;
-                }
-            }
-            if (!bContainerValid)
+            return InspectRecoveryCheckpointFile(
+                CandidatePath, Inspection, ContainerErr);
+        };
+
+        FString SelectedSourcePath;
+        if (TryContainer(FilePath))
+        {
+            SelectedSourcePath = FilePath;
+        }
+        else if (TryContainer(StagedBackupPath))
+        {
+            // A validated staged prior generation is newer than the retained
+            // backup when final rotation failed, matching normal load order.
+            SelectedSourcePath = StagedBackupPath;
+        }
+        else if (TryContainer(BackupPath))
+        {
+            SelectedSourcePath = BackupPath;
+        }
+        else
+        {
+            if (Files.FileExists(*FilePath) || Files.FileExists(*BackupPath) ||
+                Files.FileExists(*StagedBackupPath))
             {
                 bFoundCorruptPrimaryWithoutBackup = true;
-                continue;
             }
-        }
-
-        if (OpMode == EEchoesOperationMode::Skirmish)
-        {
             continue;
         }
 
         uint64 ExpectedBranchIdentity = 0;
         FString BranchErr;
-        FEchoesSkirmishSetup DummySetup;
-        if (!BuildQuickSaveBranchIdentity(OpMode, CampaignProgress, DummySetup, ExpectedBranchIdentity, BranchErr))
+        const FEchoesSkirmishSetup BranchSetup =
+            Inspection.Operation == EEchoesOperationMode::Skirmish
+            ? Inspection.SkirmishSetup
+            : FEchoesSkirmishSetupModel::DefaultSetup();
+        if (!BuildQuickSaveBranchIdentity(
+                Inspection.Operation,
+                CampaignProgress,
+                BranchSetup,
+                ExpectedBranchIdentity,
+                BranchErr))
         {
             continue;
         }
-        if (BranchIdentity != ExpectedBranchIdentity)
+        if (Inspection.BranchIdentity != ExpectedBranchIdentity)
         {
             continue;
         }
 
         EEchoesCampaignMissionId MissionId = EEchoesCampaignMissionId::WhatTheLedgerKeeps;
-        if (GetMissionIdForOperation(OpMode, MissionId) && CampaignProgress.FindDecision(MissionId) != nullptr)
+        if (GetMissionIdForOperation(Inspection.Operation, MissionId) &&
+            CampaignProgress.FindDecision(MissionId) != nullptr)
         {
             continue;
         }
 
         TArray<uint8> SnapshotBytes;
-        const TArray<uint8>* SnapshotPayload = &Payload;
+        const TArray<uint8>* SnapshotPayload = &Inspection.Payload;
 
         bool bUnpacked = true;
-        if (OpMode == EEchoesOperationMode::CampaignTheBrokenSun)
+        if (Inspection.Operation == EEchoesOperationMode::CampaignTheBrokenSun)
         {
             EEchoesFinalResolution PendingRes, SelRes;
             bool bHoldStarted, bContractFailed;
             uint64 StartTick;
             EntityId AppId, ConId;
             bUnpacked = ExtractBrokenSunQuickSaveSnapshot(
-                CampaignProgress, Payload, PendingRes, SelRes, bHoldStarted, bContractFailed, StartTick, AppId, ConId, SnapshotBytes, ContainerErr);
+                CampaignProgress, Inspection.Payload, PendingRes, SelRes, bHoldStarted, bContractFailed, StartTick, AppId, ConId, SnapshotBytes, ContainerErr);
             SnapshotPayload = &SnapshotBytes;
         }
-        else if (OpMode == EEchoesOperationMode::CampaignChoirAtLumeReach)
+        else if (Inspection.Operation == EEchoesOperationMode::CampaignChoirAtLumeReach)
         {
-            bUnpacked = ExtractChoirAtLumeReachQuickSaveSnapshot(CampaignProgress, Payload, SnapshotBytes, ContainerErr);
+            bUnpacked = ExtractChoirAtLumeReachQuickSaveSnapshot(CampaignProgress, Inspection.Payload, SnapshotBytes, ContainerErr);
             SnapshotPayload = &SnapshotBytes;
         }
-        else if (OpMode == EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
+        else if (Inspection.Operation == EEchoesOperationMode::CampaignSeveralVoicesOneCommand)
         {
             bool bCrisisHold, bCrisisFailed;
-            bUnpacked = ExtractSeveralVoicesOneCommandQuickSaveSnapshot(CampaignProgress, Payload, bCrisisHold, bCrisisFailed, SnapshotBytes, ContainerErr);
+            bUnpacked = ExtractSeveralVoicesOneCommandQuickSaveSnapshot(CampaignProgress, Inspection.Payload, bCrisisHold, bCrisisFailed, SnapshotBytes, ContainerErr);
             SnapshotPayload = &SnapshotBytes;
         }
-        else if (OpMode == EEchoesOperationMode::CampaignFutureThatWon)
+        else if (Inspection.Operation == EEchoesOperationMode::CampaignFutureThatWon)
         {
-            bUnpacked = ExtractFutureThatWonQuickSaveSnapshot(CampaignProgress, Payload, SnapshotBytes, ContainerErr);
+            bUnpacked = ExtractFutureThatWonQuickSaveSnapshot(CampaignProgress, Inspection.Payload, SnapshotBytes, ContainerErr);
             SnapshotPayload = &SnapshotBytes;
         }
-        else if (OpMode == EEchoesOperationMode::CampaignAssemblyOfTheMissing)
+        else if (Inspection.Operation == EEchoesOperationMode::CampaignAssemblyOfTheMissing)
         {
-            bUnpacked = ExtractAssemblyOfTheMissingQuickSaveSnapshot(CampaignProgress, Payload, SnapshotBytes, ContainerErr);
+            bUnpacked = ExtractAssemblyOfTheMissingQuickSaveSnapshot(CampaignProgress, Inspection.Payload, SnapshotBytes, ContainerErr);
             SnapshotPayload = &SnapshotBytes;
         }
-        else if (OpMode == EEchoesOperationMode::CampaignNoNeutralLedger)
+        else if (Inspection.Operation == EEchoesOperationMode::CampaignNoNeutralLedger)
         {
-            bUnpacked = ExtractNoNeutralLedgerQuickSaveSnapshot(CampaignProgress, Payload, SnapshotBytes, ContainerErr);
+            bUnpacked = ExtractNoNeutralLedgerQuickSaveSnapshot(CampaignProgress, Inspection.Payload, SnapshotBytes, ContainerErr);
             SnapshotPayload = &SnapshotBytes;
         }
 
@@ -10567,35 +11019,56 @@ bool UEchoesSimulationSubsystem::CheckInterruptedSessionRecovery(
 
         std::string SimErr;
         std::optional<echoes::sim::Simulation> TempSim = echoes::sim::Simulation::LoadSnapshot(
-            std::span<const uint8>(SnapshotPayload->GetData(), static_cast<size_t>(SnapshotPayload->Num())), &SimErr);
+            std::span<const uint8>(SnapshotPayload->GetData(), static_cast<size_t>(SnapshotPayload->Num())), &SimErr, OperationHostilityMasks(Inspection.Operation));
         if (!TempSim.has_value())
         {
             continue;
         }
+        if (Inspection.Operation == EEchoesOperationMode::Skirmish &&
+            !ValidateSkirmishSnapshotBinding(
+                *TempSim, Inspection.SkirmishSetup, ContainerErr))
+        {
+            continue;
+        }
+        if (Inspection.Operation == EEchoesOperationMode::Skirmish &&
+            TempSim->Outcome() != echoes::sim::MatchOutcome::Ongoing)
+        {
+            // Finished skirmishes retain ordinary load/replay availability,
+            // but have no uncommitted journey progress to resume at startup.
+            continue;
+        }
 
-        const FDateTime FileTimestamp = Files.GetTimeStamp(bUsedBackup ? *BackupPath : *FilePath);
+        const FDateTime FileTimestamp = Files.GetTimeStamp(*SelectedSourcePath);
         if (FileTimestamp > NewestTimestamp)
         {
             NewestTimestamp = FileTimestamp;
             OutCandidate.bAvailable = true;
-            OutCandidate.OperationMode = OpMode;
-            OutCandidate.MissionName = GetOperationDisplayName(OpMode);
+            OutCandidate.OperationMode = Inspection.Operation;
+            OutCandidate.MissionName = GetOperationDisplayName(Inspection.Operation);
             OutCandidate.MissionId = MissionId;
             OutCandidate.SimulationTick = TempSim->CurrentTick();
             OutCandidate.StateChecksum = TempSim->StateChecksum();
             OutCandidate.SaveTimestamp = FileTimestamp;
-            OutCandidate.SourcePath = bUsedBackup ? BackupPath : FilePath;
-            OutCandidate.bRecoveredFromBackup = bUsedBackup;
-            OutCandidate.ContainerCrc = Checksum;
+            OutCandidate.SourcePath = SelectedSourcePath;
+            OutCandidate.bRecoveredFromBackup =
+                SelectedSourcePath != FilePath;
+            OutCandidate.ContainerCrc = Inspection.ContainerCrc;
             OutCandidate.HonestLimitationNotice = TEXT("CRC confirms uncorrupted disk storage; it is not cryptographic authentication");
             OutCandidate.RecoveryStatusText = FString::Printf(
-                TEXT("Interrupted session found: %s — %s (Tick %llu, %s%s). Container CRC-32 (%08X) verified; fail-closed container bound to active campaign branch. (Note: %s.)"),
+                TEXT("Interrupted session found: %s — %s (Tick %llu, %s%s). Container CRC-32 (%08X) verified; fail-closed container bound to %s. (Note: %s.)"),
                 *OutCandidate.MissionName,
                 *OutCandidate.PhaseName,
                 static_cast<unsigned long long>(OutCandidate.SimulationTick),
-                bUsedBackup ? TEXT("recovered from backup, ") : TEXT(""),
+                SelectedSourcePath == StagedBackupPath
+                    ? TEXT("recovered from staged prior generation, ")
+                : SelectedSourcePath == BackupPath
+                    ? TEXT("recovered from backup, ")
+                    : TEXT(""),
                 *FileTimestamp.ToString(TEXT("%Y-%m-%d %H:%M:%S")),
-                Checksum,
+                Inspection.ContainerCrc,
+                Inspection.Operation == EEchoesOperationMode::Skirmish
+                    ? TEXT("its serialized skirmish setup")
+                    : TEXT("the active campaign branch"),
                 *OutCandidate.HonestLimitationNotice);
         }
     }
@@ -10625,6 +11098,49 @@ bool UEchoesSimulationSubsystem::RecoverInterruptedSession(FString& OutFeedback)
     return RecoverInterruptedSession(Candidate, OutFeedback);
 }
 
+namespace
+{
+FString GetRecoveryPrimaryPath(const FString& SourcePath)
+{
+    if (SourcePath.EndsWith(TEXT(".bak.tmp")))
+    {
+        return SourcePath.LeftChop(8);
+    }
+    if (SourcePath.EndsWith(TEXT(".bak")))
+    {
+        return SourcePath.LeftChop(4);
+    }
+    return SourcePath;
+}
+
+bool IsCurrentJourneyRecoveryCandidate(const UEchoesSimulationSubsystem& Bridge,
+    const FEchoesRecoveryCandidate& Candidate, FString& OutFeedback)
+{
+    IPlatformFile& PlatformFiles = FPlatformFileManager::Get().GetPlatformFile();
+    if (PlatformFiles.IsSymlink(*Candidate.SourcePath) == ESymlinkResult::Symlink ||
+        PlatformFiles.IsSymlink(*Bridge.GetJourneyCheckpointDirectory()) == ESymlinkResult::Symlink)
+    {
+        OutFeedback = TEXT("[RECOVERY_PATH_INVALID] Recovery cannot follow a linked file or journey directory.");
+        return false;
+    }
+    FEchoesRecoveryCandidate Current;
+    FString ScanFeedback;
+    if (!Bridge.CheckInterruptedSessionRecovery(Current, ScanFeedback) ||
+        !Candidate.bAvailable || !Current.bAvailable ||
+        Candidate.SourcePath != Current.SourcePath ||
+        Candidate.OperationMode != Current.OperationMode ||
+        Candidate.SimulationTick != Current.SimulationTick ||
+        Candidate.StateChecksum != Current.StateChecksum ||
+        Candidate.ContainerCrc != Current.ContainerCrc ||
+        Candidate.bRecoveredFromBackup != Current.bRecoveredFromBackup)
+    {
+        OutFeedback = TEXT("[RECOVERY_CANDIDATE_STALE] Recovery changed or belongs to another journey. Scan this slot again.");
+        return false;
+    }
+    return true;
+}
+}
+
 bool UEchoesSimulationSubsystem::RecoverInterruptedSession(
     const FEchoesRecoveryCandidate& Candidate,
     FString& OutFeedback)
@@ -10635,6 +11151,7 @@ bool UEchoesSimulationSubsystem::RecoverInterruptedSession(
         OutFeedback = TEXT("[RECOVERY_CANDIDATE_INVALID] No valid recovery candidate.");
         return false;
     }
+    if (!IsCurrentJourneyRecoveryCandidate(*this, Candidate, OutFeedback)) return false;
     if (!IFileManager::Get().FileExists(*Candidate.SourcePath))
     {
         OutFeedback = TEXT("[RECOVERY_FILE_NOT_FOUND] Candidate checkpoint file no longer exists.");
@@ -10643,7 +11160,45 @@ bool UEchoesSimulationSubsystem::RecoverInterruptedSession(
 
     TGuardValue<bool> SuppressAutosaveGuard(bSuppressAutosave, true);
 
-    if (SelectedOperation != Candidate.OperationMode || !bScenarioReady)
+    if (Candidate.OperationMode == EEchoesOperationMode::Skirmish)
+    {
+        FRecoveryCheckpointInspection Inspection;
+        FString InspectionError;
+        if (!InspectRecoveryCheckpointFile(
+                Candidate.SourcePath, Inspection, InspectionError) ||
+            Inspection.Operation != EEchoesOperationMode::Skirmish ||
+            !Inspection.bRecoveredSkirmishSetup)
+        {
+            OutFeedback = FString::Printf(
+                TEXT("[RECOVERY_SKIRMISH_SETUP_INVALID] %s"),
+                InspectionError.IsEmpty()
+                    ? TEXT("The candidate does not carry a valid serialized skirmish setup.")
+                    : *InspectionError);
+            return false;
+        }
+
+        const bool bRequiresScenarioInitialization =
+            SelectedOperation != EEchoesOperationMode::Skirmish ||
+            !bScenarioReady || !Simulation.IsValid() ||
+            ActiveSkirmishSetup != Inspection.SkirmishSetup;
+        if (bRequiresScenarioInitialization)
+        {
+            if (bScenarioReady || Simulation.IsValid())
+            {
+                StopPrototypeScenario();
+            }
+            SelectedOperation = EEchoesOperationMode::Skirmish;
+            ActiveSkirmishSetup = Inspection.SkirmishSetup;
+            LocalFaction = Inspection.SkirmishSetup.LocalFaction;
+            if (!StartScenario(false))
+            {
+                OutFeedback = TEXT(
+                    "[RECOVERY_INIT_FAILED] Failed to initialize the serialized skirmish environment.");
+                return false;
+            }
+        }
+    }
+    else if (SelectedOperation != Candidate.OperationMode || !bScenarioReady)
     {
         SelectedOperation = Candidate.OperationMode;
         if (!StartScenario(false))
@@ -10653,9 +11208,8 @@ bool UEchoesSimulationSubsystem::RecoverInterruptedSession(
         }
     }
 
-    const FString TargetPrimaryPath = Candidate.SourcePath.EndsWith(TEXT(".bak"))
-        ? Candidate.SourcePath.LeftChop(4)
-        : Candidate.SourcePath;
+    const FString TargetPrimaryPath = GetRecoveryPrimaryPath(
+        Candidate.SourcePath);
 
     FString LoadFeedback;
     if (!LoadScenarioFromPath(TargetPrimaryPath, LoadFeedback))
@@ -10686,10 +11240,55 @@ bool UEchoesSimulationSubsystem::DismissInterruptedSession(
         OutFeedback = TEXT("[RECOVERY_DISMISS_FAILED] Invalid candidate.");
         return false;
     }
+    // Dismissal is a persistence synchronization boundary. It cannot race a
+    // worker that would recreate one of the candidate's generations.
+    DrainCheckpointSaves();
+    if (!IsCurrentJourneyRecoveryCandidate(*this, Candidate, OutFeedback))
+    {
+        return false;
+    }
     IFileManager& Files = IFileManager::Get();
-    Files.Delete(*Candidate.SourcePath, false, true, true);
-    Files.Delete(*(Candidate.SourcePath + TEXT(".bak")), false, true, true);
-    Files.Delete(*(Candidate.SourcePath + TEXT(".tmp")), false, true, true);
+    const FString PrimaryPath = GetRecoveryPrimaryPath(Candidate.SourcePath);
+    const TArray<FString> GenerationPaths = {
+        PrimaryPath,
+        PrimaryPath + TEXT(".tmp"),
+        PrimaryPath + TEXT(".bak"),
+        PrimaryPath + TEXT(".bak.tmp")};
+    TArray<FString> FailedPaths;
+    for (const FString& Path : GenerationPaths)
+    {
+        if (!Files.FileExists(*Path))
+        {
+            if (Files.DirectoryExists(*Path))
+            {
+                FailedPaths.Add(Path);
+            }
+            continue;
+        }
+        if (!Files.Delete(*Path, false, true, true) ||
+            Files.FileExists(*Path))
+        {
+            FailedPaths.Add(Path);
+        }
+    }
+    if (!FailedPaths.IsEmpty())
+    {
+        OutFeedback = FString::Printf(
+            TEXT("[RECOVERY_DISMISS_FAILED] Could not remove checkpoint generations: %s"),
+            *FString::Join(FailedPaths, TEXT(", ")));
+        return false;
+    }
+
+    FEchoesRecoveryCandidate Remaining;
+    FString RescanFeedback;
+    if (CheckInterruptedSessionRecovery(Remaining, RescanFeedback) &&
+        Remaining.bAvailable &&
+        GetRecoveryPrimaryPath(Remaining.SourcePath) == PrimaryPath)
+    {
+        OutFeedback = TEXT(
+            "[RECOVERY_DISMISS_FAILED] The dismissed checkpoint remained discoverable after cleanup.");
+        return false;
+    }
     OutFeedback = TEXT("[RECOVERY_DISMISSED]");
     return true;
 }
@@ -10758,11 +11357,12 @@ bool UEchoesSimulationSubsystem::ForfeitNetworkPlayer(
     bSimulationPaused = true;
     bMatchResultReported = true;
     FixedTimeAccumulator = 0.0;
+    BeginReplayArchiveForCurrentResult();
     OutFeedback = TEXT("Opponent reconnect grace expired; player 1 forfeited.");
     UE_LOG(
         LogEchoes,
         Display,
-        TEXT("[ECHOES_NETWORK_FORFEIT_RECORDED] player=%u outcome=%u tick=%llu snapshotState=true replayExport=false"),
+        TEXT("[ECHOES_NETWORK_FORFEIT_RECORDED] player=%u outcome=%u tick=%llu snapshotState=true replayExport=true"),
         ForfeitingPlayer,
         static_cast<uint8>(Simulation->Outcome()),
         static_cast<unsigned long long>(Simulation->CurrentTick()));
@@ -15097,8 +15697,15 @@ bool UEchoesSimulationSubsystem::ValidateSustainedStressContract(
 
 void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 {
+    PollCheckpointSaves();
+    PollReplayArchive();
     ReclaimFinishedDestructionViews();
     ReclaimFinishedCombatEffectViews();
+    if (TickReplayPlayback(DeltaTime))
+    {
+        return;
+    }
+    const bool bMatchResultWasReported = bMatchResultReported;
     if (!bScenarioReady || !Simulation.IsValid() || bSimulationPaused ||
         Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
     {
@@ -16077,6 +16684,23 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                             : *CampaignFeedback,
                         static_cast<unsigned long long>(
                             Plan.StabilityWindowTicks));
+                    if (RestorationPhase == EEchoesFutureThatWonPhase::Failed)
+                    {
+                        const FEchoesFutureThatWonMissionFacts Facts =
+                            GatherFutureThatWonFacts();
+                        UE_LOG(
+                            LogEchoes, Display,
+                            TEXT("[ECHOES_FUTURE_THAT_WON_FAILURE_FACTS] reason=%s core=%s oruun=%s verifier=%s well=%s interfaces=%s protocolBound=%s protocolConflict=%s stabilityHeld=%s"),
+                            *GetMissionFailureReasonCode(),
+                            Facts.bLocalCoreIntact ? TEXT("true") : TEXT("false"),
+                            Facts.bOruunIntact ? TEXT("true") : TEXT("false"),
+                            Facts.bVerifierIntact ? TEXT("true") : TEXT("false"),
+                            Facts.bFutureWellIntact ? TEXT("true") : TEXT("false"),
+                            Facts.bPublicInterfacesIntact ? TEXT("true") : TEXT("false"),
+                            Facts.bRecordedProtocolBound ? TEXT("true") : TEXT("false"),
+                            Facts.bConflictingProtocolBound ? TEXT("true") : TEXT("false"),
+                            Facts.bStabilityWindowHeld ? TEXT("true") : TEXT("false"));
+                    }
                 }
             }
             else if (SelectedOperation ==
@@ -16479,6 +17103,10 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
             }
         }
     }
+    if (!bMatchResultWasReported && bMatchResultReported)
+    {
+        BeginReplayArchiveForCurrentResult();
+    }
 }
 
 void UEchoesSimulationSubsystem::QueueOpponentCommands()
@@ -16490,13 +17118,17 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
         return;
     }
 
-    const bool bAssistedDifficulty =
-        SelectedOperation == EEchoesOperationMode::Skirmish &&
-        ActiveSkirmishSetup.Difficulty == EEchoesSkirmishDifficulty::Assisted;
-    const uint64 AiCadence = bAssistedDifficulty
-        ? static_cast<uint64>(Simulation->Config().ticksPerSecond * 3 / 2)
-        : static_cast<uint64>(Simulation->Config().ticksPerSecond);
-    if (Simulation->CurrentTick() % AiCadence != 0)
+    const bool bSkirmishDifficultyPolicy =
+        SelectedOperation == EEchoesOperationMode::Skirmish;
+    const FEchoesAiDifficultyPolicy DifficultyPolicy =
+        FEchoesAiDifficultyPolicy::For(ActiveSkirmishSetup.Difficulty);
+    const bool bPlanningWindowOpen = bSkirmishDifficultyPolicy
+        ? FEchoesAiDifficultyController::IsGroupCommandTick(
+              Simulation->CurrentTick(),
+              Simulation->Config().ticksPerSecond,
+              DifficultyPolicy.GroupCommandsPerSecond)
+        : Simulation->CurrentTick() % Simulation->Config().ticksPerSecond == 0;
+    if (!bPlanningWindowOpen)
     {
         return;
     }
@@ -16534,31 +17166,45 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
             : echoes::sim::AiPersonality::Adaptive;
     const TCHAR* AiProfile =
         FEchoesSkirmishSetupModel::AiDisplayName(AiPersonality);
-    const std::vector<echoes::sim::Command> Commands =
-        echoes::sim::Simulation::GenerateAiCommands(
+    FEchoesAiDifficultyPlan DifficultyPlan;
+    std::vector<echoes::sim::Command> Commands;
+    if (bSkirmishDifficultyPolicy)
+    {
+        DifficultyPlan = FEchoesAiDifficultyController::BuildPlan(
+            *PlayerView,
+            AiPersonality,
+            DifficultyPolicy,
+            Simulation->PendingCommands());
+        Commands = MoveTemp(DifficultyPlan.Commands);
+        if (!bLoggedAssistedAiTelemetry)
+        {
+            UE_LOG(
+                LogEchoes,
+                Display,
+                TEXT("[ECHOES_AI_DIFFICULTY_ACTIVE] tier=%s reactionTicks=%llu reactionSeconds=%.2f strategicReviewTicks=%llu groupCommandsPerRollingSecond=%d fairInformation=true equalEconomy=true equalCombatRules=true"),
+                FEchoesSkirmishSetupModel::DifficultyDisplayName(
+                    ActiveSkirmishSetup.Difficulty),
+                static_cast<unsigned long long>(
+                    DifficultyPolicy.ReactionTicks),
+                static_cast<double>(DifficultyPolicy.ReactionTicks) /
+                    static_cast<double>(Simulation->Config().ticksPerSecond),
+                static_cast<unsigned long long>(
+                    DifficultyPolicy.StrategicReviewTicks),
+                DifficultyPolicy.GroupCommandsPerSecond);
+            bLoggedAssistedAiTelemetry = true;
+        }
+    }
+    else
+    {
+        Commands = echoes::sim::Simulation::GenerateAiCommands(
             *PlayerView,
             AiPersonality);
-    int32 CommandsQueued = 0;
-    const int32 MaxCommandsAllowed = bAssistedDifficulty ? 1 : MAX_int32;
+    }
     for (const echoes::sim::Command& Command : Commands)
     {
-        if (CommandsQueued >= MaxCommandsAllowed)
-        {
-            break;
-        }
         std::string Rejection;
         if (Simulation->QueueCommand(Command, &Rejection))
         {
-            ++CommandsQueued;
-            if (bAssistedDifficulty && !bLoggedAssistedAiTelemetry)
-            {
-                UE_LOG(
-                    LogEchoes,
-                    Display,
-                    TEXT("[ECHOES_AI_ASSISTED_ACTIVE] reactionCadenceTicks=%llu reactionDelaySeconds=1.5 apmCeiling=30 combatDamageMultiplier=0.80 fairInformation=true"),
-                    static_cast<unsigned long long>(AiCadence));
-                bLoggedAssistedAiTelemetry = true;
-            }
             if (!bLoggedAiExpansion &&
                 Command.type == echoes::sim::CommandType::Build)
             {
@@ -17219,7 +17865,9 @@ bool UEchoesSimulationSubsystem::IssueResearchCommand(
         return false;
     }
     echoes::sim::Command Command{};
-    Command.executeTick = ResolvePlayerExecuteTick(0);
+    // Match movement/build/ability scheduling so increasing local sequences
+    // cannot target an earlier tick than an already queued order.
+    Command.executeTick = ResolvePlayerExecuteTick(1);
     Command.player = LocalPlayerId;
     Command.sequence = NextPlayerCommandSequence++;
     Command.type = echoes::sim::CommandType::Research;
@@ -17458,6 +18106,11 @@ bool UEchoesSimulationSubsystem::QueuePlayerCommand(
     FString& OutFeedback)
 {
     OutFeedback.Reset();
+    if (bReplayPlaybackActive)
+    {
+        OutFeedback = TEXT("[REPLAY_READ_ONLY] Replay playback does not accept commands.");
+        return false;
+    }
     if (!Simulation.IsValid() || !bScenarioReady)
     {
         OutFeedback = TEXT("[SIM_NOT_READY] The deterministic simulation is unavailable.");
@@ -17868,8 +18521,7 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             return true;
         case CommandType::Attack:
             if (Actor.attackDamage <= 0 || Target == nullptr ||
-                Target->owner == echoes::sim::kNeutralPlayer ||
-                Target->owner == LocalPlayerId)
+                !Simulation->Config().IsHostile(LocalPlayerId, Target->owner))
             {
                 OutFeedback = TEXT("[ATTACK_INVALID] The actor or target cannot be used for this attack.");
                 return false;
@@ -17925,10 +18577,11 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             }
             if (Actor.type != EntityType::Worker || Target == nullptr ||
                 Target->type != EntityType::FutureWell ||
+                Target->wellProtocolTicks > 0 ||
                 (Target->wellChoice != FutureWellChoice::Dormant &&
                  !(Target->wellChoice == FutureWellChoice::Preserve &&
                    WellChoice == FutureWellChoice::Preserve &&
-                   Target->owner != Actor.owner)) ||
+                   Simulation->Config().IsHostile(Actor.owner, Target->owner))) ||
                 WellChoice == FutureWellChoice::Dormant)
             {
                 OutFeedback = TEXT("[WELL_INVALID] Choose a protocol at a dormant Well, or Preserve to capture an opposing preserved Well. Collapsed Wells cannot be reused.");
@@ -19371,8 +20024,7 @@ void UEchoesSimulationSubsystem::UpdateThreatMusicPresentation(
     }
     for (const echoes::sim::Entity* Entity : VisibleEntities)
     {
-        if (Entity != nullptr && Entity->owner != LocalPlayerId &&
-            Entity->owner != echoes::sim::kNeutralPlayer &&
+        if (Entity != nullptr && Simulation->Config().IsHostile(LocalPlayerId, Entity->owner) &&
             Entity->type != echoes::sim::EntityType::ResourceNode &&
             Entity->type != echoes::sim::EntityType::FutureWell)
         {
@@ -19503,7 +20155,9 @@ void UEchoesSimulationSubsystem::EmitRuntimeMemoryPoolTelemetry(
 
 bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
 {
-    if (!Simulation.IsValid() || GetWorld() == nullptr)
+    const echoes::sim::Simulation* PresentedSimulation =
+        GetPresentedSimulation();
+    if (PresentedSimulation == nullptr || GetWorld() == nullptr)
     {
         return false;
     }
@@ -19526,11 +20180,26 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
     bool bAllVisibleViewsReady = true;
     TSet<uint32> LiveEntityIds;
     TArray<const echoes::sim::Entity*> VisibleEntities;
-    LiveEntityIds.Reserve(static_cast<int32>(Simulation->Entities().size()));
-    VisibleEntities.Reserve(static_cast<int32>(Simulation->Entities().size()));
-    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    std::optional<echoes::sim::PlayerView> ReplayPlayerView;
+    const std::vector<echoes::sim::Entity>* PresentedEntities =
+        &PresentedSimulation->Entities();
+    if (bReplayPlaybackActive &&
+        ReplayPlayback.GetPerspective() !=
+            EEchoesReplayPerspective::OmniscientObserver)
     {
-        if (Simulation->IsEntityVisibleTo(LocalPlayerId, Entity.id))
+        ReplayPlayerView = ReplayPlayback.GetPlayerView();
+        if (!ReplayPlayerView.has_value())
+        {
+            return false;
+        }
+        PresentedEntities = &ReplayPlayerView->Entities();
+    }
+    LiveEntityIds.Reserve(static_cast<int32>(PresentedEntities->size()));
+    VisibleEntities.Reserve(static_cast<int32>(PresentedEntities->size()));
+    for (const echoes::sim::Entity& Entity : *PresentedEntities)
+    {
+        if (bReplayPlaybackActive ||
+            PresentedSimulation->IsEntityVisibleTo(LocalPlayerId, Entity.id))
         {
             LiveEntityIds.Add(Entity.id);
             VisibleEntities.Add(&Entity);
@@ -19558,7 +20227,7 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
         {
             const bool bAuthoritativelyRemoved =
                 !bTeleportNewViews &&
-                Simulation->FindEntity(RemovedId) == nullptr &&
+                PresentedSimulation->FindEntity(RemovedId) == nullptr &&
                 View->GetEntityType() != echoes::sim::EntityType::ResourceNode &&
                 View->GetEntityType() != echoes::sim::EntityType::FutureWell &&
                 !View->IsTemporaryMineralCover();
@@ -19627,42 +20296,56 @@ bool UEchoesSimulationSubsystem::SyncEntityViews(bool bTeleportNewViews)
             Binding.View->GetOwnedMIDCreationCount() - MIDCountBefore;
     }
 
-    for (const FRemovedPresentation& Presentation : RemovedPresentations)
+    if (!bReplayPlaybackActive)
     {
-        EmitDestructionPresentation(
-            Presentation.EntityId,
-            Presentation.WorldLocation,
-            Presentation.Faction,
-            Presentation.Type);
-        const bool bOwnedStructureLost =
-            Presentation.Owner == LocalPlayerId &&
-            (Presentation.Type == echoes::sim::EntityType::CommandCore ||
-             Presentation.Type == echoes::sim::EntityType::Dropoff ||
-             Presentation.Type == echoes::sim::EntityType::Barracks ||
-             Presentation.Type == echoes::sim::EntityType::UtilityStructure);
-        if (bOwnedStructureLost && GetWorld() != nullptr)
+        for (const FRemovedPresentation& Presentation : RemovedPresentations)
         {
-            if (UEchoesInterfaceAudioSubsystem* InterfaceAudio =
-                    GetWorld()->GetSubsystem<UEchoesInterfaceAudioSubsystem>())
+            EmitDestructionPresentation(
+                Presentation.EntityId,
+                Presentation.WorldLocation,
+                Presentation.Faction,
+                Presentation.Type);
+            const bool bOwnedStructureLost =
+                Presentation.Owner == LocalPlayerId &&
+                (Presentation.Type == echoes::sim::EntityType::CommandCore ||
+                 Presentation.Type == echoes::sim::EntityType::Dropoff ||
+                 Presentation.Type == echoes::sim::EntityType::Barracks ||
+                 Presentation.Type == echoes::sim::EntityType::UtilityStructure);
+            if (bOwnedStructureLost && GetWorld() != nullptr)
             {
-                InterfaceAudio->PlayAlert(EEchoesAlertCue::StructureLost);
+                if (UEchoesInterfaceAudioSubsystem* InterfaceAudio =
+                        GetWorld()->GetSubsystem<UEchoesInterfaceAudioSubsystem>())
+                {
+                    InterfaceAudio->PlayAlert(EEchoesAlertCue::StructureLost);
+                }
             }
         }
+        UpdateAlertPresentation();
+        UpdateGameplayAudioPresentation(VisibleEntities);
+        UpdateNarrativeDispatch();
+        UpdateThreatMusicPresentation(VisibleEntities);
     }
-    UpdateAlertPresentation();
-    UpdateGameplayAudioPresentation(VisibleEntities);
-    UpdateNarrativeDispatch();
-    UpdateThreatMusicPresentation(VisibleEntities);
     return bAllVisibleViewsReady;
 }
 
 bool UEchoesSimulationSubsystem::SpawnFogView()
 {
-    if (!Simulation.IsValid() || GetWorld() == nullptr)
+    const echoes::sim::Simulation* PresentedSimulation =
+        GetPresentedSimulation();
+    if (PresentedSimulation == nullptr || GetWorld() == nullptr)
     {
         return false;
     }
     DestroyFogView();
+    if (bReplayPlaybackActive &&
+        ReplayPlayback.GetPerspective() ==
+            EEchoesReplayPerspective::OmniscientObserver)
+    {
+        return true;
+    }
+    const uint8 PresentedPlayer = bReplayPlaybackActive
+        ? static_cast<uint8>(ReplayPlayback.GetPerspective())
+        : LocalPlayerId;
     FActorSpawnParameters SpawnParameters;
     SpawnParameters.SpawnCollisionHandlingOverride =
         ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -19673,10 +20356,13 @@ bool UEchoesSimulationSubsystem::SpawnFogView()
         SpawnParameters);
     if (NewFogView == nullptr ||
         !NewFogView->InitializeFog(
-            *Simulation,
-            LocalPlayerId,
+            *PresentedSimulation,
+            PresentedPlayer,
             TileWorldSize,
-            SelectedOperation == EEchoesOperationMode::CampaignPrologue))
+            (bReplayPlaybackActive
+                 ? ReplayPresentationOperation
+                 : SelectedOperation) ==
+                EEchoesOperationMode::CampaignPrologue))
     {
         if (NewFogView != nullptr)
         {
@@ -19707,7 +20393,9 @@ bool UEchoesSimulationSubsystem::SpawnFogView()
 
 bool UEchoesSimulationSubsystem::SpawnTerrainView()
 {
-    if (!Simulation.IsValid() || GetWorld() == nullptr)
+    const echoes::sim::Simulation* PresentedSimulation =
+        GetPresentedSimulation();
+    if (PresentedSimulation == nullptr || GetWorld() == nullptr)
     {
         return false;
     }
@@ -19721,10 +20409,19 @@ bool UEchoesSimulationSubsystem::SpawnTerrainView()
         FRotator::ZeroRotator,
         SpawnParameters);
     const EEchoesSkirmishMapPreset PresentationPreset =
-        SelectedOperation == EEchoesOperationMode::Skirmish
+        bReplayPlaybackActive
+            ? ReplayPresentationMapPreset
+            : SelectedOperation == EEchoesOperationMode::Skirmish
             ? ActiveSkirmishSetup.MapPreset
             : EEchoesSkirmishMapPreset::GlassScar;
-    std::optional<echoes::sim::PlayerId> TerrainPlayer = LocalPlayerId;
+    std::optional<echoes::sim::PlayerId> TerrainPlayer =
+        bReplayPlaybackActive
+            ? ReplayPlayback.GetPerspective() ==
+                    EEchoesReplayPerspective::OmniscientObserver
+                ? std::nullopt
+                : std::optional<echoes::sim::PlayerId>(
+                      static_cast<uint8>(ReplayPlayback.GetPerspective()))
+            : std::optional<echoes::sim::PlayerId>(LocalPlayerId);
 #if !UE_BUILD_SHIPPING
     FString TerrainReviewMode;
     if (FParse::Value(FCommandLine::Get(), TEXT("EchoesGlassScarReview="), TerrainReviewMode) ||
@@ -19736,11 +20433,13 @@ bool UEchoesSimulationSubsystem::SpawnTerrainView()
 #endif
     if (NewTerrainView == nullptr ||
         !NewTerrainView->InitializeTerrain(
-            *Simulation,
+            *PresentedSimulation,
             TileWorldSize,
             PresentationPreset,
             TerrainPlayer,
-            SelectedOperation))
+            bReplayPlaybackActive
+                ? ReplayPresentationOperation
+                : SelectedOperation))
     {
         if (NewTerrainView != nullptr)
         {
@@ -19779,9 +20478,14 @@ void UEchoesSimulationSubsystem::SynchronizeSkirmishEnvironmentPresentation()
         return;
     }
     const EEchoesSkirmishMapPreset PresentationPreset =
-        SelectedOperation == EEchoesOperationMode::Skirmish
+        bReplayPlaybackActive
+            ? ReplayPresentationMapPreset
+            : SelectedOperation == EEchoesOperationMode::Skirmish
             ? ActiveSkirmishSetup.MapPreset
             : EEchoesSkirmishMapPreset::GlassScar;
+    const EEchoesOperationMode PresentationOperation = bReplayPlaybackActive
+        ? ReplayPresentationOperation
+        : SelectedOperation;
     int32 ActiveActorCount = 0;
     int32 SharedActorCount = 0;
     int32 HiddenActorCount = 0;
@@ -19812,14 +20516,14 @@ void UEchoesSimulationSubsystem::SynchronizeSkirmishEnvironmentPresentation()
             // M01's terrain compositor owns grounded, knowledge-scoped fracture
             // masses. Retire the bright legacy ridge trays and unscopeable shards
             // in this mission; other scenarios keep their existing presentation.
-            if (SelectedOperation == EEchoesOperationMode::CampaignPrologue &&
+            if (PresentationOperation == EEchoesOperationMode::CampaignPrologue &&
                 (Actor->ActorHasTag(TEXT("EchoesScarBand")) ||
                  Actor->ActorHasTag(TEXT("EchoesGlassShard")) ||
                  Actor->ActorHasTag(TEXT("EchoesScarGlow"))))
             {
                 bShouldShow = false;
             }
-            if (SelectedOperation == EEchoesOperationMode::CampaignPrologue && TerrainView.IsValid() &&
+            if (PresentationOperation == EEchoesOperationMode::CampaignPrologue && TerrainView.IsValid() &&
                 EchoesBattlefieldPresentation::IsGlassScarRoute(Actor->Tags))
             {
                 bShouldShow &= TerrainView->IsWorldBoundsKnown(Actor->GetComponentsBoundingBox(true));
@@ -19867,9 +20571,11 @@ void UEchoesSimulationSubsystem::SynchronizeSkirmishEnvironmentPresentation()
 
 bool UEchoesSimulationSubsystem::SyncTerrainView()
 {
+    const echoes::sim::Simulation* PresentedSimulation =
+        GetPresentedSimulation();
     AEchoesTerrainView* View = TerrainView.Get();
-    return Simulation.IsValid() && View != nullptr &&
-           View->SyncTerrain(*Simulation);
+    return PresentedSimulation != nullptr && View != nullptr &&
+           View->SyncTerrain(*PresentedSimulation);
 }
 
 void UEchoesSimulationSubsystem::DestroyTerrainView()
@@ -19883,9 +20589,17 @@ void UEchoesSimulationSubsystem::DestroyTerrainView()
 
 bool UEchoesSimulationSubsystem::SyncFogView()
 {
+    const echoes::sim::Simulation* PresentedSimulation =
+        GetPresentedSimulation();
     AEchoesFogView* View = FogView.Get();
-    return Simulation.IsValid() && View != nullptr &&
-           View->SyncVisibility(*Simulation);
+    if (bReplayPlaybackActive &&
+        ReplayPlayback.GetPerspective() ==
+            EEchoesReplayPerspective::OmniscientObserver)
+    {
+        return View == nullptr;
+    }
+    return PresentedSimulation != nullptr && View != nullptr &&
+           View->SyncVisibility(*PresentedSimulation);
 }
 
 void UEchoesSimulationSubsystem::DestroyFogView()
@@ -19921,6 +20635,14 @@ UEchoesSimulationSubsystem::AdmitNetworkCommand(
     echoes::sim::net::CommandAdmissionContext& Context,
     std::string* SimulationRejection)
 {
+    if (bReplayPlaybackActive)
+    {
+        if (SimulationRejection != nullptr)
+        {
+            *SimulationRejection = "replay playback is read-only";
+        }
+        return echoes::sim::net::CommandAdmissionStatus::CommandRejected;
+    }
     if (!bScenarioReady || !Simulation.IsValid())
     {
         return echoes::sim::net::CommandAdmissionStatus::InvalidSeat;
@@ -19981,14 +20703,14 @@ echoes::sim::Vec2 UEchoesSimulationSubsystem::WorldToSim(const FVector& Position
 
 int32 UEchoesSimulationSubsystem::GetMapWidthTiles() const
 {
-    return Simulation.IsValid() ? Simulation->Config().mapWidthTiles
-                                : PrototypeMapWidthTiles;
+    const echoes::sim::Simulation* Presented = GetPresentedSimulation();
+    return Presented ? Presented->Config().mapWidthTiles : PrototypeMapWidthTiles;
 }
 
 int32 UEchoesSimulationSubsystem::GetMapHeightTiles() const
 {
-    return Simulation.IsValid() ? Simulation->Config().mapHeightTiles
-                                : PrototypeMapHeightTiles;
+    const echoes::sim::Simulation* Presented = GetPresentedSimulation();
+    return Presented ? Presented->Config().mapHeightTiles : PrototypeMapHeightTiles;
 }
 
 float UEchoesSimulationSubsystem::GetEffectiveGameSpeedMultiplier() const

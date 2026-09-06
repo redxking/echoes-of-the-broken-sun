@@ -314,6 +314,8 @@ private:
     void UpdateTacticalStateMotion(float DeltaSeconds, bool bReducedMotion);
     void UpdateWorkerResourceMotion(float DeltaSeconds, bool bReducedMotion);
     void UpdateCombatVFX(float DeltaSeconds, bool bReducedMotion, bool bReducedFlashing);
+    [[nodiscard]] bool UsesProloguePresentation() const;
+    [[nodiscard]] echoes::sim::EntityId GetPresentedArchiveCarrierId() const;
     void ConfigureM01SurveyorRig();
     void ResetM01SurveyorRig();
     void UpdateM01SurveyorRig(float DeltaSeconds, bool bReducedMotion);

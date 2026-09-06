@@ -270,22 +270,30 @@ bool FEchoesCombatEffectsTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("Construction fraction is below 1.0"),
                  EntityView->GetConstructionFraction() < 1.0f);
 
-        // Future Well in Reshape mode
+        // A committed Reshape warning precedes the manifested route.
         echoes::sim::Entity WellEntity{};
         WellEntity.id = 8003;
-        WellEntity.owner = 255;
+        WellEntity.owner = 0;
         WellEntity.faction = echoes::sim::Faction::MeridianCompact;
         WellEntity.type = echoes::sim::EntityType::FutureWell;
         WellEntity.position = echoes::sim::Vec2::FromTiles(20, 20);
         WellEntity.hitPoints = 1000;
         WellEntity.maxHitPoints = 1000;
-        WellEntity.wellChoice = echoes::sim::FutureWellChoice::Reshape;
-        WellEntity.reshapeUntilTick = 100;
+        WellEntity.wellPendingChoice = echoes::sim::FutureWellChoice::Reshape;
+        WellEntity.wellProtocolTicks = 180;
         WellEntity.completed = true;
 
         EntityView->ActivateForEntity(WellEntity, true);
         TestTrue(TEXT("Reshape Future Well activates reshape telegraph"),
                  EntityView->IsReshapeTelegraphActive());
+        WellEntity.wellChoice = echoes::sim::FutureWellChoice::Reshape;
+        WellEntity.wellPendingChoice = echoes::sim::FutureWellChoice::Dormant;
+        WellEntity.wellProtocolTicks = 0;
+        WellEntity.wellActivationTick = 480;
+        WellEntity.reshapeUntilTick = 2280;
+        EntityView->ApplyAuthoritativeState(WellEntity, true);
+        TestFalse(TEXT("Manifestation ends the warning effect"),
+                  EntityView->IsReshapeTelegraphActive());
 
         EntityView->PrepareForPool();
         EntityView->Destroy();

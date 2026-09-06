@@ -28,6 +28,15 @@ public:
      * arm directly while ticking is disabled must call this explicitly.
      */
     void SetCameraFraming(float LegacyArmLength, float LegacyFieldOfViewDegrees = 55.0f);
+    /** Presentation-only navigation used by minimap and grab panning. */
+    void PanToWorld(const FVector& WorldPosition);
+    void PanByScreenDelta(const FVector2D& DeltaPixels, float ViewportWidth);
+    void CancelPointerPan();
+    /** Four ground-plane corners of the current orthographic viewport. */
+    [[nodiscard]] bool GetBattlefieldFootprint(
+        const FVector2D& ViewportSize,
+        TArray<FVector>& OutCorners,
+        float GroundZ = 0.0f) const;
 
 private:
     /** Applies the authored exposure, tonemapper, and bloom baseline
@@ -56,6 +65,9 @@ private:
     float ForwardInput = 0.0f;
     float RightInput = 0.0f;
     bool bEdgePanArmed = false;
+    bool bMiddlePanActive = false;
+    bool bMiddlePanRequiresRelease = false;
+    FVector2D LastMiddlePanPosition = FVector2D::ZeroVector;
     bool bArtReviewMode = false;
     bool bArtReviewScreenshotRequested = false;
     float ArtReviewElapsedSeconds = 0.0f;

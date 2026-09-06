@@ -6,6 +6,7 @@
 
 #include "EchoesCampaignProgress.h"
 #include "EchoesCampaignMapCheckpoint.h"
+#include "EchoesReplayCheckpointTestHelpers.h"
 #include "EchoesShapeOfSilenceMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -361,6 +362,7 @@ bool FEchoesShapeOfSilenceMissionTest::RunTest(const FString& Parameters)
                 CurrentMapEnvelope,
                 *QuickSavePath) &&
                 FEchoesCampaignMapCheckpoint::Inspect(CurrentMapEnvelope, MapIdentity, CurrentTopologyBytes, MapFailure) &&
+                ExtractReplayCheckpointPayloadForTest(CurrentTopologyBytes, Feedback) &&
                 CurrentTopologyBytes.Num() > 16 &&
                 CurrentTopologyBytes[TopologyRevisionOffset] == 2))
     {

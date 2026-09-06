@@ -113,6 +113,19 @@ bool FEchoesOrthographicCameraTest::RunTest(const FString& Parameters)
             ExpectedOrthoWidth(SpringArm->TargetArmLength, DefaultLegacyFovDegrees),
             0.01f));
 
+    TArray<FVector> Footprint;
+    TestTrue(
+        TEXT("Orthographic camera projects a four-corner ground footprint"),
+        Pawn->GetBattlefieldFootprint(FVector2D(1600.0f, 900.0f), Footprint));
+    TestEqual(TEXT("Ground footprint contains four ordered corners"),
+        Footprint.Num(), 4);
+    for (const FVector& Corner : Footprint)
+    {
+        TestTrue(TEXT("Ground footprint is finite"), !Corner.ContainsNaN());
+        TestTrue(TEXT("Ground footprint lies on the battlefield plane"),
+            FMath::IsNearlyZero(Corner.Z, 0.01f));
+    }
+
     // Direct arm edits are common in editor review scripts. Runtime ticking
     // repairs the corresponding width; scripts that disable ticking must call
     // SetCameraFraming explicitly after changing the arm.
@@ -184,6 +197,35 @@ bool FEchoesOrthographicCameraTest::RunTest(const FString& Parameters)
         TEXT("Camera pan does not alter the simulation checksum"),
         Simulation != nullptr ? Simulation->StateChecksum() : 0,
         ChecksumBeforePan);
+
+    const FVector BeforeGrabPan = Pawn->GetActorLocation();
+    Pawn->PanByScreenDelta(FVector2D(120.0f, -60.0f), 1600.0f);
+    TestFalse(TEXT("Middle-drag translation changes presentation position"),
+        Pawn->GetActorLocation().Equals(BeforeGrabPan, 0.01f));
+    TestEqual(TEXT("Middle-drag translation preserves simulation tick"),
+        Simulation != nullptr ? Simulation->CurrentTick() : 0,
+        TickBeforePan);
+    TestEqual(TEXT("Middle-drag translation preserves simulation checksum"),
+        Simulation != nullptr ? Simulation->StateChecksum() : 0,
+        ChecksumBeforePan);
+
+    Pawn->PanToWorld(FVector(100000.0f, 100000.0f, 0.0f));
+    Footprint.Reset();
+    TestTrue(TEXT("Boundary pan retains a valid ground footprint"),
+        Pawn->GetBattlefieldFootprint(FVector2D(1600.0f, 900.0f), Footprint));
+    const float MapHalfWidth = Bridge->GetMapWidthTiles() *
+        UEchoesSimulationSubsystem::TileWorldSize * 0.5f;
+    const float MapHalfHeight = Bridge->GetMapHeightTiles() *
+        UEchoesSimulationSubsystem::TileWorldSize * 0.5f;
+    for (const FVector& Corner : Footprint)
+    {
+        TestTrue(TEXT("Clamped orthographic footprint stays inside map X"),
+            Corner.X >= -MapHalfWidth - 0.1f &&
+            Corner.X <= MapHalfWidth + 0.1f);
+        TestTrue(TEXT("Clamped orthographic footprint stays inside map Y"),
+            Corner.Y >= -MapHalfHeight - 0.1f &&
+            Corner.Y <= MapHalfHeight + 0.1f);
+    }
 
     Pawn->Destroy();
     Bridge->StopPrototypeScenario();

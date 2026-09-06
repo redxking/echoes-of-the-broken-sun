@@ -22,6 +22,8 @@
 #include "EchoesUnburiedRoadMissionModel.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimCore/NetworkProtocol.h"
+#include "EchoesMatchReplay.h"
+#include "Async/Future.h"
 #include "EchoesSimulationSubsystem.generated.h"
 
 class AEchoesCombatEffectView;
@@ -29,6 +31,9 @@ class AEchoesDestructionView;
 class AEchoesEntityView;
 class AEchoesFogView;
 class AEchoesTerrainView;
+class FEchoesCheckpointCoordinator;
+enum class EEchoesCheckpointWriteKind : uint8;
+struct FEchoesCheckpointWriteResult;
 #if WITH_DEV_AUTOMATION_TESTS
 class FEchoesPrologueMissionTest;
 class FEchoesFreshCampaignJourneyTest;
@@ -41,7 +46,27 @@ enum class EEchoesAutosaveReason : uint8
     None = 0,
     MissionEntry = 1,
     PhaseTransition = 2,
-    Manual = 3
+    Manual = 3,
+    TickCadence = 4
+};
+
+enum class EEchoesCheckpointSaveState : uint8 { Idle, Pending, Succeeded, Failed };
+struct ECHOESOFTHEBROKENSUN_API FEchoesCheckpointSaveStatus final
+{
+    EEchoesCheckpointSaveState State = EEchoesCheckpointSaveState::Idle;
+    uint64 RequestId = 0;
+    bool bAutosave = false;
+    EEchoesAutosaveReason Reason = EEchoesAutosaveReason::None;
+    uint8 Phase = 0;
+    uint64 SimulationTick = 0;
+    uint64 CaptureMicroseconds = 0;
+    uint64 InitiationMicroseconds = 0;
+    uint64 QueueMicroseconds = 0;
+    uint64 EncodingMicroseconds = 0;
+    uint64 CompletionMicroseconds = 0;
+    uint64 TotalCompletionMicroseconds = 0;
+    FString SavePath;
+    FString Feedback;
 };
 
 /** Candidate checkpoint discovered during interrupted-session recovery scans. */
@@ -425,7 +450,15 @@ public:
     bool RestoreCampaignBackup(FString& OutFeedback);
 
     /** Atomically writes a validated deterministic snapshot and retains one backup. */
-    bool QuickSaveScenario(FString& OutFeedback) const;
+    bool SelectJourneySlot(int32 Slot, FString& OutFeedback);
+    int32 GetActiveJourneySlot() const { return ActiveJourneySlot; }
+    static FString GetJourneySlotPath(int32 Slot);
+    FString GetJourneyCheckpointDirectory() const;
+    bool ConcedeOfflineMatch(FString& OutFeedback);
+    /** Compatibility boundary: returns only after the accepted quick save commits. */
+    bool QuickSaveScenario(FString& OutFeedback);
+    /** Non-blocking request; acceptance is Pending until its completion status is observed. */
+    bool RequestQuickSaveScenario(FString& OutFeedback);
 
     /** Restores the newest valid quick save, falling back to its prior generation. */
     bool QuickLoadScenario(FString& OutFeedback);
@@ -435,6 +468,10 @@ public:
 
     /** Atomically writes a validated deterministic autosave snapshot and retains one backup. */
     bool AutosaveScenario(EEchoesAutosaveReason Reason, FString& OutFeedback);
+    const FEchoesCheckpointSaveStatus& GetCheckpointSaveStatus() const { return LastCheckpointSaveStatus; }
+    bool IsCheckpointSavePending() const { return LastCheckpointSaveStatus.State == EEchoesCheckpointSaveState::Pending; }
+    /** Explicit synchronization for tests, loading, journey changes and shutdown. */
+    bool WaitForCheckpointSaves(FString& OutFeedback);
 
     /** The canonical autosave path. */
     [[nodiscard]] static FString GetAutosavePath();
@@ -516,6 +553,30 @@ public:
     [[nodiscard]] FEchoesObjectiveSnapshot GetLocalObjectiveSnapshot() const;
 
     [[nodiscard]] const echoes::sim::Simulation* GetSimulation() const;
+    [[nodiscard]] const echoes::sim::MatchReport* GetCompletedMatchReport() const;
+    [[nodiscard]] const FEchoesReplayMetadata* GetCompletedReplayMetadata() const;
+    [[nodiscard]] EEchoesReplayArchiveState GetReplayArchiveState() const;
+    [[nodiscard]] const FString& GetReplayArchiveError() const;
+    [[nodiscard]] TArray<FEchoesReplayMetadata> BrowseReplays(const FEchoesReplayBrowserFilter& Filter, TArray<FString>& OutErrors) const;
+    bool BeginCompletedReplay(FString& OutFeedback);
+    bool BeginLatestReplay(FString& OutFeedback);
+    bool BeginReplay(const FString& Path, FString& OutFeedback);
+    void EndReplay();
+    void SetReplayPaused(bool bPaused);
+    void SetReplaySpeed(EEchoesReplaySpeed Speed);
+    bool SetReplayPerspective(EEchoesReplayPerspective Perspective, FString& OutFeedback);
+    bool StepReplay(FString& OutFeedback);
+    bool SeekReplayTick(uint64 Tick, FString& OutFeedback);
+    bool SeekReplayEvent(int32 EventIndex, FString& OutFeedback);
+    [[nodiscard]] FEchoesReplayPlaybackState GetReplayPlaybackState() const;
+    [[nodiscard]] bool IsReplayPlaybackActive() const;
+    /** Observer-only; null outside replay. Never command authority. */
+    [[nodiscard]] const echoes::sim::Simulation* GetReplayPresentationSimulation() const;
+    [[nodiscard]] std::optional<echoes::sim::PlayerView> GetReplayPresentationPlayerView() const;
+    [[nodiscard]] EEchoesOperationMode GetReplayPresentationOperation() const;
+    [[nodiscard]] EEchoesSkirmishMapPreset GetReplayPresentationMapPreset() const;
+    [[nodiscard]] const FEchoesReplayMetadata* GetActiveReplayMetadata() const;
+    [[nodiscard]] const echoes::sim::MatchReport* GetActiveReplayReport() const;
     echoes::sim::net::CommandAdmissionStatus AdmitNetworkCommand(
         const echoes::sim::net::CommandRequest& Request,
         echoes::sim::net::CommandAdmissionContext& Context,
@@ -722,6 +783,16 @@ public:
     {
         bFailNextQuickSaveBackupRotationForTesting = true;
     }
+    void FailNextCheckpointWriteForTesting()
+    {
+        bFailNextCheckpointWriteForTesting = true;
+    }
+    /** One-shot qualification permit; normal stress fixtures remain save-isolated. */
+    void AllowNextStressCheckpointForTesting()
+    {
+        bAllowNextStressCheckpointForTesting = true;
+    }
+    void FailNextReplayPresentationSyncForTesting() { bFailNextReplayPresentationSyncForTesting = true; }
 #endif
 
 private:
@@ -738,10 +809,19 @@ private:
         uint64 ExpectedCampaignBranchIdentity,
         FString& OutFailure) const;
     void CheckPhaseTransitionAutosave();
+    bool QueueCheckpointSave(EEchoesCheckpointWriteKind Kind, EEchoesAutosaveReason Reason, FString& OutFeedback);
+    void ApplyCheckpointSaveResult(const FEchoesCheckpointWriteResult& Result);
+    void PollCheckpointSaves();
+    void DrainCheckpointSaves();
     [[nodiscard]] uint8 GetCurrentOperationPhase() const;
     [[nodiscard]] static bool IsOperationPhaseTerminal(EEchoesOperationMode Mode, uint8 Phase);
     [[nodiscard]] static FString GetOperationDisplayName(EEchoesOperationMode Mode);
     [[nodiscard]] static FString GetPhaseDisplayName(EEchoesOperationMode Mode, uint8 Phase);
+    struct FRecoveryCheckpointInspection;
+    [[nodiscard]] static bool InspectRecoveryCheckpointFile(
+        const FString& CandidatePath,
+        FRecoveryCheckpointInspection& OutInspection,
+        FString& OutError);
     static bool InspectSaveContainer(
         const TArray<uint8>& Bytes,
         uint8& OutVersion,
@@ -869,6 +949,14 @@ private:
     void OnPreGarbageCollect();
     void OnPostGarbageCollect();
     bool SyncEntityViews(bool bTeleportNewViews);
+    void BeginReplayArchiveForCurrentResult();
+    void PollReplayArchive();
+    void DrainReplayArchiveJobs();
+    [[nodiscard]] bool TickReplayPlayback(float DeltaTime);
+    [[nodiscard]] const echoes::sim::Simulation* GetPresentedSimulation() const;
+    void ResetReplayPresentationObservers();
+    [[nodiscard]] bool SyncReplayPresentation(bool bTeleport);
+    bool CompleteReplayPresentationSync(bool bTeleport, FString& OutFeedback);
 
     /** Research/production/capacity alert observation over authoritative
      *  local-player state. Baseline-guarded so a fresh scenario or a restored
@@ -962,6 +1050,11 @@ private:
     double FixedTimeAccumulator = 0.0;
     uint64 NextPlayerCommandSequence = 1;
     bool bScenarioReady = false;
+    TSharedPtr<FEchoesCheckpointCoordinator, ESPMode::ThreadSafe> CheckpointCoordinator;
+    FEchoesCheckpointSaveStatus LastCheckpointSaveStatus;
+    uint64 NextCheckpointRequestId = 1;
+    uint8 LastAutosaveRequestedPhase = 0xFF;
+    uint64 LastAutosaveRequestedTick = 0;
     uint8 LastAutosavedPhase = 0xFF;
     uint64 LastAutosavedTick = 0;
     EEchoesAutosaveReason LastAutosavedReason = EEchoesAutosaveReason::None;
@@ -969,6 +1062,9 @@ private:
 #if WITH_DEV_AUTOMATION_TESTS
     bool bFailNextScenarioStartForTesting = false;
     mutable bool bFailNextQuickSaveBackupRotationForTesting = false;
+    bool bFailNextCheckpointWriteForTesting = false;
+    bool bAllowNextStressCheckpointForTesting = false;
+    bool bFailNextReplayPresentationSyncForTesting = false;
 #endif
     bool bWarnedAboutTimeClamp = false;
     bool bLoggedFirstTick = false;
@@ -1020,6 +1116,18 @@ private:
     [[nodiscard]] FEchoesBrokenSunMissionFacts GatherBrokenSunFacts() const;
     bool bSimulationPaused = false;
     bool bMatchResultReported = false;
+    FEchoesReplayResultAuthority ReplayResultAuthority;
+    TFuture<FEchoesReplayArchiveResult> ReplayArchiveFuture;
+    TArray<TFuture<FEchoesReplayArchiveResult>> SupersededReplayArchiveFutures;
+    uint64 ReplayArchiveGeneration = 0;
+    TOptional<FEchoesReplayEnvelope> ActiveReplayEnvelope;
+    FEchoesReplayPlaybackSession ReplayPlayback;
+    EEchoesOperationMode ReplayPresentationOperation = EEchoesOperationMode::Skirmish;
+    EEchoesSkirmishMapPreset ReplayPresentationMapPreset = EEchoesSkirmishMapPreset::GlassScar;
+    bool bReplayPlaybackActive = false;
+    bool bReplayPresentationDirty = false;
+    double ReplayTimeAccumulator = 0.0;
+    FString ReplayPlaybackError;
     bool bStressScenario = false;
     bool bSustainedStressScenario = false;
     bool bSustainedStressFailed = false;
@@ -1158,6 +1266,8 @@ private:
     bool bCampaignProgressAvailable = false;
     bool bCampaignBackupAvailable = false;
     FString CampaignProgressPath;
+    FString LegacyCampaignProgressPath;
+    int32 ActiveJourneySlot = 1;
     echoes::sim::ResearchType ResearchPresentationTechnology =
         echoes::sim::ResearchType::None;
 };

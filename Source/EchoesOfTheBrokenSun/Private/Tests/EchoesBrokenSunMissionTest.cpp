@@ -3,11 +3,13 @@
 #include "Misc/AutomationTest.h"
 
 #include "EchoesTestSaveEnvironment.h"
+#include "EchoesBrokenSunTestTactics.h"
 
 #include "EchoesBrokenSunMissionModel.h"
 #include "EchoesCampaignProgress.h"
 #include "EchoesCampaignMapCheckpoint.h"
 #include "EchoesPlayerController.h"
+#include "EchoesReplayCheckpointTestHelpers.h"
 #include "EchoesSnapshotMigrationTestHelpers.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -19,6 +21,8 @@
 
 namespace
 {
+using namespace EchoesBrokenSunTestTactics;
+
 struct FPreservedBrokenSunFile final
 {
     explicit FPreservedBrokenSunFile(FString InPath)
@@ -275,37 +279,6 @@ bool BrokenSunObjectiveDomainsAreDisjoint(
         CombinedRadius * CombinedRadius;
 }
 
-FString DescribeBrokenSunEntity(
-    const TCHAR* Label,
-    echoes::sim::EntityId Id,
-    const echoes::sim::Entity* Current)
-{
-    if (Current == nullptr)
-    {
-        return FString::Printf(TEXT("%s{id=%u missing}"), Label, Id);
-    }
-    return FString::Printf(
-        TEXT("%s{id=%u owner=%u faction=%u type=%u hp=%d/%d pos=(%d,%d) completed=%s progress=%d/%d order=%u target=%u anchor=(%d,%d) destination=(%d,%d)}"),
-        Label,
-        Id,
-        Current->owner,
-        static_cast<uint8>(Current->faction),
-        static_cast<uint8>(Current->type),
-        Current->hitPoints,
-        Current->maxHitPoints,
-        Current->position.x.FloorToInt(),
-        Current->position.y.FloorToInt(),
-        Current->completed ? TEXT("true") : TEXT("false"),
-        Current->constructionProgress,
-        Current->constructionRequired,
-        static_cast<uint8>(Current->order.type),
-        Current->order.target,
-        Current->order.anchor.x.FloorToInt(),
-        Current->order.anchor.y.FloorToInt(),
-        Current->order.destination.x.FloorToInt(),
-        Current->order.destination.y.FloorToInt());
-}
-
 struct FBrokenSunResolutionPersistenceSpec final
 {
     const TCHAR* Label = TEXT("unavailable");
@@ -545,17 +518,82 @@ bool RunBrokenSunResolutionPersistenceCase(
         return FinishWorld();
     }
 
-    const auto TickUntil = [Bridge](
+    const TArray<echoes::sim::EntityId> NemeGuards =
+        FindBrokenSunNemeGuards(
+            Bridge, Objective.BrokenSunAccordVoiceId);
+    Bridge->SetScenarioPaused(false);
+    bool bNemeGuardCommandsAccepted = NemeGuards.Num() == 2;
+    for (const echoes::sim::EntityId GuardId : NemeGuards)
+    {
+        const echoes::sim::Entity* CurrentNeme =
+            Bridge->FindEntity(Objective.BrokenSunNemeId);
+        const bool bAccepted = CurrentNeme != nullptr &&
+            Bridge->IssueCommand(
+                CommandType::Guard,
+                GuardId,
+                Objective.BrokenSunNemeId,
+                Bridge->SimToWorld(
+                    CurrentNeme != nullptr ? CurrentNeme->position : Vec2{}),
+                FutureWellChoice::Dormant,
+                Feedback);
+        bNemeGuardCommandsAccepted =
+            bAccepted && bNemeGuardCommandsAccepted;
+    }
+    if (!Check(
+            TEXT("the two non-Voice Soldiers accept Guard orders on Neme"),
+            bNemeGuardCommandsAccepted))
+    {
+        return FinishWorld();
+    }
+    Bridge->Tick(0.05f);
+
+    bool bTacticalFailureReported = false;
+    const auto TickUntil = [
+        &Test,
+        Bridge,
+        &NemeGuards,
+        NemeId = Objective.BrokenSunNemeId,
+        &Feedback,
+        &bTacticalFailureReported](
         const TFunction<bool()>& Predicate,
         int32 MaximumTicks)
     {
         for (int32 TickIndex = 0; TickIndex < MaximumTicks; ++TickIndex)
         {
+            if (Bridge->GetBrokenSunPhase() ==
+                    EEchoesBrokenSunPhase::Failed ||
+                !MaintainBrokenSunNemeGuards(
+                    Bridge, NemeId, NemeGuards, Feedback))
+            {
+                if (!bTacticalFailureReported)
+                {
+                    Test.AddInfo(BrokenSunTacticalDiagnostic(
+                        Bridge, TEXT("wait"), NemeId, NemeGuards));
+                    bTacticalFailureReported = true;
+                }
+                return false;
+            }
             if (Predicate())
             {
                 return true;
             }
             Bridge->Tick(0.05f);
+        }
+        if (Bridge->GetBrokenSunPhase() ==
+                EEchoesBrokenSunPhase::Failed ||
+            !MaintainBrokenSunNemeGuards(
+                Bridge, NemeId, NemeGuards, Feedback))
+        {
+            if (!bTacticalFailureReported)
+            {
+                Test.AddInfo(BrokenSunTacticalDiagnostic(
+                    Bridge,
+                    TEXT("wait-boundary"),
+                    NemeId,
+                    NemeGuards));
+                bTacticalFailureReported = true;
+            }
+            return false;
         }
         return Predicate();
     };
@@ -608,8 +646,30 @@ bool RunBrokenSunResolutionPersistenceCase(
         return DeltaX * DeltaX + DeltaY * DeltaY <=
             RadiusRaw * RadiusRaw;
     };
+    const auto PaceNemeWithDiagnostic = [
+        &Test,
+        Bridge,
+        NemeId = Objective.BrokenSunNemeId,
+        &NemeGuards,
+        &Feedback,
+        &bTacticalFailureReported,
+        RuntimePlan]()
+    {
+        const bool bReached = PaceBrokenSunNemeToSite(
+            Bridge,
+            NemeId,
+            NemeGuards,
+            RuntimePlan.NemeAccordSite,
+            1800,
+            Feedback);
+        if (!bReached && !bTacticalFailureReported)
+        {
+            Test.AddInfo(Feedback);
+            bTacticalFailureReported = true;
+        }
+        return bReached;
+    };
 
-    Bridge->SetScenarioPaused(false);
     Vec2 ApproachBuildSite;
     if (!Check(
             TEXT("the literal approach center is open in the authored Lume terrain"),
@@ -751,10 +811,33 @@ bool RunBrokenSunResolutionPersistenceCase(
         }
         if (!bAssembleAccordReached)
         {
+            if (!MaintainBrokenSunNemeGuards(
+                    Bridge,
+                    Objective.BrokenSunNemeId,
+                    NemeGuards,
+                    Feedback))
+            {
+                if (!bTacticalFailureReported)
+                {
+                    Test.AddInfo(Feedback);
+                    bTacticalFailureReported = true;
+                }
+                break;
+            }
             Bridge->Tick(0.05f);
         }
     }
     ObserveApproach();
+    if (Bridge->GetBrokenSunPhase() == EEchoesBrokenSunPhase::Failed &&
+        !bTacticalFailureReported)
+    {
+        Test.AddInfo(BrokenSunTacticalDiagnostic(
+            Bridge,
+            TEXT("approach-wait"),
+            Objective.BrokenSunNemeId,
+            NemeGuards));
+        bTacticalFailureReported = true;
+    }
 
     Objective = Bridge->GetLocalObjectiveSnapshot();
     const echoes::sim::Entity* CurrentWorker =
@@ -871,6 +954,78 @@ bool RunBrokenSunResolutionPersistenceCase(
         return FinishWorld();
     }
 
+    const auto ClearNemeApproachWithDiagnostic = [&]()
+    {
+        const bool bCleared = ClearBrokenSunNemeAccordApproach(
+            Bridge,
+            Objective,
+            NemeGuards,
+            RuntimePlan.NemeAccordSite,
+            2400,
+            Feedback);
+        if (!bCleared)
+        {
+            Test.AddInfo(FString::Printf(
+                TEXT("%s: %s"), Spec.Label, *Feedback));
+        }
+        return bCleared;
+    };
+    const auto WaitForSharedResolutionAdmission = [&]()
+    {
+        const bool bReady = TickUntil(
+            [Bridge, ResearchLoomId]()
+            {
+                const echoes::sim::Simulation* Simulation =
+                    Bridge->GetSimulation();
+                const echoes::sim::PlayerState* Player =
+                    Simulation != nullptr
+                        ? Simulation->FindPlayer(
+                              UEchoesSimulationSubsystem::LocalPlayerId)
+                        : nullptr;
+                return Player != nullptr &&
+                    Player->HasCompletedResearch(
+                        ResearchType::ChoirHeldAlternatives) &&
+                    Player->activeResearch == ResearchType::None &&
+                    Simulation->ValidateResearch(
+                        UEchoesSimulationSubsystem::LocalPlayerId,
+                        ResearchLoomId,
+                        ResearchType::ChoirSharedResolution) ==
+                        echoes::sim::ResearchResult::Valid;
+            },
+            1200);
+        if (!bReady)
+        {
+            Test.AddInfo(FString::Printf(
+                TEXT("%s: %s"),
+                Spec.Label,
+                *BrokenSunResearchAdmissionDiagnostic(
+                    Bridge,
+                    ResearchLoomId,
+                    ResearchType::ChoirSharedResolution,
+                    TEXT("not-issued"))));
+        }
+        return bReady;
+    };
+    const auto IssueSharedResolutionWithDiagnostic = [&]()
+    {
+        const bool bAccepted = Bridge->IssueResearchCommand(
+            ResearchLoomId,
+            ResearchType::ChoirSharedResolution,
+            Feedback);
+        if (!bAccepted)
+        {
+            Test.AddInfo(FString::Printf(
+                TEXT("%s: %s"),
+                Spec.Label,
+                *BrokenSunResearchAdmissionDiagnostic(
+                    Bridge,
+                    ResearchLoomId,
+                    ResearchType::ChoirSharedResolution,
+                    Feedback)));
+        }
+        return bAccepted;
+    };
+
     if (!Check(
             TEXT("the Research Loom accepts Held Alternatives"),
             Bridge->IssueResearchCommand(
@@ -897,6 +1052,9 @@ bool RunBrokenSunResolutionPersistenceCase(
                 ChoirIdentityState::Possible,
                 Feedback)) ||
         !Check(
+            TEXT("the concentrated command force clears observable threats from Neme's public accord approach"),
+            ClearNemeApproachWithDiagnostic()) ||
+        !Check(
             TEXT("the Possible voice accepts the Mara accord move"),
             Bridge->IssueCommand(
                 CommandType::Move,
@@ -915,14 +1073,8 @@ bool RunBrokenSunResolutionPersistenceCase(
                 FutureWellChoice::Dormant,
                 Feedback)) ||
         !Check(
-            TEXT("Neme accepts the Choir accord move"),
-            Bridge->IssueCommand(
-                CommandType::Move,
-                Objective.BrokenSunNemeId,
-                0,
-                Bridge->SimToWorld(RuntimePlan.NemeAccordSite),
-                FutureWellChoice::Dormant,
-                Feedback)) ||
+            TEXT("Neme reaches the Choir accord site with both non-Voice Soldier escorts regrouped"),
+            PaceNemeWithDiagnostic()) ||
         !Check(
             TEXT("all three accord participants settle at their exact sites"),
             TickUntil(
@@ -960,11 +1112,11 @@ bool RunBrokenSunResolutionPersistenceCase(
                 },
                 3000)) ||
         !Check(
+            TEXT("Held Alternatives leaves the Research Loom ready for Shared Resolution"),
+            WaitForSharedResolutionAdmission()) ||
+        !Check(
             TEXT("the Research Loom accepts Shared Resolution"),
-            Bridge->IssueResearchCommand(
-                ResearchLoomId,
-                ResearchType::ChoirSharedResolution,
-                Feedback)) ||
+            IssueSharedResolutionWithDiagnostic()) ||
         !Check(
             TEXT("the witnessed accord opens final-resolution selection"),
             TickUntil(
@@ -1715,19 +1867,100 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         return false;
     }
 
-    const auto TickUntil = [Bridge](
+    const TArray<echoes::sim::EntityId> NemeGuards =
+        FindBrokenSunNemeGuards(
+            Bridge, Objective.BrokenSunAccordVoiceId);
+    Bridge->SetScenarioPaused(false);
+    bool bNemeGuardCommandsAccepted = NemeGuards.Num() == 2;
+    for (const echoes::sim::EntityId GuardId : NemeGuards)
+    {
+        const echoes::sim::Entity* CurrentNeme =
+            Bridge->FindEntity(Objective.BrokenSunNemeId);
+        const bool bAccepted = CurrentNeme != nullptr &&
+            Bridge->IssueCommand(
+                CommandType::Guard,
+                GuardId,
+                Objective.BrokenSunNemeId,
+                Bridge->SimToWorld(
+                    CurrentNeme != nullptr ? CurrentNeme->position : Vec2{}),
+                FutureWellChoice::Dormant,
+                Feedback);
+        bNemeGuardCommandsAccepted =
+            bAccepted && bNemeGuardCommandsAccepted;
+    }
+    if (!TestTrue(
+            TEXT("The two non-Voice Soldiers accept Guard orders on Neme"),
+            bNemeGuardCommandsAccepted))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    Bridge->Tick(0.05f);
+
+    bool bTacticalFailureReported = false;
+    const auto TickUntil = [
+        this,
+        Bridge,
+        &NemeGuards,
+        NemeId = Objective.BrokenSunNemeId,
+        &Feedback,
+        &bTacticalFailureReported](
         const TFunction<bool()>& Predicate,
         int32 MaximumTicks)
     {
         for (int32 TickIndex = 0; TickIndex < MaximumTicks; ++TickIndex)
         {
+            if (Bridge->GetBrokenSunPhase() ==
+                    EEchoesBrokenSunPhase::Failed ||
+                !MaintainBrokenSunNemeGuards(
+                    Bridge, NemeId, NemeGuards, Feedback))
+            {
+                if (!bTacticalFailureReported)
+                {
+                    AddInfo(BrokenSunTacticalDiagnostic(
+                        Bridge, TEXT("wait"), NemeId, NemeGuards));
+                    bTacticalFailureReported = true;
+                }
+                return false;
+            }
             if (Predicate())
             {
                 return true;
             }
             Bridge->Tick(0.05f);
         }
+        if (Bridge->GetBrokenSunPhase() ==
+                EEchoesBrokenSunPhase::Failed ||
+            !MaintainBrokenSunNemeGuards(
+                Bridge, NemeId, NemeGuards, Feedback))
+        {
+            if (!bTacticalFailureReported)
+            {
+                AddInfo(BrokenSunTacticalDiagnostic(
+                    Bridge,
+                    TEXT("wait-boundary"),
+                    NemeId,
+                    NemeGuards));
+                bTacticalFailureReported = true;
+            }
+            return false;
+        }
         return Predicate();
+    };
+    const auto TickUntilExpectedFailure = [Bridge](int32 MaximumTicks)
+    {
+        for (int32 TickIndex = 0; TickIndex < MaximumTicks; ++TickIndex)
+        {
+            if (Bridge->GetBrokenSunPhase() ==
+                EEchoesBrokenSunPhase::Failed)
+            {
+                return true;
+            }
+            Bridge->Tick(0.05f);
+        }
+        return Bridge->GetBrokenSunPhase() ==
+            EEchoesBrokenSunPhase::Failed;
     };
     const auto FindBuildSite = [Bridge](
         const Vec2& Center,
@@ -1765,7 +1998,6 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         return false;
     };
 
-    Bridge->SetScenarioPaused(false);
     TestFalse(
         TEXT("A final resolution cannot be armed before the accord"),
         Bridge->ChooseFinalResolution(
@@ -1787,15 +2019,14 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         TEXT("The approach contract exposes a valid construction footprint"),
         FindBuildSite(RuntimePlan.CrownfallApproachSite, 3,
                       ApproachBuildSite));
-    // Per-player terrain and object memory is now serialized into the
-    // snapshot, so the native snapshot schema advanced from 24 to 25. The
-    // replay envelope shape did not change and stays at 24; every schema
+    // Schema 28 appends player-hostility masks after schema 27 lifecycle state.
+    // The replay envelope shape did not change and stays at 24; every schema
     // named below is the native snapshot schema this build saves.
     const auto NativeBuildSequence =
         Bridge->GetSimulation()->NextCommandSequence(
             UEchoesSimulationSubsystem::LocalPlayerId);
     TestTrue(
-        TEXT("The schema-26 approach build has a stable receipt sequence"),
+        TEXT("The schema-28 approach build has a stable receipt sequence"),
         NativeBuildSequence.has_value());
     TestTrue(
         TEXT("The exact approach anchor accepts an ordinary worker build"),
@@ -1819,7 +2050,7 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         Objective.bBrokenSunApproachSecured &&
             Objective.BrokenSunApproachAnchorId != 0);
     TestTrue(
-        TEXT("The native schema-26 source retains the approach-build receipt"),
+        TEXT("The native schema-28 source retains the approach-build receipt"),
         NativeBuildSequence.has_value() &&
             Bridge->GetSimulation()->FindCommandResolutionReceipt(
                 UEchoesSimulationSubsystem::LocalPlayerId,
@@ -1840,19 +2071,98 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
     EEchoesCampaignMapCheckpointFailure MapFailure{};
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         NativeLayout;
-    // The checkpoint saved just above is native schema 26. The shared inspect
-    // and down-convert helpers parse the work/projectile append, then read the
-    // memory ledgers explicitly as they reduce 25 to 24 to 23 to 22.
+    // The checkpoint saved just above is native schema 28. The shared helpers
+    // parse and remove hostility masks, then lifecycle state, before traversing
+    // 26 to 25 to 24 to 23 to 22 with the real loader validating each step.
     TestTrue(
-        TEXT("The Mission 15 schema-26 checkpoint exposes its bounded receipt block"),
+        TEXT("The Mission 15 schema-28 checkpoint exposes bounded receipt, lifecycle, and hostility blocks"),
         FFileHelper::LoadFileToArray(NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, NativeCheckpoint, MapFailure) &&
+            ExtractReplayCheckpointPayloadForTest(NativeCheckpoint, Feedback) &&
             EchoesSnapshotMigrationTestHelpers::
                 InspectMission15EnvelopeSnapshot(
                     NativeCheckpoint, NativeLayout) &&
             NativeLayout.ReceiptCount > 0U &&
             NativeLayout.ReceiptBlockSize ==
-                4 + static_cast<int32>(NativeLayout.ReceiptCount) * 19);
+                4 + static_cast<int32>(NativeLayout.ReceiptCount) * 19 &&
+            NativeLayout.Schema27AppendOffset ==
+                NativeLayout.Schema26AppendOffset +
+                    NativeLayout.Schema26AppendSize &&
+            NativeLayout.Schema27AppendSize >= 4 &&
+            (NativeLayout.Schema27AppendSize - 4) % 16 == 0 &&
+            NativeLayout.Schema28AppendOffset ==
+                NativeLayout.Schema27AppendOffset +
+                    NativeLayout.Schema27AppendSize &&
+            NativeLayout.Schema28AppendSize ==
+                static_cast<int32>(echoes::sim::kMaximumPlayers) &&
+            NativeLayout.Schema28HostilityMasks ==
+                EchoesSnapshotMigrationTestHelpers::Mission15HostilityMasks);
+    const uint64 BeforeWrongMaskTick =
+        Bridge->GetSimulation()->CurrentTick();
+    const uint64 BeforeWrongMaskChecksum =
+        Bridge->GetSimulation()->StateChecksum();
+    const EEchoesBrokenSunPhase BeforeWrongMaskPhase =
+        Bridge->GetBrokenSunPhase();
+    TArray<uint8> WrongMaskCheckpoint = NativeCheckpoint;
+    TArray<uint8> WrongMaskMapEnvelope;
+    bool bWrongMaskFixtureWritten =
+        NativeLayout.Schema28AppendOffset != INDEX_NONE &&
+        NativeLayout.Schema28AppendSize ==
+            static_cast<int32>(echoes::sim::kMaximumPlayers);
+    if (bWrongMaskFixtureWritten)
+    {
+        for (int32 Player = 0;
+             Player < static_cast<int32>(echoes::sim::kMaximumPlayers);
+             ++Player)
+        {
+            WrongMaskCheckpoint[
+                NativeLayout.Schema28AppendOffset + Player] =
+                echoes::sim::kDefaultHostilityMasks[Player];
+        }
+        bWrongMaskFixtureWritten =
+            EchoesSnapshotMigrationTestHelpers::ResignEmbeddedSnapshot(
+                WrongMaskCheckpoint,
+                NativeLayout.SnapshotOffset,
+                NativeLayout.SnapshotLength);
+        if (bWrongMaskFixtureWritten)
+        {
+            EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
+                WrongMaskCheckpoint);
+            bWrongMaskFixtureWritten =
+                EchoesSnapshotMigrationTestHelpers::
+                    IsLoadableEmbeddedSnapshot(
+                        WrongMaskCheckpoint,
+                        NativeLayout.SnapshotOffset,
+                        NativeLayout.SnapshotLength,
+                        echoes::sim::kSnapshotVersion) &&
+                FEchoesCampaignMapCheckpoint::Wrap(
+                    MapIdentity,
+                    WrongMaskCheckpoint,
+                    WrongMaskMapEnvelope,
+                    MapFailure) &&
+                FFileHelper::SaveArrayToFile(
+                    WrongMaskMapEnvelope,
+                    *QuickSavePath);
+        }
+    }
+    TestTrue(
+        TEXT("A structurally valid but operation-wrong hostility mask fixture is written"),
+        bWrongMaskFixtureWritten);
+    TestTrue(
+        TEXT("Mission 15 rejects operation-wrong valid hostility masks without mutating live state"),
+        bWrongMaskFixtureWritten &&
+            !Bridge->QuickLoadScenario(Feedback) &&
+            Bridge->GetSimulation()->CurrentTick() == BeforeWrongMaskTick &&
+            Bridge->GetSimulation()->StateChecksum() ==
+                BeforeWrongMaskChecksum &&
+            Bridge->GetBrokenSunPhase() == BeforeWrongMaskPhase &&
+            Bridge->GetSimulation()->Config().hostilityMasks ==
+                EchoesSnapshotMigrationTestHelpers::Mission15HostilityMasks);
+    TestTrue(
+        TEXT("The authored Mission 15 checkpoint is restored after the mask negative"),
+        FFileHelper::SaveArrayToFile(
+            NativeMapEnvelope,
+            *QuickSavePath));
     // The schema-25 memory ledgers are measured against this mission's own map,
     // not taken on the inspector's word: four remembered-terrain grids of
     // exactly the live tile count, then one bounded object ledger per player.
@@ -1881,9 +2191,11 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
     const uint64 ExpectedNativeToV22Shrink = 5ULL +
         static_cast<uint64>(NativeLayout.ReceiptCount) * 19ULL +
         static_cast<uint64>(NativeLayout.MemoryLedgerSize) +
-        static_cast<uint64>(NativeLayout.Schema26AppendSize);
+        static_cast<uint64>(NativeLayout.Schema26AppendSize) +
+        static_cast<uint64>(NativeLayout.Schema27AppendSize) +
+        static_cast<uint64>(NativeLayout.Schema28AppendSize);
     TestTrue(
-        TEXT("The Mission 15 checkpoint converts through schemas 24 and 23 to its genuine schema-22 shape"),
+        TEXT("The Mission 15 checkpoint converts through every schema from 28 to its genuine schema-22 shape"),
         EchoesSnapshotMigrationTestHelpers::
                 ConvertMission15EnvelopeSnapshotToV22(V22Checkpoint) &&
             EchoesSnapshotMigrationTestHelpers::Mission15SnapshotVersion(
@@ -1909,7 +2221,9 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         TEXT("Mission 15 loads the genuine schema-22 primary without trailing payload"),
         Bridge->QuickLoadScenario(Feedback) &&
             !Feedback.Contains(TEXT("prior-generation backup")) &&
-            !Feedback.Contains(TEXT("staged prior-generation recovery")));
+            !Feedback.Contains(TEXT("staged prior-generation recovery")) &&
+            Bridge->GetSimulation()->Config().hostilityMasks ==
+                EchoesSnapshotMigrationTestHelpers::Mission15HostilityMasks);
     Objective = Bridge->GetLocalObjectiveSnapshot();
     const echoes::sim::Entity* LoadedApproachAnchor =
         Bridge->FindEntity(Objective.BrokenSunApproachAnchorId);
@@ -1976,6 +2290,24 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             Objective.BrokenSunAccordVoiceId,
             ChoirIdentityState::Possible,
             Feedback));
+    const bool bNemeApproachCleared =
+        ClearBrokenSunNemeAccordApproach(
+            Bridge,
+            Objective,
+            NemeGuards,
+            RuntimePlan.NemeAccordSite,
+            2400,
+            Feedback);
+    TestTrue(
+        TEXT("The concentrated command force clears observable threats from Neme's public accord approach"),
+        bNemeApproachCleared);
+    if (!bNemeApproachCleared)
+    {
+        AddInfo(Feedback);
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
     TestTrue(
         TEXT("The local voice moves to Mara's public accord site"),
         Bridge->IssueCommand(
@@ -1994,15 +2326,21 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             Bridge->SimToWorld(RuntimePlan.OruunAccordSite),
             FutureWellChoice::Dormant,
             Feedback));
+    const bool bNemeReachedAccord = PaceBrokenSunNemeToSite(
+        Bridge,
+        Objective.BrokenSunNemeId,
+        NemeGuards,
+        RuntimePlan.NemeAccordSite,
+        1800,
+        Feedback);
     TestTrue(
-        TEXT("Neme moves to the Choir accord site"),
-        Bridge->IssueCommand(
-            CommandType::Move,
-            Objective.BrokenSunNemeId,
-            0,
-            Bridge->SimToWorld(RuntimePlan.NemeAccordSite),
-            FutureWellChoice::Dormant,
-            Feedback));
+        TEXT("Neme reaches the Choir accord site with both non-Voice Soldier escorts regrouped"),
+        bNemeReachedAccord);
+    if (!bNemeReachedAccord && !bTacticalFailureReported)
+    {
+        AddInfo(Feedback);
+        bTacticalFailureReported = true;
+    }
     const auto IsWithinContractRadius = [](const Vec2& Position,
                                            const Vec2& Site,
                                            int32 Radius)
@@ -2048,12 +2386,48 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
                         3);
             },
             3000));
+    const bool bSharedResolutionAdmissionReady = TickUntil(
+        [Bridge, ResearchLoomId]()
+        {
+            const echoes::sim::Simulation* Simulation =
+                Bridge->GetSimulation();
+            const echoes::sim::PlayerState* Player =
+                Simulation != nullptr
+                    ? Simulation->FindPlayer(
+                          UEchoesSimulationSubsystem::LocalPlayerId)
+                    : nullptr;
+            return Player != nullptr &&
+                Player->HasCompletedResearch(
+                    ResearchType::ChoirHeldAlternatives) &&
+                Player->activeResearch == ResearchType::None &&
+                Simulation->ValidateResearch(
+                    UEchoesSimulationSubsystem::LocalPlayerId,
+                    ResearchLoomId,
+                    ResearchType::ChoirSharedResolution) ==
+                    echoes::sim::ResearchResult::Valid;
+        },
+        1200);
     TestTrue(
-        TEXT("The Research Loom accepts Shared Resolution"),
+        TEXT("Held Alternatives leaves the Research Loom ready for Shared Resolution"),
+        bSharedResolutionAdmissionReady);
+    const bool bSharedResolutionAccepted =
+        bSharedResolutionAdmissionReady &&
         Bridge->IssueResearchCommand(
             ResearchLoomId,
             ResearchType::ChoirSharedResolution,
-            Feedback));
+            Feedback);
+    TestTrue(
+        TEXT("The Research Loom accepts Shared Resolution"),
+        bSharedResolutionAccepted);
+    if (!bSharedResolutionAccepted)
+    {
+        AddInfo(BrokenSunResearchAdmissionDiagnostic(
+            Bridge,
+            ResearchLoomId,
+            ResearchType::ChoirSharedResolution,
+            bSharedResolutionAdmissionReady ? Feedback
+                                            : FString(TEXT("not-issued"))));
+    }
     TestTrue(
         TEXT("The witnessed three-part accord opens the ending choice"),
         TickUntil(
@@ -2089,33 +2463,37 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
                 EEchoesFinalResolution::ControlledStabilization &&
             Objective.BrokenSunFinalResolution ==
                 EEchoesFinalResolution::None);
-    // Resaving writes the native snapshot, which is schema 25 now that
-    // terrain and object memory is serialized; the replay envelope is
-    // untouched here and stays at 24.
+    // Resaving writes native schema 28; the replay envelope is untouched here
+    // and stays at its independent replay schema.
     TestTrue(
-        TEXT("The legacy-loaded Mission 15 state resaves as native schema 26"),
+        TEXT("The legacy-loaded Mission 15 state resaves as native schema 28"),
         Bridge->QuickSaveScenario(Feedback));
     TArray<uint8> ResavedNativePrimary;
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         ResavedNativeLayout;
     TestTrue(
-        TEXT("The Mission 15 primary records native schema 26 after legacy load"),
+        TEXT("The Mission 15 primary records native schema 28 after legacy load"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, ResavedNativePrimary, MapFailure) &&
+            ExtractReplayCheckpointPayloadForTest(ResavedNativePrimary, Feedback) &&
             EchoesSnapshotMigrationTestHelpers::
                 InspectMission15EnvelopeSnapshot(
                     ResavedNativePrimary,
                     ResavedNativeLayout) &&
             EchoesSnapshotMigrationTestHelpers::Mission15SnapshotVersion(
-                ResavedNativePrimary) == 26U);
+                ResavedNativePrimary) == echoes::sim::kSnapshotVersion &&
+            ResavedNativeLayout.Schema28HostilityMasks ==
+                EchoesSnapshotMigrationTestHelpers::Mission15HostilityMasks);
     TestTrue(
         TEXT("The native Mission 15 primary remains directly loadable"),
         !IFileManager::Get().FileExists(
             *(QuickSavePath + TEXT(".bak.tmp"))) &&
             Bridge->QuickLoadScenario(Feedback) &&
             !Feedback.Contains(TEXT("prior-generation backup")) &&
-            !Feedback.Contains(TEXT("staged prior-generation recovery")));
+            !Feedback.Contains(TEXT("staged prior-generation recovery")) &&
+            Bridge->GetSimulation()->Config().hostilityMasks ==
+                EchoesSnapshotMigrationTestHelpers::Mission15HostilityMasks);
     Objective = Bridge->GetLocalObjectiveSnapshot();
     TestTrue(
         TEXT("Quick load restores the exact armed-but-unconfirmed choice"),
@@ -2126,15 +2504,16 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             Bridge->GetBrokenSunPhase() ==
                 EEchoesBrokenSunPhase::ChooseFinalResolution);
     TArray<uint8> RetainedV22Backup;
-    // Only the resave moved to the native schema 25. The retained backup is
+    // Only the resave moved to native schema 28. The retained backup is
     // the deliberately built schema-22 generation this test loaded, so it
     // stays at 22: that is the backward-compatibility coverage.
     TestTrue(
-        TEXT("The first schema-26 resave retains the valid schema-22 Mission 15 generation"),
+        TEXT("The first schema-28 resave retains the valid schema-22 Mission 15 generation"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope,
             *(QuickSavePath + TEXT(".bak"))) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, RetainedV22Backup, MapFailure) &&
+            ExtractReplayCheckpointPayloadForTest(RetainedV22Backup, Feedback) &&
             EchoesSnapshotMigrationTestHelpers::Mission15SnapshotVersion(
                 RetainedV22Backup) == 22U);
     TestTrue(
@@ -2236,13 +2615,7 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
                 Feedback));
     TestTrue(
         TEXT("Leaving the accord irreversibly fails the final contract"),
-        TickUntil(
-            [Bridge]()
-            {
-                return Bridge->GetBrokenSunPhase() ==
-                    EEchoesBrokenSunPhase::Failed;
-            },
-            2500));
+        TickUntilExpectedFailure(2500));
     TestTrue(
         TEXT("The failed final contract writes its irreversible latch"),
         Bridge->QuickSaveScenario(Feedback) &&
@@ -2337,8 +2710,7 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::TheBrokenSun);
     // The runtime stamps echoes::sim::kSnapshotVersion into the decision
-    // record, and that is 25 now that terrain and object memory is
-    // serialized; the replay envelope stays at 24.
+    // record; the replay envelope remains at schema 24.
     TestTrue(
         TEXT("Mission 15 stores the exact resolution projection and native provenance"),
         MissionRecord != nullptr &&
@@ -2351,7 +2723,8 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             MissionRecord->AvailableFinalResolutions ==
                 RuntimePlan.AvailableFinalResolutions &&
             MissionRecord->FinalPlanKey == RuntimePlan.StablePlanKey &&
-            MissionRecord->SimulationSnapshotVersion == 26 &&
+            MissionRecord->SimulationSnapshotVersion ==
+                echoes::sim::kSnapshotVersion &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0 &&
             Bridge->IsScenarioPaused());

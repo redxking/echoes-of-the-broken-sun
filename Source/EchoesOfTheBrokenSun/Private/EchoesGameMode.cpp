@@ -54,6 +54,16 @@
 
 namespace
 {
+bool IsDeveloperAutoStartRequested()
+{
+#if UE_BUILD_SHIPPING
+    return false;
+#else
+    return FApp::IsUnattended() ||
+        FParse::Param(FCommandLine::Get(), TEXT("EchoesAutoStart"));
+#endif
+}
+
 const FName EnvironmentColorParameterName(TEXT("Color"));
 const FName EnvironmentMetallicParameterName(TEXT("Metallic"));
 const FName EnvironmentRoughnessParameterName(TEXT("Roughness"));
@@ -831,11 +841,12 @@ void AEchoesGameMode::BeginPlay()
         return;
     }
 
-    const bool bLegacyStressScenario =
-        FParse::Param(FCommandLine::Get(), TEXT("EchoesStress400"));
 #if UE_BUILD_SHIPPING
+    const bool bLegacyStressScenario = false;
     const bool bSustainedStressScenario = false;
 #else
+    const bool bLegacyStressScenario =
+        FParse::Param(FCommandLine::Get(), TEXT("EchoesStress400"));
     const bool bSustainedStressScenario =
         FParse::Param(
             FCommandLine::Get(),
@@ -911,8 +922,7 @@ void AEchoesGameMode::BeginPlay()
             Display,
             TEXT("[ECHOES_FACTION_REQUESTED] value=%s accepted=true"),
             *RequestedFaction);
-        if (FApp::IsUnattended() ||
-            FParse::Param(FCommandLine::Get(), TEXT("EchoesAutoStart")))
+        if (IsDeveloperAutoStartRequested())
         {
             Bridge->SetScenarioPaused(false);
         }
@@ -1221,6 +1231,11 @@ void AEchoesGameMode::BeginPlay()
         return;
     }
 
+#if UE_BUILD_SHIPPING
+    // Shipping always waits for the player front door, including unattended
+    // launches or a missing controller. Only developer builds auto-start.
+    Bridge->SetScenarioPaused(true);
+#endif
     if (GetNetMode() == NM_ListenServer)
     {
         const FEchoesSkirmishSetup OnlineSetup =
@@ -2253,8 +2268,7 @@ void AEchoesGameMode::BeginPlay()
         }
         else
 #endif
-        if (!FApp::IsUnattended() &&
-            !FParse::Param(FCommandLine::Get(), TEXT("EchoesAutoStart")))
+        if (!IsDeveloperAutoStartRequested())
         {
             Controller->PresentTitleScreen();
         }

@@ -344,7 +344,7 @@ UEchoesPresentationAudioSubsystem::GatherLiveVoiceEvidenceForTest(
         World != nullptr ? World->GetAudioDeviceRaw() : nullptr;
     USoundBase* Sound = GetCueAsset(Cue);
     USoundConcurrency* Policy = GetConcurrencyPolicy(Cue);
-    if (Device == nullptr || Sound == nullptr)
+    if (Device == nullptr || Sound == nullptr || Policy == nullptr)
     {
         return Evidence;
     }
@@ -354,16 +354,13 @@ UEchoesPresentationAudioSubsystem::GatherLiveVoiceEvidenceForTest(
     {
         for (const FActiveSound* ActiveSound : Device->GetActiveSounds())
         {
-            if (ActiveSound == nullptr || ActiveSound->GetSound() != Sound)
+            if (ActiveSound == nullptr || ActiveSound->GetSound() != Sound ||
+                !ActiveSound->ConcurrencySet.Contains(Policy))
             {
                 continue;
             }
             ++Evidence.MatchingActiveVoices;
-            if (Policy != nullptr &&
-                ActiveSound->ConcurrencySet.Contains(Policy))
-            {
-                ++Evidence.VoicesCarryingSubsystemPolicy;
-            }
+            ++Evidence.VoicesCarryingSubsystemPolicy;
             if (ActiveSound->ConcurrencyGroupData.Num() > 0)
             {
                 ++Evidence.VoicesInsideLiveConcurrencyGroup;

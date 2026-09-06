@@ -686,6 +686,13 @@ bool FEchoesContentCatalog::BuildSimulationRules(
         Rules.combatVisionPercent = Technology->CombatVisionPercent;
     }
 
+    // These warning durations are pinned core invariants in snapshot schema 27.
+    // Refuse content that asks for a different duration instead of ignoring it.
+    if (FutureWell.HarvestTelegraphTicks != 180 || FutureWell.ReshapeTelegraphTicks != 180)
+    {
+        OutError = TEXT("SIM_RULES_WELL_TELEGRAPH_UNSUPPORTED");
+        return false;
+    }
     OutRules.futureWell.harvestImmediateDawn = FutureWell.HarvestImmediateDawn;
     OutRules.futureWell.preserveDawnPerInterval = FutureWell.PreserveDawnPerInterval;
     OutRules.futureWell.preserveIntervalTicks = FutureWell.PreserveIntervalTicks;

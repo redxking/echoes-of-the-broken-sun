@@ -31,7 +31,7 @@ constexpr std::size_t CommandCapacityHeadroom = 1024;
 enum class ESmokeTermination : std::uint8_t
 {
     AuthoritativeOutcome,
-    TickBudgetExhausted,
+    BoundedWindowComplete,
     WallClockBudgetExhausted,
     TickProgressFailure,
     QueueCapacityGuard,
@@ -90,6 +90,7 @@ struct FRejectedCommand final
 struct FRunResult final
 {
     bool bCompleted = false;
+    bool bAuthoritativeTerminal = false;
     std::uint64_t InitialSnapshotTraceDigest = 0;
     std::uint64_t InitialChecksum = 0;
     std::vector<echoes::sim::Command> GeneratedCommands{};
@@ -151,8 +152,8 @@ private:
     {
         case ESmokeTermination::AuthoritativeOutcome:
             return TEXT("authoritative_outcome");
-        case ESmokeTermination::TickBudgetExhausted:
-            return TEXT("tick_budget_exhausted");
+        case ESmokeTermination::BoundedWindowComplete:
+            return TEXT("bounded_window_complete_ongoing");
         case ESmokeTermination::WallClockBudgetExhausted:
             return TEXT("wall_clock_budget_exhausted");
         case ESmokeTermination::TickProgressFailure:
@@ -896,6 +897,8 @@ void AppendStateSample(
     Result.FinalTick = Simulation.CurrentTick();
     Result.FinalChecksum = Simulation.StateChecksum();
     Result.Outcome = Simulation.Outcome();
+    Result.bAuthoritativeTerminal =
+        Result.Outcome != echoes::sim::MatchOutcome::Ongoing;
     if (Result.Samples.empty() ||
         Result.Samples.back().Tick != Result.FinalTick)
     {
@@ -935,7 +938,7 @@ void AppendStateSample(
 
     Result.Termination =
         Result.Outcome == echoes::sim::MatchOutcome::Ongoing
-            ? ESmokeTermination::TickBudgetExhausted
+            ? ESmokeTermination::BoundedWindowComplete
             : ESmokeTermination::AuthoritativeOutcome;
 
     if (!HasWallClockBudget(TEXT("replay export")))
@@ -1086,6 +1089,9 @@ void AppendStateSample(
     bMatches &= Differ(
         First.Termination == Second.Termination,
         TEXT("termination label"));
+    bMatches &= Differ(
+        First.bAuthoritativeTerminal == Second.bAuthoritativeTerminal,
+        TEXT("authoritative terminal flag"));
     bMatches &= Differ(
         First.Outcome == Second.Outcome,
         TEXT("authoritative outcome"));
@@ -1384,6 +1390,7 @@ bool FEchoesAiSkirmishDeterminismSmokeTest::RunTest(
                 TEXT("hiddenTargetReferences=%llu generatorMismatches=%llu ")
                 TEXT("samples=%llu sampleTraceDigest=%llu ")
                 TEXT("commandTraceDigest=%llu termination=%s outcome=%u ")
+                TEXT("authoritativeTerminal=%s ")
                 TEXT("finalTick=%llu finalChecksum=%llu replay=%s ")
                 TEXT("replayVersion=%u replayCommands=%llu ")
                 TEXT("replayBaselineTraceDigest=%llu ")
@@ -1422,6 +1429,7 @@ bool FEchoesAiSkirmishDeterminismSmokeTest::RunTest(
                     CommandTraceDigest(Run.GeneratedCommands)),
                 StableName(Run.Termination),
                 static_cast<unsigned int>(Run.Outcome),
+                Run.bAuthoritativeTerminal ? TEXT("true") : TEXT("false"),
                 static_cast<unsigned long long>(Run.FinalTick),
                 static_cast<unsigned long long>(Run.FinalChecksum),
                 Run.bReplaySucceeded ? TEXT("matched") : TEXT("failed"),

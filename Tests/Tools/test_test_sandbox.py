@@ -88,6 +88,59 @@ class EchoesTestSandboxPolicyTest(unittest.TestCase):
             SANDBOX.assert_targeted_deny_clauses(
                 profile, [SANDBOX._lexical_absolute(protected)])
 
+    def test_automation_storage_root_is_fixed_below_the_project(self) -> None:
+        project_root = self.root / "Project"
+        project_root.mkdir()
+        project = project_root / "Echoes.uproject"
+        project.write_text("{}\n", encoding="utf-8")
+        home = self.root / "home"
+        home.mkdir()
+
+        with mock.patch.object(
+                SANDBOX, "_resolved", wraps=SANDBOX._resolved) as resolver:
+            storage_root = SANDBOX._prepare_automation_storage_root(project, home)
+
+        self.assertEqual(
+            storage_root,
+            (project_root / "BuildArtifacts" / "TestIO").resolve(),
+        )
+        self.assertTrue(storage_root.is_dir())
+        self.assertNotIn(home, [call.args[0] for call in resolver.call_args_list])
+
+    def test_automation_storage_root_rejects_symlink_routing(self) -> None:
+        project_root = self.root / "Project"
+        project_root.mkdir()
+        project = project_root / "Echoes.uproject"
+        project.write_text("{}\n", encoding="utf-8")
+        outside = self.root / "outside"
+        outside.mkdir()
+        (project_root / "BuildArtifacts").symlink_to(
+            outside, target_is_directory=True)
+
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            SANDBOX._prepare_automation_storage_root(
+                project, self.root / "home")
+
+    def test_automation_storage_root_rejects_home_and_player_save_routes(self) -> None:
+        home = self.root / "home"
+        project_root = home / "Project"
+        project_root.mkdir(parents=True)
+        project = project_root / "Echoes.uproject"
+        project.write_text("{}\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "home"):
+            SANDBOX._prepare_automation_storage_root(project, home)
+
+        external_project = self.root / "ExternalProject"
+        player_saves = external_project / "Saved" / "SaveGames"
+        player_saves.mkdir(parents=True)
+        external_project_file = external_project / "Echoes.uproject"
+        external_project_file.write_text("{}\n", encoding="utf-8")
+        (external_project / "BuildArtifacts").symlink_to(
+            player_saves, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            SANDBOX._prepare_automation_storage_root(
+                external_project_file, home)
+
     def test_editor_command_keeps_paths_and_arguments_atomic(self) -> None:
         root = self.root / "sandbox with spaces"
         root.mkdir()
@@ -134,9 +187,9 @@ class EchoesTestSandboxPolicyTest(unittest.TestCase):
 
     @unittest.skipUnless(sys.platform == "darwin" and shutil.which("sandbox-exec"),
                          "sandbox-exec is unavailable on this host")
-    def test_launcher_end_to_end_with_synthetic_project_and_editor(self) -> None:
-        project = self.root / "Synthetic.uproject"
-        project.write_text("{}\n", encoding="utf-8")
+    def test_launcher_end_to_end_with_checkout_project_and_synthetic_editor(self) -> None:
+        project = ROOT / "EchoesOfTheBrokenSun.uproject"
+        self.assertTrue(project.is_file())
         report = self.root / "report"
         # A stale or caller-provided TMPDIR must not choose where saves are made.
         with mock.patch.object(tempfile, "tempdir", str(self.root / "forbidden temp override")):
@@ -149,10 +202,44 @@ class EchoesTestSandboxPolicyTest(unittest.TestCase):
             ))
         self.assertEqual(status, 0)
         result = json.loads((report / "SaveIsolation" / "launcher-result.json").read_text())
+        expected_storage_root = (
+            project.parent / "BuildArtifacts" / "TestIO").resolve()
+        self.assertEqual(
+            Path(result["automation_storage_root"]), expected_storage_root)
+        self.assertEqual(
+            Path(result["sandbox_root"]).parent, expected_storage_root)
+        self.assertTrue(Path(result["sandbox_root"]).name.startswith("EAT."))
+        self.assertEqual(Path(result["local_cache_dir"]).name, "DDC")
         self.assertTrue(result["synthetic_denial_probe"])
         self.assertTrue(result["protected_policy_clauses_verified"])
         self.assertFalse(result["prelaunch_failure"])
         self.assertTrue(result["cleanup_succeeded"])
+
+    def test_checkout_ddc_route_stays_below_unreal_path_limit(self) -> None:
+        ddc = ROOT / "BuildArtifacts" / "TestIO" / "EAT.12345678" / "DDC"
+        self.assertLessEqual(
+            len(str(ddc)), SANDBOX.UNREAL_DDC_MAX_PATH_LENGTH)
+
+    @unittest.skipUnless(sys.platform == "darwin" and shutil.which("sandbox-exec"),
+                         "sandbox-exec is unavailable on this host")
+    def test_launcher_rejects_overlong_ddc_route_before_editor(self) -> None:
+        project_root = self.root / ("long-project-path-" + "x" * 48)
+        project_root.mkdir()
+        project = project_root / "Synthetic.uproject"
+        project.write_text("{}\n", encoding="utf-8")
+
+        with mock.patch.object(SANDBOX, "run_editor_with_timeout") as run_editor:
+            with self.assertRaisesRegex(RuntimeError, "119-character engine limit"):
+                SANDBOX.launch(argparse.Namespace(
+                    editor="/usr/bin/true",
+                    project=str(project),
+                    report_dir=str(self.root / "overlong-report"),
+                    editor_args=[],
+                    timeout_seconds=10,
+                ))
+        run_editor.assert_not_called()
+        storage_root = project_root / "BuildArtifacts" / "TestIO"
+        self.assertEqual(list(storage_root.glob("EAT.*")), [])
 
     @unittest.skipUnless(sys.platform == "darwin" and shutil.which("sandbox-exec"),
                          "sandbox-exec is unavailable on this host")

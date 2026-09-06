@@ -95,18 +95,40 @@ void TransformSha256Block(const uint8* Block, uint32 (&State)[8])
 }
 }
 
-[[nodiscard]] FString ComputeSha256Hex(const TArray<uint8>& Bytes)
+[[nodiscard]] FString ComputeSha256Hex(
+    TConstArrayView<uint8> Bytes,
+    const TFunction<bool()>& ShouldCancel,
+    bool& OutCancelled)
 {
+    OutCancelled = false;
     uint32 State[8] = {
         0x6a09e667U, 0xbb67ae85U, 0x3c6ef372U, 0xa54ff53aU,
         0x510e527fU, 0x9b05688cU, 0x1f83d9abU, 0x5be0cd19U,
     };
 
+    constexpr int32 CancellationChunkBytes = 1024 * 1024;
     int32 Offset = 0;
+    int32 BytesUntilCancellationCheck = 0;
     while (Bytes.Num() - Offset >= 64)
     {
+        if (BytesUntilCancellationCheck <= 0)
+        {
+            if (ShouldCancel && ShouldCancel())
+            {
+                OutCancelled = true;
+                return {};
+            }
+            BytesUntilCancellationCheck = CancellationChunkBytes;
+        }
         TransformSha256Block(Bytes.GetData() + Offset, State);
         Offset += 64;
+        BytesUntilCancellationCheck -= 64;
+    }
+
+    if (ShouldCancel && ShouldCancel())
+    {
+        OutCancelled = true;
+        return {};
     }
 
     uint8 FinalBlocks[128]{};
@@ -136,5 +158,12 @@ void TransformSha256Block(const uint8* Block, uint32 (&State)[8])
         Digest += FString::Printf(TEXT("%08x"), Word);
     }
     return Digest;
+}
+
+[[nodiscard]] FString ComputeSha256Hex(const TArray<uint8>& Bytes)
+{
+    bool bCancelled = false;
+    return ComputeSha256Hex(
+        MakeArrayView(Bytes.GetData(), Bytes.Num()), {}, bCancelled);
 }
 }

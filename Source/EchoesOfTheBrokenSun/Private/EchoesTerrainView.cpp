@@ -302,7 +302,7 @@ bool AEchoesTerrainView::InitializeTerrain(
     }
     // If OperationMode is not explicitly supplied, check if the live terrain
     // matches the Lume Reach signature (four gated bastions along y=28):
-    if (!OperationMode.has_value())
+    if (!OperationMode.has_value() && !ScopedPlayer.has_value())
     {
         if (Simulation.Config().mapWidthTiles == 64 &&
             Simulation.Config().mapHeightTiles == 64 &&
@@ -327,9 +327,18 @@ bool AEchoesTerrainView::InitializeTerrain(
     if (MapPreset == EEchoesSkirmishMapPreset::GlassScar &&
         ActiveDressingProfile == EDressingSiteProfile::GlassScar)
     {
+        // Static substrate comes from the authored scenario, never from hidden
+        // changes at a replay seek tick. Cached player knowledge gates drawing.
         ComposeGlassScarChasm(
-            [&Simulation](int32 X, int32 Y)
+            [&Simulation, MapPreset, OperationMode, ScopedPlayer](int32 X, int32 Y)
             {
+                if (OperationMode == EEchoesOperationMode::CampaignPrologue)
+                    return echoes::world::IsCampaignTerrainPassable(1,
+                        echoes::sim::FutureWellChoice::Preserve, X, Y)
+                        ? echoes::sim::Terrain::Open : echoes::sim::Terrain::Blocked;
+                if (OperationMode == EEchoesOperationMode::Skirmish || ScopedPlayer.has_value())
+                    return FEchoesSkirmishSetupModel::IsBlockedTile(MapPreset, X, Y)
+                        ? echoes::sim::Terrain::Blocked : echoes::sim::Terrain::Open;
                 return Simulation.TerrainAt(X, Y);
             });
     }
@@ -561,6 +570,26 @@ bool AEchoesTerrainView::SyncTerrain(
         return false;
     }
 
+    // The shared adapter serves both live play and detached replay. Explored
+    // terrain and passability must remain the selected player's last knowledge.
+    const std::optional<echoes::sim::PlayerView> PlayerView = ScopedPlayerId.has_value()
+        ? Simulation.CreatePlayerView(*ScopedPlayerId) : std::nullopt;
+    if (ScopedPlayerId.has_value() && !PlayerView.has_value()) return false;
+    const auto PresentedTerrainAt = [&Simulation, &PlayerView](int32 X, int32 Y)
+    {
+        return PlayerView ? PlayerView->TerrainAt(X, Y) : Simulation.TerrainAt(X, Y);
+    };
+    const auto PresentedVisibilityAt = [&PlayerView](int32 X, int32 Y)
+    {
+        return PlayerView ? PlayerView->VisibilityAt(echoes::sim::Vec2::FromTiles(X, Y))
+            : echoes::sim::Visibility::Visible;
+    };
+    const auto PresentedPassableAt = [&Simulation, &PlayerView](int32 X, int32 Y)
+    {
+        const auto Position = echoes::sim::Vec2::FromTiles(X, Y);
+        return PlayerView ? PlayerView->IsPositionPassable(Position) : Simulation.IsPositionPassable(Position);
+    };
+
     BlockedTileCount = 0;
     ScarredTileCount = 0;
     InstancedBlockedTileCount = 0;
@@ -571,22 +600,15 @@ bool AEchoesTerrainView::SyncTerrain(
         for (int32 TileX = 0; TileX < MapWidthTiles; ++TileX)
         {
             const int32 TileIndex = TileY * MapWidthTiles + TileX;
-            const echoes::sim::Terrain Terrain =
-                Simulation.TerrainAt(TileX, TileY);
-            // Reading the simulation is only legal here because nothing is
-            // drawn from it until the player's own information state allows it.
-            // Without a scoped player the caller has claimed full disclosure,
-            // which is the legacy behaviour this overload preserves.
-            const echoes::sim::Visibility Visibility =
-                ScopedPlayerId.has_value()
-                    ? Simulation.VisibilityAt(
-                          *ScopedPlayerId,
-                          echoes::sim::Vec2::FromTiles(TileX, TileY))
-                    : echoes::sim::Visibility::Visible;
+            const echoes::sim::Terrain Terrain = PresentedTerrainAt(TileX, TileY);
+            const echoes::sim::Visibility Visibility = PresentedVisibilityAt(TileX, TileY);
             const bool bKnown =
                 Visibility != echoes::sim::Visibility::Unexplored;
-            BlockedTileCount += Terrain == echoes::sim::Terrain::Blocked ? 1 : 0;
-            ScarredTileCount += Terrain == echoes::sim::Terrain::Scarred ? 1 : 0;
+            // Diagnostic census retains its documented authoritative meaning;
+            // only the scoped values below are used by rendering or dressing.
+            const auto AuthoritativeTerrain = Simulation.TerrainAt(TileX, TileY);
+            BlockedTileCount += AuthoritativeTerrain == echoes::sim::Terrain::Blocked ? 1 : 0;
+            ScarredTileCount += AuthoritativeTerrain == echoes::sim::Terrain::Scarred ? 1 : 0;
             InstancedBlockedTileCount +=
                 bKnown && Terrain == echoes::sim::Terrain::Blocked ? 1 : 0;
             InstancedScarredTileCount +=
@@ -609,26 +631,7 @@ bool AEchoesTerrainView::SyncTerrain(
         BiomeSurface->MarkRenderStateDirty();
         SyncChasmVisibility();
     }
-    SyncDressingWith(
-        [&Simulation](int32 X, int32 Y)
-        {
-            return Simulation.TerrainAt(X, Y);
-        },
-        [&Simulation, this](int32 X, int32 Y)
-        {
-            return ScopedPlayerId.has_value()
-                ? Simulation.VisibilityAt(
-                      *ScopedPlayerId,
-                      echoes::sim::Vec2::FromTiles(X, Y))
-                : echoes::sim::Visibility::Visible;
-        },
-        [&Simulation](int32 X, int32 Y)
-        {
-            // A Blocked tile that reports passable is one a Reshape Well
-            // currently holds open; the record hides for that span.
-            return Simulation.IsPositionPassable(
-                echoes::sim::Vec2::FromTiles(X, Y));
-        });
+    SyncDressingWith(PresentedTerrainAt, PresentedVisibilityAt, PresentedPassableAt);
     return true;
 }
 
@@ -1356,13 +1359,11 @@ void AEchoesTerrainView::SyncDressingWith(
     {
         return;
     }
-    // The presentation preset names a theme, not a map. Campaign operations
-    // present under the Glass Scar theme on their own terrain, so the first
-    // sync is where the live terrain proves it is the compiled pack these
-    // records were verified against: any record off a Blocked cell means it
-    // is not, and the layer deactivates for this view rather than drawing a
-    // partial match or reporting a defect. After activation a refusal is an
-    // anomaly and is reported once per record.
+    // Theme names are not topology identities. In a scoped view, the Blocked
+    // value on an unexplored cell is a sentinel, not evidence that a dressing
+    // record belongs there. Admit static dressing only where the authored map
+    // supports it across its doctrine variants. Legacy diagnostic views may
+    // still test an explicitly supplied unscoped terrain fixture.
     if (bDressingAwaitingIdentity)
     {
         bDressingAwaitingIdentity = false;
@@ -1370,7 +1371,27 @@ void AEchoesTerrainView::SyncDressingWith(
         for (int32 RecordIndex = 0; RecordIndex < DressingRecordCount; ++RecordIndex)
         {
             const FActiveDressingRecord& Record = ActiveDressingRecords[RecordIndex];
-            if (TerrainAt(Record.X, Record.Y) != echoes::sim::Terrain::Blocked)
+            bool bAuthoredBlocked = false;
+            if (bDiagnosticDressingTopology)
+                bAuthoredBlocked = TerrainAt(Record.X, Record.Y) == echoes::sim::Terrain::Blocked;
+            else
+            {
+                EEchoesCampaignMissionId Mission;
+                if (ActiveOperationMode.has_value() &&
+                    UEchoesSimulationSubsystem::GetMissionIdForOperation(*ActiveOperationMode, Mission))
+                {
+                    const int32 Ordinal = static_cast<int32>(Mission);
+                    bAuthoredBlocked = true;
+                    for (const auto Choice : {echoes::sim::FutureWellChoice::Harvest,
+                            echoes::sim::FutureWellChoice::Preserve, echoes::sim::FutureWellChoice::Reshape})
+                        bAuthoredBlocked &= !echoes::world::IsCampaignTerrainPassable(
+                            Ordinal, Choice, Record.X, Record.Y);
+                }
+                else
+                    bAuthoredBlocked = FEchoesSkirmishSetupModel::IsBlockedTile(
+                        ActiveMapPreset, Record.X, Record.Y);
+            }
+            if (!bAuthoredBlocked)
             {
                 ++Mismatched;
             }
@@ -1384,7 +1405,7 @@ void AEchoesTerrainView::SyncDressingWith(
             UE_LOG(
                 LogEchoes,
                 Display,
-                TEXT("[ECHOES_DRESSING_INACTIVE] site=%s records=%d offBlocked=%d reason=liveTerrainIsNotTheBoundCompiledPack"),
+                TEXT("[ECHOES_DRESSING_INACTIVE] site=%s records=%d offBlocked=%d reason=topologyDoesNotSupportBoundDressing"),
                 *ActiveDressingSiteId,
                 DressingRecordCount,
                 Mismatched);
@@ -1417,7 +1438,9 @@ void AEchoesTerrainView::SyncDressingWith(
         else
         {
             ++DressingRefusedCount;
-            if (!DressingRefusalReported[RecordIndex])
+            // Observing a changed cell is normal player knowledge, not an
+            // asset-binding failure. The authored check above is independent.
+            if (bDiagnosticDressingTopology && !DressingRefusalReported[RecordIndex])
             {
                 DressingRefusalReported[RecordIndex] = true;
                 UE_LOG(

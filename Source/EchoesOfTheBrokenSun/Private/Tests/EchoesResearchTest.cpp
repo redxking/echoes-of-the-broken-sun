@@ -27,13 +27,12 @@ bool FEchoesResearchTest::RunTest(const FString& Parameters)
     {
         return false;
     }
-    // Per-player terrain and object memory is now serialized into snapshots,
-    // so the native snapshot schema moved 24 -> 25. The replay envelope shape
-    // did not change, so the replay schema deliberately stays at 24.
-    TestEqual(TEXT("Research interruption uses snapshot schema 26"),
-              echoes::sim::kSnapshotVersion, 26U);
-    TestEqual(TEXT("Research interruption uses replay schema 24"),
-              echoes::sim::kReplayVersion, 24U);
+    // Schema 28 appends player-hostility masks after schema 27 lifecycle state.
+    // Concession recording independently advanced replay to schema 25.
+    TestEqual(TEXT("Research interruption uses snapshot schema 28"),
+              echoes::sim::kSnapshotVersion, 28U);
+    TestEqual(TEXT("Research interruption uses replay schema 25"),
+              echoes::sim::kReplayVersion, 25U);
     FTestWorldWrapper WorldWrapper;
     if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
     {
@@ -102,6 +101,172 @@ bool FEchoesResearchTest::RunTest(const FString& Parameters)
             Feedback));
     TestTrue(TEXT("Research rejection explains the resource boundary"),
              Feedback.Contains(TEXT("INSUFFICIENT_RESOURCES")));
+
+    FEchoesSkirmishSetup FundedSetup = Bridge->GetActiveSkirmishSetup();
+    FundedSetup.ResourceLevel = EEchoesSkirmishResourceLevel::Abundant;
+    if (!TestTrue(
+            TEXT("The mixed-command regression uses an authored funded deployment"),
+            Bridge->ApplySkirmishSetup(FundedSetup, Feedback)))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    Scenario = Bridge->GetSimulation();
+    const echoes::sim::ResearchRules* FundedTargeting =
+        Scenario->ResearchDefinition(
+            echoes::sim::ResearchType::MeridianPrismaticTargeting);
+    uint32 FundedFoundry = 0;
+    uint32 MovingLancer = 0;
+    echoes::sim::Vec2 MoveDestination{};
+    for (const echoes::sim::Entity& Entity : Scenario->Entities())
+    {
+        if (Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId)
+        {
+            continue;
+        }
+        if (Entity.type == echoes::sim::EntityType::Barracks)
+        {
+            FundedFoundry = Entity.id;
+        }
+        if (MovingLancer == 0 &&
+            Entity.type == echoes::sim::EntityType::Soldier)
+        {
+            static constexpr int32 Offsets[][2] = {
+                {1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+            for (const int32* Offset : Offsets)
+            {
+                const echoes::sim::Vec2 Candidate =
+                    echoes::sim::Vec2::FromTiles(
+                        Entity.position.x.FloorToInt() + Offset[0],
+                        Entity.position.y.FloorToInt() + Offset[1]);
+                if (Scenario->ValidateMoveOrder(
+                        UEchoesSimulationSubsystem::LocalPlayerId,
+                        Entity.id,
+                        Candidate) ==
+                    echoes::sim::CommandResolutionOutcome::Applied)
+                {
+                    MovingLancer = Entity.id;
+                    MoveDestination = Candidate;
+                    break;
+                }
+            }
+        }
+    }
+    if (!TestTrue(TEXT("Funded deployment exposes a foundry and movable Lancer"),
+                  FundedFoundry != 0 && MovingLancer != 0))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+
+    const echoes::sim::Tick SubmissionTick = Scenario->CurrentTick();
+    const std::optional<uint64> MoveSequence = Scenario->NextCommandSequence(
+        UEchoesSimulationSubsystem::LocalPlayerId);
+    const echoes::sim::Vec2 PositionBeforeMove =
+        Scenario->FindEntity(MovingLancer)->position;
+    const echoes::sim::ResourcePool ResourcesBeforeResearch =
+        Scenario->FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId)->resources;
+    FString MoveFeedback;
+    FString ResearchFeedback;
+    Bridge->SetScenarioPaused(false);
+    const bool bMoveAccepted = Bridge->IssueCommand(
+        echoes::sim::CommandType::Move,
+        MovingLancer,
+        0,
+        Bridge->SimToWorld(MoveDestination),
+        echoes::sim::FutureWellChoice::Dormant,
+        MoveFeedback);
+    const std::optional<uint64> ResearchSequence =
+        Scenario->NextCommandSequence(
+            UEchoesSimulationSubsystem::LocalPlayerId);
+    const bool bResearchAccepted = Bridge->IssueResearchCommand(
+        FundedFoundry,
+        echoes::sim::ResearchType::MeridianPrismaticTargeting,
+        ResearchFeedback);
+    TestTrue(TEXT("Move is accepted for next-tick execution"), bMoveAccepted);
+    TestTrue(TEXT("Same-frame research is accepted after the move"),
+             bResearchAccepted);
+    TestTrue(TEXT("Same-frame commands receive consecutive local sequences"),
+             MoveSequence.has_value() && ResearchSequence.has_value() &&
+                 *ResearchSequence == *MoveSequence + 1);
+    if (!bMoveAccepted || !bResearchAccepted || !MoveSequence.has_value() ||
+        !ResearchSequence.has_value())
+    {
+        AddError(FString::Printf(
+            TEXT("Mixed move/research admission failed: move='%s' research='%s'"),
+            *MoveFeedback,
+            *ResearchFeedback));
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    TestFalse(TEXT("Move has no receipt before its assigned tick"),
+              Scenario->FindCommandResolutionReceipt(
+                  UEchoesSimulationSubsystem::LocalPlayerId,
+                  *MoveSequence).has_value());
+    TestFalse(TEXT("Research has no receipt before its assigned tick"),
+              Scenario->FindCommandResolutionReceipt(
+                  UEchoesSimulationSubsystem::LocalPlayerId,
+                  *ResearchSequence).has_value());
+
+    Bridge->Tick(0.05f);
+    TestEqual(TEXT("One fixed step reaches the assigned execution tick"),
+              Scenario->CurrentTick(), SubmissionTick + 1);
+    TestFalse(TEXT("Move remains queued until the assigned tick executes"),
+              Scenario->FindCommandResolutionReceipt(
+                  UEchoesSimulationSubsystem::LocalPlayerId,
+                  *MoveSequence).has_value());
+    TestFalse(TEXT("Research remains queued until the assigned tick executes"),
+              Scenario->FindCommandResolutionReceipt(
+                  UEchoesSimulationSubsystem::LocalPlayerId,
+                  *ResearchSequence).has_value());
+
+    Bridge->Tick(0.05f);
+    const std::optional<echoes::sim::CommandResolutionReceipt> MoveReceipt =
+        Scenario->FindCommandResolutionReceipt(
+            UEchoesSimulationSubsystem::LocalPlayerId,
+            *MoveSequence);
+    const std::optional<echoes::sim::CommandResolutionReceipt> ResearchReceipt =
+        Scenario->FindCommandResolutionReceipt(
+            UEchoesSimulationSubsystem::LocalPlayerId,
+            *ResearchSequence);
+    TestTrue(TEXT("Move resolves as applied on tick T+1"),
+             MoveReceipt.has_value() &&
+                 MoveReceipt->assignedExecutionTick == SubmissionTick + 1 &&
+                 MoveReceipt->outcome ==
+                     echoes::sim::CommandResolutionOutcome::Applied);
+    TestTrue(TEXT("Research resolves as applied on tick T+1"),
+             ResearchReceipt.has_value() &&
+                 ResearchReceipt->assignedExecutionTick == SubmissionTick + 1 &&
+                 ResearchReceipt->outcome ==
+                     echoes::sim::CommandResolutionOutcome::Applied);
+    const echoes::sim::Entity* MovedLancer =
+        Scenario->FindEntity(MovingLancer);
+    const echoes::sim::PlayerState* FundedPlayer = Scenario->FindPlayer(
+        UEchoesSimulationSubsystem::LocalPlayerId);
+    TestTrue(TEXT("Applied move advances the selected Lancer"),
+             MovedLancer != nullptr &&
+                 MovedLancer->position != PositionBeforeMove);
+    TestTrue(TEXT("Applied research commits its authored state and cost"),
+             FundedPlayer != nullptr && FundedTargeting != nullptr &&
+                 FundedPlayer->activeResearch ==
+                     echoes::sim::ResearchType::MeridianPrismaticTargeting &&
+                 FundedPlayer->researchProgress == 1 &&
+                 FundedPlayer->resources.material ==
+                     ResourcesBeforeResearch.material -
+                         FundedTargeting->cost.material &&
+                 FundedPlayer->resources.dawnshards ==
+                     ResourcesBeforeResearch.dawnshards -
+                         FundedTargeting->cost.dawnshards);
+    std::string MixedReplayError;
+    const std::optional<echoes::sim::Simulation> MixedReplay =
+        echoes::sim::Simulation::ReplayToEnd(
+            Scenario->ExportReplay(&MixedReplayError), &MixedReplayError);
+    TestTrue(TEXT("Mixed next-tick execution replays deterministically"),
+             MixedReplay.has_value() &&
+                 MixedReplay->StateChecksum() == Scenario->StateChecksum());
 
     echoes::sim::Simulation Simulation(Scenario->Config());
     TestTrue(TEXT("Standalone authored-rules player initializes"),

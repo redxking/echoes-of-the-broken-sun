@@ -1,10 +1,17 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Async/Future.h"
+#include <atomic>
+#include <memory>
 #include "EchoesCampaignProgress.h"
+#include "EchoesPlayerFlow.h"
+#include "EchoesPlayerProfile.h"
+#include "EchoesMatchReplay.h"
 #include "EchoesCampaignMapLayout.h"
 #include "EchoesCommandDeckModel.h"
 #include "EchoesFormationLayout.h"
+#include "EchoesFieldHudView.h"
 #include "EchoesNetworkSession.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSkirmishSetup.h"
@@ -24,6 +31,18 @@ enum class EEchoesCommandMarkerType : uint8;
 enum class EEchoesCityDistrict : uint8;
 class UEchoesSimulationSubsystem;
 class UEchoesGameInstance;
+class UEchoesShellWidget;
+class AEchoesBuildPlacementPreview;
+class UEchoesContextCursorWidget;
+class UEchoesFieldHudWidget;
+
+/** Value-only result of a background replay directory scan. */
+struct FEchoesReplayBrowserScanResult
+{
+    uint64 Generation = 0;
+    TArray<FEchoesReplayMetadata> Entries;
+    TArray<FString> Errors;
+};
 
 #if UE_BUILD_DEVELOPMENT && WITH_DEV_AUTOMATION_TESTS
 namespace echoes::network::testing
@@ -192,6 +211,34 @@ public:
         EEchoesFinalResolution Resolution,
         EEchoesFinalResolution RecordedResolution,
         EEchoesCampaignCommitStatus CommitStatus);
+    FEchoesFieldHudView BuildFieldHudView() const;
+    void RefreshFieldHud();
+    void HandleFieldHudAction(EEchoesFieldHudAction Action, int32 Argument = 0);
+    bool HandleFieldHudPointer(const FVector2D& NormalizedMapPosition, bool bIssueOrder);
+    void HandleFieldHudEndpoint(const FString& Endpoint);
+    UEchoesFieldHudWidget* GetFieldHudWidget() const { return FieldHudWidget; }
+    FEchoesShellView BuildShellView() const;
+    void HandleShellAction(EEchoesShellAction Action, int32 Argument = 0);
+    void HandleShellValue(EEchoesShellAction Action, float Value, bool bCommit);
+    void BuildReplayShellView(FEchoesShellView& View) const;
+    bool HandleReplayShellAction(EEchoesShellAction Action, int32 Argument, bool bConfirmed);
+    void RefreshReplayBrowser();
+    void PollReplayBrowser();
+    void CancelReplayBrowserScan();
+#if WITH_DEV_AUTOMATION_TESTS
+    void DrainReplayBrowserScan();
+#endif
+    bool IsReplayBrowserLoading() const { return bReplayBrowserLoading; }
+    const TArray<FEchoesReplayMetadata>& GetReplayBrowserEntries() const { return ReplayBrowserEntries; }
+    void AppendMatchResultDossier(FEchoesShellView& View) const;
+    void RevertPendingDisplay();
+    void RefreshShell();
+    bool InitializePlayerProfile();
+    bool CommitPlayerProfile();
+    bool RequireOperationMastery(EEchoesOperationMode Operation, bool bLearningCheckpoint = false);
+    const FEchoesPlayerProfile& GetPlayerProfile() const { return PlayerProfile; }
+    bool UsesShellWidget() const;
+    const FEchoesPlayerFlow& GetPlayerFlow() const { return PlayerFlow; }
     void PresentTitleScreen();
     void OpenOnlineFrontDoor();
     void ConfirmOnlineFrontDoorAction();
@@ -244,6 +291,11 @@ public:
     void FocusPreviousTechnologyTier();
     void FocusNextTechnologyTier();
     void TogglePauseMenu();
+    void RestartScenario();
+    void ToggleTacticalPause();
+#if WITH_DEV_AUTOMATION_TESTS
+    // Historical explicit-position fixtures; shipping input is routed by UMG.
+    bool HandleMinimapPointer(const FVector2D& ScreenPosition, const FVector2D& ViewportSize, bool bIssueOrder);
     bool HandleTechnologyPanelPointer(const FVector2D& ScreenPosition);
     /** Activates the visible modal control at a shared-layout screen position. */
     bool HandleModalOverlayPointer(
@@ -267,6 +319,7 @@ public:
     bool HandleBattlefieldPointerPressed(
         const FVector2D& ScreenPosition,
         const FVector2D& ViewportSize);
+#endif
     /** Runs one command-deck action; cursor-targeted actions arm instead. */
     void ActivateCommandDeckAction(EEchoesCommandDeckAction Action);
     /**
@@ -285,15 +338,15 @@ public:
     [[nodiscard]] FString GetOpponentFactionLabel() const;
     [[nodiscard]] bool IsMissionBriefingVisible() const
     {
-        return bMissionBriefingVisible;
+        return PlayerFlow.Is(EEchoesShellScreen::Briefing);
     }
     [[nodiscard]] bool IsTitleScreenVisible() const
     {
-        return bTitleScreenVisible;
+        return PlayerFlow.Is(EEchoesShellScreen::Title);
     }
     [[nodiscard]] bool IsMatchResultVisible() const
     {
-        return bMatchResultVisible;
+        return PlayerFlow.Is(EEchoesShellScreen::Results);
     }
     [[nodiscard]] bool IsNewCampaignConfirmationArmed() const;
     [[nodiscard]] bool IsCampaignRestoreConfirmationArmed() const;
@@ -330,7 +383,7 @@ public:
     }
     [[nodiscard]] bool IsPauseMenuVisible() const
     {
-        return bPauseMenuVisible;
+        return PlayerFlow.Is(EEchoesShellScreen::Pause);
     }
     [[nodiscard]] bool IsTechnologyPanelVisible() const
     {
@@ -348,11 +401,12 @@ public:
     {
         return KeyboardTargetOffset;
     }
+    [[nodiscard]] bool IsReplayInputActive() const;
     [[nodiscard]] bool IsModalOverlayVisible() const
     {
-        return bTitleScreenVisible || bMissionBriefingVisible ||
-               bPauseMenuVisible || bTechnologyPanelVisible ||
-               bMatchResultVisible || bOnlineLocalMenuVisible ||
+        return PlayerFlow.HasOverlay() || PlayerFlow.Is(EEchoesShellScreen::Title) || PlayerFlow.Is(EEchoesShellScreen::Briefing) ||
+               PlayerFlow.Is(EEchoesShellScreen::Pause) || bTechnologyPanelVisible ||
+               PlayerFlow.Is(EEchoesShellScreen::Results) || bOnlineLocalMenuVisible ||
                bCampaignOperationsMapVisible ||
                IsOpponentReconnectGraceActive() ||
                IsOnlineFrontDoorVisible() ||
@@ -427,6 +481,22 @@ public:
     }
 
 private:
+    void InitializeTacticalInputPresentation();
+    void ShutdownTacticalInputPresentation();
+    void UpdateTacticalInputPresentation();
+    void BeginBuildPlacement(echoes::sim::EntityType BuildingType);
+    bool ConfirmBuildPlacement();
+    void CancelBuildPlacement(bool bShowFeedback = true);
+    UPROPERTY(Transient)
+    TObjectPtr<UEchoesContextCursorWidget> ContextCursorWidget;
+    UPROPERTY(Transient)
+    TObjectPtr<AEchoesBuildPlacementPreview> BuildPlacementPreview;
+    echoes::sim::EntityId BuildPlacementWorkerId = 0;
+    echoes::sim::EntityType BuildPlacementType = echoes::sim::EntityType::Barracks;
+    FVector BuildPlacementWorldPosition = FVector::ZeroVector;
+    int32 BuildPlacementHalfExtentRaw = 0;
+    bool bBuildPlacementActive = false;
+    bool bBuildPlacementValid = false;
 #if WITH_DEV_AUTOMATION_TESTS
     friend class FEchoesNetworkProtocolTest;
 #endif
@@ -691,7 +761,6 @@ private:
     void ReconcileSelectedChoirToPossible();
     void ReconcileSelectedChoirIdentities(
         echoes::sim::ChoirIdentityState StableState);
-    void RestartScenario();
     void QuickSaveScenario();
     void QuickLoadScenario();
     void CycleHudScale();
@@ -806,14 +875,47 @@ private:
      * only, in the same family as bControlGroupAssignmentArmed.
      */
     EEchoesCommandDeckAction ArmedDeckAction = EEchoesCommandDeckAction::None;
-    bool bTitleScreenVisible = false;
-    bool bMissionBriefingVisible = false;
-    bool bPauseMenuVisible = false;
     bool bOnlineLocalMenuVisible = false;
+    FEchoesPlayerFlow PlayerFlow;
+    UPROPERTY(Transient)
+    TObjectPtr<UEchoesShellWidget> ShellWidget;
+    UPROPERTY(Transient)
+    TObjectPtr<UEchoesFieldHudWidget> FieldHudWidget;
+    mutable FString LastFieldHudError;
+    bool bFieldHudWasModal = false;
+    EEchoesFieldHudSurface LastFieldHudSurface = EEchoesFieldHudSurface::Hidden;
+    EEchoesShellAction PendingShellAction = EEchoesShellAction::Cancel;
+    int32 PendingShellArgument = 0;
+    FString ShellMessage;
+    TArray<FEchoesReplayMetadata> ReplayBrowserEntries;
+    TFuture<FEchoesReplayBrowserScanResult> ReplayBrowserScan;
+    std::shared_ptr<std::atomic_bool> ReplayBrowserCancellation;
+    FEchoesReplayBrowserFilter RequestedReplayBrowserFilter;
+    FString RequestedReplayBrowserDirectory;
+    uint64 ReplayBrowserGeneration = 0;
+    bool bReplayBrowserRefreshQueued = false;
+    bool bReplayBrowserLoading = false;
+    FString ReplayBrowserMapFilter;
+    int32 ReplayBrowserDateFilter = 0;
+    EEchoesShellScreen ReplayReturnScreen = EEchoesShellScreen::Title;
+    uint64 PendingReplayTick = 0;
+    FEchoesPlayerProfile PlayerProfile;
+    bool bPlayerProfileInitialized = false;
+    bool bTutorialOperationAuthorized = false;
+    bool bPlayerProfileAvailable = false;
+    bool bShellWasVisible = false;
+    bool bMinimapDragging = false;
+    bool bTacticalPaused = false;
+    uint64 PresentedCheckpointRequestId = 0;
+    bool bPresentedCheckpointPending = false;
+    FIntPoint PendingDisplayResolution = FIntPoint(1280, 720);
+    EWindowMode::Type PendingDisplayMode = EWindowMode::Windowed;
+    FIntPoint PreviousDisplayResolution = FIntPoint(1280, 720);
+    EWindowMode::Type PreviousDisplayMode = EWindowMode::Windowed;
+    double DisplayRevertDeadline = 0.0;
     bool bTechnologyPanelVisible = false;
     bool bTechnologyPanelWasScenarioPaused = false;
     bool bKeyboardTargetingEnabled = false;
-    bool bMatchResultVisible = false;
     bool bNewCampaignConfirmationArmed = false;
     bool bCampaignRestoreConfirmationArmed = false;
     bool bReturnToOperationsConfirmationArmed = false;

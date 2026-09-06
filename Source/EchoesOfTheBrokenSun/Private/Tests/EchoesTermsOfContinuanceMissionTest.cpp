@@ -3,10 +3,12 @@
 #include "Misc/AutomationTest.h"
 
 #include "EchoesTestSaveEnvironment.h"
+#include "EchoesContinuanceTestTactics.h"
 
 #include "EchoesCampaignProgress.h"
 #include "EchoesCampaignMapCheckpoint.h"
 #include "EchoesPlayerController.h"
+#include "EchoesReplayCheckpointTestHelpers.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTermsOfContinuanceMissionModel.h"
 #include "Engine/World.h"
@@ -15,6 +17,9 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Tests/AutomationCommon.h"
+
+#include <optional>
+#include <string>
 
 namespace
 {
@@ -746,7 +751,8 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             }
         }
 
-        const auto TickUntil = [BranchBridge](
+        const auto TickUntil = [
+            BranchBridge, Choice, LivePlan, &Feedback](
             const TFunction<bool()>& Predicate,
             int32 MaximumTicks)
         {
@@ -760,6 +766,11 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                 }
                 if (BranchBridge->GetTermsOfContinuancePhase() ==
                     EEchoesTermsOfContinuancePhase::Failed)
+                {
+                    return false;
+                }
+                if (!EchoesContinuanceTestTactics::MaintainSpineDefense(
+                        BranchBridge, Choice, LivePlan, Feedback))
                 {
                     return false;
                 }
@@ -842,6 +853,20 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                 Spine->completed && Spine->aegisPowered;
         };
         BranchBridge->SetScenarioPaused(false);
+        // The eastern Reshape-ledger spine is exposed to the approaching
+        // opponent. Defend it with the existing army while workers reconnect
+        // power; the same T300-T900 network and survival gates still apply.
+        if (Choice == echoes::sim::FutureWellChoice::Reshape)
+        {
+            if (!Check(TEXT("the army and existing scout defend the exposed spine"),
+                    EchoesContinuanceTestTactics::AssignSpineDefense(
+                        BranchBridge, Choice, LivePlan, Feedback)))
+            {
+                BranchBridge->StopPrototypeScenario();
+                BranchWorld.ForwardErrorMessages(this);
+                return false;
+            }
+        }
         BranchBridge->Tick(0.05f);
         TArray<echoes::sim::EntityId> SelectedWorkers;
         for (int32 SiteIndex = 0;
@@ -1023,6 +1048,32 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
                     },
                     1000)))
         {
+            const FEchoesObjectiveSnapshot FailedObjective =
+                BranchBridge->GetLocalObjectiveSnapshot();
+            AddInfo(FString::Printf(
+                TEXT("Continuance failure: branch=%u tick=%llu reason=%s relay=%u spine=%u meridianWitness=%u kharuunWitness=%u playerLinks=%s seeds=%s interfaces=%s"),
+                static_cast<uint8>(Choice),
+                static_cast<unsigned long long>(
+                    BranchBridge->GetSimulation()->CurrentTick()),
+                *BranchBridge->GetMissionFailureReasonCode(),
+                FailedObjective.MeridianContinuanceRelayId,
+                FailedObjective.KharuunContinuanceSpineId,
+                FailedObjective.MeridianContinuanceWitnessId,
+                FailedObjective.KharuunContinuanceWitnessId,
+                AreAllPlayerLinksLivingCompletedUnpowered() ? TEXT("true") : TEXT("false"),
+                AreAllAuthoredSeedsLivingCompletedUnpowered() ? TEXT("true") : TEXT("false"),
+                AreBothInterfacesLivingAndPowered() ? TEXT("true") : TEXT("false")));
+            for (const echoes::sim::Entity& Entity :
+                 BranchBridge->GetSimulation()->Entities())
+            {
+                AddInfo(FString::Printf(
+                    TEXT("Continuance entity: id=%u owner=%u type=%u hp=%d tile=(%d,%d) completed=%s powered=%s"),
+                    Entity.id, Entity.owner, static_cast<uint8>(Entity.type),
+                    Entity.hitPoints, Entity.position.x.FloorToInt(),
+                    Entity.position.y.FloorToInt(),
+                    Entity.completed ? TEXT("true") : TEXT("false"),
+                    Entity.aegisPowered ? TEXT("true") : TEXT("false")));
+            }
             BranchBridge->StopPrototypeScenario();
             BranchWorld.ForwardErrorMessages(this);
             return false;
@@ -1246,6 +1297,28 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             MutableSpine->position =
                 echoes::sim::Vec2::FromTiles(50, 39);
         }
+        // This fixture deliberately constructs legacy geometry through direct
+        // state mutation. Round-trip once so derived visibility and memory are
+        // normalized exactly as replay loading will normalize them, then rebase
+        // replay authority before downgrading the topology revision below.
+        std::string LegacyNormalizationError;
+        std::optional<echoes::sim::Simulation> NormalizedLegacySimulation =
+            echoes::sim::Simulation::LoadSnapshot(
+                LegacySimulation->SaveSnapshot(),
+                &LegacyNormalizationError);
+        if (!TestTrue(
+                TEXT("The prior revision-1 geometry normalizes through the authoritative snapshot path"),
+                NormalizedLegacySimulation.has_value()))
+        {
+            AddError(FString::Printf(
+                TEXT("Legacy topology normalization failed: %s"),
+                UTF8_TO_TCHAR(LegacyNormalizationError.c_str())));
+            LegacyBridge->StopPrototypeScenario();
+            LegacyTopologyWorld.ForwardErrorMessages(this);
+            return false;
+        }
+        *LegacySimulation = MoveTemp(*NormalizedLegacySimulation);
+        LegacySimulation->CaptureReplayBaseline();
         if (!TestTrue(
                 TEXT("The regression fixture materializes the exact prior revision-1 Reshape geometry"),
                 bLegacyTopologyMaterialized) ||
@@ -1268,6 +1341,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             FEchoesCampaignMapCheckpoint::Inspect(
                 LegacyMapEnvelope, LegacyMapIdentity, LegacyContainerBytes,
                 LegacyMapFailure) &&
+            ExtractReplayCheckpointPayloadForTest(LegacyContainerBytes, Feedback) &&
             LegacyContainerBytes.Num() > 16;
         if (bLegacyRevisionMaterialized)
         {
@@ -1414,6 +1488,11 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             DegradedTopologyWorld.ForwardErrorMessages(this);
             return false;
         }
+        // The fixture removed the authored seed through direct state mutation,
+        // outside recorded command authority. Begin truthful partial replay
+        // coverage only after Step has completed removal and derived-state
+        // updates; the checkpoint remains a current revision-2 topology.
+        DegradedSimulation->CaptureReplayBaseline();
         TArray<uint8> CurrentTopologyBytes;
         TArray<uint8> CurrentMapEnvelope;
         FEchoesCampaignMapCheckpointIdentity CurrentMapIdentity;
@@ -1426,6 +1505,7 @@ bool FEchoesTermsOfContinuanceMissionTest::RunTest(
             FEchoesCampaignMapCheckpoint::Inspect(
                 CurrentMapEnvelope, CurrentMapIdentity,
                 CurrentTopologyBytes, CurrentMapFailure) &&
+            ExtractReplayCheckpointPayloadForTest(CurrentTopologyBytes, Feedback) &&
             CurrentTopologyBytes.Num() > 16 &&
             CurrentTopologyBytes[11] == 2;
         if (!TestTrue(

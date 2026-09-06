@@ -173,6 +173,11 @@ bool FEchoesSkirmishSetupModel::Validate(
     FString& OutError)
 {
     OutError.Reset();
+    if (Setup.Seed == 0)
+    {
+        OutError = TEXT("[SKIRMISH_SEED_INVALID] Select a nonzero match seed.");
+        return false;
+    }
     if (!IsPlayableFaction(Setup.LocalFaction) ||
         !IsPlayableFaction(Setup.OpponentFaction))
     {
@@ -202,10 +207,9 @@ bool FEchoesSkirmishSetupModel::Validate(
         OutError = TEXT("[SKIRMISH_DIFFICULTY_INVALID] Select a supported difficulty tier.");
         return false;
     }
-    if (static_cast<uint8>(Setup.VictoryCondition) >
-        static_cast<uint8>(EEchoesSkirmishVictoryCondition::Conquest))
+    if (Setup.VictoryCondition != EEchoesSkirmishVictoryCondition::Corefall)
     {
-        OutError = TEXT("[SKIRMISH_VICTORY_INVALID] Select a supported victory condition.");
+        OutError = TEXT("[SKIRMISH_VICTORY_INVALID] This offline match supports Corefall only. Select Corefall before deployment.");
         return false;
     }
     if (static_cast<uint8>(Setup.GameSpeed) >
@@ -454,43 +458,46 @@ echoes::sim::ResourcePool FEchoesSkirmishSetupModel::StartingResources(
     return {};
 }
 
-const TCHAR* FEchoesSkirmishSetupModel::DifficultyDisplayName(
-    EEchoesSkirmishDifficulty Difficulty)
+FEchoesAiDifficultyPolicy FEchoesAiDifficultyPolicy::For(EEchoesSkirmishDifficulty Difficulty)
 {
     switch (Difficulty)
     {
-        case EEchoesSkirmishDifficulty::Assisted:
-            return TEXT("ASSISTED // +50% DELAY, 30 APM CAP, -20% DAMAGE");
-        case EEchoesSkirmishDifficulty::Standard:
-            return TEXT("STANDARD // 100% FAIR INFORMATION, NO CHEATS");
-        case EEchoesSkirmishDifficulty::Challenging:
-            return TEXT("CHALLENGING // 0.4S REACTION, 140 APM CAP");
-        case EEchoesSkirmishDifficulty::Sovereign:
-            return TEXT("SOVEREIGN // 0.15S REACTION, 180 APM CAP");
+    case EEchoesSkirmishDifficulty::Story: return {60, 200, 4};
+    case EEchoesSkirmishDifficulty::Standard: return {30, 100, 7};
+    case EEchoesSkirmishDifficulty::Veteran: return {18, 60, 10};
+    case EEchoesSkirmishDifficulty::Sovereign: return {10, 40, 12};
     }
-    return TEXT("UNKNOWN DIFFICULTY");
+    return {};
 }
 
-const TCHAR* FEchoesSkirmishSetupModel::DifficultyDescription(
-    EEchoesSkirmishDifficulty Difficulty)
+const TCHAR* FEchoesSkirmishSetupModel::DifficultyDisplayName(EEchoesSkirmishDifficulty Difficulty)
 {
     switch (Difficulty)
     {
-        case EEchoesSkirmishDifficulty::Assisted:
-            return TEXT("DISCLOSED HANDICAP: +50% REACTION DELAY (1.5S), APM CEILING 30, -20% COMBAT DAMAGE");
-        case EEchoesSkirmishDifficulty::Standard:
-            return TEXT("BASELINE COMPETITIVE: ZERO HIDDEN INCOME, FAIR VISION, 0.8S REACTION, 90 APM CEILING");
-        case EEchoesSkirmishDifficulty::Challenging:
-            return TEXT("TACTICAL EXECUTION: DISCIPLINED FOCUS-FIRING, FAST EXPANSION, 0.4S REACTION, 140 APM");
-        case EEchoesSkirmishDifficulty::Sovereign:
-            return TEXT("MASTER LEVEL: OPTIMAL TARGETING AND SPREAD, 0.15S REACTION, 180 APM CEILING");
+    case EEchoesSkirmishDifficulty::Story: return TEXT("Story");
+    case EEchoesSkirmishDifficulty::Standard: return TEXT("Standard");
+    case EEchoesSkirmishDifficulty::Veteran: return TEXT("Veteran");
+    case EEchoesSkirmishDifficulty::Sovereign: return TEXT("Sovereign");
     }
-    return TEXT("DIFFICULTY DATA UNAVAILABLE");
+    return TEXT("Unknown difficulty");
+}
+
+const TCHAR* FEchoesSkirmishSetupModel::DifficultyDescription(EEchoesSkirmishDifficulty Difficulty)
+{
+    switch (Difficulty)
+    {
+    case EEchoesSkirmishDifficulty::Story: return TEXT("3.0s reaction; strategic review every 10s; at most 4 group commands/s. Equal combat and economy rules.");
+    case EEchoesSkirmishDifficulty::Standard: return TEXT("1.5s reaction; strategic review every 5s; at most 7 group commands/s. Equal combat and economy rules.");
+    case EEchoesSkirmishDifficulty::Veteran: return TEXT("0.9s reaction; strategic review every 3s; at most 10 group commands/s. Equal combat and economy rules.");
+    case EEchoesSkirmishDifficulty::Sovereign: return TEXT("0.5s reaction; strategic review every 2s; at most 12 group commands/s. Equal combat and economy rules.");
+    }
+    return TEXT("Difficulty unavailable");
 }
 
 const TCHAR* FEchoesSkirmishSetupModel::AssistedDifficultyModifiers()
 {
-    return TEXT("+50% reaction delay (1.5s), APM ceiling 30, -20% combat damage multiplier");
+    // Legacy call sites retain the same ordinal; the selected Story contract applies.
+    return DifficultyDescription(EEchoesSkirmishDifficulty::Story);
 }
 
 const TCHAR* FEchoesSkirmishSetupModel::VictoryConditionDisplayName(
@@ -501,9 +508,9 @@ const TCHAR* FEchoesSkirmishSetupModel::VictoryConditionDisplayName(
         case EEchoesSkirmishVictoryCondition::Corefall:
             return TEXT("COREFALL // DESTROY ENEMY COMMAND CORE");
         case EEchoesSkirmishVictoryCondition::WellControl:
-            return TEXT("WELL CONTROL // DOMINANCE");
+            return TEXT("Unsupported legacy victory rule");
         case EEchoesSkirmishVictoryCondition::Conquest:
-            return TEXT("CONQUEST // ELIMINATE ALL ENEMY STRUCTURES");
+            return TEXT("Unsupported legacy victory rule");
     }
     return TEXT("UNKNOWN VICTORY CONDITION");
 }
@@ -516,9 +523,9 @@ const TCHAR* FEchoesSkirmishSetupModel::VictoryConditionDescription(
         case EEchoesSkirmishVictoryCondition::Corefall:
             return TEXT("MATCH ENDS WHEN EITHER SIDE'S COMMAND CORE IS DESTROYED (DEFAULT RTS CONTRACT)");
         case EEchoesSkirmishVictoryCondition::WellControl:
-            return TEXT("CONTROL AND COMPLETE FUTURE WELL PROTOCOLS TO ACCUMULATE RESONANCE VICTORY");
+            return TEXT("Select Corefall to start an offline match.");
         case EEchoesSkirmishVictoryCondition::Conquest:
-            return TEXT("TOTAL ELIMINATION: SYSTEMATIC DESTRUCTION OF EVERY HOSTILE STRUCTURE REQUIRED");
+            return TEXT("Select Corefall to start an offline match.");
     }
     return TEXT("VICTORY CONDITION DATA UNAVAILABLE");
 }
@@ -672,7 +679,7 @@ FEchoesSkirmishSetup FEchoesSkirmishSetupModel::WithNextVictoryCondition(
     int32 Direction)
 {
     FEchoesSkirmishSetup Result = Setup;
-    Result.VictoryCondition = CycleEnum(Result.VictoryCondition, Direction, 3);
+    Result.VictoryCondition = EEchoesSkirmishVictoryCondition::Corefall;
     return Result;
 }
 

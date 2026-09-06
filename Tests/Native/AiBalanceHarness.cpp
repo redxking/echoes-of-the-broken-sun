@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -29,10 +30,107 @@ struct MatchRecord {
     std::string personality0;
     std::string personality1;
     std::string winnerFaction;
-    std::int32_t winnerPlayer = -1;  // 0, 1, or -1 (Draw)
+    std::int32_t winnerPlayer = -2;  // 0, 1, -1 (authoritative Draw), -2 (unresolved)
     Tick durationTicks = 0;
     std::uint64_t finalChecksum = 0;
+    MatchOutcome outcome = MatchOutcome::Ongoing;
+    bool terminal = false;
+    Tick lastMaterialProgressTick = 0;
+    std::int32_t player0CoreHitPoints = 0;
+    std::int32_t player1CoreHitPoints = 0;
+    std::string termination = "tick_budget_actionable_stall";
+    std::string stallReason;
 };
+
+struct MaterialProgressState {
+    std::array<std::int64_t, 2> coreHitPoints{};
+    std::array<std::int64_t, 2> ownedEntityCount{};
+    std::array<std::int64_t, 2> ownedHitPoints{};
+    std::array<std::int64_t, 2> resources{};
+    std::int64_t resourceRemaining = 0;
+    std::int64_t wellLifecycle = 0;
+
+    friend bool operator==(const MaterialProgressState&,
+                           const MaterialProgressState&) = default;
+};
+
+MaterialProgressState CaptureMaterialProgress(const Simulation& sim) {
+    MaterialProgressState state{};
+    for (PlayerId player = 0; player < 2; ++player) {
+        if (const PlayerState* p = sim.FindPlayer(player)) {
+            state.resources[player] =
+                static_cast<std::int64_t>(p->resources.material) * 4096 +
+                p->resources.dawnshards;
+        }
+    }
+    for (const Entity& entity : sim.Entities()) {
+        if (entity.type == EntityType::ResourceNode) {
+            state.resourceRemaining += entity.resourceRemaining;
+            continue;
+        }
+        if (entity.type == EntityType::FutureWell) {
+            state.wellLifecycle +=
+                static_cast<std::int64_t>(entity.owner) * 1000000000LL +
+                static_cast<std::int64_t>(entity.wellChoice) * 1000000LL +
+                static_cast<std::int64_t>(entity.wellPendingChoice) * 10000LL +
+                entity.wellCaptureProgress * 10LL +
+                static_cast<std::int64_t>(entity.wellProtocolTicks > 0);
+            continue;
+        }
+        if (entity.owner < 2) {
+            ++state.ownedEntityCount[entity.owner];
+            state.ownedHitPoints[entity.owner] += entity.hitPoints;
+            if (entity.type == EntityType::CommandCore) {
+                state.coreHitPoints[entity.owner] += entity.hitPoints;
+            }
+        }
+    }
+    return state;
+}
+
+std::string DiagnoseStall(const Simulation& sim,
+                          AiPersonality p0,
+                          AiPersonality p1) {
+    std::array<std::size_t, 2> generated{};
+    std::array<std::int32_t, 2> workers{};
+    std::array<std::int32_t, 2> combat{};
+    std::array<std::int32_t, 2> producers{};
+    for (PlayerId player = 0; player < 2; ++player) {
+        const auto view = sim.CreatePlayerView(player);
+        if (view.has_value()) {
+            generated[player] = Simulation::GenerateAiCommands(
+                *view, player == 0 ? p0 : p1).size();
+        }
+    }
+    for (const Entity& entity : sim.Entities()) {
+        if (entity.owner >= 2 || entity.hitPoints <= 0) continue;
+        workers[entity.owner] += entity.type == EntityType::Worker ? 1 : 0;
+        combat[entity.owner] +=
+            entity.type == EntityType::Soldier ||
+                    entity.type == EntityType::HeavyUnit ||
+                    entity.type == EntityType::ScoutUnit
+                ? 1
+                : 0;
+        producers[entity.owner] +=
+            entity.type == EntityType::CommandCore ||
+                    entity.type == EntityType::Barracks
+                ? 1
+                : 0;
+    }
+    std::ostringstream out;
+    out << "ongoing_at_tick_budget"
+        << "; generated=" << generated[0] << "/" << generated[1]
+        << "; pending=" << sim.PendingCommands().size()
+        << "; workers=" << workers[0] << "/" << workers[1]
+        << "; combat=" << combat[0] << "/" << combat[1]
+        << "; producers=" << producers[0] << "/" << producers[1];
+    if (generated[0] == 0 || generated[1] == 0) {
+        out << "; action=no_commands_for_live_seat";
+    } else {
+        out << "; action=commands_fail_to_convert_into_corefall";
+    }
+    return out.str();
+}
 
 inline std::string FactionToString(Faction f) {
     switch (f) {
@@ -112,6 +210,8 @@ MatchRecord RunMatch(std::uint64_t seed,
     record.personality1 = PersonalityToString(p1);
 
     Tick ticks = 0;
+    MaterialProgressState priorProgress = CaptureMaterialProgress(sim);
+    Tick lastMaterialProgressTick = 0;
     while (sim.Outcome() == MatchOutcome::Ongoing && ticks < maxTicks) {
         if (ticks % 4 == 0) {
             const auto cmds0 = sim.GenerateAiCommands(0, p0);
@@ -125,61 +225,43 @@ MatchRecord RunMatch(std::uint64_t seed,
         }
         sim.Step();
         ++ticks;
+        if (ticks % sim.Config().ticksPerSecond == 0) {
+            const MaterialProgressState current = CaptureMaterialProgress(sim);
+            if (!(current == priorProgress)) {
+                lastMaterialProgressTick = ticks;
+                priorProgress = current;
+            }
+        }
     }
 
     record.durationTicks = ticks;
     record.finalChecksum = sim.StateChecksum();
 
     const MatchOutcome outcome = sim.Outcome();
+    record.outcome = outcome;
+    record.terminal = outcome != MatchOutcome::Ongoing;
+    record.lastMaterialProgressTick = lastMaterialProgressTick;
+    const MaterialProgressState finalProgress = CaptureMaterialProgress(sim);
+    record.player0CoreHitPoints =
+        static_cast<std::int32_t>(finalProgress.coreHitPoints[0]);
+    record.player1CoreHitPoints =
+        static_cast<std::int32_t>(finalProgress.coreHitPoints[1]);
     if (outcome == MatchOutcome::Player0Victory) {
         record.winnerPlayer = 0;
         record.winnerFaction = record.faction0;
+        record.termination = "authoritative_corefall";
     } else if (outcome == MatchOutcome::Player1Victory) {
         record.winnerPlayer = 1;
         record.winnerFaction = record.faction1;
+        record.termination = "authoritative_corefall";
+    } else if (outcome == MatchOutcome::Draw) {
+        record.winnerPlayer = -1;
+        record.winnerFaction = "Draw";
+        record.termination = "authoritative_draw";
     } else {
-        // Evaluate by surviving Command Core hit points, then surviving entity HP
-        std::int32_t p0CoreHp = 0;
-        std::int32_t p1CoreHp = 0;
-        std::int32_t p0TotalHp = 0;
-        std::int32_t p1TotalHp = 0;
-        for (const auto& e : sim.Entities()) {
-            if (e.owner == 0) {
-                p0TotalHp += e.hitPoints;
-                if (e.type == EntityType::CommandCore) {
-                    p0CoreHp += e.hitPoints;
-                }
-            } else if (e.owner == 1) {
-                p1TotalHp += e.hitPoints;
-                if (e.type == EntityType::CommandCore) {
-                    p1CoreHp += e.hitPoints;
-                }
-            }
-        }
-        if (p0CoreHp > p1CoreHp || (p0CoreHp == p1CoreHp && p0TotalHp > p1TotalHp)) {
-            record.winnerPlayer = 0;
-            record.winnerFaction = record.faction0;
-        } else if (p1CoreHp > p0CoreHp || (p0CoreHp == p1CoreHp && p1TotalHp > p0TotalHp)) {
-            record.winnerPlayer = 1;
-            record.winnerFaction = record.faction1;
-        } else {
-            const auto* pl0 = sim.FindPlayer(0);
-            const auto* pl1 = sim.FindPlayer(1);
-            const int res0 = pl0 ? (pl0->resources.material + pl0->resources.dawnshards * 2) : 0;
-            const int res1 = pl1 ? (pl1->resources.material + pl1->resources.dawnshards * 2) : 0;
-            if (res0 > res1) {
-                record.winnerPlayer = 0;
-                record.winnerFaction = record.faction0;
-            } else if (res1 > res0) {
-                record.winnerPlayer = 1;
-                record.winnerFaction = record.faction1;
-            } else {
-                // True tie — use seed parity as a fair coin flip.
-                const int coin = static_cast<int>(seed & 1);
-                record.winnerPlayer = coin;
-                record.winnerFaction = coin == 0 ? record.faction0 : record.faction1;
-            }
-        }
+        record.winnerPlayer = -2;
+        record.winnerFaction.clear();
+        record.stallReason = DiagnoseStall(sim, p0, p1);
     }
 
     return record;
@@ -316,10 +398,12 @@ int main(int argc, char* argv[]) {
     int slot0Wins = 0;
     int slot1Wins = 0;
     int draws = 0;
+    int unresolved = 0;
     for (const auto& r : results) {
         if (r.winnerPlayer == 0) slot0Wins++;
         else if (r.winnerPlayer == 1) slot1Wins++;
-        else draws++;
+        else if (r.winnerPlayer == -1) draws++;
+        else unresolved++;
     }
     const int decisiveMatches = slot0Wins + slot1Wins;
     const auto spawnCI = ComputeConfidenceInterval(slot0Wins, decisiveMatches);
@@ -337,27 +421,27 @@ int main(int argc, char* argv[]) {
         if (r.faction0 == "MeridianCompact" && r.faction1 == "KharuunAssemblies") {
             if (r.winnerPlayer == 0) nonMirrorPairs[0].winsA++;
             else if (r.winnerPlayer == 1) nonMirrorPairs[0].winsB++;
-            else nonMirrorPairs[0].pairDraws++;
+            else if (r.winnerPlayer == -1) nonMirrorPairs[0].pairDraws++;
         } else if (r.faction0 == "KharuunAssemblies" && r.faction1 == "MeridianCompact") {
             if (r.winnerPlayer == 0) nonMirrorPairs[0].winsB++;
             else if (r.winnerPlayer == 1) nonMirrorPairs[0].winsA++;
-            else nonMirrorPairs[0].pairDraws++;
+            else if (r.winnerPlayer == -1) nonMirrorPairs[0].pairDraws++;
         } else if (r.faction0 == "MeridianCompact" && r.faction1 == "HollowChoir") {
             if (r.winnerPlayer == 0) nonMirrorPairs[1].winsA++;
             else if (r.winnerPlayer == 1) nonMirrorPairs[1].winsB++;
-            else nonMirrorPairs[1].pairDraws++;
+            else if (r.winnerPlayer == -1) nonMirrorPairs[1].pairDraws++;
         } else if (r.faction0 == "HollowChoir" && r.faction1 == "MeridianCompact") {
             if (r.winnerPlayer == 0) nonMirrorPairs[1].winsB++;
             else if (r.winnerPlayer == 1) nonMirrorPairs[1].winsA++;
-            else nonMirrorPairs[1].pairDraws++;
+            else if (r.winnerPlayer == -1) nonMirrorPairs[1].pairDraws++;
         } else if (r.faction0 == "KharuunAssemblies" && r.faction1 == "HollowChoir") {
             if (r.winnerPlayer == 0) nonMirrorPairs[2].winsA++;
             else if (r.winnerPlayer == 1) nonMirrorPairs[2].winsB++;
-            else nonMirrorPairs[2].pairDraws++;
+            else if (r.winnerPlayer == -1) nonMirrorPairs[2].pairDraws++;
         } else if (r.faction0 == "HollowChoir" && r.faction1 == "KharuunAssemblies") {
             if (r.winnerPlayer == 0) nonMirrorPairs[2].winsB++;
             else if (r.winnerPlayer == 1) nonMirrorPairs[2].winsA++;
-            else nonMirrorPairs[2].pairDraws++;
+            else if (r.winnerPlayer == -1) nonMirrorPairs[2].pairDraws++;
         }
     }
 
@@ -403,7 +487,10 @@ int main(int argc, char* argv[]) {
             const MatchRecord replay = RunMatch(sample.seed, f0, f1, AiPersonality::Adaptive, AiPersonality::Adaptive);
             if (replay.durationTicks != sample.durationTicks ||
                 replay.finalChecksum != sample.finalChecksum ||
-                replay.winnerPlayer != sample.winnerPlayer) {
+                replay.winnerPlayer != sample.winnerPlayer ||
+                replay.outcome != sample.outcome ||
+                replay.termination != sample.termination ||
+                replay.stallReason != sample.stallReason) {
                 determinismPassed = false;
                 std::cerr << "DETERMINISM VIOLATION on seed " << sample.seed << "\n";
             }
@@ -412,6 +499,8 @@ int main(int argc, char* argv[]) {
 
     // 5. AI Competence Battery (SPEC-BAL-008)
     bool batteryPassed = true;
+    constexpr int implementedBatteryChecks = 1;
+    constexpr int requiredBatteryChecks = 4;
     if (runBattery) {
         std::cout << "Executing AI Instrument Competence battery...\n";
         // 1. Retreat severely damaged units
@@ -461,10 +550,18 @@ int main(int argc, char* argv[]) {
               << (primacyCI.rate * 100.0) << "% ± " << (primacyCI.marginOfError * 100.0)
               << "% (N=" << (primacyHighWins + primacyFlawedWins) << ") "
               << (primacyPassed ? "[PASS]" : "[FAIL]") << "\n";
-    std::cout << "Replay Determinism:               "
-              << (determinismPassed ? "10/10 Bit-Exact [PASS]" : "Divergence Detected [FAIL]") << "\n";
+    std::cout << "Duplicate deterministic rerun:    "
+              << (determinismPassed
+                      ? "10/10 final states matched [PASS]"
+                      : "final-state divergence detected [FAIL]")
+              << "\n";
     std::cout << "AI Competence Battery:            "
-              << (batteryPassed ? "Passed [PASS]" : "Failed [FAIL]") << "\n";
+              << implementedBatteryChecks << "/" << requiredBatteryChecks
+              << (batteryPassed ? " implemented checks passed [INCOMPLETE]"
+                                : " implemented check failed [FAIL]") << "\n";
+    std::cout << "Authoritative terminal matches:   "
+              << (totalMatches - unresolved) << "/" << totalMatches
+              << "; actionable stalls: " << unresolved << "\n";
     std::cout << "=================================================\n";
 
     // Write structured JSON
@@ -472,6 +569,9 @@ int main(int argc, char* argv[]) {
     if (out.is_open()) {
         out << "{\n";
         out << "  \"total_matches\": " << totalMatches << ",\n";
+        out << "  \"authoritative_terminal_matches\": "
+            << (totalMatches - unresolved) << ",\n";
+        out << "  \"actionable_stalls\": " << unresolved << ",\n";
         out << "  \"elapsed_seconds\": " << elapsedSec << ",\n";
         out << "  \"throughput_matches_per_sec\": " << matchesPerSec << ",\n";
         out << "  \"spawn_fairness\": {\n";
@@ -498,13 +598,47 @@ int main(int argc, char* argv[]) {
         out << "    \"passed\": " << (primacyPassed ? "true" : "false") << "\n";
         out << "  },\n";
         out << "  \"determinism\": {\"passed\": " << (determinismPassed ? "true" : "false") << "},\n";
-        out << "  \"ai_competence_battery\": {\"passed\": " << (batteryPassed ? "true" : "false") << "},\n";
-        out << "  \"overall_passed\": " << (spawnFairnessPassed && balanceBandPassed && primacyPassed && determinismPassed && batteryPassed ? "true" : "false") << "\n";
+        out << "  \"ai_competence_battery\": {\"implemented_checks\": "
+            << implementedBatteryChecks << ", \"required_checks\": "
+            << requiredBatteryChecks << ", \"implemented_checks_passed\": "
+            << (batteryPassed ? "true" : "false")
+            << ", \"qualified\": false},\n";
+        out << "  \"matches\": [\n";
+        for (std::size_t index = 0; index < results.size(); ++index) {
+            const MatchRecord& r = results[index];
+            out << "    {\"seed\": " << r.seed
+                << ", \"map_id\": \"" << r.mapId
+                << "\", \"faction_0\": \"" << r.faction0
+                << "\", \"faction_1\": \"" << r.faction1
+                << "\", \"personality_0\": \"" << r.personality0
+                << "\", \"personality_1\": \"" << r.personality1
+                << "\", \"winner_player\": " << r.winnerPlayer
+                << ", \"winner_faction\": \"" << r.winnerFaction
+                << "\", \"outcome\": " << static_cast<int>(r.outcome)
+                << ", \"terminal\": " << (r.terminal ? "true" : "false")
+                << ", \"termination\": \"" << r.termination
+                << "\", \"duration_ticks\": " << r.durationTicks
+                << ", \"final_checksum\": " << r.finalChecksum
+                << ", \"last_material_progress_tick\": "
+                << r.lastMaterialProgressTick
+                << ", \"core_hp\": [" << r.player0CoreHitPoints
+                << ", " << r.player1CoreHitPoints << "]"
+                << ", \"stall_reason\": \"" << r.stallReason << "\"}"
+                << (index + 1 == results.size() ? "\n" : ",\n");
+        }
+        out << "  ],\n";
+        out << "  \"qualification_limitations\": ["
+            << "\"synthetic single-map fixture is not the three shipping maps\", "
+            << "\"one of four competence checks is implemented\"],\n";
+        out << "  \"overall_passed\": false\n";
         out << "}\n";
         out.close();
         std::cout << "Report written to: " << outputPath << "\n";
     }
 
-    const bool overallSuccess = spawnFairnessPassed && balanceBandPassed && primacyPassed && determinismPassed && batteryPassed;
+    // This legacy harness is diagnostic until it runs the shipping map set and
+    // implements the complete four-part competence battery. Never publish a
+    // synthetic or unresolved matrix as balance qualification.
+    const bool overallSuccess = false;
     return overallSuccess ? 0 : 1;
 }

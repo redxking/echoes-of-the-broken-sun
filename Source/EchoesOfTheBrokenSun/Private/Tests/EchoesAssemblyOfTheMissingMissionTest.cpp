@@ -273,13 +273,12 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
     TestEqual(TEXT("Mission 13 uses the current campaign schema"),
               FEchoesCampaignProgress::SchemaVersion,
               static_cast<uint16>(2));
-    // Per-player terrain and object memory is now serialized into the
-    // snapshot, so the native snapshot schema advanced from 24 to 25. The
-    // replay envelope shape did not change and stays at 24; this assertion
+    // Schema 28 appends player-hostility masks after schema 27 lifecycle state.
+    // The replay envelope shape did not change and stays at 24; this assertion
     // pins the native snapshot schema only.
     TestEqual(TEXT("Mission 13 accepts the current native snapshot schema"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(26));
+              static_cast<uint32>(28));
 
     FString Feedback;
     FEchoesCampaignProgress TwelveRecords = MakeAssemblyPrerequisites(
@@ -595,11 +594,10 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
                     EEchoesAssemblyOfTheMissingPhase::LinkCrownfallIndex;
             },
             6000));
-    // Quick save writes the native snapshot, which is schema 25 now that
-    // per-player terrain and object memory is serialized; the replay
-    // envelope is untouched here and stays at 24.
+    // Quick save writes native schema 28; the replay envelope is untouched
+    // here and stays at schema 24.
     TestTrue(
-        TEXT("The paired readback reconstructs through schema-25 quick load"),
+        TEXT("The paired readback reconstructs through schema-28 quick load"),
         Bridge->QuickSaveScenario(Feedback) &&
             Bridge->QuickLoadScenario(Feedback) &&
             Bridge->GetLocalObjectiveSnapshot().
@@ -685,17 +683,17 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
     const FEchoesCampaignDecisionRecord* MissionRecord =
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::AssemblyOfTheMissing);
-    // The commit stamps the current native snapshot schema, which moved
-    // from 24 to 25 because per-player terrain and object memory is now
-    // serialized; the replay envelope stays at 24.
+    // The commit stamps current native schema-28 provenance; the replay
+    // envelope stays at schema 24.
     TestTrue(
-        TEXT("Mission 13 stores one protocol, all facts, and schema-25 provenance"),
+        TEXT("Mission 13 stores one protocol, all facts, and schema-28 provenance"),
         MissionRecord != nullptr &&
             MissionRecord->WellChoice == FutureWellChoice::Preserve &&
             MissionRecord->AvailableWellChoices ==
                 AssemblyChoiceMask(FutureWellChoice::Preserve) &&
             MissionRecord->VerifiedFacts == 0xFF &&
-            MissionRecord->SimulationSnapshotVersion == 26 &&
+            MissionRecord->SimulationSnapshotVersion ==
+                echoes::sim::kSnapshotVersion &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0);
     FEchoesCampaignProgress Reloaded;

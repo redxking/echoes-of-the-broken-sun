@@ -7,12 +7,14 @@
 #include "Components/SceneComponent.h"
 #include "EchoesEntityView.h"
 #include "EchoesGameUserSettings.h"
+#include "EchoesHudLayout.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 #include "EchoesPointerCombatGuardReview.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
+#include "Engine/GameViewportClient.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #if WITH_EDITOR
@@ -22,6 +24,7 @@
 #include "Misc/Parse.h"
 #include "String/LexFromString.h"
 #include "UnrealClient.h"
+#include "InputCoreTypes.h"
 
 namespace
 {
@@ -729,12 +732,42 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
     APlayerController* Controller = Cast<APlayerController>(GetController());
     const AEchoesPlayerController* EchoesController =
         Cast<AEchoesPlayerController>(Controller);
-    if (EchoesController != nullptr && EchoesController->IsModalOverlayVisible())
+    const bool bHasViewportFocus = Controller == nullptr || GetWorld() == nullptr ||
+        GetWorld()->GetGameViewport() == nullptr || GetWorld()->GetGameViewport()->Viewport == nullptr ||
+        GetWorld()->GetGameViewport()->Viewport->IsForegroundWindow();
+    if (!bHasViewportFocus || (EchoesController != nullptr && EchoesController->IsModalOverlayVisible()))
     {
         ForwardInput = 0.0f;
         RightInput = 0.0f;
         bEdgePanArmed = false;
+        CancelPointerPan();
         return;
+    }
+    if (Controller != nullptr)
+    {
+        const bool bHeld = Controller->IsInputKeyDown(EKeys::MiddleMouseButton);
+        if (!bHeld) { bMiddlePanActive = false; bMiddlePanRequiresRelease = false; }
+        if (bHeld && !bMiddlePanRequiresRelease)
+        {
+            float X = 0, Y = 0; int32 Width = 0, Height = 0;
+            Controller->GetViewportSize(Width, Height);
+            if (Width > 0 && Height > 0 && Controller->GetMousePosition(X, Y))
+            {
+                const FVector2D Point(X, Y);
+                const FEchoesHudLayout Layout = FEchoesHudLayout::Build(FVector2D(Width, Height),
+                    Settings ? Settings->GetHudScale() : 1.0f, false);
+                if (!bMiddlePanActive)
+                {
+                    bMiddlePanRequiresRelease = Layout.IsPointerOnChrome(Point) ||
+                        (EchoesController && EchoesController->IsDraggingSelection());
+                    bMiddlePanActive = !bMiddlePanRequiresRelease;
+                }
+                else PanByScreenDelta(Point - LastMiddlePanPosition, Width);
+                LastMiddlePanPosition = Point;
+                if (bMiddlePanActive) { bEdgePanArmed = false; return; }
+            }
+            else CancelPointerPan();
+        }
     }
     if (bEdgePanEnabled && Controller != nullptr &&
         (EchoesController == nullptr || !EchoesController->IsDraggingSelection()))
@@ -798,6 +831,77 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
 void AEchoesRTSCameraPawn::SetForwardInput(float Value)
 {
     ForwardInput = Value;
+}
+
+void AEchoesRTSCameraPawn::CancelPointerPan()
+{
+    bMiddlePanActive = false;
+    bMiddlePanRequiresRelease = true;
+}
+
+void AEchoesRTSCameraPawn::PanToWorld(const FVector& WorldPosition)
+{
+    if (WorldPosition.ContainsNaN()) return;
+    FVector Location = WorldPosition;
+    Location.Z = GetActorLocation().Z;
+    SetActorLocation(Location);
+    ClampToBattlefield();
+}
+
+void AEchoesRTSCameraPawn::PanByScreenDelta(const FVector2D& DeltaPixels, float ViewportWidth)
+{
+    if (DeltaPixels.ContainsNaN() || !FMath::IsFinite(ViewportWidth) || ViewportWidth <= 0 || !Camera || !SpringArm) return;
+    const FRotator View = SpringArm->GetComponentRotation();
+    const FRotator Flat(0, View.Yaw, 0);
+    const float UnitsPerPixel = Camera->OrthoWidth / ViewportWidth;
+    const float PitchScale = FMath::Max(.1f, FMath::Abs(FMath::Sin(FMath::DegreesToRadians(View.Pitch))));
+    const FVector Delta = -FRotationMatrix(Flat).GetUnitAxis(EAxis::Y) * DeltaPixels.X * UnitsPerPixel +
+        Flat.Vector() * DeltaPixels.Y * UnitsPerPixel / PitchScale;
+    PanToWorld(GetActorLocation() + Delta);
+}
+
+bool AEchoesRTSCameraPawn::GetBattlefieldFootprint(
+    const FVector2D& ViewportSize,
+    TArray<FVector>& OutCorners,
+    float GroundZ) const
+{
+    OutCorners.Reset();
+    if (Camera == nullptr || ViewportSize.X <= 0.0f || ViewportSize.Y <= 0.0f ||
+        ViewportSize.ContainsNaN() || !FMath::IsFinite(GroundZ) ||
+        !FMath::IsFinite(Camera->OrthoWidth) || Camera->OrthoWidth <= 0.0f)
+    {
+        return false;
+    }
+
+    const FVector Direction = Camera->GetForwardVector();
+    if (FMath::IsNearlyZero(Direction.Z))
+    {
+        return false;
+    }
+    const float HalfWidth = Camera->OrthoWidth * 0.5f;
+    const float HalfHeight = HalfWidth * ViewportSize.Y / ViewportSize.X;
+    const FVector Center = Camera->GetComponentLocation();
+    const FVector Right = Camera->GetRightVector();
+    const FVector Up = Camera->GetUpVector();
+    const FVector2D Signs[] = {
+        {-1.0f, 1.0f},
+        {1.0f, 1.0f},
+        {1.0f, -1.0f},
+        {-1.0f, -1.0f}};
+    OutCorners.Reserve(UE_ARRAY_COUNT(Signs));
+    for (const FVector2D Sign : Signs)
+    {
+        const FVector RayOrigin = Center + Right * (Sign.X * HalfWidth) +
+            Up * (Sign.Y * HalfHeight);
+        const float Distance = (GroundZ - RayOrigin.Z) / Direction.Z;
+        if (!FMath::IsFinite(Distance))
+        {
+            OutCorners.Reset();
+            return false;
+        }
+        OutCorners.Add(RayOrigin + Direction * Distance);
+    }
+    return OutCorners.Num() == 4;
 }
 
 void AEchoesRTSCameraPawn::SetRightInput(float Value)
@@ -885,7 +989,51 @@ void AEchoesRTSCameraPawn::ClampToBattlefield()
         static_cast<float>(Bridge->GetMapHeightTiles()) *
         UEchoesSimulationSubsystem::TileWorldSize * 0.5f;
     FVector Location = GetActorLocation();
-    Location.X = FMath::Clamp(Location.X, -HalfWidth, HalfWidth);
-    Location.Y = FMath::Clamp(Location.Y, -HalfHeight, HalfHeight);
+    float MinimumCameraX = -HalfWidth;
+    float MaximumCameraX = HalfWidth;
+    float MinimumCameraY = -HalfHeight;
+    float MaximumCameraY = HalfHeight;
+    FVector2D ViewportSize(16.0f, 9.0f);
+    if (const APlayerController* Controller =
+            Cast<APlayerController>(GetController()))
+    {
+        int32 Width = 0;
+        int32 Height = 0;
+        Controller->GetViewportSize(Width, Height);
+        if (Width > 0 && Height > 0)
+        {
+            ViewportSize = FVector2D(Width, Height);
+        }
+    }
+    TArray<FVector> Footprint;
+    if (GetBattlefieldFootprint(ViewportSize, Footprint) &&
+        Footprint.Num() == 4)
+    {
+        float MinimumOffsetX = MAX_flt;
+        float MaximumOffsetX = -MAX_flt;
+        float MinimumOffsetY = MAX_flt;
+        float MaximumOffsetY = -MAX_flt;
+        for (const FVector& Corner : Footprint)
+        {
+            MinimumOffsetX = FMath::Min(MinimumOffsetX, Corner.X - Location.X);
+            MaximumOffsetX = FMath::Max(MaximumOffsetX, Corner.X - Location.X);
+            MinimumOffsetY = FMath::Min(MinimumOffsetY, Corner.Y - Location.Y);
+            MaximumOffsetY = FMath::Max(MaximumOffsetY, Corner.Y - Location.Y);
+        }
+        MinimumCameraX = -HalfWidth - MinimumOffsetX;
+        MaximumCameraX = HalfWidth - MaximumOffsetX;
+        MinimumCameraY = -HalfHeight - MinimumOffsetY;
+        MaximumCameraY = HalfHeight - MaximumOffsetY;
+        if (MinimumCameraX > MaximumCameraX)
+        {
+            MinimumCameraX = MaximumCameraX = 0.0f;
+        }
+        if (MinimumCameraY > MaximumCameraY)
+        {
+            MinimumCameraY = MaximumCameraY = 0.0f;
+        }
+    }
+    Location.X = FMath::Clamp(Location.X, MinimumCameraX, MaximumCameraX);
+    Location.Y = FMath::Clamp(Location.Y, MinimumCameraY, MaximumCameraY);
     SetActorLocation(Location);
 }

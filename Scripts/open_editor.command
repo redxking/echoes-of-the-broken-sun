@@ -31,4 +31,4 @@ print "Derived data cache: $cache_root"
 print "Editor log: $log_path"
 exec "$editor" "$project" \
   -ModelContextProtocolStartServer -ModelContextProtocolPort=8000 \
-  "-LocalDataCachePath=$cache_root" "-abslog=$log_path"
+  "-LocalDataCachePath=$cache_root" "-abslog=$log_path" "$@"

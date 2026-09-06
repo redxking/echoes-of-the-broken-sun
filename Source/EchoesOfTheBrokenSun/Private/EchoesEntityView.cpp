@@ -290,6 +290,50 @@ FLinearColor ColorForState(const echoes::sim::Entity& State)
 }
 }
 
+bool AEchoesEntityView::UsesProloguePresentation() const
+{
+    const UEchoesSimulationSubsystem* Bridge = GetWorld() != nullptr
+        ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+        : nullptr;
+    return Bridge != nullptr &&
+        (Bridge->IsReplayPlaybackActive()
+             ? Bridge->GetReplayPresentationOperation()
+             : Bridge->GetOperationMode()) ==
+            EEchoesOperationMode::CampaignPrologue;
+}
+
+echoes::sim::EntityId AEchoesEntityView::GetPresentedArchiveCarrierId() const
+{
+    const UEchoesSimulationSubsystem* Bridge = GetWorld() != nullptr
+        ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+        : nullptr;
+    if (Bridge == nullptr || !UsesProloguePresentation())
+    {
+        return 0;
+    }
+    if (!Bridge->IsReplayPlaybackActive())
+    {
+        return Bridge->GetArchiveCarrierId();
+    }
+
+    // M01's canonical spawn order assigns the archive carrier entity 11. The
+    // role ID is part of the replayed baseline even though the UE-only mission
+    // field is not. Validate its traits before exposing the authored name; if
+    // the carrier has been destroyed, no later scout may inherit that role.
+    constexpr echoes::sim::EntityId M01ArchiveCarrierEntityId = 11;
+    const echoes::sim::Simulation* Replay =
+        Bridge->GetReplayPresentationSimulation();
+    const echoes::sim::Entity* Candidate = Replay != nullptr
+        ? Replay->FindEntity(M01ArchiveCarrierEntityId)
+        : nullptr;
+    return Candidate != nullptr &&
+            Candidate->owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+            Candidate->faction == echoes::sim::Faction::MeridianCompact &&
+            Candidate->type == echoes::sim::EntityType::ScoutUnit
+        ? Candidate->id
+        : 0;
+}
+
 AEchoesEntityView::AEchoesEntityView()
 {
     PrimaryActorTick.bCanEverTick = true;
@@ -1314,13 +1358,11 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     const int32 PreviousHitPoints = HitPoints;
     const UEchoesSimulationSubsystem* Bridge = GetWorld() != nullptr
         ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
-    const bool bNewM01ReshapeExpired = Bridge != nullptr &&
-        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue &&
+    const bool bNewM01ReshapeExpired = UsesProloguePresentation() &&
         State.type == echoes::sim::EntityType::FutureWell &&
         State.wellChoice == echoes::sim::FutureWellChoice::Reshape &&
         State.reshapeUntilTick == 0;
-    const bool bNewWellProtocolActive = State.wellProtocolTicks > 0 &&
-        State.wellPendingChoice != echoes::sim::FutureWellChoice::Dormant;
+    const bool bNewWellProtocolActive = State.wellProtocolTicks > 0;
     const bool bNewFutureWellTerminallyCollapsed =
         State.type == echoes::sim::EntityType::FutureWell &&
         State.wellChoice == echoes::sim::FutureWellChoice::Harvest &&
@@ -1410,7 +1452,7 @@ void AEchoesEntityView::ApplyAuthoritativeState(
 
     bM01GatherTargetBound = EntityType == echoes::sim::EntityType::Worker &&
         EntityFaction == echoes::sim::Faction::MeridianCompact &&
-        Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
+        UsesProloguePresentation();
     bWorkerHarvestingActive =
         (EntityType == echoes::sim::EntityType::Worker) && State.harvestSlotHeld &&
         State.harvestTicks > 0 &&
@@ -1428,7 +1470,8 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     ConstructionFraction = (State.constructionRequired > 0)
         ? FMath::Clamp(static_cast<float>(State.constructionProgress) / static_cast<float>(State.constructionRequired), 0.0f, 1.0f)
         : 0.0f;
-    bReshapeTelegraphActive = (State.reshapeUntilTick > 0);
+    bReshapeTelegraphActive = State.wellProtocolTicks > 0 &&
+        State.wellPendingChoice == echoes::sim::FutureWellChoice::Reshape;
 
     const FVector NewWorldLocation = Bridge->SimToWorld(State.position);
     if (!bTeleport && bHasAuthoritativeLocation)
@@ -1796,8 +1839,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
     BodyPivot->SetRelativeScale3D(FVector(PresentationScale));
     if (bUsingAuthoredFutureWellMesh)
     {
-        const auto* M01Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
-        if (M01Bridge && M01Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
+        if (UsesProloguePresentation())
         {
             // The physical basin fits the compact authoritative Well footprint.
             // Its vertical construction, elevated core and semantic rings remain.
@@ -2768,8 +2810,7 @@ void AEchoesEntityView::ConfigureFutureWellPresentation(
         GlowEmissive = 0.18f;
     }
 
-    const auto* M01LayoutBridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
-    const bool bM01Layout = M01LayoutBridge && M01LayoutBridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue;
+    const bool bM01Layout = UsesProloguePresentation();
     for (UStaticMeshComponent* Ornament : {FutureWellOrbitOuter, FutureWellOrbitInner, FutureWellCore})
         Ornament->SetCastShadow(!bM01Layout);
     if (bM01Layout)
@@ -2893,9 +2934,7 @@ void AEchoesEntityView::ConfigureFutureWellPresentation(
         GlowEmissive * 0.72f,
         ESurfaceTextureFamily::VitrifiedGlass,
         GlowEmissive * 0.30f);
-    const UEchoesSimulationSubsystem* Mission = GetWorld() != nullptr
-        ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
-    if (Mission != nullptr && Mission->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
+    if (UsesProloguePresentation())
     {
         // The civic basin is a worn working surface. Keep the protocol rings
         // distinct without letting a broad specular reflection erase the dais.
@@ -3143,9 +3182,7 @@ uint8 AEchoesEntityView::GetOwnerMarkerVariant() const
 
 FString AEchoesEntityView::GetDisplayName() const
 {
-    const auto* Mission = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
-    if (Mission && Mission->GetOperationMode() == EEchoesOperationMode::CampaignPrologue &&
-        EntityId != 0 && EntityId == Mission->GetArchiveCarrierId())
+    if (EntityId != 0 && EntityId == GetPresentedArchiveCarrierId())
         return TEXT("Archive Carrier");
     if (EntityFaction == echoes::sim::Faction::HollowChoir)
     {

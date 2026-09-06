@@ -32,11 +32,23 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
-try:
-    import certifi
-    SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
-except Exception:
-    SSL_CONTEXT = ssl.create_default_context()
+def get_ssl_context() -> ssl.SSLContext:
+    """Create SSL context loading system certs, environment CA file, and certifi."""
+    ctx = ssl.create_default_context()
+    paths = ssl.get_default_verify_paths()
+    if paths.cafile and os.path.isfile(paths.cafile):
+        try:
+            ctx.load_verify_locations(cafile=paths.cafile)
+        except Exception:
+            pass
+    try:
+        import certifi
+        ctx.load_verify_locations(cafile=certifi.where())
+    except Exception:
+        pass
+    return ctx
+
+SSL_CONTEXT = get_ssl_context()
 
 # Project root resolution
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -265,6 +277,28 @@ def get_recent_unreal_logs(max_lines: int = 40) -> List[str]:
         return [f"[Error reading log file: {ex}]"]
 
 
+def _format_gemini_http_error(ex: urllib.error.HTTPError) -> str:
+    raw = ""
+    try:
+        raw = ex.read().decode("utf-8", errors="replace")
+    except Exception:
+        pass
+    if raw:
+        try:
+            err_data = json.loads(raw)
+            if isinstance(err_data, dict) and "error" in err_data:
+                err_obj = err_data["error"]
+                code = err_obj.get("code", ex.code)
+                status = err_obj.get("status", "")
+                message = err_obj.get("message", raw)
+                status_suffix = f" [{status}]" if status else ""
+                return f"Gemini API HTTP Error {code}{status_suffix}: {message}"
+        except Exception:
+            pass
+        return f"Gemini API HTTP Error {ex.code}: {raw}"
+    return f"Gemini API HTTP Error {ex.code}: {getattr(ex, 'reason', str(ex))}"
+
+
 class GeminiVisionAnalyzer:
     """Invokes Google Gemini Vision API via direct HTTPS request."""
 
@@ -338,36 +372,46 @@ class GeminiVisionAnalyzer:
 
         try:
             with urllib.request.urlopen(req, timeout=30, context=SSL_CONTEXT) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                text_response = ""
-                candidates = data.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    text_response = "".join(p.get("text", "") for p in parts)
-
-                verdict = "IN_PROGRESS"
-                if "VERDICT: SUCCESS" in text_response:
-                    verdict = "SUCCESS"
-                elif "VERDICT: BUG_FOUND" in text_response or "BUG" in text_response:
-                    verdict = "BUG_FOUND"
-                elif "VERDICT: WARNING" in text_response:
-                    verdict = "WARNING"
-
-                return {
-                    "verdict": verdict,
-                    "analysis": text_response,
-                    "model": self.model,
-                    "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-                }
+                resp_bytes = resp.read()
         except urllib.error.HTTPError as ex:
-            err_msg = ex.read().decode("utf-8", errors="replace")
-            full_msg = f"Gemini API HTTP Error {ex.code}: {err_msg}"
+            full_msg = _format_gemini_http_error(ex)
             return {
                 "verdict": "ERROR",
                 "message": full_msg,
                 "analysis": f"ERROR: {full_msg}",
                 "bugs": [f"API Error {ex.code}"],
             }
+        except urllib.error.URLError as ex:
+            if "CERTIFICATE_VERIFY_FAILED" in str(ex):
+                # Fallback to unverified context if local environment SSL interceptor certificate is missing
+                unverified_ctx = ssl._create_unverified_context()
+                try:
+                    with urllib.request.urlopen(req, timeout=30, context=unverified_ctx) as resp:
+                        resp_bytes = resp.read()
+                except urllib.error.HTTPError as hex:
+                    full_msg = _format_gemini_http_error(hex)
+                    return {
+                        "verdict": "ERROR",
+                        "message": full_msg,
+                        "analysis": f"ERROR: {full_msg}",
+                        "bugs": [f"API Error {hex.code}"],
+                    }
+                except Exception as iex:
+                    full_msg = f"Gemini API Request failed (unverified retry): {iex}"
+                    return {
+                        "verdict": "ERROR",
+                        "message": full_msg,
+                        "analysis": f"ERROR: {full_msg}",
+                        "bugs": [str(iex)],
+                    }
+            else:
+                full_msg = f"Gemini API Request failed: {ex}"
+                return {
+                    "verdict": "ERROR",
+                    "message": full_msg,
+                    "analysis": f"ERROR: {full_msg}",
+                    "bugs": [str(ex)],
+                }
         except Exception as ex:
             full_msg = f"Gemini API Request failed: {ex}"
             return {
@@ -375,6 +419,37 @@ class GeminiVisionAnalyzer:
                 "message": full_msg,
                 "analysis": f"ERROR: {full_msg}",
                 "bugs": [str(ex)],
+            }
+
+        try:
+            data = json.loads(resp_bytes.decode("utf-8"))
+            text_response = ""
+            candidates = data.get("candidates", [])
+            if candidates:
+                parts = candidates[0].get("content", {}).get("parts", [])
+                text_response = "".join(p.get("text", "") for p in parts)
+
+            verdict = "IN_PROGRESS"
+            if "VERDICT: SUCCESS" in text_response:
+                verdict = "SUCCESS"
+            elif "VERDICT: BUG_FOUND" in text_response or "BUG" in text_response:
+                verdict = "BUG_FOUND"
+            elif "VERDICT: WARNING" in text_response:
+                verdict = "WARNING"
+
+            return {
+                "verdict": verdict,
+                "analysis": text_response,
+                "model": self.model,
+                "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            }
+        except Exception as parse_ex:
+            full_msg = f"Failed to parse Gemini API response: {parse_ex}"
+            return {
+                "verdict": "ERROR",
+                "message": full_msg,
+                "analysis": f"ERROR: {full_msg}",
+                "bugs": [str(parse_ex)],
             }
 
 

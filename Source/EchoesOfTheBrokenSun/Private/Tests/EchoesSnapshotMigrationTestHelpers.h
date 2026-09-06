@@ -79,7 +79,15 @@ struct FEmbeddedSnapshotLayout final
     uint32 RememberedObjectCount = 0;
     int32 Schema26AppendOffset = INDEX_NONE;
     int32 Schema26AppendSize = 0;
+    int32 Schema27AppendOffset = INDEX_NONE;
+    int32 Schema27AppendSize = 0;
+    int32 Schema28AppendOffset = INDEX_NONE;
+    int32 Schema28AppendSize = 0;
+    echoes::sim::PlayerHostilityMasks Schema28HostilityMasks{};
 };
+
+inline constexpr echoes::sim::PlayerHostilityMasks
+    Mission15HostilityMasks{0x02, 0x0D, 0x02, 0x02};
 
 inline bool SelectUniqueReceiptCandidate(
     const TArray<FEmbeddedSnapshotLayout>& LoadableCandidates,
@@ -145,7 +153,9 @@ inline bool IsLoadableEmbeddedSnapshot(
     const TArray<uint8>& Envelope,
     int32 SnapshotOffset,
     uint32 SnapshotLength,
-    uint32 ExpectedVersion)
+    uint32 ExpectedVersion,
+    const echoes::sim::PlayerHostilityMasks& LegacyHostilityMasks =
+        echoes::sim::kDefaultHostilityMasks)
 {
     if (SnapshotOffset < 0 || SnapshotLength < 8U ||
         SnapshotLength > static_cast<uint32>(MAX_int32) ||
@@ -160,7 +170,8 @@ inline bool IsLoadableEmbeddedSnapshot(
                std::span<const std::uint8_t>(
                    Envelope.GetData() + SnapshotOffset,
                    static_cast<size_t>(SnapshotLength)),
-               &Error)
+               &Error,
+               LegacyHostilityMasks)
                .has_value() &&
         Error.empty();
 }
@@ -188,9 +199,11 @@ inline int32 EmbeddedSnapshotTerrainGridOffset()
         constexpr int32 EmptyTrailingBytes =
             // One empty remembered-object ledger per player, then the empty
             // entity, pending-command, receipt, schema-26 work, and ballistic
-            // ledgers. The latter is flag + next ID + count with no records.
+            // ledgers. The latter is flag + next ID + count with no records,
+            // followed by the schema-27 empty lifecycle count and schema-28's
+            // four measured hostility-mask bytes.
             static_cast<int32>(echoes::sim::kMaximumPlayers) * 4 +
-            4 + 4 + 4 + 4 + 1 + 4 + 4;
+            4 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 4;
         constexpr int32 SnapshotSignatureSize = 8;
         const echoes::sim::Simulation Probe(
             echoes::sim::SimulationConfig{2, 2, 20, 0});
@@ -312,9 +325,11 @@ inline bool ResolveEmbeddedSnapshotMemoryLedger(
 }
 
 // Schema 26 appends worker work/order state and in-flight projectile state
-// after the receipt block. This helper walks that append from the preceding
-// entity and command counts; it never guesses a tail length. The real schema
-// 26 loader has already validated record semantics before callers reach here.
+// after the receipt block. Schema 27 then appends one 16-byte Future Well
+// lifecycle record per entity. Schema 28 then appends four hostility masks.
+// This helper walks the variable regions from their counts and parses the
+// schema-28 append separately; it never guesses a tail length. The real loader
+// has already validated record semantics before callers reach here.
 inline bool ResolveEmbeddedSnapshotSchema26Append(
     const TArray<uint8>& Envelope,
     const FEmbeddedSnapshotLayout& Layout,
@@ -424,23 +439,61 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
         return false;
     }
     Cursor += 9 + static_cast<int64>(ProjectileCount) * SerializedProjectileSize;
-    // Schema 27 appends exact per-entity capture/telegraph records. These
-    // synthetic legacy fixtures intentionally project away both append blocks;
-    // the real current loader above already validated lifecycle semantics.
+    const int64 Schema26AppendEnd = Cursor;
+    // Schema 27 appends exact per-entity capture/telegraph records. Synthetic
+    // legacy fixtures project this block away before projecting schema 26.
     const uint32 Version = ReadUint32(Envelope, Layout.SnapshotOffset + 4);
+    if (Version != 26U && Version != 27U && Version != 28U)
+    {
+        return false;
+    }
     if (Version >= 27U)
     {
+        const int64 LifecycleOffset = Cursor;
         uint32 WellRecordCount = 0;
         if (!ReadCount(WellRecordCount) || WellRecordCount != EntityCount ||
-            Cursor + static_cast<int64>(WellRecordCount) * 16 != PayloadEnd)
+            Cursor + static_cast<int64>(WellRecordCount) * 16 > PayloadEnd)
         {
             return false;
         }
         Cursor += static_cast<int64>(WellRecordCount) * 16;
+        if (LifecycleOffset > MAX_int32 || Cursor - LifecycleOffset > MAX_int32)
+        {
+            return false;
+        }
+        OutLayout.Schema27AppendOffset =
+            static_cast<int32>(LifecycleOffset);
+        OutLayout.Schema27AppendSize =
+            static_cast<int32>(Cursor - LifecycleOffset);
+    }
+    if (Version == 28U)
+    {
+        constexpr int32 HostilityMaskSize =
+            static_cast<int32>(echoes::sim::kMaximumPlayers);
+        const int64 HostilityOffset = Cursor;
+        if (Cursor + HostilityMaskSize != PayloadEnd || Cursor > MAX_int32)
+        {
+            return false;
+        }
+        echoes::sim::SimulationConfig Config;
+        for (int32 Player = 0; Player < HostilityMaskSize; ++Player)
+        {
+            Config.hostilityMasks[Player] =
+                Envelope[static_cast<int32>(Cursor) + Player];
+        }
+        if (!Config.HasValidHostilityMasks())
+        {
+            return false;
+        }
+        Cursor += HostilityMaskSize;
+        OutLayout.Schema28AppendOffset =
+            static_cast<int32>(HostilityOffset);
+        OutLayout.Schema28AppendSize = HostilityMaskSize;
+        OutLayout.Schema28HostilityMasks = Config.hostilityMasks;
     }
     if (Cursor != PayloadEnd) return false;
     if (ReceiptOffset > MAX_int32 || AppendOffset > MAX_int32 ||
-        PayloadEnd - AppendOffset > MAX_int32)
+        Schema26AppendEnd - AppendOffset > MAX_int32)
     {
         return false;
     }
@@ -449,7 +502,7 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
     OutLayout.ReceiptBlockSize = 4 +
         static_cast<int32>(ReceiptCount) * SerializedReceiptSize;
     OutAppendOffset = static_cast<int32>(AppendOffset);
-    OutAppendSize = static_cast<int32>(PayloadEnd - AppendOffset);
+    OutAppendSize = static_cast<int32>(Schema26AppendEnd - AppendOffset);
     OutLayout.Schema26AppendOffset = OutAppendOffset;
     OutLayout.Schema26AppendSize = OutAppendSize;
     return true;
@@ -482,7 +535,9 @@ inline bool InspectEmbeddedSnapshot(
     int32 LedgerLengthOffset,
     int32 SnapshotLengthOffset,
     FEmbeddedSnapshotLayout& OutLayout,
-    uint32 ExpectedSnapshotVersion = echoes::sim::kSnapshotVersion)
+    uint32 ExpectedSnapshotVersion = echoes::sim::kSnapshotVersion,
+    const echoes::sim::PlayerHostilityMasks& LegacyHostilityMasks =
+        echoes::sim::kDefaultHostilityMasks)
 {
     constexpr int32 SnapshotVersionOffset = 4;
     constexpr int32 ProtectionMaskOffset = 28;
@@ -523,7 +578,7 @@ inline bool InspectEmbeddedSnapshot(
     const int32 SnapshotOffset = static_cast<int32>(SnapshotOffset64);
     if (!IsLoadableEmbeddedSnapshot(
             Envelope, SnapshotOffset, SnapshotLength,
-            ExpectedSnapshotVersion) ||
+            ExpectedSnapshotVersion, LegacyHostilityMasks) ||
         Envelope[SnapshotOffset + ProtectionMaskOffset] != 0U)
     {
         return false;
@@ -625,7 +680,7 @@ inline bool InspectEmbeddedSnapshot(
         UpdateEnvelopeChecksum(Candidate);
         if (!IsLoadableEmbeddedSnapshot(
                 Candidate, SnapshotOffset, V23SnapshotLength,
-                ReceiptFreeSnapshotVersion))
+                ReceiptFreeSnapshotVersion, LegacyHostilityMasks))
         {
             continue;
         }
@@ -638,15 +693,141 @@ inline bool InspectEmbeddedSnapshot(
     return SelectUniqueReceiptCandidate(LoadableCandidates, OutLayout);
 }
 
-// Synthetic regression migrations may deliberately project a current schema
-// checkpoint down to schema 25 before exercising the older 25->22 path. The
-// schema-26 append is removed only after its exact variable layout has been
-// parsed and the resulting schema-25 payload is accepted by the real loader.
+// Project a current schema-28 checkpoint to schema 27 by removing exactly the
+// four validated hostility masks. The legacy loader receives the masks that
+// the authored operation will inject when reopening the synthetic fixture.
+inline bool ConvertEmbeddedSnapshotV28ToV27(
+    TArray<uint8>& Envelope,
+    int32 FixedHeaderSize,
+    int32 LedgerLengthOffset,
+    int32 SnapshotLengthOffset,
+    const echoes::sim::PlayerHostilityMasks& LegacyHostilityMasks =
+        echoes::sim::kDefaultHostilityMasks)
+{
+    constexpr int32 SnapshotVersionOffset = 4;
+    constexpr uint32 LifecycleSnapshotVersion = 27U;
+    FEmbeddedSnapshotLayout Layout;
+    if (!InspectEmbeddedSnapshot(
+            Envelope,
+            FixedHeaderSize,
+            LedgerLengthOffset,
+            SnapshotLengthOffset,
+            Layout,
+            echoes::sim::kSnapshotVersion,
+            LegacyHostilityMasks) ||
+        Layout.Schema28AppendOffset == INDEX_NONE ||
+        Layout.Schema28AppendSize !=
+            static_cast<int32>(echoes::sim::kMaximumPlayers) ||
+        Layout.Schema28HostilityMasks != LegacyHostilityMasks ||
+        Layout.SnapshotLength <
+            static_cast<uint32>(Layout.Schema28AppendSize))
+    {
+        return false;
+    }
+    TArray<uint8> Working = Envelope;
+    Working.RemoveAt(
+        Layout.Schema28AppendOffset,
+        Layout.Schema28AppendSize,
+        EAllowShrinking::No);
+    const uint32 V27SnapshotLength = Layout.SnapshotLength -
+        static_cast<uint32>(Layout.Schema28AppendSize);
+    WriteUint32(Working, SnapshotLengthOffset, V27SnapshotLength);
+    WriteUint32(
+        Working,
+        Layout.SnapshotOffset + SnapshotVersionOffset,
+        LifecycleSnapshotVersion);
+    if (!ResignEmbeddedSnapshot(
+            Working, Layout.SnapshotOffset, V27SnapshotLength))
+    {
+        return false;
+    }
+    UpdateEnvelopeChecksum(Working);
+    if (static_cast<uint64>(Envelope.Num() - Working.Num()) !=
+            static_cast<uint64>(Layout.Schema28AppendSize) ||
+        !IsLoadableEmbeddedSnapshot(
+            Working,
+            Layout.SnapshotOffset,
+            V27SnapshotLength,
+            LifecycleSnapshotVersion,
+            LegacyHostilityMasks))
+    {
+        return false;
+    }
+    Envelope = MoveTemp(Working);
+    return true;
+}
+
+// Project a schema-27 checkpoint to its genuine schema-26 shape by
+// removing only the validated lifecycle block.
+inline bool ConvertEmbeddedSnapshotV27ToV26(
+    TArray<uint8>& Envelope,
+    int32 FixedHeaderSize,
+    int32 LedgerLengthOffset,
+    int32 SnapshotLengthOffset,
+    const echoes::sim::PlayerHostilityMasks& LegacyHostilityMasks =
+        echoes::sim::kDefaultHostilityMasks)
+{
+    constexpr int32 SnapshotVersionOffset = 4;
+    constexpr uint32 WorkSnapshotVersion = 26U;
+    FEmbeddedSnapshotLayout Layout;
+    if (!InspectEmbeddedSnapshot(
+            Envelope,
+            FixedHeaderSize,
+            LedgerLengthOffset,
+            SnapshotLengthOffset,
+            Layout,
+            27U,
+            LegacyHostilityMasks) ||
+        Layout.Schema27AppendOffset == INDEX_NONE ||
+        Layout.Schema27AppendSize <= 0 ||
+        Layout.SnapshotLength <
+            static_cast<uint32>(Layout.Schema27AppendSize))
+    {
+        return false;
+    }
+    TArray<uint8> Working = Envelope;
+    Working.RemoveAt(
+        Layout.Schema27AppendOffset,
+        Layout.Schema27AppendSize,
+        EAllowShrinking::No);
+    const uint32 V26SnapshotLength = Layout.SnapshotLength -
+        static_cast<uint32>(Layout.Schema27AppendSize);
+    WriteUint32(Working, SnapshotLengthOffset, V26SnapshotLength);
+    WriteUint32(
+        Working,
+        Layout.SnapshotOffset + SnapshotVersionOffset,
+        WorkSnapshotVersion);
+    if (!ResignEmbeddedSnapshot(
+            Working, Layout.SnapshotOffset, V26SnapshotLength))
+    {
+        return false;
+    }
+    UpdateEnvelopeChecksum(Working);
+    if (static_cast<uint64>(Envelope.Num() - Working.Num()) !=
+            static_cast<uint64>(Layout.Schema27AppendSize) ||
+        !IsLoadableEmbeddedSnapshot(
+            Working,
+            Layout.SnapshotOffset,
+            V26SnapshotLength,
+            WorkSnapshotVersion,
+            LegacyHostilityMasks))
+    {
+        return false;
+    }
+    Envelope = MoveTemp(Working);
+    return true;
+}
+
+// Project a schema-26 checkpoint to schema 25 before exercising the older
+// 25->22 path. The work/projectile append is removed only after its exact
+// variable layout has been parsed and the schema-25 payload loads successfully.
 inline bool ConvertEmbeddedSnapshotV26ToV25(
     TArray<uint8>& Envelope,
     int32 FixedHeaderSize,
     int32 LedgerLengthOffset,
-    int32 SnapshotLengthOffset)
+    int32 SnapshotLengthOffset,
+    const echoes::sim::PlayerHostilityMasks& LegacyHostilityMasks =
+        echoes::sim::kDefaultHostilityMasks)
 {
     constexpr int32 SnapshotVersionOffset = 4;
     constexpr uint32 MemorySnapshotVersion = 25U;
@@ -657,7 +838,8 @@ inline bool ConvertEmbeddedSnapshotV26ToV25(
             LedgerLengthOffset,
             SnapshotLengthOffset,
             Layout,
-            echoes::sim::kSnapshotVersion))
+            26U,
+            LegacyHostilityMasks))
     {
         return false;
     }
@@ -691,7 +873,8 @@ inline bool ConvertEmbeddedSnapshotV26ToV25(
             Working,
             Schema26Layout.SnapshotOffset,
             V25SnapshotLength,
-            MemorySnapshotVersion))
+            MemorySnapshotVersion,
+            LegacyHostilityMasks))
     {
         return false;
     }
@@ -703,7 +886,9 @@ inline bool ConvertEmbeddedSnapshotV23ToV22(
     TArray<uint8>& Envelope,
     int32 FixedHeaderSize,
     int32 LedgerLengthOffset,
-    int32 SnapshotLengthOffset)
+    int32 SnapshotLengthOffset,
+    const echoes::sim::PlayerHostilityMasks& LegacyHostilityMasks =
+        echoes::sim::kDefaultHostilityMasks)
 {
     constexpr int32 SnapshotVersionOffset = 4;
     constexpr int32 ProtectionMaskOffset = 28;
@@ -737,7 +922,8 @@ inline bool ConvertEmbeddedSnapshotV23ToV22(
     }
     const int32 SnapshotOffset = static_cast<int32>(SnapshotOffset64);
     if (!IsLoadableEmbeddedSnapshot(
-            Envelope, SnapshotOffset, V23SnapshotLength, 23U) ||
+            Envelope, SnapshotOffset, V23SnapshotLength, 23U,
+            LegacyHostilityMasks) ||
         Envelope[SnapshotOffset + ProtectionMaskOffset] != 0U)
     {
         return false;
@@ -760,7 +946,8 @@ inline bool ConvertEmbeddedSnapshotV23ToV22(
     }
     UpdateEnvelopeChecksum(Working);
     if (!IsLoadableEmbeddedSnapshot(
-            Working, SnapshotOffset, V22SnapshotLength, 22U))
+            Working, SnapshotOffset, V22SnapshotLength, 22U,
+            LegacyHostilityMasks))
     {
         return false;
     }
@@ -771,30 +958,48 @@ inline bool ConvertEmbeddedSnapshotV23ToV22(
 // Walks a checkpoint this build just wrote down every schema step it supports,
 // stopping at the genuine schema-22 shape:
 //
+//   28 -> 27   drop the four hostility masks (legacy adapter supplies them)
+//   27 -> 26   drop the per-entity Future Well lifecycle records
+//   26 -> 25   drop worker work/order and in-flight projectile state
 //   25 -> 24   drop the per-player terrain and object memory ledgers
 //   24 -> 23   drop the command-resolution receipt block
 //   23 -> 22   drop the protected-Command-Core mask byte
 //
 // Each step is proved by handing the result to the real loader and demanding it
 // load at that exact version, so a wrong split cannot slip through as a smaller
-// but still plausible payload. A schema-24 source simply starts one step in.
+// but still plausible payload.
 //
 // The envelope is left untouched unless every step succeeds.
 inline bool ConvertEmbeddedSnapshotToV22(
     TArray<uint8>& Envelope,
     int32 FixedHeaderSize,
     int32 LedgerLengthOffset,
-    int32 SnapshotLengthOffset)
+    int32 SnapshotLengthOffset,
+    const echoes::sim::PlayerHostilityMasks& LegacyHostilityMasks =
+        echoes::sim::kDefaultHostilityMasks)
 {
     constexpr int32 SnapshotVersionOffset = 4;
     constexpr uint32 ReceiptSnapshotVersion = 24U;
     constexpr uint32 ReceiptFreeSnapshotVersion = 23U;
     TArray<uint8> Source = Envelope;
-    if (!ConvertEmbeddedSnapshotV26ToV25(
+    if (!ConvertEmbeddedSnapshotV28ToV27(
             Source,
             FixedHeaderSize,
             LedgerLengthOffset,
-            SnapshotLengthOffset))
+            SnapshotLengthOffset,
+            LegacyHostilityMasks) ||
+        !ConvertEmbeddedSnapshotV27ToV26(
+            Source,
+            FixedHeaderSize,
+            LedgerLengthOffset,
+            SnapshotLengthOffset,
+            LegacyHostilityMasks) ||
+        !ConvertEmbeddedSnapshotV26ToV25(
+            Source,
+            FixedHeaderSize,
+            LedgerLengthOffset,
+            SnapshotLengthOffset,
+            LegacyHostilityMasks))
     {
         return false;
     }
@@ -805,7 +1010,8 @@ inline bool ConvertEmbeddedSnapshotToV22(
             LedgerLengthOffset,
             SnapshotLengthOffset,
             Layout,
-            25U))
+            25U,
+            LegacyHostilityMasks))
     {
         return false;
     }
@@ -839,14 +1045,15 @@ inline bool ConvertEmbeddedSnapshotToV22(
         // source declared.
         if (!IsLoadableEmbeddedSnapshot(
                 Working, Layout.SnapshotOffset, WorkingSnapshotLength,
-                ReceiptSnapshotVersion) ||
+                ReceiptSnapshotVersion, LegacyHostilityMasks) ||
             !InspectEmbeddedSnapshot(
                 Working,
                 FixedHeaderSize,
                 LedgerLengthOffset,
                 SnapshotLengthOffset,
                 ReceiptLayout,
-                ReceiptSnapshotVersion) ||
+                ReceiptSnapshotVersion,
+                LegacyHostilityMasks) ||
             ReceiptLayout.MemoryLedgerSize != 0 ||
             ReceiptLayout.ReceiptCount != Layout.ReceiptCount ||
             ReceiptLayout.SnapshotOffset != Layout.SnapshotOffset)
@@ -874,12 +1081,13 @@ inline bool ConvertEmbeddedSnapshotToV22(
     UpdateEnvelopeChecksum(Working);
     if (!IsLoadableEmbeddedSnapshot(
             Working, Layout.SnapshotOffset, V23SnapshotLength,
-            ReceiptFreeSnapshotVersion) ||
+            ReceiptFreeSnapshotVersion, LegacyHostilityMasks) ||
         !ConvertEmbeddedSnapshotV23ToV22(
             Working,
             FixedHeaderSize,
             LedgerLengthOffset,
-            SnapshotLengthOffset))
+            SnapshotLengthOffset,
+            LegacyHostilityMasks))
     {
         return false;
     }
@@ -952,7 +1160,8 @@ inline bool InspectMission15EnvelopeSnapshot(
             LedgerLengthOffset,
             SnapshotLengthOffset,
             OutLayout,
-            ExpectedSnapshotVersion);
+            ExpectedSnapshotVersion,
+            Mission15HostilityMasks);
 }
 
 inline bool ConvertMission14EnvelopeSnapshotToV22(TArray<uint8>& Envelope)
@@ -978,7 +1187,8 @@ inline bool ConvertMission15EnvelopeSnapshotToV22(TArray<uint8>& Envelope)
             Envelope,
             FixedHeaderSize,
             LedgerLengthOffset,
-            SnapshotLengthOffset);
+            SnapshotLengthOffset,
+            Mission15HostilityMasks);
 }
 
 inline uint32 Mission14SnapshotVersion(const TArray<uint8>& Envelope)

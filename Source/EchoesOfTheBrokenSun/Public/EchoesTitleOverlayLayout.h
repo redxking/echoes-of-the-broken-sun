@@ -29,7 +29,7 @@ struct FEchoesTitleOverlayLayout final
     bool bNewCampaignVisible = false;
     bool bRestoreVisible = false;
 
-    /** Panel geometry shared with AEchoesHUD::DrawTitleScreen. */
+    /** Historical panel geometry retained for explicit-position fixtures. */
     static void BuildPanel(
         const FVector2D& ViewportSize,
         FBox2D& OutPanel,

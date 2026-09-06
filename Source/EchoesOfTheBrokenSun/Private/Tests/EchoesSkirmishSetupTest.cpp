@@ -924,6 +924,9 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
 
     const FEchoesCampaignProgress CampaignBeforeReturn =
         Bridge->GetCampaignProgress();
+    // The preceding failed-deployment fixture deliberately retained a paused
+    // match. Resume it before testing the ordinary running -> menu -> running route.
+    Bridge->SetScenarioPaused(false);
     Controller->TogglePauseMenu();
     TestTrue(TEXT("Field menu opens on the active skirmish"),
              Controller->IsPauseMenuVisible() &&
@@ -937,6 +940,16 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Pause resume is pointer-operable"),
              !Controller->IsPauseMenuVisible() &&
                  !Bridge->IsScenarioPaused());
+    Controller->ToggleTacticalPause();
+    const auto TacticalPauseTick = Bridge->GetSimulation()->CurrentTick();
+    Bridge->Tick(0.5f);
+    TestEqual(TEXT("Tactical pause freezes the simulation accumulator"), Bridge->GetSimulation()->CurrentTick(), TacticalPauseTick);
+    Controller->TogglePauseMenu();
+    Controller->HandleModalOverlayPointer(BoxCenter(PauseLayout.ResumeButton), TestViewport, 1.0f);
+    TestTrue(TEXT("Returning from menu preserves an active tactical pause"),
+        !Controller->IsPauseMenuVisible() && Bridge->IsScenarioPaused());
+    Controller->ToggleTacticalPause();
+    TestFalse(TEXT("Tactical pause can be independently resumed"), Bridge->IsScenarioPaused());
     Controller->TogglePauseMenu();
     TestTrue(TEXT("Field menu reopens for pointer return"),
              Controller->IsPauseMenuVisible() &&
@@ -1169,13 +1182,13 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
         TestEqual(TEXT("Option 6 (Difficulty): Default is Standard"),
                   DiffTestSetup.Difficulty, EEchoesSkirmishDifficulty::Standard);
         DiffTestSetup = FEchoesSkirmishSetupModel::WithNextDifficulty(DiffTestSetup, -1);
-        TestEqual(TEXT("Option 6 (Difficulty): Cycles backward to Assisted"),
+        TestEqual(TEXT("Option 6 (Difficulty): Cycles backward to Story"),
                   DiffTestSetup.Difficulty, EEchoesSkirmishDifficulty::Assisted);
-        TestEqual(TEXT("Option 6 (Difficulty): Assisted exact disclosed handicap"),
+        TestEqual(TEXT("Option 6 (Difficulty): Story equal-rules disclosure"),
                   FString(FEchoesSkirmishSetupModel::AssistedDifficultyModifiers()),
-                  FString(TEXT("+50% reaction delay (1.5s), APM ceiling 30, -20% combat damage multiplier")));
+                  FString(FEchoesSkirmishSetupModel::DifficultyDescription(EEchoesSkirmishDifficulty::Story)));
         DiffTestSetup = FEchoesSkirmishSetupModel::WithNextDifficulty(DiffTestSetup, 2);
-        TestEqual(TEXT("Option 6 (Difficulty): Cycles forward to Challenging"),
+        TestEqual(TEXT("Option 6 (Difficulty): Cycles forward to Veteran"),
                   DiffTestSetup.Difficulty, EEchoesSkirmishDifficulty::Challenging);
         DiffTestSetup = FEchoesSkirmishSetupModel::WithNextDifficulty(DiffTestSetup, 1);
         TestEqual(TEXT("Option 6 (Difficulty): Cycles forward to Sovereign"),
@@ -1194,18 +1207,18 @@ bool FEchoesSkirmishSetupTest::RunTest(const FString& Parameters)
         FEchoesSkirmishSetup VicTestSetup = FEchoesSkirmishSetupModel::DefaultSetup();
         TestEqual(TEXT("Option 8 (Victory Condition): Default is Corefall"),
                   VicTestSetup.VictoryCondition, EEchoesSkirmishVictoryCondition::Corefall);
-        VicTestSetup = FEchoesSkirmishSetupModel::WithNextVictoryCondition(VicTestSetup, 1);
-        TestEqual(TEXT("Option 8 (Victory Condition): Cycles to Well Control"),
-                  VicTestSetup.VictoryCondition, EEchoesSkirmishVictoryCondition::WellControl);
-        TestEqual(TEXT("Option 8 (Victory Condition): Displays Well Control name"),
-                  FString(FEchoesSkirmishSetupModel::VictoryConditionDisplayName(VicTestSetup.VictoryCondition)),
-                  FString(TEXT("WELL CONTROL // DOMINANCE")));
-        VicTestSetup = FEchoesSkirmishSetupModel::WithNextVictoryCondition(VicTestSetup, 1);
-        TestEqual(TEXT("Option 8 (Victory Condition): Cycles to Conquest"),
-                  VicTestSetup.VictoryCondition, EEchoesSkirmishVictoryCondition::Conquest);
-        VicTestSetup = FEchoesSkirmishSetupModel::WithNextVictoryCondition(VicTestSetup, 1);
-        TestEqual(TEXT("Option 8 (Victory Condition): Wraps back to Corefall"),
-                  VicTestSetup.VictoryCondition, EEchoesSkirmishVictoryCondition::Corefall);
+        for (int32 Direction : {-1, 1})
+        {
+            VicTestSetup = FEchoesSkirmishSetupModel::WithNextVictoryCondition(VicTestSetup, Direction);
+            TestTrue(TEXT("Offline selector retains Corefall in both directions"), VicTestSetup.VictoryCondition == EEchoesSkirmishVictoryCondition::Corefall);
+        }
+        for (const auto Unsupported : {EEchoesSkirmishVictoryCondition::WellControl, EEchoesSkirmishVictoryCondition::Conquest})
+        {
+            VicTestSetup.VictoryCondition = Unsupported;
+            FString UnsupportedRuleError;
+            TestFalse(TEXT("Legacy unimplemented victory rules are rejected"), FEchoesSkirmishSetupModel::Validate(VicTestSetup, UnsupportedRuleError));
+            TestTrue(TEXT("Refusal names actionable Corefall remedy"), UnsupportedRuleError.Contains(TEXT("Corefall")));
+        }
 
         // 9. Game Speed Option & Deterministic Multipliers
         FEchoesSkirmishSetup SpeedTestSetup = FEchoesSkirmishSetupModel::DefaultSetup();

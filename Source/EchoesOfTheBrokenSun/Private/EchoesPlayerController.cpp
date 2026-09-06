@@ -1,4 +1,6 @@
 #include "EchoesPlayerController.h"
+#include "EchoesShellWidget.h"
+#include "EchoesFieldHudWidget.h"
 
 #include "EchoesAmbienceSubsystem.h"
 #include "EchoesCollisionChannels.h"
@@ -515,6 +517,7 @@ AEchoesPlayerController::AEchoesPlayerController()
 void AEchoesPlayerController::BeginPlay()
 {
     Super::BeginPlay();
+    InitializeTacticalInputPresentation();
 
     FInputModeGameAndUI InputMode;
     InputMode.SetHideCursorDuringCapture(false);
@@ -729,13 +732,76 @@ void AEchoesPlayerController::EndPlay(
     ClearNetworkConnectionTimeouts();
     GetWorldTimerManager().ClearTimer(NetworkResultAcknowledgementTimer);
     DestroyNetworkPresentation();
+    RevertPendingDisplay();
+    ShutdownTacticalInputPresentation();
+    CancelReplayBrowserScan();
+    if (ShellWidget) { ShellWidget->RemoveFromParent(); ShellWidget = nullptr; }
+    if (FieldHudWidget) { FieldHudWidget->RemoveFromParent(); FieldHudWidget = nullptr; }
     Super::EndPlay(EndPlayReason);
+}
+
+bool AEchoesPlayerController::IsReplayInputActive() const
+{
+    const auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    return Bridge && Bridge->IsReplayPlaybackActive();
 }
 
 bool AEchoesPlayerController::InputKey(const FInputKeyEventArgs& Params)
 {
+    if (bBuildPlacementActive && Params.Key == EKeys::Escape && Params.Event == IE_Pressed)
+    { CancelBuildPlacement(); return true; }
+    // UMG receives modal input first. Unhandled keys/buttons cannot leak into
+    // the legacy Canvas hit targets or battlefield while this shell owns focus.
+    if (UsesShellWidget())
+    {
+#if !UE_BUILD_SHIPPING
+        if (FParse::Param(FCommandLine::Get(), TEXT("EchoesShellInputTrace")))
+            UE_LOG(LogEchoes, Display, TEXT("[ECHOES_SHELL_INPUT] route=controller key=%s event=%d"), *Params.Key.ToString(), static_cast<int32>(Params.Event));
+#endif
+        if (Params.Event == IE_Pressed || Params.Event == IE_Repeat)
+        {
+            if (ShellWidget->HandleNavigationKey(Params.Key,
+                IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift), Params.Event == IE_Repeat))
+            {
+                return true;
+            }
+        }
+        if (Params.Key == EKeys::LeftMouseButton && Params.Event == IE_Pressed)
+        {
+            SelectionPressed();
+            return true;
+        }
+        return true;
+    }
+    if (IsReplayInputActive())
+    {
+        // Playback owns all input except the camera and its scoped minimap.
+        // Do not dispatch blocked keys through the live action mappings.
+        if (Params.Event == IE_Pressed || Params.Event == IE_Repeat)
+        {
+            if (Params.Key == EKeys::Escape || Params.Key == EKeys::Gamepad_FaceButton_Right)
+            {
+                if (Params.Event == IE_Pressed) HandleShellAction(EEchoesShellAction::ExitReplay);
+                return true;
+            }
+            if (ShellWidget && ShellWidget->HandleNavigationKey(Params.Key,
+                IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift), Params.Event == IE_Repeat))
+                return true;
+        }
+        const bool bCameraKey = Params.Key == EKeys::W || Params.Key == EKeys::A ||
+            Params.Key == EKeys::S || Params.Key == EKeys::D || Params.Key == EKeys::MiddleMouseButton ||
+            Params.Key == EKeys::MouseScrollUp || Params.Key == EKeys::MouseScrollDown ||
+            Params.Key == EKeys::MouseX || Params.Key == EKeys::MouseY;
+        if (bCameraKey || Params.Key == EKeys::LeftMouseButton) return Super::InputKey(Params);
+        return true;
+    }
     if (HandleOnlineEndpointKey(Params))
     {
+        return true;
+    }
+    if (Params.Key == EKeys::Pause && Params.Event == IE_Pressed)
+    {
+        ToggleTacticalPause();
         return true;
     }
     if (Params.Key == EKeys::M && Params.Event == IE_Pressed)
@@ -745,7 +811,7 @@ bool AEchoesPlayerController::InputKey(const FInputKeyEventArgs& Params)
             CloseCampaignOperationsMap();
             return true;
         }
-        else if (bTitleScreenVisible || (!IsModalOverlayVisible() && !bMatchResultVisible))
+        else if (PlayerFlow.Is(EEchoesShellScreen::Title) || (!IsModalOverlayVisible() && !PlayerFlow.Is(EEchoesShellScreen::Results)))
         {
             OpenCampaignOperationsMap();
             return true;
@@ -886,7 +952,7 @@ bool AEchoesPlayerController::IsOnlineFrontDoorVisible() const
 void AEchoesPlayerController::OpenOnlineFrontDoor()
 {
     UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
-    if (!bTitleScreenVisible || !IsLocalController() ||
+    if (!PlayerFlow.Is(EEchoesShellScreen::Title) || !IsLocalController() ||
         GetNetMode() != NM_Standalone || EchoesGameInstance == nullptr)
     {
         return;
@@ -1033,12 +1099,12 @@ void AEchoesPlayerController::BeginHostedNetworkMatchPresentation()
     bNetworkCompatibilityAccepted = true;
     bNetworkReady = true;
     bNetworkMatchStarted = true;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bOnlineLocalMenuVisible = false;
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, false);
     SetIgnoreMoveInput(false);
     SetIgnoreLookInput(false);
     SetStatusMessage(
@@ -1235,8 +1301,8 @@ void AEchoesPlayerController::ClearNetworkReconnectGrace()
 {
     bOpponentReconnectGraceActive = false;
     OpponentReconnectExpiresAtSeconds = 0.0;
-    if (!bMatchResultVisible && !bOnlineLocalMenuVisible &&
-        !bPauseMenuVisible && !bTechnologyPanelVisible)
+    if (!PlayerFlow.Is(EEchoesShellScreen::Results) && !bOnlineLocalMenuVisible &&
+        !PlayerFlow.Is(EEchoesShellScreen::Pause) && !bTechnologyPanelVisible)
     {
         SetIgnoreMoveInput(false);
         SetIgnoreLookInput(false);
@@ -1324,7 +1390,7 @@ bool AEchoesPlayerController::IsNetworkClientControlActive() const
     return GetNetMode() == NM_Client && IsLocalController() &&
            bNetworkCompatibilityAccepted && bNetworkMatchStarted &&
            NetworkSeat < echoes::sim::kMaximumPlayers &&
-           GetNetworkScopedView() != nullptr && !bMatchResultVisible;
+           GetNetworkScopedView() != nullptr && !PlayerFlow.Is(EEchoesShellScreen::Results);
 }
 
 const echoes::sim::net::ScopedEntityState*
@@ -4797,7 +4863,7 @@ bool AEchoesPlayerController::IsSkirmishSetupVisible() const
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
-    return bTitleScreenVisible && Bridge != nullptr &&
+    return PlayerFlow.Is(EEchoesShellScreen::Title) && Bridge != nullptr &&
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish &&
         !Bridge->IsNetworkHumanOpponentEnabled();
 }
@@ -4808,7 +4874,7 @@ bool AEchoesPlayerController::IsSkirmishDeploymentSummaryVisible() const
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
-    return bMissionBriefingVisible && Bridge != nullptr &&
+    return PlayerFlow.Is(EEchoesShellScreen::Briefing) && Bridge != nullptr &&
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish &&
         !Bridge->IsNetworkHumanOpponentEnabled();
 }
@@ -4819,7 +4885,7 @@ bool AEchoesPlayerController::CanReturnCompletedSkirmishToOperations() const
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
-    return bMatchResultVisible && !bCampaignResult && Bridge != nullptr &&
+    return PlayerFlow.Is(EEchoesShellScreen::Results) && !bCampaignResult && Bridge != nullptr &&
         Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish &&
         !Bridge->IsNetworkHumanOpponentEnabled();
 }
@@ -4832,7 +4898,7 @@ bool AEchoesPlayerController::CanLeaveNetworkMatchToOnlineMenu() const
 
 bool AEchoesPlayerController::IsOnlineMatchResult() const
 {
-    if (!bMatchResultVisible || bCampaignResult)
+    if (!PlayerFlow.Is(EEchoesShellScreen::Results) || bCampaignResult)
     {
         return false;
     }
@@ -4850,7 +4916,7 @@ bool AEchoesPlayerController::IsOnlineMatchResult() const
 
 bool AEchoesPlayerController::IsActiveOnlineNetworkMatch() const
 {
-    if (!bNetworkMatchStarted || bMatchResultVisible)
+    if (!bNetworkMatchStarted || PlayerFlow.Is(EEchoesShellScreen::Results))
     {
         return false;
     }
@@ -5076,8 +5142,8 @@ void AEchoesPlayerController::ReturnToSkirmishSetup()
     {
         return;
     }
-    bMissionBriefingVisible = false;
-    bTitleScreenVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, true);
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
     SetStatusMessage(
@@ -5300,11 +5366,11 @@ void AEchoesPlayerController::PresentTitleScreen()
     ClearSelection();
     bSelectionButtonDown = false;
     bControlGroupAssignmentArmed = false;
-    bTitleScreenVisible = true;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, true);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, false);
     bNewCampaignConfirmationArmed = false;
     NewCampaignConfirmationExpiresAt = 0.0;
     bCampaignRestoreConfirmationArmed = false;
@@ -5456,15 +5522,17 @@ void AEchoesPlayerController::PresentTitleScreen()
 
 void AEchoesPlayerController::ConfirmTitleScreen()
 {
-    if (!bTitleScreenVisible)
+    if (!PlayerFlow.Is(EEchoesShellScreen::Title))
     {
         return;
     }
+    if (const auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+        Bridge && !RequireOperationMastery(Bridge->GetOperationMode())) return;
     bNewCampaignConfirmationArmed = false;
     NewCampaignConfirmationExpiresAt = 0.0;
     bCampaignRestoreConfirmationArmed = false;
     CampaignRestoreConfirmationExpiresAt = 0.0;
-    bTitleScreenVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
     UE_LOG(LogEchoes, Display, TEXT("[ECHOES_TITLE_CONFIRMED] next=OperationsBrief"));
     PresentMissionBriefing();
 }
@@ -5484,17 +5552,17 @@ void AEchoesPlayerController::PresentMissionBriefing()
     ClearSelection();
     bSelectionButtonDown = false;
     bControlGroupAssignmentArmed = false;
-    bTitleScreenVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, false);
     bCampaignResult = false;
     RecordedCampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
     CampaignFinalResolution = EEchoesFinalResolution::None;
     RecordedCampaignFinalResolution = EEchoesFinalResolution::None;
     CampaignCommitStatus = EEchoesCampaignCommitStatus::NotApplicable;
     PresentedMatchOutcome = echoes::sim::MatchOutcome::Ongoing;
-    bMissionBriefingVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, true);
     Bridge->SetScenarioPaused(true);
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
@@ -5617,7 +5685,7 @@ void AEchoesPlayerController::PresentMissionBriefing()
 
 void AEchoesPlayerController::ConfirmMissionBriefing()
 {
-    if (!bMissionBriefingVisible)
+    if (!PlayerFlow.Is(EEchoesShellScreen::Briefing))
     {
         return;
     }
@@ -5630,6 +5698,7 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
         SetStatusMessage(TEXT("[BRIEFING_SIM_NOT_READY] Deployment could not begin."));
         return;
     }
+    if (!RequireOperationMastery(Bridge->GetOperationMode())) return;
     if (IsSkirmishDeploymentSummaryVisible())
     {
         FString DeploymentFeedback;
@@ -5647,7 +5716,7 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
         PendingSkirmishSetup = Bridge->GetActiveSkirmishSetup();
     }
     SynchronizeBoundCampaignProtocol();
-    bMissionBriefingVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
     if (UEchoesInterfaceAudioSubsystem* InterfaceAudio =
             GetWorld()->GetSubsystem<UEchoesInterfaceAudioSubsystem>())
     {
@@ -5951,7 +6020,7 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
 
 void AEchoesPlayerController::CyclePlayableFaction()
 {
-    if (!bTitleScreenVisible && !bMissionBriefingVisible)
+    if (!PlayerFlow.Is(EEchoesShellScreen::Title) && !PlayerFlow.Is(EEchoesShellScreen::Briefing))
     {
         CycleOwnedEntity(1);
         return;
@@ -5974,7 +6043,7 @@ void AEchoesPlayerController::CyclePlayableFaction()
                 8.0f);
             return;
         }
-        if (!bTitleScreenVisible)
+        if (!PlayerFlow.Is(EEchoesShellScreen::Title))
         {
             SetStatusMessage(
                 TEXT("DEPLOYMENT REVIEW — Escape returns to setup; Enter applies the shown deployment."),
@@ -6105,7 +6174,7 @@ void AEchoesPlayerController::CyclePlayableFaction()
 
 void AEchoesPlayerController::CycleOperation()
 {
-    if (!bTitleScreenVisible && !bMissionBriefingVisible)
+    if (!PlayerFlow.Is(EEchoesShellScreen::Title) && !PlayerFlow.Is(EEchoesShellScreen::Briefing))
     {
         return;
     }
@@ -6240,9 +6309,10 @@ void AEchoesPlayerController::CycleOperation()
 
 void AEchoesPlayerController::ContinueCampaign()
 {
-    const bool bContinuingFromTitle = bTitleScreenVisible;
+    if (!RequireOperationMastery(EEchoesOperationMode::Skirmish)) return;
+    const bool bContinuingFromTitle = PlayerFlow.Is(EEchoesShellScreen::Title);
     const bool bContinuingFromResult =
-        bMatchResultVisible && CanAdvanceCampaignResult();
+        PlayerFlow.Is(EEchoesShellScreen::Results) && CanAdvanceCampaignResult();
     if (!bContinuingFromTitle && !bContinuingFromResult)
     {
         return;
@@ -6331,12 +6401,14 @@ void AEchoesPlayerController::ContinueCampaign()
 
 void AEchoesPlayerController::OpenCampaignOperationsMap()
 {
+    if (IsReplayInputActive()) return;
+    if (!RequireOperationMastery(EEchoesOperationMode::Skirmish)) return;
     bNewCampaignConfirmationArmed = false;
     NewCampaignConfirmationExpiresAt = 0.0;
     bCampaignRestoreConfirmationArmed = false;
     CampaignRestoreConfirmationExpiresAt = 0.0;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
     bCampaignOperationsMapVisible = true;
 
     const UEchoesSimulationSubsystem* Bridge =
@@ -6359,7 +6431,7 @@ void AEchoesPlayerController::OpenCampaignOperationsMap()
 void AEchoesPlayerController::CloseCampaignOperationsMap()
 {
     bCampaignOperationsMapVisible = false;
-    bTitleScreenVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, true);
     UE_LOG(
         LogEchoes,
         Display,
@@ -6395,6 +6467,7 @@ void AEchoesPlayerController::SelectPreviousCampaignMapNode()
 
 void AEchoesPlayerController::DeploySelectedCampaignOperation()
 {
+    if (!RequireOperationMastery(EEchoesOperationMode::Skirmish)) return;
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -6436,7 +6509,7 @@ void AEchoesPlayerController::DeploySelectedCampaignOperation()
     }
 
     bCampaignOperationsMapVisible = false;
-    bTitleScreenVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
     SynchronizeBoundCampaignProtocol();
     ClearSelection();
     ClearControlGroups();
@@ -6453,6 +6526,8 @@ void AEchoesPlayerController::DeploySelectedCampaignOperation()
         *TargetNode.MissionCode);
 }
 
+#if WITH_DEV_AUTOMATION_TESTS
+// Legacy explicit-position fixture seam. Runtime input belongs to UMG.
 bool AEchoesPlayerController::HandleCampaignOperationsMapPointer(
     const FVector2D& ScreenPosition,
     const FVector2D& ViewportSize,
@@ -6503,6 +6578,8 @@ bool AEchoesPlayerController::HandleCampaignOperationsMapPointer(
 
     return false;
 }
+#endif
+
 
 bool AEchoesPlayerController::IsNewCampaignConfirmationArmed() const
 {
@@ -6531,7 +6608,7 @@ void AEchoesPlayerController::RequestReturnToOperations()
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
             : nullptr;
-    if (!bPauseMenuVisible || Bridge == nullptr ||
+    if (!PlayerFlow.Is(EEchoesShellScreen::Pause) || Bridge == nullptr ||
         Bridge->GetOperationMode() != EEchoesOperationMode::Skirmish ||
         Bridge->IsNetworkHumanOpponentEnabled())
     {
@@ -6563,7 +6640,7 @@ void AEchoesPlayerController::RequestReturnToOperations()
     PendingSkirmishSetup = Bridge->GetActiveSkirmishSetup();
     SkirmishSetupFocusRow = 0;
     PresentTitleScreen();
-    if (bTitleScreenVisible)
+    if (PlayerFlow.Is(EEchoesShellScreen::Title))
     {
         SetStatusMessage(
             TEXT("RETURNED TO OPERATIONS — the field is paused. The current setup resumes the same match; changing setup replaces it after confirmation."),
@@ -6582,12 +6659,12 @@ void AEchoesPlayerController::RequestNewCampaign()
         LeaveOnlineMatch();
         return;
     }
-    if (bPauseMenuVisible)
+    if (PlayerFlow.Is(EEchoesShellScreen::Pause))
     {
         RequestReturnToOperations();
         return;
     }
-    if (!bTitleScreenVisible)
+    if (!PlayerFlow.Is(EEchoesShellScreen::Title))
     {
         SetStatusMessage(TEXT("[NEW_CAMPAIGN_TITLE_REQUIRED] Return to the title screen before replacing campaign progress."));
         return;
@@ -6654,7 +6731,7 @@ void AEchoesPlayerController::RequestNewCampaign()
 
 void AEchoesPlayerController::RequestCampaignRestore()
 {
-    if (!bTitleScreenVisible)
+    if (!PlayerFlow.Is(EEchoesShellScreen::Title))
     {
         SetStatusMessage(TEXT("[CAMPAIGN_RESTORE_TITLE_REQUIRED] Return to the title screen before restoring campaign progress."));
         return;
@@ -6724,7 +6801,7 @@ void AEchoesPlayerController::RequestCampaignRestore()
 
 void AEchoesPlayerController::CycleOwnedEntityPrevious()
 {
-    if (bTitleScreenVisible || bMissionBriefingVisible)
+    if (PlayerFlow.Is(EEchoesShellScreen::Title) || PlayerFlow.Is(EEchoesShellScreen::Briefing))
     {
         CyclePlayableFaction();
         return;
@@ -6734,6 +6811,7 @@ void AEchoesPlayerController::CycleOwnedEntityPrevious()
 
 void AEchoesPlayerController::SelectCombatForce()
 {
+    if (IsReplayInputActive()) return;
     if (IsModalOverlayVisible())
     {
         return;
@@ -7036,11 +7114,11 @@ void AEchoesPlayerController::ConfirmPrimaryAction()
             TEXT("ONLINE LOBBY — ready submitted; waiting for authority start."),
             3600.0f);
     }
-    else if (bTitleScreenVisible)
+    else if (PlayerFlow.Is(EEchoesShellScreen::Title))
     {
         ConfirmTitleScreen();
     }
-    else if (bMissionBriefingVisible)
+    else if (PlayerFlow.Is(EEchoesShellScreen::Briefing))
     {
         ConfirmMissionBriefing();
     }
@@ -7048,7 +7126,7 @@ void AEchoesPlayerController::ConfirmPrimaryAction()
     {
         TogglePauseMenu();
     }
-    else if (bMatchResultVisible)
+    else if (PlayerFlow.Is(EEchoesShellScreen::Results))
     {
         if (IsOnlineMatchResult())
         {
@@ -7078,7 +7156,7 @@ void AEchoesPlayerController::ConfirmPrimaryAction()
                 SkirmishSetupFocusRow = 0;
             }
             PresentTitleScreen();
-            if (bTitleScreenVisible)
+            if (PlayerFlow.Is(EEchoesShellScreen::Title))
             {
                 SetStatusMessage(
                     TEXT("OPERATIONS — the completed field remains retained; review the same setup or adjust it before the next deployment."),
@@ -7094,7 +7172,7 @@ void AEchoesPlayerController::ConfirmPrimaryAction()
     {
         ResearchTechnologyByTier(TechnologyPanelFocusedTier);
     }
-    else if (bPauseMenuVisible)
+    else if (PlayerFlow.Is(EEchoesShellScreen::Pause))
     {
         TogglePauseMenu();
     }
@@ -7116,12 +7194,12 @@ void AEchoesPlayerController::NotifyMatchFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bOnlineLocalMenuVisible = false;
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = false;
     PresentedCampaignOperation = EEchoesOperationMode::Skirmish;
     PresentedMatchOutcome = Outcome;
@@ -7214,11 +7292,11 @@ void AEchoesPlayerController::NotifyCampaignPrologueFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     PresentedCampaignOperation = EEchoesOperationMode::CampaignPrologue;
     bCampaignSuccess = bSuccess;
@@ -7276,11 +7354,11 @@ void AEchoesPlayerController::NotifySevenAccountsFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -7335,11 +7413,11 @@ void AEchoesPlayerController::NotifyCityReserveFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -7394,11 +7472,11 @@ void AEchoesPlayerController::NotifyUnburiedRoadFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -7453,11 +7531,11 @@ void AEchoesPlayerController::NotifyTermsOfContinuanceFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -7513,11 +7591,11 @@ void AEchoesPlayerController::NotifyNamesWithoutBirthsFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -7572,11 +7650,11 @@ void AEchoesPlayerController::NotifyShapeOfSilenceFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -7632,11 +7710,11 @@ void AEchoesPlayerController::NotifyShapeBesideUsFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -7694,11 +7772,11 @@ void AEchoesPlayerController::NotifyReserveAuthorityFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -7764,11 +7842,11 @@ void AEchoesPlayerController::NotifyChoirAtLumeReachFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -7841,11 +7919,11 @@ void AEchoesPlayerController::NotifyNoNeutralLedgerFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -7923,11 +8001,11 @@ void AEchoesPlayerController::NotifyFutureThatWonFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -8005,11 +8083,11 @@ void AEchoesPlayerController::NotifyAssemblyOfTheMissingFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -8087,11 +8165,11 @@ void AEchoesPlayerController::NotifySeveralVoicesOneCommandFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentResultAudio(bSuccess);
@@ -8169,11 +8247,11 @@ void AEchoesPlayerController::NotifyBrokenSunFinished(
     ClearSelection();
     bControlGroupAssignmentArmed = false;
     bSelectionButtonDown = false;
-    bTitleScreenVisible = false;
-    bMissionBriefingVisible = false;
-    bPauseMenuVisible = false;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Briefing, false);
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
     bTechnologyPanelVisible = false;
-    bMatchResultVisible = true;
+    PlayerFlow.SetVisible(EEchoesShellScreen::Results, true);
     bCampaignResult = true;
     bCampaignSuccess = bSuccess;
     PresentEndingAudio(RecordedResolution, bSuccess);
@@ -8240,6 +8318,34 @@ void AEchoesPlayerController::NotifyBrokenSunFinished(
 void AEchoesPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
+    PollReplayBrowser();
+    RefreshShell();
+    RefreshFieldHud();
+    UpdateTacticalInputPresentation();
+    if (auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr)
+    {
+        const auto& Save = Bridge->GetCheckpointSaveStatus();
+        if (Save.RequestId != PresentedCheckpointRequestId ||
+            bPresentedCheckpointPending != (Save.State == EEchoesCheckpointSaveState::Pending))
+        {
+            PresentedCheckpointRequestId = Save.RequestId;
+            bPresentedCheckpointPending = Save.State == EEchoesCheckpointSaveState::Pending;
+            if (Save.State != EEchoesCheckpointSaveState::Idle && !IsModalOverlayVisible()) SetStatusMessage(Save.Feedback, 8.f);
+        }
+    }
+#if WITH_DEV_AUTOMATION_TESTS
+    if (bMinimapDragging)
+    {
+        const auto* ViewportClient = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
+        if (IsModalOverlayVisible() || !IsInputKeyDown(EKeys::LeftMouseButton) ||
+            (ViewportClient && ViewportClient->Viewport && !ViewportClient->Viewport->IsForegroundWindow())) bMinimapDragging = false;
+        else
+        {
+            FVector2D Point, Size;
+            if (ResolvePointerScreenPosition(Point, &Size)) HandleMinimapPointer(Point, Size, false);
+        }
+    }
+#endif
 #if !UE_BUILD_SHIPPING
     if (bPointerCombatGuardReviewActive)
     {
@@ -9006,6 +9112,7 @@ void AEchoesPlayerController::SetupInputComponent()
         IE_Pressed,
         this,
         &AEchoesPlayerController::ReconcileSelectedChoirToPossible);
+    InputComponent->BindAction(TEXT("TacticalPause"), IE_Pressed, this, &AEchoesPlayerController::ToggleTacticalPause);
     InputComponent->BindAction(
         TEXT("PauseScenario"),
         IE_Pressed,
@@ -9084,6 +9191,11 @@ void AEchoesPlayerController::SelectionPressed()
     FVector2D ViewportSize = FVector2D::ZeroVector;
     const bool bPointerAvailable =
         ResolvePointerScreenPosition(PointerPosition, &ViewportSize);
+    if (IsReplayInputActive())
+    {
+        bSelectionButtonDown = false;
+        return; // The UMG minimap owns its pointer stream, including replay pan.
+    }
 #if WITH_EDITOR
     // Retained EDT pointer-path diagnostics: distinguishes a native mouse event
     // from a direct controller fixture and records the actual resolved hit point.
@@ -9106,42 +9218,23 @@ void AEchoesPlayerController::SelectionPressed()
         UE_LOG(LogEchoes, Display,
             TEXT("[ECHOES_M01_POINTER_PRESS] resolved=%d point=%.1f,%.1f viewport=%.0f,%.0f title=%d brief=%d pause=%d slate=%.1f,%.1f origin=%.1f,%.1f local=%.1f,%.1f cached=%d:%.1f,%.1f"),
             bPointerAvailable, PointerPosition.X, PointerPosition.Y, ViewportSize.X, ViewportSize.Y,
-            bTitleScreenVisible, bMissionBriefingVisible, bPauseMenuVisible,
+            PlayerFlow.Is(EEchoesShellScreen::Title), PlayerFlow.Is(EEchoesShellScreen::Briefing), PlayerFlow.Is(EEchoesShellScreen::Pause),
             SlatePosition.X, SlatePosition.Y, GeometryOrigin.X, GeometryOrigin.Y,
             GeometrySize.X, GeometrySize.Y, bCached, CachedX, CachedY);
     }
 #endif
-    if (bTechnologyPanelVisible)
-    {
-        if (bPointerAvailable)
-        {
-            (void)HandleTechnologyPanelPointer(PointerPosition);
-        }
-        return;
-    }
     if (IsModalOverlayVisible())
     {
-        if (bPointerAvailable &&
-            ViewportSize.X > 0.0f && ViewportSize.Y > 0.0f)
-        {
-            const UEchoesGameUserSettings* Settings =
-                UEchoesGameUserSettings::Get();
-            (void)HandleModalOverlayPointer(
-                PointerPosition,
-                ViewportSize,
-                Settings != nullptr ? Settings->GetHudScale() : 1.0f);
-        }
-        return;
+        bSelectionButtonDown = false;
+        return; // UMG owns modal controls; an outside click cannot select the world.
     }
     if (!bPointerAvailable)
     {
         SetStatusMessage(TEXT("[CURSOR_UNAVAILABLE] Selection could not read the pointer position."));
         return;
     }
-    if (HandleBattlefieldPointerPressed(PointerPosition, ViewportSize))
-    {
-        return;
-    }
+    if (FieldHudWidget && FieldHudWidget->IsPointerOverChrome(PointerPosition)) return;
+    if (bBuildPlacementActive) { (void)ConfirmBuildPlacement(); return; }
     if (ArmedDeckAction != EEchoesCommandDeckAction::None)
     {
         // The armed order resolves at the cursor, which is now on the chosen
@@ -9180,6 +9273,7 @@ void AEchoesPlayerController::SelectionPressed()
 
 void AEchoesPlayerController::SelectionReleased()
 {
+    if (bMinimapDragging) { bMinimapDragging = false; bSelectionButtonDown = false; return; }
     if (IsModalOverlayVisible())
     {
         bSelectionButtonDown = false;
@@ -9213,6 +9307,7 @@ void AEchoesPlayerController::SelectionReleased()
 
 void AEchoesPlayerController::SelectAtCursor(bool bAdditive)
 {
+    if (IsReplayInputActive()) return;
     FHitResult HitResult;
     AEchoesEntityView* View = nullptr;
     if (TraceCursor(HitResult))
@@ -9268,6 +9363,7 @@ void AEchoesPlayerController::SelectAtCursor(bool bAdditive)
 
 void AEchoesPlayerController::SelectInScreenRectangle(bool bAdditive)
 {
+    if (IsReplayInputActive()) return;
     if (GetNetMode() == NM_Client)
     {
         const echoes::sim::net::ScopedViewKeyframe* NetworkView =
@@ -9397,6 +9493,8 @@ void AEchoesPlayerController::SelectInScreenRectangle(bool bAdditive)
 
 void AEchoesPlayerController::ContextOrderPressed()
 {
+    if (IsReplayInputActive()) return;
+    if (bBuildPlacementActive) { CancelBuildPlacement(); return; }
     if (IsModalOverlayVisible())
     {
         return;
@@ -9414,16 +9512,7 @@ void AEchoesPlayerController::ContextOrderPressed()
         if (ResolvePointerScreenPosition(PointerPosition, &ViewportSize) &&
             ViewportSize.X > 0.0f && ViewportSize.Y > 0.0f)
         {
-            const UEchoesGameUserSettings* Settings =
-                UEchoesGameUserSettings::Get();
-            const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
-                ViewportSize,
-                Settings != nullptr ? Settings->GetHudScale() : 1.0f,
-                !GetStatusMessage().IsEmpty());
-            if (Layout.IsPointerOnChrome(PointerPosition))
-            {
-                return;
-            }
+            if (FieldHudWidget && FieldHudWidget->IsPointerOverChrome(PointerPosition)) return;
         }
     }
     PruneSelection();
@@ -9655,8 +9744,9 @@ void AEchoesPlayerController::IssueContextOrder(
         {
             CommandType = echoes::sim::CommandType::FutureWell;
         }
-        else if (TargetEntity->owner != echoes::sim::kNeutralPlayer &&
-                 TargetEntity->owner != UEchoesSimulationSubsystem::LocalPlayerId)
+        else if (Bridge->GetSimulation() != nullptr &&
+                 Bridge->GetSimulation()->Config().IsHostile(
+                     UEchoesSimulationSubsystem::LocalPlayerId, TargetEntity->owner))
         {
             CommandType = echoes::sim::CommandType::Attack;
         }
@@ -9840,6 +9930,7 @@ void AEchoesPlayerController::SetEntitySelected(uint32 EntityId, bool bSelected)
 
 void AEchoesPlayerController::ClearSelection()
 {
+    CancelBuildPlacement(false);
     for (const uint32 EntityId : SelectedEntityIds)
     {
         SetEntitySelected(EntityId, false);
@@ -9952,6 +10043,7 @@ void AEchoesPlayerController::ClearControlGroups()
 
 void AEchoesPlayerController::AssignControlGroupFromSelection(int32 GroupIndex)
 {
+    if (IsReplayInputActive()) return;
     PruneSelection();
     FString Feedback;
     SetControlGroup(GroupIndex, SelectedEntityIds, Feedback);
@@ -9960,6 +10052,7 @@ void AEchoesPlayerController::AssignControlGroupFromSelection(int32 GroupIndex)
 
 void AEchoesPlayerController::ArmControlGroupAssignment()
 {
+    if (IsReplayInputActive()) return;
     if (IsModalOverlayVisible())
     {
         return;
@@ -9974,6 +10067,7 @@ void AEchoesPlayerController::ArmControlGroupAssignment()
 
 void AEchoesPlayerController::RecallControlGroup(int32 GroupIndex)
 {
+    if (IsReplayInputActive()) return;
     if (IsModalOverlayVisible())
     {
         return;
@@ -10028,6 +10122,7 @@ DEFINE_CONTROL_GROUP_HANDLER(0, 9)
 
 void AEchoesPlayerController::PruneSelection()
 {
+    if (IsReplayInputActive()) return;
     const UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -11749,7 +11844,7 @@ void AEchoesPlayerController::QuickSaveScenario()
     }
     else
     {
-        Bridge->QuickSaveScenario(Feedback);
+        Bridge->RequestQuickSaveScenario(Feedback);
     }
     SetStatusMessage(Feedback, 6.0f);
 }
@@ -11775,10 +11870,21 @@ void AEchoesPlayerController::QuickLoadScenario()
     {
         Feedback = TEXT("[LOAD_SIM_NOT_READY] Start a scenario before loading.");
     }
+    else if (!RequireOperationMastery(Bridge->GetOperationMode(), true))
+    {
+        return;
+    }
     else if (Bridge->QuickLoadScenario(Feedback))
     {
         ClearSelection();
         bControlGroupAssignmentArmed = false;
+        if (Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue)
+            bTutorialOperationAuthorized = true;
+        if (!RequireOperationMastery(Bridge->GetOperationMode()))
+        {
+            PresentMissionBriefing();
+            return;
+        }
     }
     SetStatusMessage(Feedback, 7.0f);
 }
@@ -11957,6 +12063,7 @@ void AEchoesPlayerController::ToggleReducedDynamicRange()
 void AEchoesPlayerController::BuildAtCursor(
     echoes::sim::EntityType BuildingType)
 {
+    if (GetNetMode() != NM_Client) { BeginBuildPlacement(BuildingType); return; }
     if (IsModalOverlayVisible())
     {
         return;
@@ -12245,6 +12352,7 @@ void AEchoesPlayerController::ProduceUnit(echoes::sim::EntityType UnitType)
 
 void AEchoesPlayerController::ToggleTechnologyPanel()
 {
+    if (IsReplayInputActive()) return;
     if (IsActiveOnlineNetworkMatch() ||
         IsOpponentReconnectGraceActive())
     {
@@ -12253,8 +12361,8 @@ void AEchoesPlayerController::ToggleTechnologyPanel()
             5.0f);
         return;
     }
-    if (bTitleScreenVisible || bMissionBriefingVisible ||
-        bPauseMenuVisible || bMatchResultVisible)
+    if (PlayerFlow.Is(EEchoesShellScreen::Title) || PlayerFlow.Is(EEchoesShellScreen::Briefing) ||
+        PlayerFlow.Is(EEchoesShellScreen::Pause) || PlayerFlow.Is(EEchoesShellScreen::Results))
     {
         return;
     }
@@ -12353,6 +12461,8 @@ void AEchoesPlayerController::FocusNextTechnologyTier()
         3600.0f);
 }
 
+#if WITH_DEV_AUTOMATION_TESTS
+// Legacy explicit-position fixture seam. Runtime input belongs to UMG.
 bool AEchoesPlayerController::HandleTechnologyPanelPointer(
     const FVector2D& ScreenPosition)
 {
@@ -12389,7 +12499,11 @@ bool AEchoesPlayerController::HandleTechnologyPanelPointer(
     }
     return true;
 }
+#endif
 
+
+#if WITH_DEV_AUTOMATION_TESTS
+// Legacy explicit-position fixture seam. Runtime input belongs to UMG.
 bool AEchoesPlayerController::HandleOnlineFrontDoorPointer(
     const FVector2D& ScreenPosition,
     const FVector2D& ViewportSize,
@@ -12451,6 +12565,8 @@ bool AEchoesPlayerController::HandleOnlineFrontDoorPointer(
     }
     return true;
 }
+#endif
+
 
 FEchoesTitleOverlayFacts
 AEchoesPlayerController::BuildTitleOverlayFacts() const
@@ -12530,6 +12646,7 @@ AEchoesPlayerController::BuildCommandDeckProfile() const
 void AEchoesPlayerController::ActivateCommandDeckAction(
     EEchoesCommandDeckAction Action)
 {
+    if (IsReplayInputActive()) return;
     switch (Action)
     {
         // Cursor-targeted orders arm and wait for a battlefield target: their
@@ -12542,6 +12659,18 @@ void AEchoesPlayerController::ActivateCommandDeckAction(
         case EEchoesCommandDeckAction::BuildDropoff:
         case EEchoesCommandDeckAction::BuildUtility:
             ArmedDeckAction = Action;
+            if (Action == EEchoesCommandDeckAction::BuildBarracks)
+            {
+                BeginBuildPlacement(echoes::sim::EntityType::Barracks);
+            }
+            else if (Action == EEchoesCommandDeckAction::BuildDropoff)
+            {
+                BeginBuildPlacement(echoes::sim::EntityType::Dropoff);
+            }
+            else if (Action == EEchoesCommandDeckAction::BuildUtility)
+            {
+                BeginBuildPlacement(echoes::sim::EntityType::UtilityStructure);
+            }
             SetStatusMessage(
                 TEXT("Select a target on the battlefield. Right-click cancels."),
                 8.0f);
@@ -12576,6 +12705,8 @@ void AEchoesPlayerController::ActivateCommandDeckAction(
     }
 }
 
+#if WITH_DEV_AUTOMATION_TESTS
+// Legacy explicit-position fixture seam. Runtime input belongs to UMG.
 bool AEchoesPlayerController::HandleBattlefieldPointerPressed(
     const FVector2D& ScreenPosition,
     const FVector2D& ViewportSize)
@@ -12590,6 +12721,7 @@ bool AEchoesPlayerController::HandleBattlefieldPointerPressed(
     const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
         ViewportSize, HudScale, !GetStatusMessage().IsEmpty());
 
+    if (HandleMinimapPointer(ScreenPosition, ViewportSize, false)) return true;
     const bool bOverCommandDeck =
         Layout.bCommandDeckVisible &&
         Layout.CommandDeckPanel.IsInsideOrOn(ScreenPosition);
@@ -12613,7 +12745,11 @@ bool AEchoesPlayerController::HandleBattlefieldPointerPressed(
     // must never fall through and clear the player's selection.
     return Layout.IsPointerOnChrome(ScreenPosition);
 }
+#endif
 
+
+#if WITH_DEV_AUTOMATION_TESTS
+// Legacy explicit-position fixture seam. Runtime input belongs to UMG.
 bool AEchoesPlayerController::HandleModalOverlayPointer(
     const FVector2D& ScreenPosition,
     const FVector2D& ViewportSize,
@@ -12657,7 +12793,16 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
             ScreenPosition, ViewportSize, HudScale);
     }
 
-    if (bTitleScreenVisible &&
+    if (UsesShellWidget() && ShellWidget != nullptr)
+    {
+        if (ShellWidget->ActivateButtonUnderLocation(ScreenPosition))
+        {
+            return true;
+        }
+        return true;
+    }
+
+    if (PlayerFlow.Is(EEchoesShellScreen::Title) &&
         FEchoesOnlineFrontDoorLayout::BuildTitleEntry(
             ViewportSize, HudScale).IsInsideOrOn(ScreenPosition))
     {
@@ -12678,7 +12823,7 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
         return true;
     }
 
-    if (bTitleScreenVisible && !IsSkirmishSetupVisible())
+    if (PlayerFlow.Is(EEchoesShellScreen::Title) && !IsSkirmishSetupVisible())
     {
         const FEchoesTitleOverlayLayout Layout =
             FEchoesTitleOverlayLayout::Build(
@@ -12713,7 +12858,7 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
         return true;
     }
 
-    if (bMissionBriefingVisible && !IsSkirmishDeploymentSummaryVisible())
+    if (PlayerFlow.Is(EEchoesShellScreen::Briefing) && !IsSkirmishDeploymentSummaryVisible())
     {
         const FEchoesBriefingOverlayLayout Layout =
             FEchoesBriefingOverlayLayout::Build(ViewportSize);
@@ -12775,7 +12920,7 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
         return true;
     }
 
-    if (bPauseMenuVisible)
+    if (PlayerFlow.Is(EEchoesShellScreen::Pause))
     {
         const FEchoesPauseOverlayLayout Layout =
             FEchoesPauseOverlayLayout::Build(ViewportSize, HudScale);
@@ -12814,7 +12959,7 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
         return true;
     }
 
-    if (bMatchResultVisible)
+    if (PlayerFlow.Is(EEchoesShellScreen::Results))
     {
         const FEchoesResultOverlayLayout Layout =
             FEchoesResultOverlayLayout::Build(ViewportSize, HudScale);
@@ -12867,9 +13012,12 @@ bool AEchoesPlayerController::HandleModalOverlayPointer(
 
     return true;
 }
+#endif
+
 
 void AEchoesPlayerController::TogglePauseMenu()
 {
+    if (IsReplayInputActive()) return;
     if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
         EchoesGameInstance != nullptr &&
         EchoesGameInstance->GetOnlineState() !=
@@ -12905,11 +13053,11 @@ void AEchoesPlayerController::TogglePauseMenu()
         ReturnToSkirmishSetup();
         return;
     }
-    if (bMatchResultVisible && bCampaignResult &&
+    if (PlayerFlow.Is(EEchoesShellScreen::Results) && bCampaignResult &&
         CampaignCommitStatus == EEchoesCampaignCommitStatus::ReplayConflict)
     {
         PresentTitleScreen();
-        if (bTitleScreenVisible)
+        if (PlayerFlow.Is(EEchoesShellScreen::Title))
         {
             SetStatusMessage(
                 TEXT("CAMPAIGN JOURNEY — the original irreversible ledger record remains active. Press C to continue from that record, or choose an operation to replay."),
@@ -12921,7 +13069,7 @@ void AEchoesPlayerController::TogglePauseMenu()
         }
         return;
     }
-    if (bTitleScreenVisible || bMissionBriefingVisible || bMatchResultVisible)
+    if (PlayerFlow.Is(EEchoesShellScreen::Title) || PlayerFlow.Is(EEchoesShellScreen::Briefing) || PlayerFlow.Is(EEchoesShellScreen::Results))
     {
         return;
     }
@@ -12939,37 +13087,41 @@ void AEchoesPlayerController::TogglePauseMenu()
         SetStatusMessage(TEXT("[MATCH_FINISHED] Press R to restart."));
         return;
     }
-    bPauseMenuVisible = !bPauseMenuVisible;
+    if (PlayerFlow.Is(EEchoesShellScreen::Pause) &&
+        !RequireOperationMastery(Bridge->GetOperationMode())) return;
+    if (!PlayerFlow.Is(EEchoesShellScreen::Pause)) bTacticalPaused = Bridge->IsScenarioPaused();
+    PlayerFlow.SetVisible(EEchoesShellScreen::Pause, !PlayerFlow.Is(EEchoesShellScreen::Pause));
     if (UEchoesInterfaceAudioSubsystem* InterfaceAudio =
             GetWorld()->GetSubsystem<UEchoesInterfaceAudioSubsystem>())
     {
         InterfaceAudio->PlayInterfaceCue(
-            bPauseMenuVisible ? EEchoesInterfaceCue::MenuOpen
+            PlayerFlow.Is(EEchoesShellScreen::Pause) ? EEchoesInterfaceCue::MenuOpen
                               : EEchoesInterfaceCue::MenuClose);
     }
     bReturnToOperationsConfirmationArmed = false;
     ReturnToOperationsConfirmationExpiresAt = 0.0;
-    Bridge->SetScenarioPaused(bPauseMenuVisible);
-    SetIgnoreMoveInput(bPauseMenuVisible);
-    SetIgnoreLookInput(bPauseMenuVisible);
+    Bridge->SetScenarioPaused(PlayerFlow.Is(EEchoesShellScreen::Pause) || bTacticalPaused);
+    SetIgnoreMoveInput(PlayerFlow.Is(EEchoesShellScreen::Pause));
+    SetIgnoreLookInput(PlayerFlow.Is(EEchoesShellScreen::Pause));
     SetStatusMessage(
-        bPauseMenuVisible
+        PlayerFlow.Is(EEchoesShellScreen::Pause)
             ? Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish &&
                     !Bridge->IsNetworkHumanOpponentEnabled()
-                ? TEXT("FIELD MENU — Enter, Escape, or P resumes; R restarts; F10 / Menu returns to Operations with confirmation.")
-                : TEXT("FIELD MENU — Enter, Escape, or P resumes; R restarts.")
+                ? TEXT("FIELD MENU — Enter or Escape resumes; R restarts; F10 / Menu returns to Operations with confirmation.")
+                : TEXT("FIELD MENU — Enter or Escape resumes; R restarts.")
             : TEXT("MATCH RESUMED."),
-        bPauseMenuVisible ? 3600.0f : 3.0f);
+        PlayerFlow.Is(EEchoesShellScreen::Pause) ? 3600.0f : 3.0f);
     UE_LOG(
         LogEchoes,
         Display,
         TEXT("[ECHOES_PAUSE_MENU] visible=%s paused=%s"),
-        bPauseMenuVisible ? TEXT("true") : TEXT("false"),
+        PlayerFlow.Is(EEchoesShellScreen::Pause) ? TEXT("true") : TEXT("false"),
         Bridge->IsScenarioPaused() ? TEXT("true") : TEXT("false"));
 }
 
 void AEchoesPlayerController::RestartScenario()
 {
+    if (IsReplayInputActive()) return;
     // Legacy action mappings may also dispatch the unmodified R action while
     // the Shift+R research chord is held. The chord belongs to ResearchNext.
     if (IsInputKeyDown(EKeys::LeftShift) ||
@@ -13002,7 +13154,7 @@ void AEchoesPlayerController::RestartScenario()
             5.0f);
         return;
     }
-    if (bTitleScreenVisible || bMissionBriefingVisible)
+    if (PlayerFlow.Is(EEchoesShellScreen::Title) || PlayerFlow.Is(EEchoesShellScreen::Briefing))
     {
         return;
     }
@@ -13013,14 +13165,15 @@ void AEchoesPlayerController::RestartScenario()
     ClearSelection();
     ClearControlGroups();
     bControlGroupAssignmentArmed = false;
+    if (Bridge != nullptr && !RequireOperationMastery(Bridge->GetOperationMode())) return;
     if (Bridge != nullptr && Bridge->RestartPrototypeScenario())
     {
         SynchronizeBoundCampaignProtocol();
         bRuntimeStateKnown = true;
-        bTitleScreenVisible = false;
-        bPauseMenuVisible = false;
+        PlayerFlow.SetVisible(EEchoesShellScreen::Title, false);
+        PlayerFlow.SetVisible(EEchoesShellScreen::Pause, false);
         bTechnologyPanelVisible = false;
-        bMatchResultVisible = false;
+        PlayerFlow.SetVisible(EEchoesShellScreen::Results, false);
         bCampaignResult = false;
         bCampaignSuccess = false;
         CampaignConsequence = echoes::sim::FutureWellChoice::Dormant;
@@ -13220,7 +13373,7 @@ void AEchoesPlayerController::SetStatusMessage(
     float DisplaySeconds)
 {
     StatusMessage = Message;
-    if (bMatchResultVisible && bCampaignResult &&
+    if (PlayerFlow.Is(EEchoesShellScreen::Results) && bCampaignResult &&
         CampaignCommitStatus == EEchoesCampaignCommitStatus::ReplayConflict)
     {
         StatusMessage.ReplaceInline(
@@ -13230,7 +13383,7 @@ void AEchoesPlayerController::SetStatusMessage(
             TEXT("Press R to replay."),
             TEXT("Press Escape to return to the campaign journey or R to replay."));
     }
-    if (bMatchResultVisible && CanAdvanceCampaignResult())
+    if (PlayerFlow.Is(EEchoesShellScreen::Results) && CanAdvanceCampaignResult())
     {
         if (PresentedCampaignOperation ==
             EEchoesOperationMode::CampaignTheBrokenSun)

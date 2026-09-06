@@ -2511,3 +2511,419 @@ authored-route geometry decision remains open. Do not promote immediate activati
 `session.json` and `dispatch.json` identify ownership and routing; `p0-scoped.patch` separates this repair
 from the pre-existing native changes; `native-attempt-1*` preserves the failure; `native-attempt-2-result.json`
 and its log bind the successful run to input hashes. These local artifacts are not a backed-up release.
+
+
+## 2026-09-05 — P0 integrated continuation and Reshape warning repair
+
+**Author and owner:** Angelis Pseftis
+**Execution state:** P0 automated integration gate passed locally; requirement and owner acceptance remain open.
+**Source:** clean `main` at `15008d55378323bb1731193213d70ab586da49c0` at entry, followed by
+scoped dirty changes. The external evidence root is
+`/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/p0-integrated-20260905T155600Z/`.
+`session.json`, build input manifests, logs and scoped diffs bind individual runs; a commit alone does
+not identify subsequent edits. Root owns integration; read-only evidence/review specialists and a
+`gpt-5.6-sol`/`high` worker with five disjoint sandbox paths supported this package.
+
+The earlier native repair's seven recorded inputs matched the starting checkout exactly. Current
+generated-source checks passed. A new build exposed the committed project descriptor's UTF-16 encoding,
+which UnrealBuildTool rejected; conversion to UTF-8 preserved every JSON value. The test wrapper now
+requires the two existing camera/Harvest-collapse tests it previously omitted (92 registered tests).
+
+`REL-WEL-010`, `SPEC-WELLP-003`, `SPEC-WEL-003`, `SPEC-SAV-003` and `REL-SAV-005/010` now have a
+bounded Reshape warning implementation: capture commits once at 120 Dawn; a separate pending state
+broadcasts 180 ticks without opening terrain or advancing mission activation; manifestation lasts
+1,800 ticks. Affordability is checked on authoritative command execution and again at capture completion.
+Invalid mixed lifecycle snapshots fail closed; schema 27's layout and prior valid Harvest/Reshape states
+remain supported. Offline player views receive only the public warning fields, and AI avoids already
+committed Wells. Content requesting a different pinned warning duration is rejected. Harvest presentation
+now follows the core's emitted countdown state instead of prematurely displaying collapse.
+
+**Policy interpretation:** `SPEC-WEL-004` permits transfer until protocol commitment; Harvest has the
+explicit warning-period interruption exception in `REL-WEL-005`. Reshape therefore retains contest/decay
+before commitment and has no post-commit cancellation/refund. An interruption/refund extension needs an
+owner decision. This does not resolve the separate M01 authored-route geometry decision.
+
+Native optimized/debug/ASan+UBSan passed 100/100 each after the repair and again after review corrections
+(`native-reshape-1.log`, `native-reshape-2.log`). The first post-repair editor build succeeded. The first
+full isolated Unreal launch stopped before tests because its external DDC path exceeded Unreal's
+119-character limit; denial probe and cleanup passed. The launcher and bootstrap now use the shorter
+fixed project route `BuildArtifacts/TestIO/EAT.<run>/DDC`; 15 focused Python tests passed, including
+static symlink/home/player-save refusal, real sandbox denial and overlong-path refusal/cleanup. Concurrent
+same-user mutation of the checkout during launcher setup remains outside that local routing boundary.
+
+The next editor build succeeded (`editor-build-3.log`, `candidate-3-inputs.json`). The first complete
+isolated run executed all 92 tests: **80 succeeded and 12 failed** (`unreal-2/index.json`). The save
+sandbox denial probe, policy checks, empty-save-root check and cleanup all passed. Failures remain
+retained. Several native-schema assertions still expected 26, and the Unreal migration helper omitted
+the schema-27 lifecycle count from its measured tail and did not validate a separate 27-to-26 step.
+The test repair now bounds and validates each conversion through the real loader. Other fixture repairs
+wait for actual Harvest payout before troop purchases and assert the emitted Harvest/Reshape visual state.
+
+The next compiled candidate (`editor-build-4.log`, `candidate-4-inputs.json`) improved the full
+isolated result to **85/92** (`unreal-3/index.json`); save isolation, denial probe and cleanup passed.
+Seven failures remain in that retained run: M05, two M12 journeys, two M15 paths, complete skirmish,
+and audio concurrency. M05 diagnostics identify loss of the Kharuun spine; the fixture now sends existing
+combat units to Guard it without changing the fixed T300–T900 branch window. M12 fixtures no longer
+abort solely because a replaceable escort dies; named protected losses still fail. The skirmish fixture
+now gathers and produces reinforcements through ordinary commands. Audio assertions count the current
+world policy's voices rather than unrelated voices using the same sound. These changes await Unreal validation.
+
+M15 exposed a gameplay defect: neutral protected witnesses were eligible combat targets under the
+core's default free-for-all hostility. Schema 28 now persists a validated symmetric four-player hostility
+matrix. M15 authors `02 0d 02 02`; other operations retain default FFA. Combat, AI threat selection and
+Well contests use this explicit relation. Command ownership and fog visibility remain separate. Legacy
+M15 saves receive the authored fallback and remove current incompatible attack/Well orders and projectiles;
+queued orders are rejected on execution. Current saves with a valid but wrong operation matrix are refused
+without live mutation. Schema-27 replay verification retains its historical typed-checksum payload shape.
+This does not close the broader team, shared-vision or allied-Guard contracts.
+
+Native validation first caught a test-only optional-value compile error, then an incorrect test oracle
+that confused snapshot FNV integrity with the typed state checksum. Both failed attempts are retained.
+The historical schema-27 core at `15008d55` was compiled separately with the exact replay setup to obtain
+checksum `7947105480651690908`; its source, fixture and result are retained in `legacy27-oracle/`.
+The corrected 101-test suite passed optimized, debug and sanitizer configurations (`native-hostility-3.log`).
+Additional command-ownership, fog-isolation and immediate legacy attack/projectile sanitation negatives
+also passed in all three configurations (`native-hostility-4.log`).
+
+The schema-28 editor build succeeded (`editor-build-5.log`, `candidate-5-inputs.json`). Its full isolated
+run passed **86/92** (`unreal-4/index.json`), including audio policy isolation and M15 matrix migration
+checks. Save protections, denial probe and cleanup passed. M15 neutral witnesses survive; Neme still
+suffers direct enemy focus fire while his escorts trail behind. M12 loses Oruun and his two defenders
+while the verifier and its two defenders remain unharmed. M05's accepted Guard orders do not intercept
+the attackers before spine loss. The skirmish fixture incorrectly compared PlayerView's redacted resource
+presence sentinel with the authoritative deposit amount. Candidate fixture repairs use a fair-information
+resource selection with a separate test oracle, concentrate M12 escorts, scout/intercept M05 pressure,
+and clear M15's approach using ordinary AttackMove commands. These tactical repairs are not yet validated.
+
+Two further editor builds succeeded (`editor-build-8.log`, `editor-build-7.log`). Both full isolated
+reports passed **88/92** (`unreal-7/index.json`, `unreal-6/index.json`) with save protections and cleanup
+passing. M05 now completes its unchanged T300–T900 defense after ordinary scout/interception orders.
+The complete skirmish reaches its real victory, results, save/recovery and restart assertions using
+ordinary gathering and reinforcements. M12 and M15 remain open. Concurrent worker staging, corrected
+escort regrouping and withdrawal allow M12 to reach protocol admission and preserve Oruun, but the
+verifier left at the old readback is lost. M15's confined Move/Hold defense avoids pursuit into the enemy
+base and reaches the final hold; Neme remains vulnerable as the forwardmost witness. Plan 25 completes,
+while plans 7 and 17 retain protected-witness failures. Current corrections withdraw both M12 witnesses
+and use a lawful rear holding position inside M15's unchanged accord radius. No combat stat, AI policy,
+mission duration, loss predicate or acceptance criterion is relaxed.
+
+Further retained runs (`unreal-7/index.json`, `unreal-8/index.json`) remain at **88/92**. New diagnostics
+identify M12 worker loss at 253–258 of the unchanged 300 capture ticks; a second ordinary worker now
+supports continuity without stacking capture speed. The witness withdrawals preserve both scouts through
+the initial capture attempt. M15's rear stand preserves Neme, but the exact research feedback exposes
+an adapter defect: research schedules at the current offline tick while movement/Guard schedules at the
+next tick, causing valid increasing command sequences to be rejected across execution ticks. Research
+now uses the same next-tick offline schedule; network scheduling remains three ticks. A focused mixed
+movement/research regression and full qualification are pending. A test-only private-helper compile
+failure is retained in `editor-build-9.log`; `editor-build-10.log` succeeded after using observable capture
+progress instead. No core ordering check was weakened.
+
+The command scheduling build succeeded (`editor-build-11.log`, `candidate-11-inputs.json`). The full
+isolated run improved to **90/92** (`unreal-9/index.json`), with save protections and cleanup passing.
+Both M15 playthrough tests now complete, and the focused same-frame Move/Research regression verifies
+consecutive sequences, next-tick Applied receipts, actual movement, exact research cost/progress and
+replay equality. FreshJourney now completes M12 and reaches M13, where unescorted Oruun is lost while
+the Crownfall link is 105/120 complete. The focused M12 scenario still loses its two capturers before
+binding. The ordinary reserve worker is being included in the unchanged fixed-rate capture, and the
+M13 journey is receiving guarded witness movement. These last fixture corrections remain unverified.
+
+The next full runs reached **91/92** (`unreal-11/index.json`, `unreal-12/index.json`) after current
+successful editor builds. The focused M12 test passes its unchanged capture, activation, stability,
+recovery and completion checks. The first FreshJourney route completes M12–M14; M13 required a fixture correction to
+recognize actual completion within the authored three-tile observation radius after automatic pause.
+Its current first failure is M15's older unescorted Neme route; later branch journeys have not yet
+run past that point. The already qualified M15 positioning/defense
+helpers are being shared with FreshJourney to remove the separate stale tactic implementation.
+
+The shared M15 tactics compiled successfully (`editor-build-15.log`, `candidate-15-inputs.json`,
+including the new header and its retained patch). Independent read-only review found no material
+semantic defect. The full protected `unreal-13` run remains **91/92**: FreshJourney now completes its
+first M01–M15 route, reset/restore and conflicting M15 replay checks, then reaches the second route's
+M12 (plan 17, founding Harvest / Lume Reshape). That route loses all capture workers and combat escorts
+before binding (tick 1031, capture progress 43). Save denial, protected-path policy, empty scoped save
+root and cleanup all pass. Later branch completion remains unverified.
+
+The next two screen candidates built successfully but retained **91/92** (`unreal-14`, `unreal-15`).
+The first withdrew witnesses before protocol admission, so the reducer correctly refused the command;
+the second preserved admission but lost Oruun at tick 624 while waiting for clearance. The correction
+removes that extra pre-capture wait: accept the recorded protocol, immediately withdraw witnesses, and
+maintain a bounded visible-threat screen during central Reshape capture. Preserve/Harvest retain their
+previous worker-escort path. These failures are retained and are not runtime-rule relaxations.
+
+The concurrent screen advanced capture to 256/300 with all three workers still at full health
+(`unreal-16`), but the fixture incorrectly aborted when its last replaceable escort died. Removing that
+extra loss predicate allowed the complete second route, including M12 and M15, to pass its checks in
+`unreal-17` after successful `editor-build-19`. FreshJourney then reached the third route (founding
+Reshape) and failed M05 at tick 307: its protected spine was destroyed. Read-only diagnosis found that
+Fresh M05 never used the standalone M05 Guard/visible-contact interception routine. That qualified
+routine is being shared between the two fixtures; no mission timing or loss criterion changes.
+
+The shared M05 defense integration built successfully (`editor-build-20.log`, 24.57 seconds) and the
+full protected run passed **92/92, zero failed, zero skipped** (`unreal-18/index.json`). FreshJourney
+passes all four defined fresh routes, the conflicting-ending replay, and reset/restore checks. Both
+new shared test headers are included in `candidate-20-inputs.json` and `candidate-20.patch`. All 356
+candidate inputs matched at qualification; all seven native inputs still match the **101/101** optimized,
+debug and ASan+UBSan receipt in `native-hostility-4.log`. The sandbox denial probe, protected-path policy,
+empty scoped save directory and cleanup all pass. `p0-qualification.json` records this final comparison.
+Generated-source checks remain applicable: registered content and generated packs are unchanged.
+
+**P0 evidence gate:** the automated integrated baseline is now qualified on this dirty local source.
+No requirement is marked COMPLETE and no owner acceptance is inferred. The latest owner instruction
+limits this continuation to P0; no P1/P2 implementation is started. Packaged execution, physical input,
+complete rendered/listening review and human acceptance remain separate unperformed gates. Network
+transport of public warnings, structured resource-failure receipts, M01 geometry and later player-journey
+gates remain open. Changes and evidence are retained locally; no commit, push or release was performed.
+
+## 2026-09-05 — P1 shell and persistence implementation
+
+**Author and owner:** Angelis Pseftis
+**State:** IN PROGRESS. Owner authorized proceeding to P1 after the P0 automated gate passed.
+**Evidence:** `/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/p1-shell-20260905/`.
+Root owns controller, flow state, subsystem integration and evidence. Disjoint workers own the new UMG
+widget and profile files. P0 changes and retained evidence remain intact on `15008d55` plus dirty inputs.
+
+The current increment binds `REL-UI-001/008/010/013/014`, `REL-SAV-003/004/009`, and `REL-FTU-003/005`:
+a single base-screen state and overlay return stack, native UMG shell screens and modal controls,
+transactional `Profile.sav`, three runtime journey slots, and slot-scoped checkpoints/recovery.
+Slot 1 deliberately retains the existing campaign path and checkpoint names in place; Slots 2/3 use
+separate named ledgers and checkpoint directories. This preserves existing saves without automatic
+copying or deletion. Tutorial opt-out is confirmed and stored separately from verified mastery; UI
+acknowledgement never grants a tutorial lesson. The actual tutorial curriculum integration remains P3.
+
+The local editor build succeeds (`editor-build-8.log`) and the protected Unreal suite passes **95/95**
+(`unreal-7/index.json`). Added tests cover transactional profile persistence and recovery, corrupt-profile
+archive/reset with byte-preserving rollback, failed opt-out writes, invalid/damaged journey selection,
+stale cross-slot recovery/dismissal, checkpoint isolation, modal cancellation, pause freeze, concession,
+UMG cold attachment, stable Slate root lifetime, and focus/disabled controls at 80% and 150% UI scale.
+The first rendered editor inspection exposed an invisible initial shell: the UMG root was created after
+Slate attachment. The widget now constructs its root before Slate caches it, with a cold-attachment
+regression test. Rendered inspection subsequently verified the title, Options, 80%/150% scale,
+and high contrast; settings were restored to 100%/standard contrast. It also exposed child-widget
+navigation competing with the shell and premature label wrapping. The final source owns preview-key
+navigation, separates hover from keyboard focus, and fills the available button-label width. On that
+build, reverse navigation scrolled to Back and the opt-out prompt visibly defaulted to Cancel.
+Native Slate button dispatch reached Options; CUA pointer activation did not establish a reliable pass.
+A Metal compiler failure splitting the spaced external TMPDIR was isolated in `editor-inspection-3.log`;
+the corrected launch uses `/tmp/echoes-p1-metal` as a symlink to external `LocalCache/Temp`.
+The corrected-cache session rendered mission materials without the prior Metal path errors, exercised
+deploy/pause/restart/exit with keyboard input, and was returned to a paused title for review.
+`p1-qualification.json`, `title-candidate-8.png` and `pause-candidate-8.png` retain this bounded result.
+
+All 366 candidate inputs are bound in `candidate-8-inputs.json`. The seven P0 native inputs remain
+unchanged; the retained P0 optimized/debug/sanitizer evidence carries forward only for those inputs.
+The editor inspection uses explicit external `EditorFixture` save/user directories. It is development
+inspection, not packaged physical-input or ordinary-player evidence.
+
+P1 remains IN PROGRESS until the rendered focus/activation/display matrix is qualified. Full Shipping
+HUD migration, complete results telemetry/replay, tutorial fact collection, authored briefing presentation,
+and packaged/physical/listening/human/owner gates retain their DeliveryPlan dependencies. Existing camera
+and display settings persist in the profile but do not yet have complete controls in the new options view.
+No requirement is COMPLETE; no commit, push or release was performed.
+
+## 2026-09-05 — P1/P2 continuation and AI difficulty decision
+
+**Author and owner:** Angelis Pseftis
+**State:** IN PROGRESS. Owner authorizes continuing through P1 and P2 and coordinating independent work.
+**Decision:** Angelis selected: “Story / Standard / Veteran / Sovereign; equal combat rules, reaction delays 3.0 / 1.5 / 0.9 / 0.5 seconds.” This resolves the contradiction in favor of `SPEC-DIF-001..004` and `SPEC-SKM-005`. The existing `REL-AI-005/014/015/017/018` bodies now reference that policy, retaining their identifiers. The conflicting Assisted/Challenging names, reaction schedules, 30/90/140/180 APM caps and Assisted damage handicap are superseded by the selected contract. Group commands per second remain distinct from measured player APM. This is a requirements decision, not acceptance of implementation or balance.
+
+Current work retains the prior P0/P1 dirty baseline and evidence. The continuation receipt is
+`BuildArtifacts/Evidence/p1-p2-completion-20260905/session.json`. Root owns integration, UI/controller and
+heavy runs; separate workers own asynchronous checkpoint work and deterministic replay/reporting.
+No requirement, package or owner gate is closed by this entry.
+
+### P1/P2 integration evidence — current continuation
+
+The native core passes **102/102** in optimized, debug and Address/UndefinedBehavior Sanitizer
+configurations (`native-current-5.log` and its input/result receipts), including cooperative
+replay, snapshot-parser and visibility-rebuild cancellation and eager-reference differential coverage
+for the streaming replay command schedule, dense-tick report outcome retention, 64-bit APM and final
+cancellation publication gates. Input hashes stayed unchanged throughout all three configurations.
+This qualifies the bounded native suite, not the Unreal adapters or rendered player journey.
+Requirement registry, agent-document structure and build-identity checks passed earlier in this continuation.
+
+The integration history below retains each failure at its original candidate. The latest runtime
+qualification is candidate 20, recorded at the end of this entry; rendered exit checks remain open.
+Candidate 4 passed 95/98 Unreal tests. Candidate 5
+compiled, then exposed a replay-prefix field-order defect that rejected checkpoint writes; AutosaveRecovery
+subsequently indexed an absent generation and crashed. The format mismatch and test preconditions are
+corrected in source. Candidate 6 was intentionally interrupted during content preflight to integrate the
+archive shutdown hook. Candidate 7 compiled and ran all 105 tests: 100 clean passes, one success with two
+world-teardown warnings, and four failures. The failures concern a synchronous save wrapper competing
+with an already queued save, an invalid legacy-geometry replay baseline in M05, hidden-mover command
+frontier setup, and an unrelated expansion assertion after a real Standard Corefall loss. Corrections
+are integrated in source; the failures are not recorded as passes. Candidate 8 then failed UHT on
+widget parameter shadowing; candidate 9 passed UHT but failed C++ compilation on one fixture visibility
+call and three widget/test type errors. Those source errors are corrected. Static integrity review also
+identified staged recovery, dismissal, failed-autosave retry and replay-admission defects. Repairs and
+negative regressions are integrated; runtime verification remains pending. Every failed or interrupted
+run and its input receipt is retained under `BuildArtifacts/Evidence/p1-p2-completion-20260905/`.
+
+Candidate 10 passed content preflight and UHT, then failed compilation on two const-access errors in
+AutosaveRecovery. Candidate 11 corrected that fixture and compiled successfully. Its protected full
+suite ran all 111 tests: **104 clean passes, three warning-only successes, four failures**, with no
+input drift. The sandbox denial/protection and cleanup gates passed. The failures cover M05 legacy
+baseline normalization, the replay-browser fixture's missing ready scenario, widget refresh/map-node
+semantics, and display-config persistence suppressed by Unreal's `-Multiprocess` flag. Source repairs
+are underway; this failed run remains retained as `candidate-11-unreal-result.json`.
+
+Candidate 11 also exposed long-history checkpoint latency after a normal Corefall loss at tick 52,764.
+The eight queued cadence saves drained before the terminal manual save, taking about 176 seconds.
+A retained process sample and call-path inspection identified eager replay-command queue scans and
+repeated semantic reconstruction of byte-identical generated/readback files. The streaming core repair
+passes the current native suite; bounded checkpoint worker repair and Unreal rerun remain pending.
+
+The scoped terrain repair exposed legacy Lume Reach dressing bound to an older overlay: 34 of its
+39 record cells are open in the current M10 topology across all three doctrine variants. Current source
+rejects that decoration layer against authored topology before unexplored sentinels can admit it; normal
+knowledge updates still use only scoped terrain/passability. The legacy diagnostic fixture remains
+available. Re-authoring that optional legacy decoration for current M10 is a P5 campaign-art gap, not
+P1/P2 visual completion or a reason to draw incompatible scenery.
+
+Candidate 13 compiled, then logged 106 completed successes and two fixture failures (the later M05
+missing-seed replay baseline and a nonadjacent replay-filter action). A new LocalPlayer ownership test
+then used the wrong UObject Outer and triggered an ensure, ending the editor before final report export.
+The launcher retained production deny protection and removed its temporary tree, but the per-test
+empty-save-directory gate did not pass after the interruption. This is not a successful suite or final
+isolation qualification. Candidate 14 corrects only those three fixture defects and compiles successfully;
+its protected full suite ran all 111 tests: **109 clean passes, one warning-only success and one
+failure** in 145.25 seconds. All 501 captured runtime inputs remained unchanged, and the save sandbox
+protection/cleanup gates passed (`candidate-14-runtime-result.json`). The remaining UI failure exposed
+three issues: a test INI redirection that Unreal replaces during SaveSettings, a scanner that omits
+interrupted skirmish saves, and a fresh-controller fixture initialized before presenting the paused title.
+The browser's warning-only result requires explicit scenario teardown while its world context exists.
+Candidate 15 includes the repairs but failed compilation because a free recovery helper called a private
+subsystem parser. Candidate 16 keeps both the helper and its inspection state private inside the subsystem
+and compiled in 136.44 seconds. Its full suite completed **110 clean passes and one failure**, with no
+warnings and all input/isolation gates intact. The shell fixture stopped at its INI isolation guard: UE5.8
+known-config globals are cache keys, while `FConfigBranch::IniPath` supplies the physical file path.
+Candidate 17 separates those values and compiled in 55.28 seconds. Its protected targeted shell test
+passed cleanly in 17.10 seconds, including display disk persistence and the new recovery/mastery routes.
+The full integrated suite then completed 110 clean passes and one failed shell test: the skirmish and
+M01 fixture saves both committed in the same second (01:51:36 UTC), while UE's Mac file timestamp API
+retains only whole seconds. Candidate 18 explicitly ages the earlier fixture and compiled in 30.49 seconds;
+its full suite passed **111/111 with zero warnings/errors** in 145.65 seconds. All 501 input hashes stayed
+unchanged; the protected-data denial probe, exact sandbox policy and cleanup gates passed
+(`candidate-18-runtime-result.json`). At that boundary, rendered mouse/keyboard qualification was
+still open and production inputs were unchanged from candidate 16. Candidate 18 subsequently passed
+Shipping compilation; candidate 20 below qualifies the later input repairs. The preceding failures remain
+retained and are not passing qualification.
+
+The completed candidate-13 budget fixture measured 40 µs capture, 475 µs initiation and 7,369 µs total
+completion for 401 entities / 396 commands / 336,606 bytes. The tick-52,764 normal-loss manual checkpoint
+measured 172 µs capture, 623 µs initiation and 3,087,314 µs completion for 823,885 bytes. Its preceding
+fast-forward cadence backlog drained in about 27.5 seconds; ordinary asynchronous UI initiation did not
+use that synchronous compatibility-wrapper drain. These measurements come from completed fixtures in
+a later-interrupted development suite (`candidate-13-save-budget.json`), not packaged performance or
+full-suite qualification. The equivalent candidate-11 first manual worker took about 23.4 seconds.
+
+The rendered candidate-7 title appeared at 1280×754. The first pointer movement into the game exposed
+an array self-reference assertion in custom cursor painting. Source now copies the first point before
+closing a stroke, and the regression fixture paints all seven cursor states through Slate. Its real
+Slate-paint regression passed in candidate 11. Candidate 19 later rendered the cursor during M01 without
+that assertion; the full rendered cursor/placement matrix is still open. The field, campaign-map and online panels now use an immutable
+field view model, modular UMG/Slate widgets and controller routes. The retired Canvas HUD is removed;
+legacy coordinate handlers are restricted to development test fixtures. Compilation, rendered behavior
+and the Shipping source audit still gate `REL-UI-001`; source migration alone does not close it.
+
+The bounded Shipping preflight found no new compile hazard in the P1/P2 widget/replay sources.
+Candidates 18 and 20 subsequently compiled and linked the Mac Shipping game target successfully. Both legacy and sustained stress entry flags are now disabled in
+Shipping. Engine on-screen debug messages are already compiled out by UE5.8 in Shipping/Test, as verified
+in the local engine implementation. Existing network smoke and packet-fault command-line fixtures remain
+a P6 Shipping network qualification follow-up; this offline package does not qualify those network routes.
+
+Current source includes the selected equal-rules AI difficulty policy, separate tactical pause, cursor and
+placement feedback, minimap/camera controls, full options controls, asynchronous checkpoint captures,
+result metrics/curves and detached replay browsing/transport. Replay schemas distinguish recorded-content
+integrity from rules/build compatibility; asynchronous archive results are bound to their result generation
+and captured storage directory. UI retry retains an exact replay time/perspective, and player perspectives
+consume scoped information. The explicit observer perspective reads only the detached recording.
+
+The new save budget fixture measures a 401-entity scenario with 396 admitted replay commands and checks
+capture, full game-thread initiation, committed bytes and replay-prefix fidelity. It passed in candidate 7:
+36 µs capture, 531 µs full game-thread initiation, 2,546 µs encoding and 14,420 µs total completion for
+336,606 bytes (`candidate-7-save-budget.json`). This is an Unreal development fixture on this host;
+packaged baseline-hardware performance remains a separate gate. Candidate 7's three Standard AI
+long-run scenarios passed, reaching actual Corefall at ticks 6,434, 48,908 and 57,289 and preserving
+explicit economy, Well and combat restoration across the runs. The normal winning fixture passed;
+the normal losing fixture reached Corefall at tick 52,764 and passed terminal save/load but still failed
+its expansion assertion. These observations do not establish balance or human usability.
+
+Current P1 source also enforces the stored mastery predicate before player-owned Campaign/Skirmish
+lobby, deployment, restart/rematch, resume and checkpoint recovery routes. Confirmed opt-out remains
+persisted prompt consent, returns to Title, and keeps Tutorial primary; it cannot unlock play. M01 is
+available through the explicit Tutorial route or an M01 learning checkpoint. Recovery preflights and
+reuses the exact candidate operation. Local players lazily load profiles and fail closed; low-level
+controllers without a LocalPlayer or initialized profile remain runtime fixtures, with a regression
+that attaching a LocalPlayer activates denial. Shipping excludes unattended/command-line auto-start
+and holds initial simulation paused even if no controller exists. No production writer yet awards
+tutorial facts; that remains P3. Fully mastered profile fixtures are explicitly seeded controller/storage
+tests, not evidence of a player completing training. Candidate 12 compiled all 82 editor actions after
+full content/tool preflight, with no source drift. Its runtime run was deferred to candidate 13, which
+separates checkpoint preflight from successful M01 authorization and strengthens deployment/recovery
+regressions. The later candidate-20 receipts below supersede those pending runtime and compile checks;
+rendered qualification remains separate.
+
+The requested Gemini See Loop captured editor frames. Analysis was rejected by Google's API with
+`API_KEY_INVALID` after correcting local session initialization and trusted-CA configuration; no Gemini
+vision assessment is claimed. No P1/P2 package exit, requirement COMPLETE state, packaged Shipping
+qualification or owner acceptance is inferred from that probe.
+
+
+#### Current qualification — candidate 20, 2026-09-06 UTC
+
+The implemented P1/P2 changes pass the current automated checks at this source boundary. Their delivery
+exit remains **IN PROGRESS** because stable rendered mouse/keyboard, display and HUD-scale endpoint
+checks are unfinished. The development fixture results do not close physical-input, uncoached-player,
+packaged-performance or owner-acceptance gates.
+
+Candidate 20 is bound to commit `bc051467d52ee3e6001ab42931a974449a5d6245` plus the archived dirty inputs
+in [candidate-20-inputs.json](../BuildArtifacts/Evidence/p1-p2-completion-20260905/candidate-20-inputs.json).
+All 501 hashes remained unchanged through the 46.42-second editor build, protected **111/111** Unreal
+suite (144.515 seconds, zero test warnings/errors), exact registered-inventory check, and 58.46-second
+Mac Shipping build. Its post-build sync ad-hoc signed the app for local execution and registered it
+with LaunchServices; this does not establish a fresh cook/package, distribution signing, notarization
+or clean-machine installation. The save-denial probe, protected policy, empty fixture storage and
+launcher cleanup passed. Shipping binary SHA-256 is `2a5fe65f92affc6a676cfbad99f2bf0db56c321e83454e328ad8c22e74fc3b5c`.
+The separate native receipt still covers the unchanged core: **102/102** in optimized, debug and
+Address/UndefinedBehavior Sanitizer configurations. Retained current receipts are
+[candidate-20-runtime-result.json](../BuildArtifacts/Evidence/p1-p2-completion-20260905/candidate-20-runtime-result.json),
+[candidate-20-shipping-result.json](../BuildArtifacts/Evidence/p1-p2-completion-20260905/candidate-20-shipping-result.json)
+and [native-current-5-result.json](../BuildArtifacts/Evidence/p1-p2-completion-20260905/native-current-5-result.json).
+
+The final input repairs give modal UI ownership of the system cursor, cancel armed build placement
+before modal return, and consume right/middle mouse presses without activating shell actions. The
+existing shell-widget fixture now paints real child geometry and dispatches right, middle and left
+pointer events through its SObjectWidget wrapper. Non-primary events preserve action focus; left click
+reaches the pointed action. This test passed in the complete candidate-20 suite.
+
+Current save measurements were 44 µs capture, 471 µs main-thread initiation and 20.768 ms total completion
+for 401 entities / 396 commands / 336,606 bytes. The normal Corefall loss at tick 52,764 measured 181 µs,
+653 µs and 3.139 seconds respectively for 823,885 bytes. Capture and initiation are the relevant bounded
+foreground operations; background completion is reported separately. The normal victory/defeat,
+restoration, three Standard AI terminal runs, replay fidelity and asynchronous browser fixtures all
+passed. These are local development measurements and automated mechanics, not balance or human-play
+validation. See [candidate-20-save-budget.json](../BuildArtifacts/Evidence/p1-p2-completion-20260905/candidate-20-save-budget.json).
+
+Candidate 19 rendered readable Options at 80% and 150%, toggled high contrast, reached display Revert
+by keyboard/pointer, followed Start tutorial → M01 briefing → Deploy without injected mastery, and
+queued/completed Bulwark Team production through the visible command card. Native Slate event dispatch
+worked; CUA and OS synthetic pointer probes were inconsistent. Camera movement followed some probes,
+but competing input prevents attributing a control-specific pass. Escape after HUD focus was intercepted
+by PIE, so those checks require a standalone game window. The probe record retains the precise evidence
+classes: [editor-gui-19-result.json](../BuildArtifacts/Evidence/p1-p2-completion-20260905/editor-gui-19-result.json).
+
+Candidate 20 launched an uncooked standalone Development game using isolated save/profile paths.
+The actual window became 2560×1440 under the fresh profile's borderless setting, despite the 1280×720
+launch request; startup arguments therefore do not prove a display endpoint. A click intended for Options
+reached Quit, Escape cancelled it, and the log later recorded Quit plus Confirm while the coordinator was
+only reading metadata. This indicates competing input; its source was not established. The game exited
+normally. Live input is paused pending an idle computer window. The empty editor automatically opened by
+CUA discovery after that exit was closed; no editor or heavy run remains active.
+
+Next executable work is a coordinated standalone mouse/keyboard pass: display Apply/Keep/Revert and
+actual viewport sizes; both HUD-scale endpoints; normal selection/orders and placement refusal/confirm;
+minimap and middle-drag; tactical pause and modal focus recovery; and visible result/replay return paths.
+Retain actual screenshots and event receipts, fix any reproducible game defect, and rerun affected checks
+against a new source receipt only if code changes. The See Loop capture path works, but Gemini still needs
+a valid locally configured API key; no key value is stored in the evidence. P3 curriculum/mastery awards,
+P4 packaged journey/owner play and P7 distribution remain their own packages.

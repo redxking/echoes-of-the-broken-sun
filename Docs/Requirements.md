@@ -4058,7 +4058,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-AI-004.LANE:** Opponent AI.
 
 * **REL-AI-005 — Defensive Reaction & Base Protection:** When its base or workers are attacked, the AI shall immediately switch to `DEFEND` state, pulling combat units to intercept the attackers and retreating threatened workers.
-  * **REL-AI-005.AUTH:** Reaction time to base alerts scales with difficulty (Assisted: 2.0s; Standard: 1.0s; Sovereign: 0.2s).
+  * **REL-AI-005.AUTH:** Reaction time to visible base alerts follows `SPEC-DIF-001..004`: Story 60 ticks (3.0s), Standard 30 ticks (1.5s), Veteran 18 ticks (0.9s), Sovereign 10 ticks (0.5s).
   * **REL-AI-005.FAIL:** AI army ignoring base destruction alerts fails perceived intelligence.
   * **REL-AI-005.VERIF:** `PKG-AUTO` (AI defensive reaction benchmark).
   * **REL-AI-005.LANE:** Opponent AI.
@@ -4111,13 +4111,13 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-AI-013.VERIF:** `PKG-AUTO` (Adaptive doctrine tech counter test).
   * **REL-AI-013.LANE:** Opponent AI.
 
-* **REL-AI-014 — AI Difficulty Tier: Assisted:** Assisted difficulty shall offer a gentle learning curve for novice players: +50% reaction delay (1.5s), APM ceiling capped at 30, and -20% combat damage multiplier disclosed in pre-match UI.
+* **REL-AI-014 — AI Difficulty Tier: Story:** Story difficulty shall follow `SPEC-DIF-001`: 60-tick reaction delay, strategic review every 200 ticks, and a ceiling of 4 group commands per second. Combat, income, costs, build times and information obey the same rules as human players; no damage handicap applies.
   * **REL-AI-014.AUTH:** AI gives visible telegraphs prior to launching attacks.
-  * **REL-AI-014.FAIL:** Assisted AI executing high-speed micro-management fails accessibility.
-  * **REL-AI-014.VERIF:** `PKG-AUTO` (Assisted APM and reaction delay test).
+  * **REL-AI-014.FAIL:** Story AI exceeding its reaction or group-command limits fails accessibility.
+  * **REL-AI-014.VERIF:** `PKG-AUTO` (Story reaction, strategic-review, group-command ceiling and equal-rules test).
   * **REL-AI-014.LANE:** Opponent AI.
 
-* **REL-AI-015 — AI Difficulty Tier: Standard:** Standard difficulty represents the baseline competitive AI: 100% fair information, zero resource cheats, reaction delay of 0.8s, and APM ceiling capped at 90.
+* **REL-AI-015 — AI Difficulty Tier: Standard:** Standard difficulty represents the baseline competitive AI: 100% fair information, zero resource or combat cheats, and the `SPEC-DIF-002` policy: 30-tick reaction delay, strategic review every 100 ticks, and a ceiling of 7 group commands per second.
   * **REL-AI-015.AUTH:** Economy and build times match human player identically.
   * **REL-AI-015.FAIL:** Hidden income or sight advantages in Standard mode are strictly prohibited.
   * **REL-AI-015.VERIF:** `PKG-AUTO` (Standard AI fairness assertion).
@@ -4129,16 +4129,16 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-AI-042.VERIF:** `PKG-AUTO` (1,000-match automated balance validation suite).
   * **REL-AI-042.LANE:** Opponent AI & Faction Design.
 
-* **REL-AI-017 — AI Difficulty Tier: Challenging:** Challenging difficulty shall provide tight tactical execution: reaction delay 0.4s, APM ceiling 140, disciplined focus-firing, and optimal expansion timings without economic cheats.
-  * **REL-AI-017.AUTH:** Defeating Challenging AI requires solid player macro-economy and tactical control.
-  * **REL-AI-017.FAIL:** Cheating vision or free units in Challenging mode fails fair AI rules.
-  * **REL-AI-017.VERIF:** `PKG-AUTO` (Challenging AI execution metrics).
+* **REL-AI-017 — AI Difficulty Tier: Veteran:** Veteran difficulty shall follow `SPEC-DIF-003`: 18-tick reaction delay, strategic review every 60 ticks, and a ceiling of 10 group commands per second, with multi-step planning, focus and retreat discipline under equal combat, economic and information rules.
+  * **REL-AI-017.AUTH:** Defeating Veteran AI requires solid player macro-economy and tactical control.
+  * **REL-AI-017.FAIL:** Cheating vision or free units in Veteran mode fails fair AI rules.
+  * **REL-AI-017.VERIF:** `PKG-AUTO` (Veteran AI execution metrics).
   * **REL-AI-017.LANE:** Opponent AI.
 
-* **REL-AI-018 — AI Difficulty Tier: Sovereign:** Sovereign difficulty represents the master-level AI: reaction delay 0.15s, APM ceiling 180 (human reasonable), optimal micro-management, flanking coordination, and ruthless target prioritization.
+* **REL-AI-018 — AI Difficulty Tier: Sovereign:** Sovereign difficulty represents the master-level AI: the `SPEC-DIF-004` policy of 10-tick reaction delay, strategic review every 40 ticks, and a ceiling of 12 group commands per second, with longer planning horizons, feints and synchronized routes under equal information and resource rules.
   * **REL-AI-018.AUTH:** Sovereign AI achieves high performance through algorithm efficiency, not artificial health/damage buffs.
-  * **REL-AI-018.FAIL:** Unlimited inhuman APM (>300) is strictly prohibited.
-  * **REL-AI-018.VERIF:** `PKG-AUTO` (Sovereign APM ceiling and fairness test).
+  * **REL-AI-018.FAIL:** Exceeding the declared group-command ceiling or granting hidden information, economic or combat advantages is prohibited.
+  * **REL-AI-018.VERIF:** `PKG-AUTO` (Sovereign group-command ceiling, reaction and fairness test).
   * **REL-AI-018.LANE:** Opponent AI.
 
 * **REL-AI-019 — AI Concession & Elimination Protocol:** The AI shall concede a match only when its Command Core is destroyed or all workers and production facilities are lost with 0 resources and no army remaining.
@@ -5977,10 +5977,10 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `REL-AI-011` | AI Doctrine: Steward (Economic Macro): | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
 | `REL-AI-012` | AI Doctrine: Expansionist (Territorial Control): | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
 | `REL-AI-013` | AI Doctrine: Adaptive (Counter-Play): | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
-| `REL-AI-014` | AI Difficulty Tier: Assisted: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-014` | AI Difficulty Tier: Story: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
 | `REL-AI-015` | AI Difficulty Tier: Standard: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
 | `REL-AI-016` | Retired ambiguous identifier; see body for all titled successors | Retired ambiguous identifiers |
-| `REL-AI-017` | AI Difficulty Tier: Challenging: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
+| `REL-AI-017` | AI Difficulty Tier: Veteran: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
 | `REL-AI-018` | AI Difficulty Tier: Sovereign: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
 | `REL-AI-019` | AI Concession & Elimination Protocol: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |
 | `REL-AI-020` | Skirmish Mirror Matchup Support: | §15 Skirmish, AI, Difficulty, and Balance (`REL-AI-*`) |

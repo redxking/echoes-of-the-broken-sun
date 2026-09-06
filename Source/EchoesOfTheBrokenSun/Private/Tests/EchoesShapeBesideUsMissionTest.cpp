@@ -6,6 +6,7 @@
 
 #include "EchoesCampaignProgress.h"
 #include "EchoesCampaignMapCheckpoint.h"
+#include "EchoesReplayCheckpointTestHelpers.h"
 #include "EchoesShapeBesideUsMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -352,6 +353,7 @@ bool FEchoesShapeBesideUsMissionTest::RunTest(const FString& Parameters)
             TEXT("The current Mission 08 checkpoint carries topology revision one"),
             FFileHelper::LoadFileToArray(CurrentMapEnvelope, *QuickSavePath) &&
                 FEchoesCampaignMapCheckpoint::Inspect(CurrentMapEnvelope, MapIdentity, CurrentTopologyBytes, MapFailure) &&
+                ExtractReplayCheckpointPayloadForTest(CurrentTopologyBytes, Feedback) &&
                 CurrentTopologyBytes.Num() > 16 &&
                 CurrentTopologyBytes[TopologyRevisionOffset] == 1))
     {

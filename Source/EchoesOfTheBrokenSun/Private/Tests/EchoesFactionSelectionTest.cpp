@@ -221,9 +221,13 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
             TestTrue(
                 TEXT("Each Future Well state uses authored landmark geometry"),
                 FutureWellPreview->IsUsingAuthoredFutureWellMesh());
-            TestTrue(
-                TEXT("Each Future Well state presents its orbit and fractured core"),
-                FutureWellPreview->IsFutureWellPresentationVisible());
+            TestEqual(
+                TEXT("Intact protocols show the Well; completed Harvest leaves a remnant"),
+                FutureWellPreview->IsFutureWellPresentationVisible(),
+                Choice != echoes::sim::FutureWellChoice::Harvest);
+            TestEqual(TEXT("Only completed Harvest shows collapsed geometry"),
+                FutureWellPreview->IsFutureWellCollapsedRemnantVisible(),
+                Choice == echoes::sim::FutureWellChoice::Harvest);
             TestTrue(
                 TEXT("Each Future Well state retains its requested visual variant"),
                 FutureWellPreview->GetFutureWellVisualChoice() == Choice);
@@ -283,17 +287,34 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
              HiddenMover != 0);
     if (MutableSimulation != nullptr && HiddenMover != 0)
     {
+        echoes::sim::Tick OpponentCommandFrontier =
+            MutableSimulation->CurrentTick();
+        for (const echoes::sim::Command& Pending :
+             MutableSimulation->PendingCommands())
+        {
+            if (Pending.player ==
+                UEchoesSimulationSubsystem::OpponentPlayerId)
+            {
+                OpponentCommandFrontier = std::max(
+                    OpponentCommandFrontier,
+                    Pending.executeTick);
+            }
+        }
         echoes::sim::Command Move;
-        Move.executeTick = MutableSimulation->CurrentTick() + 1;
+        Move.executeTick = OpponentCommandFrontier + 1;
         Move.player = UEchoesSimulationSubsystem::OpponentPlayerId;
         Move.sequence = *MutableSimulation->NextCommandSequence(
             UEchoesSimulationSubsystem::OpponentPlayerId);
         Move.type = echoes::sim::CommandType::Move;
         Move.actor = HiddenMover;
         Move.position = echoes::sim::Vec2::FromTiles(32, 6);
-        TestTrue(TEXT("Hidden Meridian movement is admitted"),
-                 MutableSimulation->QueueCommand(Move));
-        Bridge->Tick(0.10f);
+        const bool bMoveQueued = MutableSimulation->QueueCommand(Move);
+        TestTrue(TEXT("Hidden Meridian movement is admitted"), bMoveQueued);
+        if (bMoveQueued)
+        {
+            MutableSimulation->Step(
+                Move.executeTick - MutableSimulation->CurrentTick() + 1);
+        }
         const std::optional<echoes::sim::PlayerView> LocalView =
             MutableSimulation->CreatePlayerView(
                 UEchoesSimulationSubsystem::LocalPlayerId);

@@ -63,7 +63,7 @@ UFont* Resolve(FEchoesTypefaceSlot& Slot)
     Font->FontCacheType = EFontCacheType::Runtime;
     Font->LegacyFontSize = Slot.LegacySize;
     Font->LegacyFontName = FName(Slot.Label);
-    Font->CompositeFont.DefaultTypeface.AppendFont(
+    Font->GetMutableInternalCompositeFont().DefaultTypeface.AppendFont(
         TEXT("Regular"), Path, EFontHinting::Default, EFontLoadingPolicy::LazyLoad);
     Slot.Font.Reset(Font);
     Slot.bVendored = true;

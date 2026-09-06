@@ -1,6 +1,7 @@
 #include "EchoesTestBootstrap.h"
 
 #include "EchoesCampaignProgress.h"
+#include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
 #include "Misc/CommandLine.h"
 #include "Misc/FileHelper.h"
@@ -24,6 +25,7 @@ constexpr TCHAR SaveDirectoryKey[] = TEXT("EchoesSaveGameDirectory=");
 constexpr TCHAR UserDirectoryKey[] = TEXT("UserDir=");
 constexpr TCHAR ManifestFormat[] = TEXT("EchoesTestSandbox/v1");
 bool GDedicatedTestSandboxValidated = false;
+FString GValidatedTestSaveDirectory;
 
 FString NormalizeDirectory(FString Path)
 {
@@ -38,13 +40,28 @@ bool IsUnderOrEqual(const FString& Candidate, const FString& Parent)
     return Candidate == Parent || FPaths::IsUnderDirectory(Candidate, Parent);
 }
 
-bool IsUnderEitherTemporaryRoot(
+bool IsUnderEitherRoot(
     const FString& Candidate,
     const FString& LexicalTemporaryRoot,
     const FString& CanonicalTemporaryRoot)
 {
     return IsUnderOrEqual(Candidate, LexicalTemporaryRoot) ||
         IsUnderOrEqual(Candidate, CanonicalTemporaryRoot);
+}
+
+bool IsUnderAcceptedStorageRoot(
+    const FString& Candidate,
+    const FString& LexicalTemporaryRoot,
+    const FString& CanonicalTemporaryRoot,
+    const FString& ProjectAutomationRoot,
+    const FString& CanonicalProjectAutomationRoot)
+{
+    return IsUnderEitherRoot(
+               Candidate, LexicalTemporaryRoot, CanonicalTemporaryRoot) ||
+        (!ProjectAutomationRoot.IsEmpty() &&
+         !CanonicalProjectAutomationRoot.IsEmpty() &&
+         (IsUnderOrEqual(Candidate, ProjectAutomationRoot) ||
+          IsUnderOrEqual(Candidate, CanonicalProjectAutomationRoot)));
 }
 
 bool CanonicalizeExistingSandboxPath(
@@ -127,6 +144,7 @@ bool EchoesTestBootstrap::ValidateBeforeGameInstance(FString& OutFailure)
 {
     OutFailure.Reset();
     GDedicatedTestSandboxValidated = false;
+    GValidatedTestSaveDirectory.Reset();
     const TCHAR* CommandLine = FCommandLine::Get();
     const bool bDedicatedTestMode =
         FParse::Param(CommandLine, TestSandboxFlag);
@@ -174,19 +192,62 @@ bool EchoesTestBootstrap::ValidateBeforeGameInstance(FString& OutFailure)
     {
         return false;
     }
+    FString CanonicalProjectRoot;
+    if (!CanonicalizeExistingSandboxPath(
+            NormalizeDirectory(FPaths::ProjectDir()),
+            CanonicalProjectRoot,
+            OutFailure))
+    {
+        return false;
+    }
+    const FString ProjectAutomationRoot = NormalizeDirectory(FPaths::Combine(
+        CanonicalProjectRoot,
+        TEXT("BuildArtifacts"),
+        TEXT("TestIO")));
+    FString CanonicalProjectAutomationRoot;
+    if (IFileManager::Get().DirectoryExists(*ProjectAutomationRoot))
+    {
+        if (!CanonicalizeExistingSandboxPath(
+                ProjectAutomationRoot,
+                CanonicalProjectAutomationRoot,
+                OutFailure))
+        {
+            return false;
+        }
+        if (CanonicalProjectAutomationRoot != ProjectAutomationRoot ||
+            !IsUnderOrEqual(
+                CanonicalProjectAutomationRoot, CanonicalProjectRoot))
+        {
+            OutFailure =
+                TEXT("[ECHOES_TEST_SANDBOX_PROJECT_ROOT_REDIRECTED]");
+            return false;
+        }
+    }
     // These lexical checks run before opening the manifest or resolving a
     // route. A forged command line therefore cannot direct bootstrap to
-    // inspect a production path. On macOS the accepted roots are only the
-    // system temporary directory as reported by Foundation and its canonical
-    // /private/var alias; both name the same OS-owned temporary hierarchy.
-    if (!IsUnderEitherTemporaryRoot(
-            ManifestPath, TemporaryRoot, CanonicalTemporaryRoot) ||
-        !IsUnderEitherTemporaryRoot(
-            CommandSaveDirectory, TemporaryRoot, CanonicalTemporaryRoot) ||
-        !IsUnderEitherTemporaryRoot(
-            CommandUserDirectory, TemporaryRoot, CanonicalTemporaryRoot))
+    // inspect a production path. The fixed project automation tree is the
+    // normal route; the platform temporary hierarchy remains accepted for
+    // legacy isolated launchers.
+    if (!IsUnderAcceptedStorageRoot(
+            ManifestPath,
+            TemporaryRoot,
+            CanonicalTemporaryRoot,
+            ProjectAutomationRoot,
+            CanonicalProjectAutomationRoot) ||
+        !IsUnderAcceptedStorageRoot(
+            CommandSaveDirectory,
+            TemporaryRoot,
+            CanonicalTemporaryRoot,
+            ProjectAutomationRoot,
+            CanonicalProjectAutomationRoot) ||
+        !IsUnderAcceptedStorageRoot(
+            CommandUserDirectory,
+            TemporaryRoot,
+            CanonicalTemporaryRoot,
+            ProjectAutomationRoot,
+            CanonicalProjectAutomationRoot))
     {
-        OutFailure = TEXT("[ECHOES_TEST_SANDBOX_ROUTE_NOT_TEMPORARY]");
+        OutFailure = TEXT("[ECHOES_TEST_SANDBOX_ROUTE_NOT_ALLOWED_ROOT]");
         return false;
     }
     FString CanonicalManifestPath;
@@ -212,16 +273,28 @@ bool EchoesTestBootstrap::ValidateBeforeGameInstance(FString& OutFailure)
     ManifestRoot = NormalizeDirectory(ManifestRoot);
     ManifestSaveDirectory = NormalizeDirectory(ManifestSaveDirectory);
     ManifestUserDirectory = NormalizeDirectory(ManifestUserDirectory);
-    if (!IsUnderEitherTemporaryRoot(
-            ManifestRoot, TemporaryRoot, CanonicalTemporaryRoot) ||
-        !IsUnderEitherTemporaryRoot(
-            ManifestSaveDirectory, TemporaryRoot, CanonicalTemporaryRoot) ||
-        !IsUnderEitherTemporaryRoot(
-            ManifestUserDirectory, TemporaryRoot, CanonicalTemporaryRoot) ||
+    if (!IsUnderAcceptedStorageRoot(
+            ManifestRoot,
+            TemporaryRoot,
+            CanonicalTemporaryRoot,
+            ProjectAutomationRoot,
+            CanonicalProjectAutomationRoot) ||
+        !IsUnderAcceptedStorageRoot(
+            ManifestSaveDirectory,
+            TemporaryRoot,
+            CanonicalTemporaryRoot,
+            ProjectAutomationRoot,
+            CanonicalProjectAutomationRoot) ||
+        !IsUnderAcceptedStorageRoot(
+            ManifestUserDirectory,
+            TemporaryRoot,
+            CanonicalTemporaryRoot,
+            ProjectAutomationRoot,
+            CanonicalProjectAutomationRoot) ||
         !IsUnderOrEqual(ManifestSaveDirectory, ManifestRoot) ||
         !IsUnderOrEqual(ManifestUserDirectory, ManifestRoot))
     {
-        OutFailure = TEXT("[ECHOES_TEST_SANDBOX_ROUTE_NOT_TEMPORARY]");
+        OutFailure = TEXT("[ECHOES_TEST_SANDBOX_ROUTE_NOT_ALLOWED_ROOT]");
         return false;
     }
     FString CanonicalRoot;
@@ -243,14 +316,27 @@ bool EchoesTestBootstrap::ValidateBeforeGameInstance(FString& OutFailure)
         return false;
     }
     const FString PlayerSaveRoot = NormalizeDirectory(FPaths::Combine(
-        FPaths::ProjectSavedDir(), TEXT("SaveGames")));
+        CanonicalProjectRoot, TEXT("Saved"), TEXT("SaveGames")));
+    const FString UserRoot = NormalizeDirectory(FPlatformProcess::UserDir());
+    const bool bRootUsesLegacyTemporaryStorage =
+        IsUnderOrEqual(CanonicalRoot, CanonicalTemporaryRoot);
+    const bool bRootUsesProjectAutomationStorage =
+        !CanonicalProjectAutomationRoot.IsEmpty() &&
+        NormalizeDirectory(FPaths::GetPath(CanonicalRoot)) ==
+            CanonicalProjectAutomationRoot &&
+        FPaths::GetCleanFilename(CanonicalRoot).StartsWith(
+            TEXT("EAT."),
+            ESearchCase::CaseSensitive);
 
-    if (!IsUnderOrEqual(CanonicalRoot, CanonicalTemporaryRoot) ||
+    if ((!bRootUsesLegacyTemporaryStorage &&
+         !bRootUsesProjectAutomationStorage) ||
         !IsUnderOrEqual(CanonicalManifestSaveDirectory, CanonicalRoot) ||
         !IsUnderOrEqual(CanonicalManifestUserDirectory, CanonicalRoot) ||
         !IsUnderOrEqual(CanonicalManifestPath, CanonicalRoot) ||
         CanonicalCommandSaveDirectory != CanonicalManifestSaveDirectory ||
         CanonicalCommandUserDirectory != CanonicalManifestUserDirectory ||
+        IsUnderOrEqual(CanonicalRoot, UserRoot) ||
+        IsUnderOrEqual(CanonicalRoot, PlayerSaveRoot) ||
         CanonicalManifestSaveDirectory == PlayerSaveRoot ||
         FPaths::IsUnderDirectory(CanonicalManifestSaveDirectory, PlayerSaveRoot))
     {
@@ -269,6 +355,7 @@ bool EchoesTestBootstrap::ValidateBeforeGameInstance(FString& OutFailure)
         return false;
     }
     GDedicatedTestSandboxValidated = true;
+    GValidatedTestSaveDirectory = CanonicalManifestSaveDirectory;
     return true;
 #endif
 }
@@ -276,4 +363,17 @@ bool EchoesTestBootstrap::ValidateBeforeGameInstance(FString& OutFailure)
 bool EchoesTestBootstrap::IsDedicatedTestSandboxValidated()
 {
     return GDedicatedTestSandboxValidated;
+}
+
+bool EchoesTestBootstrap::GetValidatedSuiteSaveDirectory(
+    FString& OutSaveDirectory)
+{
+    OutSaveDirectory.Reset();
+    if (!GDedicatedTestSandboxValidated ||
+        GValidatedTestSaveDirectory.IsEmpty())
+    {
+        return false;
+    }
+    OutSaveDirectory = GValidatedTestSaveDirectory;
+    return true;
 }

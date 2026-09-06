@@ -126,6 +126,44 @@ bool FEchoesFutureWellCollapseTest::RunTest(const FString& Parameters)
                  View->IsFutureWellPresentationEntityPickable() &&
                  View->IsEntityPickProxyEnabled());
 
+    // Feed the view states emitted by the real core. The prior hand-built
+    // pending-Harvest fixture did not match schema 27's Harvest countdown.
+    for (const auto Choice : {echoes::sim::FutureWellChoice::Harvest,
+                              echoes::sim::FutureWellChoice::Reshape})
+    {
+        echoes::sim::Simulation Sim({20, 20, 20, 0x57454c4c});
+        Sim.AddPlayer(0, echoes::sim::Faction::MeridianCompact, {0, 120});
+        const auto Worker = Sim.SpawnEntity(0, echoes::sim::Faction::MeridianCompact,
+            echoes::sim::EntityType::Worker, echoes::sim::Vec2::FromTiles(5, 6));
+        const auto Well = Sim.SpawnFutureWell(echoes::sim::Vec2::FromTiles(6, 6));
+        echoes::sim::Command Command{};
+        Command.player = 0; Command.sequence = 1;
+        Command.type = echoes::sim::CommandType::FutureWell;
+        Command.actor = Worker; Command.target = Well; Command.wellChoice = Choice;
+        TestTrue(TEXT("Real Well command queues"), Sim.QueueCommand(Command));
+        Sim.Step(300);
+        View->ApplyAuthoritativeState(*Sim.FindEntity(Well), true);
+        TestEqual(TEXT("Committed warning begins at 180 ticks"),
+            Sim.FindEntity(Well)->wellProtocolTicks, echoes::sim::Tick{180});
+        TestFalse(TEXT("Warning never displays a collapsed Well"),
+            View->IsFutureWellTerminallyCollapsed());
+        TestTrue(TEXT("Warning shows its actual protocol identity"),
+            View->GetFutureWellVisualChoice() == Choice &&
+            View->IsFutureWellPresentationVisible());
+        TestEqual(TEXT("Reshape field marks only its warning phase"),
+            View->IsReshapeTelegraphActive(), Choice == echoes::sim::FutureWellChoice::Reshape);
+        Sim.Step(179);
+        View->ApplyAuthoritativeState(*Sim.FindEntity(Well), true);
+        TestFalse(TEXT("Final warning tick still has an intact Well"),
+            View->IsFutureWellTerminallyCollapsed());
+        Sim.Step();
+        View->ApplyAuthoritativeState(*Sim.FindEntity(Well), true);
+        TestEqual(TEXT("Only completed Harvest collapses"),
+            View->IsFutureWellTerminallyCollapsed(), Choice == echoes::sim::FutureWellChoice::Harvest);
+        TestFalse(TEXT("Protocol completion removes the warning field"),
+            View->IsReshapeTelegraphActive());
+    }
+
     View->Destroy();
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);

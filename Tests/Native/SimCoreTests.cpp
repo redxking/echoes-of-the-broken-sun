@@ -287,6 +287,20 @@ std::size_t SnapshotFutureWellLifecycleRecordOffset(
     return recordOffset;
 }
 
+std::vector<std::uint8_t> ConvertSnapshotV28ToV27(
+    const std::vector<std::uint8_t>& current, std::size_t mapTileCount) {
+    REQUIRE(ReadU32(current, 4) == 28);
+    const std::size_t lifecycle = SnapshotFutureWellLifecycleBlockOffset(current, mapTileCount);
+    const std::size_t end = SerializedSpanEnd(current, lifecycle + 4U,
+        ReadU32(current, lifecycle), kSerializedFutureWellLifecycleBytes);
+    REQUIRE(end <= current.size() && current.size() - end == 12U);
+    std::vector<std::uint8_t> prior(current.begin(), current.begin() + end);
+    prior.resize(prior.size() + 8U);
+    WriteU32(prior, 4, 27);
+    ResignSnapshot(prior);
+    return prior;
+}
+
 std::vector<std::uint8_t> ConvertSnapshotV27ToV26(
     const std::vector<std::uint8_t>& current, std::size_t mapTileCount) {
     REQUIRE(ReadU32(current, 4) == 27);
@@ -809,7 +823,7 @@ void TestProtectedCommandCoreContract() {
     REQUIRE(protectedSimulation.QueueCommand(stop));
     protectedSimulation.Step(4);
     const ReplayRecord replay = protectedSimulation.ExportReplay();
-    REQUIRE(replay.version == 24);
+    REQUIRE(replay.version == kReplayVersion);
     std::optional<Simulation> replayed =
         Simulation::ReplayToEnd(replay, &error);
     REQUIRE(replayed.has_value());
@@ -2150,16 +2164,13 @@ void TestFutureWellChoices() {
         action.target = well;
         action.wellChoice = FutureWellChoice::Reshape;
         REQUIRE(reshape.QueueCommand(action));
-        // Retain the existing terrain/expiry regression at the currently
-        // implemented capture boundary. This does not accept the missing
-        // REL-WEL-010 180-tick Reshape telegraph as intended behavior; that
-        // production gap must move these activation assertions when repaired.
-        reshape.Step(300);
+        // The route manifests only after capture and the full public warning.
+        reshape.Step(480);
         REQUIRE(reshape.FindPlayer(0)->resources.dawnshards == 80);
         const Entity* reshapedWell = reshape.FindEntity(well);
         REQUIRE(reshapedWell->wellChoice == FutureWellChoice::Reshape);
-        REQUIRE(reshapedWell->wellActivationTick == 301);
-        REQUIRE(reshapedWell->reshapeUntilTick == 2100);
+        REQUIRE(reshapedWell->wellActivationTick == 481);
+        REQUIRE(reshapedWell->reshapeUntilTick == 2281);
         REQUIRE(reshape.IsPositionPassable(Vec2::FromTiles(7, 6)));
         Command enter = MakeCommand(reshape.CurrentTick(), 0, 3,
                                     CommandType::Move, worker);
@@ -2258,9 +2269,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
 
     const ReplayRecord replay = simulation.ExportReplay();
-    // The replay envelope shape did not change with snapshot schema 27, so
-    // its own version stays 24 while the baseline it carries is current.
-    REQUIRE(replay.version == 24);
+    REQUIRE(replay.version == kReplayVersion);
     REQUIRE(ReadU32(replay.initialSnapshot, 4) == kSnapshotVersion);
     std::optional<Simulation> replayed =
         Simulation::ReplayToEnd(replay, &error);
@@ -2270,8 +2279,10 @@ void TestFutureWellSnapshotMigrationAndReplay() {
     REQUIRE(replayed->FindEntity(dormantWell)->wellActivationTick == 0);
     REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
 
+    const std::vector<std::uint8_t> v27 = ConvertSnapshotV28ToV27(snapshot, kMapTiles);
+    REQUIRE(Simulation::LoadSnapshot(v27, &error).has_value());
     const std::vector<std::uint8_t> v26 =
-        ConvertSnapshotV27ToV26(snapshot, kMapTiles);
+        ConvertSnapshotV27ToV26(v27, kMapTiles);
     REQUIRE(ReadU32(v26, 4) == 26);
     std::optional<Simulation> v26Migrated =
         Simulation::LoadSnapshot(v26, &error);
@@ -5211,11 +5222,10 @@ void TestDeterministicNetworkForfeit() {
     REQUIRE(!simulation.ForfeitPlayer(1));
 
     std::string replayError;
-    const ReplayRecord rejectedReplay = simulation.ExportReplay(&replayError);
-    REQUIRE(replayError == "replay export is disabled");
-    REQUIRE(rejectedReplay.version == 0);
-    REQUIRE(rejectedReplay.initialSnapshot.empty());
-    REQUIRE(rejectedReplay.commands.empty());
+    const ReplayRecord forfeitedReplay = simulation.ExportReplay(&replayError);
+    REQUIRE(replayError.empty());
+    REQUIRE(forfeitedReplay.version == kReplayVersion);
+    REQUIRE(forfeitedReplay.forfeitingPlayer == 1);
 
     const Vec2 remotePosition = simulation.FindEntity(remoteSoldier)->position;
     const std::uint64_t forfeitedChecksum = simulation.StateChecksum();
@@ -5312,10 +5322,8 @@ void TestReshapeExpiryStopsWithoutTeleporting() {
     activate.target = well;
     activate.wellChoice = FutureWellChoice::Reshape;
     REQUIRE(reshape.QueueCommand(activate));
-    // Reach the currently implemented capture boundary to exercise MOV-004's
-    // terrain-expiry behavior. REL-WEL-010's missing 180-tick Reshape
-    // telegraph remains an open production gap; this setup does not accept it.
-    reshape.Step(300);
+    // Exercise expiry after capture, the public warning, and manifestation.
+    reshape.Step(480);
     const Entity* reshapedWell = reshape.FindEntity(well);
     REQUIRE(reshapedWell != nullptr);
     REQUIRE(reshapedWell->wellChoice == FutureWellChoice::Reshape);
@@ -7220,33 +7228,170 @@ void TestCoreExperiencePillarsAndInformationTiers() {
 }
 
 void TestFutureWellProtocolExecutionAndTelegraphs() {
-    // SPEC-WEL-001..003 & SPEC-WELLP-001..003: Future Well Protocols, Telegraphs & Persistence
-    Simulation sim(SimulationConfig{32, 32, 20, 0x707ULL});
-    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{500, 200}));
+    // REL-WEL-010 / SPEC-WELLP-003: test actual authority, not constants.
+    Simulation sim({20, 20, 20, 0x707ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, {500, 120}));
+    REQUIRE(sim.AddPlayer(1, Faction::KharuunAssemblies, {0, 0}));
+    const EntityId worker = sim.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::Worker, Vec2::FromTiles(5, 6));
+    const EntityId well = sim.SpawnFutureWell(Vec2::FromTiles(6, 6));
+    REQUIRE(sim.SpawnEntity(1, Faction::KharuunAssemblies,
+        EntityType::Worker, Vec2::FromTiles(18, 18)) != 0);
+    REQUIRE(sim.SetTerrainTile(7, 6, Terrain::Blocked));
+    sim.CaptureReplayBaseline();
+    Command reshape = MakeCommand(0, 0, 1, CommandType::FutureWell, worker);
+    reshape.target = well;
+    reshape.wellChoice = FutureWellChoice::Reshape;
+    REQUIRE(sim.QueueCommand(reshape));
+    sim.Step(299);
+    REQUIRE(sim.FindPlayer(0)->resources.dawnshards == 120);
+    REQUIRE(sim.PublicFutureWellTelegraphs().empty());
+    sim.Step();
+    const Entity* state = sim.FindEntity(well);
+    REQUIRE(state->wellChoice == FutureWellChoice::Dormant);
+    REQUIRE(state->wellPendingChoice == FutureWellChoice::Reshape);
+    REQUIRE(state->wellProtocolTicks == 180 && state->wellActivationTick == 0);
+    REQUIRE(state->reshapeUntilTick == 0);
+    REQUIRE(sim.FindPlayer(0)->resources.dawnshards == 0);
+    REQUIRE(!sim.IsPositionPassable(Vec2::FromTiles(7, 6)));
+    REQUIRE(!sim.IsEntityVisibleTo(1, well));
+    const auto events = sim.PublicFutureWellTelegraphs();
+    REQUIRE(events.size() == 1 && events.front().choice == FutureWellChoice::Reshape);
+    REQUIRE(events.front().wellId == well && events.front().remainingTicks == 180);
+    for (PlayerId player = 0; player < 2; ++player) {
+        const auto view = sim.CreatePlayerView(player);
+        REQUIRE(view.has_value() && view->PublicFutureWellTelegraphs() == events);
+        if (player == 1) {
+            REQUIRE(std::none_of(view->Entities().begin(), view->Entities().end(),
+                [well](const Entity& entity) { return entity.id == well; }));
+        }
+        const auto commands = sim.GenerateAiCommands(*view, AiPersonality::Balanced);
+        REQUIRE(std::none_of(commands.begin(), commands.end(), [well](const Command& command) {
+            return command.type == CommandType::FutureWell && command.target == well;
+        }));
+    }
 
-    const EntityId well = sim.SpawnFutureWell(Vec2::FromTiles(16, 16));
-    REQUIRE(well != 0);
-
-    // Protocol metrics
-    // Harvest: 180-tick global telegraph, +500 Dawn (SPEC-WELLP-001)
-    // Preserve: +15 Dawn / 300 ticks, 1400 cm radar (SPEC-WELLP-002)
-    // Reshape: 120 Dawn cost, 180-tick telegraph, 1800-tick duration (SPEC-WELLP-003)
-    struct WellProtocolData {
-        FutureWellChoice choice;
-        int32_t telegraphTicks;
-        int32_t immediateDawnYield;
-        int32_t recurringDawnYield;
-        int32_t dawnCost;
-        int32_t activeDurationTicks;
+    std::string error;
+    const auto snapshot = sim.SaveSnapshot();
+    auto restored = Simulation::LoadSnapshot(snapshot, &error);
+    REQUIRE(restored.has_value() && error.empty());
+    REQUIRE(restored->StateChecksum() == sim.StateChecksum());
+    const std::size_t record = SnapshotFutureWellLifecycleRecordOffset(snapshot, 400, 1);
+    const auto RejectMutation = [&](std::size_t offset, std::uint64_t value, bool byte) {
+        auto corrupt = snapshot;
+        if (byte) corrupt[offset] = static_cast<std::uint8_t>(value);
+        else WriteU64(corrupt, offset, value);
+        ResignSnapshot(corrupt);
+        REQUIRE(!Simulation::LoadSnapshot(corrupt, &error).has_value());
     };
+    RejectMutation(record + 8, 181, false);
+    RejectMutation(record + 8, 0, false);
+    RejectMutation(record + 4, 0, true); // A warning cannot also be a capture.
+    RejectMutation(record + 7, static_cast<std::uint8_t>(FutureWellChoice::Harvest), true);
+    const std::size_t entity = SnapshotV25FirstEntityOffset(snapshot, 400) +
+        kSerializedEntityBytes;
+    RejectMutation(entity + 4, kNeutralPlayer, true);
+    RejectMutation(entity + 104, 300, false); // Not active during warning.
+    RejectMutation(entity + 112, 2280, false); // No passage during warning.
+    RejectMutation(entity + 120, 1, true); // Variant is drawn only on manifestation.
 
-    const WellProtocolData harvest{FutureWellChoice::Harvest, 180, 500, 0, 0, 0};
-    const WellProtocolData preserve{FutureWellChoice::Preserve, 0, 0, 15, 0, -1};
-    const WellProtocolData reshape{FutureWellChoice::Reshape, 180, 0, 0, 120, 1800};
+    // Hostile entry after payment does not invent Harvest's cancellation rule.
+    auto contested = *restored;
+    REQUIRE(contested.SpawnEntity(1, Faction::KharuunAssemblies,
+        EntityType::Worker, Vec2::FromTiles(5, 8)) != 0);
+    contested.Step();
+    REQUIRE(contested.FindEntity(well)->owner == 0);
+    REQUIRE(contested.FindEntity(well)->wellPendingChoice == FutureWellChoice::Reshape);
+    REQUIRE(contested.FindEntity(well)->wellProtocolTicks == 179);
+    REQUIRE(contested.FindPlayer(0)->resources.dawnshards == 0);
 
-    REQUIRE(harvest.immediateDawnYield == 500);
-    REQUIRE(preserve.recurringDawnYield == 15);
-    REQUIRE(reshape.dawnCost == 120 && reshape.activeDurationTicks == 1800);
+    // A funded duplicate must also refuse: affordability must not mask the
+    // active-protocol guard exercised by the exact-cost fixture below.
+    auto funded = Simulation::LoadSnapshot(snapshot, &error);
+    REQUIRE(funded.has_value());
+    REQUIRE(funded->AddPlayer(2, Faction::HollowChoir, {0, 240}));
+    const EntityId intruder = funded->SpawnEntity(2, Faction::HollowChoir,
+        EntityType::Worker, Vec2::FromTiles(5, 8));
+    Command duplicate = MakeCommand(funded->CurrentTick(), 2, 1,
+        CommandType::FutureWell, intruder);
+    duplicate.target = well; duplicate.wellChoice = FutureWellChoice::Reshape;
+    REQUIRE(funded->QueueCommand(duplicate)); funded->Step();
+    REQUIRE(funded->FindEntity(intruder)->order.type == OrderType::None);
+    REQUIRE(funded->FindPlayer(2)->resources.dawnshards == 240);
+    REQUIRE(funded->FindEntity(well)->wellProtocolTicks == 179);
+    REQUIRE(funded->FindEntity(well)->owner == 0);
+
+    // A duplicate choice cannot restart the warning or charge again.
+    reshape.executeTick = sim.CurrentTick();
+    reshape.sequence = 2;
+    REQUIRE(sim.QueueCommand(reshape));
+    REQUIRE(restored->QueueCommand(reshape));
+    sim.Step(179);
+    restored->Step(179);
+    REQUIRE(sim.FindEntity(well)->wellProtocolTicks == 1);
+    REQUIRE(sim.FindEntity(well)->wellChoice == FutureWellChoice::Dormant);
+    REQUIRE(!sim.IsPositionPassable(Vec2::FromTiles(7, 6)));
+    REQUIRE(restored->StateChecksum() == sim.StateChecksum());
+    auto finalTick = Simulation::LoadSnapshot(sim.SaveSnapshot(), &error);
+    REQUIRE(finalTick.has_value());
+    sim.Step(); restored->Step(); finalTick->Step();
+    state = sim.FindEntity(well);
+    REQUIRE(state->wellChoice == FutureWellChoice::Reshape);
+    REQUIRE(state->wellPendingChoice == FutureWellChoice::Dormant);
+    REQUIRE(state->wellProtocolTicks == 0 && state->wellActivationTick == 480);
+    REQUIRE(state->reshapeUntilTick == 2280);
+    REQUIRE(sim.FindPlayer(0)->resources.dawnshards == 0);
+    REQUIRE(sim.IsPositionPassable(Vec2::FromTiles(7, 6)));
+    REQUIRE(sim.PublicFutureWellTelegraphs().empty());
+    REQUIRE(restored->StateChecksum() == sim.StateChecksum());
+    REQUIRE(finalTick->StateChecksum() == sim.StateChecksum());
+    sim.Step(1799); restored->Step(1799);
+    REQUIRE(sim.IsPositionPassable(Vec2::FromTiles(7, 6)));
+    sim.Step(); restored->Step();
+    REQUIRE(!sim.IsPositionPassable(Vec2::FromTiles(7, 6)));
+    REQUIRE(sim.FindEntity(well)->reshapeUntilTick == 0);
+    REQUIRE(restored->StateChecksum() == sim.StateChecksum());
+    auto replayed = Simulation::ReplayToEnd(sim.ExportReplay(), &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == sim.StateChecksum());
+
+    // Below-cost commands refuse before capture, including direct core input.
+    Simulation poor({20, 20, 20, 0x708ULL});
+    REQUIRE(poor.AddPlayer(0, Faction::MeridianCompact, {500, 119}));
+    const EntityId poorWorker = poor.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::Worker, Vec2::FromTiles(5, 6));
+    const EntityId poorWell = poor.SpawnFutureWell(Vec2::FromTiles(6, 6));
+    Command attempt = MakeCommand(0, 0, 1, CommandType::FutureWell, poorWorker);
+    attempt.target = poorWell; attempt.wellChoice = FutureWellChoice::Reshape;
+    REQUIRE(poor.QueueCommand(attempt)); poor.Step();
+    REQUIRE(poor.FindEntity(poorWorker)->order.type == OrderType::None);
+    REQUIRE(poor.FindEntity(poorWell)->wellCaptureProgress == 0);
+    REQUIRE(poor.FindPlayer(0)->resources.dawnshards == 119);
+    REQUIRE(poor.PublicFutureWellTelegraphs().empty());
+    const auto refused = poor.FindCommandResolutionReceipt(0, 1);
+    REQUIRE(refused.has_value() && refused->outcome == CommandResolutionOutcome::NoEffect);
+
+    // Spending elsewhere during capture cannot create an unfunded warning.
+    Simulation late({20, 20, 20, 0x709ULL});
+    REQUIRE(late.AddPlayer(0, Faction::MeridianCompact, {500, 120}));
+    const EntityId lateWorker = late.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::Worker, Vec2::FromTiles(5, 6));
+    const EntityId lateWell = late.SpawnFutureWell(Vec2::FromTiles(6, 6));
+    const EntityId core = late.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::CommandCore, Vec2::FromTiles(2, 2));
+    const EntityId barracks = late.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::Barracks, Vec2::FromTiles(3, 10));
+    REQUIRE(core != 0 && barracks != 0);
+    attempt.actor = lateWorker; attempt.target = lateWell;
+    REQUIRE(late.QueueCommand(attempt));
+    Command spend = MakeCommand(299, 0, 2, CommandType::Produce, barracks);
+    spend.buildType = EntityType::Soldier;
+    REQUIRE(late.QueueCommand(spend)); late.Step(300);
+    REQUIRE(late.FindPlayer(0)->resources.dawnshards == 100);
+    REQUIRE(late.FindEntity(lateWell)->owner == kNeutralPlayer);
+    REQUIRE(late.FindEntity(lateWell)->wellCaptureProgress == 0);
+    REQUIRE(late.FindEntity(lateWorker)->order.type == OrderType::None);
+    REQUIRE(late.PublicFutureWellTelegraphs().empty());
 }
 
 void TestOpponentAiArchitectureAndDifficultyTiers() {
@@ -7698,6 +7843,206 @@ void TestContactLineOfSightRegression() {
     }
 }
 
+void TestExplicitHostilityAndLegacyReplay() {
+    SimulationConfig config{32, 32, 20, 71};
+    REQUIRE(config.hostilityMasks == kDefaultHostilityMasks);
+    config.hostilityMasks = {0x02, 0x0D, 0x02, 0x02};
+    REQUIRE(config.HasValidHostilityMasks());
+    REQUIRE(!config.IsHostile(0, 2) && !config.IsHostile(0, 3));
+    REQUIRE(config.IsHostile(1, 0) && config.IsHostile(1, 2) && config.IsHostile(1, 3));
+    REQUIRE(!config.IsHostile(0, kNeutralPlayer));
+    for (std::uint8_t invalid : {std::uint8_t{0x82}, std::uint8_t{0x03}, std::uint8_t{0x06}}) {
+        auto bad = config;
+        bad.hostilityMasks[0] = invalid;
+        bool rejected = false;
+        try { Simulation invalidSimulation(bad); }
+        catch (const std::invalid_argument&) { rejected = true; }
+        REQUIRE(rejected);
+    }
+    for (bool ballistic : {false, true}) {
+        config.enableBallisticProjectiles = ballistic;
+        for (CommandType mode : {CommandType::AttackMove, CommandType::Hold,
+                                 CommandType::Patrol, CommandType::Guard}) {
+            Simulation simulation(config);
+            for (PlayerId player = 0; player < 4; ++player)
+                REQUIRE(simulation.AddPlayer(player, Faction::MeridianCompact, {}));
+            const auto defender = simulation.SpawnEntity(0, Faction::MeridianCompact,
+                EntityType::Soldier, Vec2::FromTiles(5, 5));
+            const auto ward = simulation.SpawnEntity(0, Faction::MeridianCompact,
+                EntityType::Worker, Vec2::FromTiles(5, 6));
+            const auto witness2 = simulation.SpawnEntity(2, Faction::MeridianCompact,
+                EntityType::Worker, Vec2::FromTiles(6, 5));
+            const auto witness3 = simulation.SpawnEntity(3, Faction::MeridianCompact,
+                EntityType::Worker, Vec2::FromTiles(6, 6));
+            const auto enemy = simulation.SpawnEntity(1, Faction::MeridianCompact,
+                EntityType::Worker, Vec2::FromTiles(8, 5));
+            const int witnessHealth = simulation.FindEntity(witness2)->hitPoints;
+            const int enemyHealth = simulation.FindEntity(enemy)->hitPoints;
+            auto command = MakeCommand(0, 0, 1, mode, defender);
+            command.target = mode == CommandType::Guard ? ward : 0;
+            command.position = Vec2::FromTiles(10, 5);
+            REQUIRE(simulation.QueueCommand(command));
+            simulation.Step(40);
+            REQUIRE(simulation.FindEntity(witness2)->hitPoints == witnessHealth);
+            REQUIRE(simulation.FindEntity(witness3)->hitPoints == witnessHealth);
+            REQUIRE(simulation.FindEntity(enemy) == nullptr ||
+                    simulation.FindEntity(enemy)->hitPoints < enemyHealth);
+            const auto view = simulation.CreatePlayerView(0);
+            REQUIRE(view.has_value());
+            REQUIRE(view->Config().hostilityMasks == config.hostilityMasks);
+            for (const auto& ai : Simulation::GenerateAiCommands(*view, AiPersonality::Adaptive)) {
+                REQUIRE(ai.type != CommandType::Attack ||
+                        (ai.target != witness2 && ai.target != witness3));
+            }
+            auto forbidden = MakeCommand(simulation.CurrentTick(), 0, 2,
+                CommandType::Attack, defender);
+            forbidden.target = witness2;
+            REQUIRE(simulation.QueueCommand(forbidden));
+            simulation.Step();
+            const auto receipt = simulation.FindCommandResolutionReceipt(0, 2);
+            REQUIRE(receipt.has_value() && receipt->outcome == CommandResolutionOutcome::NoEffect);
+            REQUIRE(simulation.FindEntity(witness2)->hitPoints == witnessHealth);
+        }
+    }
+    // Non-hostile witnesses retain ordinary vulnerability to the opponent,
+    // including a projectile whose firing unit dies before impact.
+    Simulation vulnerable(config);
+    REQUIRE(vulnerable.AddPlayer(1, Faction::MeridianCompact, {}));
+    REQUIRE(vulnerable.AddPlayer(2, Faction::MeridianCompact, {}));
+    const auto hostile = vulnerable.SpawnEntity(1, Faction::MeridianCompact,
+        EntityType::Soldier, Vec2::FromTiles(5, 5));
+    const auto witness = vulnerable.SpawnEntity(2, Faction::MeridianCompact,
+        EntityType::Worker, Vec2::FromTiles(8, 5));
+    const int health = vulnerable.FindEntity(witness)->hitPoints;
+    auto attack = MakeCommand(0, 1, 1, CommandType::Attack, hostile);
+    attack.target = witness;
+    REQUIRE(vulnerable.QueueCommand(attack));
+    vulnerable.Step();
+    REQUIRE(!vulnerable.Projectiles().empty());
+    vulnerable.MutableEntityForTesting(hostile)->hitPoints = 0;
+    vulnerable.Step(10);
+    REQUIRE(vulnerable.FindEntity(witness)->hitPoints < health);
+
+    config.enableBallisticProjectiles = false;
+    Simulation wellWorld(config);
+    REQUIRE(wellWorld.AddPlayer(0, Faction::MeridianCompact, {1000, 1000}));
+    REQUIRE(wellWorld.AddPlayer(1, Faction::MeridianCompact, {}));
+    REQUIRE(wellWorld.AddPlayer(2, Faction::MeridianCompact, {}));
+    const auto worker = wellWorld.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::Worker, Vec2::FromTiles(5, 5));
+    const auto friendlyWorker = wellWorld.SpawnEntity(2, Faction::MeridianCompact,
+        EntityType::Worker, Vec2::FromTiles(7, 5));
+    const auto well = wellWorld.SpawnFutureWell(Vec2::FromTiles(6, 5));
+    auto preserve = MakeCommand(0, 0, 1, CommandType::FutureWell, worker);
+    preserve.target = well;
+    preserve.wellChoice = FutureWellChoice::Preserve;
+    REQUIRE(wellWorld.QueueCommand(preserve));
+    wellWorld.Step(300);
+    REQUIRE(wellWorld.FindEntity(well)->owner == 0);
+    REQUIRE(!wellWorld.IsFutureWellContested(*wellWorld.FindEntity(well)));
+    auto steal = MakeCommand(300, 2, 1, CommandType::FutureWell, friendlyWorker);
+    steal.target = well;
+    steal.wellChoice = FutureWellChoice::Preserve;
+    REQUIRE(wellWorld.QueueCommand(steal));
+    wellWorld.Step();
+    REQUIRE(wellWorld.FindCommandResolutionReceipt(2, 1)->outcome == CommandResolutionOutcome::NoEffect);
+    REQUIRE(wellWorld.SpawnEntity(1, Faction::MeridianCompact,
+        EntityType::Worker, Vec2::FromTiles(6, 7)) != 0);
+    REQUIRE(wellWorld.IsFutureWellContested(*wellWorld.FindEntity(well)));
+
+    std::string error;
+    const auto snapshot = wellWorld.SaveSnapshot();
+    const auto loaded = Simulation::LoadSnapshot(snapshot, &error);
+    REQUIRE(loaded.has_value() && loaded->StateChecksum() == wellWorld.StateChecksum());
+    auto invalidFallback = kDefaultHostilityMasks;
+    invalidFallback[0] = 0xFF;
+    REQUIRE(Simulation::LoadSnapshot(snapshot, &error, invalidFallback).has_value());
+    for (std::uint8_t invalid : {std::uint8_t{0x82}, std::uint8_t{0x03}, std::uint8_t{0x06}}) {
+        auto bad = snapshot;
+        bad[bad.size() - 12U] = invalid;
+        ResignSnapshot(bad);
+        REQUIRE(!Simulation::LoadSnapshot(bad, &error).has_value());
+    }
+    const auto legacy = ConvertSnapshotV28ToV27(snapshot, 32 * 32);
+    const auto generic = Simulation::LoadSnapshot(legacy, &error);
+    const auto mission = Simulation::LoadSnapshot(legacy, &error, config.hostilityMasks);
+    REQUIRE(generic.has_value() && mission.has_value());
+    REQUIRE(generic->Config().hostilityMasks == kDefaultHostilityMasks);
+    REQUIRE(mission->Config().hostilityMasks == config.hostilityMasks);
+    REQUIRE(!Simulation::LoadSnapshot(legacy, &error, invalidFallback).has_value());
+
+    // Nonhostility grants neither command authority nor another player's sight.
+    Simulation isolated(config);
+    REQUIRE(isolated.AddPlayer(0, Faction::MeridianCompact, {}));
+    REQUIRE(isolated.AddPlayer(2, Faction::MeridianCompact, {}));
+    REQUIRE(isolated.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::ScoutUnit, Vec2::FromTiles(2, 2)) != 0);
+    const auto distantAlly = isolated.SpawnEntity(2, Faction::MeridianCompact,
+        EntityType::ScoutUnit, Vec2::FromTiles(28, 28));
+    isolated.Step();
+    REQUIRE(!isolated.IsEntityVisibleTo(0, distantAlly));
+    const auto localView = isolated.CreatePlayerView(0);
+    REQUIRE(localView.has_value());
+    REQUIRE(std::none_of(localView->Entities().begin(), localView->Entities().end(),
+        [distantAlly](const Entity& entity) { return entity.id == distantAlly; }));
+    auto unauthorized = MakeCommand(1, 0, 1, CommandType::Move, distantAlly);
+    unauthorized.position = Vec2::FromTiles(25, 25);
+    REQUIRE(isolated.QueueCommand(unauthorized));
+    isolated.Step();
+    REQUIRE(isolated.FindCommandResolutionReceipt(0, 1)->outcome == CommandResolutionOutcome::NoEffect);
+    REQUIRE(isolated.FindEntity(distantAlly)->position == Vec2::FromTiles(28, 28));
+
+    // A legacy FFA projectile and its retained Attack cannot hurt a witness
+    // after migration into the authored M15 relation, including before a tick.
+    auto oldConfig = config;
+    oldConfig.hostilityMasks = kDefaultHostilityMasks;
+    oldConfig.enableBallisticProjectiles = true;
+    Simulation unsafeLegacy(oldConfig);
+    REQUIRE(unsafeLegacy.AddPlayer(0, Faction::MeridianCompact, {}));
+    REQUIRE(unsafeLegacy.AddPlayer(2, Faction::MeridianCompact, {}));
+    const auto legacyShooter = unsafeLegacy.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::Soldier, Vec2::FromTiles(5, 5));
+    const auto legacyWitness = unsafeLegacy.SpawnEntity(2, Faction::MeridianCompact,
+        EntityType::Worker, Vec2::FromTiles(8, 5));
+    auto legacyAttack = MakeCommand(0, 0, 1, CommandType::Attack, legacyShooter);
+    legacyAttack.target = legacyWitness;
+    REQUIRE(unsafeLegacy.QueueCommand(legacyAttack));
+    unsafeLegacy.Step();
+    REQUIRE(!unsafeLegacy.Projectiles().empty());
+    const auto unsafeBytes = ConvertSnapshotV28ToV27(unsafeLegacy.SaveSnapshot(), 32 * 32);
+    auto sanitized = Simulation::LoadSnapshot(unsafeBytes, &error, config.hostilityMasks);
+    REQUIRE(sanitized.has_value());
+    REQUIRE(sanitized->Projectiles().empty());
+    REQUIRE(sanitized->FindEntity(legacyShooter)->order.type == OrderType::None);
+    const auto migratedHealth = sanitized->FindEntity(legacyWitness)->hitPoints;
+    sanitized->Step(20);
+    REQUIRE(sanitized->FindEntity(legacyWitness)->hitPoints == migratedHealth);
+
+    // Historical oracle: commit 15008d55378323bb1731193213d70ab586da49c0,
+    // schema27 core compiled independently with the exact setup below.
+    // StateChecksum uses typed HashWriter operations, not snapshot FNV integrity.
+    Simulation oldWorld(SimulationConfig{32, 32, 20, 89});
+    REQUIRE(oldWorld.AddPlayer(0, Faction::MeridianCompact, {}));
+    const auto scout = oldWorld.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::ScoutUnit, Vec2::FromTiles(5, 5));
+    oldWorld.CaptureReplayBaseline();
+    auto move = MakeCommand(0, 0, 1, CommandType::Move, scout);
+    move.position = Vec2::FromTiles(10, 10);
+    REQUIRE(oldWorld.QueueCommand(move));
+    oldWorld.Step(60);
+    const auto currentReplay = oldWorld.ExportReplay();
+    REQUIRE(Simulation::ReplayToEnd(currentReplay, &error).has_value());
+    auto oldReplay = currentReplay;
+    oldReplay.initialSnapshot = ConvertSnapshotV28ToV27(currentReplay.initialSnapshot, 32 * 32);
+    oldReplay.finalChecksum = 7947105480651690908ULL;
+    REQUIRE(oldReplay.finalChecksum != currentReplay.finalChecksum);
+    REQUIRE(Simulation::ReplayToEnd(oldReplay, &error).has_value());
+    ++oldReplay.finalChecksum;
+    REQUIRE(!Simulation::ReplayToEnd(oldReplay, &error).has_value());
+}
+
+#include "ReplayReportTests.h"
+
 }  // namespace
 
 int main() {
@@ -7730,6 +8075,7 @@ int main() {
          TestFourPlayerVisibilitySnapshotAndOutcome},
         {"Future Well choices", TestFutureWellChoices},
         {"snapshot and replay", TestSnapshotAndReplay},
+        {"replay report authority and continuation", TestReplayReportAuthorityAndContinuation},
         {"Future Well snapshot migration and replay",
          TestFutureWellSnapshotMigrationAndReplay},
         {"numeric and public input hardening", TestNumericAndPublicInputHardening},
@@ -7885,6 +8231,7 @@ int main() {
          TestPhaseAnchorDawnCoherenceField},
         {"ballistic projectile flight and occlusion",
          TestBallisticProjectileFlightAndOcclusion},
+        {"explicit hostility and legacy replay", TestExplicitHostilityAndLegacyReplay},
     };
 
     std::size_t passed = 0;

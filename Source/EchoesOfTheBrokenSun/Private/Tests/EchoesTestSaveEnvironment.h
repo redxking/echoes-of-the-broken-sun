@@ -9,7 +9,6 @@
 #include "EchoesTestBootstrap.h"
 #include "HAL/CriticalSection.h"
 #include "HAL/FileManager.h"
-#include "HAL/PlatformProcess.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Guid.h"
 #include "Misc/Parse.h"
@@ -72,15 +71,11 @@ public:
         }
 
         FString SuiteRoot;
-        FParse::Value(
-            *OriginalCommandLine,
-            TEXT("EchoesSaveGameDirectory="),
-            SuiteRoot);
-        if (SuiteRoot.IsEmpty())
+        if (!EchoesTestBootstrap::GetValidatedSuiteSaveDirectory(SuiteRoot))
         {
-            SuiteRoot = FPaths::Combine(
-                FPlatformProcess::UserTempDir(),
-                TEXT("EchoesAutomation"));
+            Test.AddError(
+                TEXT("[ECHOES_TEST_STORAGE_VALIDATED_ROOT_MISSING] Bootstrap did not provide the canonical validated suite save root."));
+            return;
         }
         if (SuiteRoot.Contains(TEXT("\"")) ||
             SuiteRoot.Contains(TEXT("\r")) ||
@@ -91,18 +86,10 @@ public:
             return;
         }
         SuiteRoot = NormalizeDirectory(SuiteRoot);
-        const FString TemporaryRoot = NormalizeDirectory(
-            FPlatformProcess::UserTempDir());
-        if (SuiteRoot != TemporaryRoot &&
-            !FPaths::IsUnderDirectory(SuiteRoot, TemporaryRoot))
-        {
-            Test.AddError(
-                TEXT("[ECHOES_TEST_STORAGE_NON_TEMP_ROOT] The automation storage parent must be under the platform temporary directory."));
-            return;
-        }
         const FString PlayerSaveRoot = NormalizeDirectory(
             FPaths::Combine(
-                FPaths::ProjectSavedDir(),
+                FPaths::ProjectDir(),
+                TEXT("Saved"),
                 TEXT("SaveGames")));
         if (SuiteRoot == PlayerSaveRoot ||
             FPaths::IsUnderDirectory(SuiteRoot, PlayerSaveRoot))

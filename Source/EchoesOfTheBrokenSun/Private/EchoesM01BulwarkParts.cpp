@@ -24,8 +24,7 @@ void AEchoesEntityView::ResetM01BulwarkParts()
 
 void AEchoesEntityView::ConfigureM01BulwarkParts()
 {
-    const auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
-    const bool bEligible = Bridge && Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue &&
+    const bool bEligible = UsesProloguePresentation() &&
         EntityFaction == echoes::sim::Faction::MeridianCompact &&
         EntityType == echoes::sim::EntityType::HeavyUnit && bUsingAuthoredRosterMesh;
     if (!bEligible)

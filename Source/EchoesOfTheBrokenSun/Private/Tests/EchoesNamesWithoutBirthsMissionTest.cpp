@@ -6,6 +6,7 @@
 
 #include "EchoesCampaignProgress.h"
 #include "EchoesCampaignMapCheckpoint.h"
+#include "EchoesReplayCheckpointTestHelpers.h"
 #include "EchoesNamesWithoutBirthsMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -349,6 +350,7 @@ bool FEchoesNamesWithoutBirthsMissionTest::RunTest(const FString& Parameters)
                 *QuickSavePath) &&
                 FEchoesCampaignMapCheckpoint::Inspect(
                     CurrentMapEnvelope, MapIdentity, CurrentTopologyBytes, MapFailure) &&
+                ExtractReplayCheckpointPayloadForTest(CurrentTopologyBytes, Feedback) &&
                 CurrentTopologyBytes.Num() > 16 &&
                 CurrentTopologyBytes[TopologyRevisionOffset] == 2))
     {

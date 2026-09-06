@@ -6,6 +6,7 @@
 
 #include "EchoesCampaignProgress.h"
 #include "EchoesCampaignMapCheckpoint.h"
+#include "EchoesReplayCheckpointTestHelpers.h"
 #include "EchoesSnapshotMigrationTestHelpers.h"
 #include "EchoesSeveralVoicesOneCommandMissionModel.h"
 #include "EchoesSimulationSubsystem.h"
@@ -311,12 +312,11 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TestEqual(TEXT("Mission 14 uses the current campaign schema"),
               FEchoesCampaignProgress::SchemaVersion,
               static_cast<uint16>(2));
-    // Per-player terrain and object memory is now serialized into the
-    // snapshot, so the native schema moved from 24 to 25. The replay
-    // envelope shape did not change and stays at 24.
-    TestEqual(TEXT("Mission 14 writes native snapshot schema 26"),
+    // Schema 28 appends player-hostility masks after schema 27 lifecycle state.
+    // The replay envelope shape did not change and stays at 24.
+    TestEqual(TEXT("Mission 14 writes native snapshot schema 28"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(26));
+              static_cast<uint32>(28));
 
     FString Feedback;
     FEchoesCampaignProgress ThirteenRecords =
@@ -646,7 +646,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         Bridge->GetSimulation()->NextCommandSequence(
             UEchoesSimulationSubsystem::LocalPlayerId);
     TestTrue(
-        TEXT("The schema-26 reconciliation has a stable receipt sequence"),
+        TEXT("The schema-28 reconciliation has a stable receipt sequence"),
         NativeReconciliationSequence.has_value());
     TestTrue(
         TEXT("The protected Soldier accepts Possible resolution"),
@@ -673,7 +673,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
                 ChoirIdentityState::DualResolvePossible &&
             InitialResolveRemaining > 0 && InitialResolveRemaining <= 160);
     TestTrue(
-        TEXT("The native schema-26 source retains the reconciliation receipt"),
+        TEXT("The native schema-28 source retains the reconciliation receipt"),
         NativeReconciliationSequence.has_value() &&
             Bridge->GetSimulation()->FindCommandResolutionReceipt(
                 UEchoesSimulationSubsystem::LocalPlayerId,
@@ -696,15 +696,28 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         NativeLayout;
     TestTrue(
-        TEXT("The Mission 14 schema-26 checkpoint exposes a bounded nonzero receipt block"),
+        TEXT("The Mission 14 schema-28 checkpoint exposes bounded receipt, lifecycle, and hostility blocks"),
         FFileHelper::LoadFileToArray(NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, NativeCheckpoint, MapFailure) &&
+            ExtractReplayCheckpointPayloadForTest(NativeCheckpoint, Feedback) &&
             EchoesSnapshotMigrationTestHelpers::
                 InspectMission14EnvelopeSnapshot(
                     NativeCheckpoint, NativeLayout) &&
             NativeLayout.ReceiptCount > 0U &&
             NativeLayout.ReceiptBlockSize ==
-                4 + static_cast<int32>(NativeLayout.ReceiptCount) * 19);
+                4 + static_cast<int32>(NativeLayout.ReceiptCount) * 19 &&
+            NativeLayout.Schema27AppendOffset ==
+                NativeLayout.Schema26AppendOffset +
+                    NativeLayout.Schema26AppendSize &&
+            NativeLayout.Schema27AppendSize >= 4 &&
+            (NativeLayout.Schema27AppendSize - 4) % 16 == 0 &&
+            NativeLayout.Schema28AppendOffset ==
+                NativeLayout.Schema27AppendOffset +
+                    NativeLayout.Schema27AppendSize &&
+            NativeLayout.Schema28AppendSize ==
+                static_cast<int32>(echoes::sim::kMaximumPlayers) &&
+            NativeLayout.Schema28HostilityMasks ==
+                echoes::sim::kDefaultHostilityMasks);
     // The schema-25 memory ledgers are measured against this mission's own map,
     // not taken on the inspector's word: four remembered-terrain grids of
     // exactly the live tile count, then one bounded object ledger per player.
@@ -803,17 +816,16 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         {
             EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
                 ProtectedCoreSnapshot);
-            // The source here is the checkpoint just written by this run,
-            // so it carries the native schema. That native schema is 25
-            // now that per-player terrain and object memory is serialized;
-            // the replay envelope is unrelated and stays at 24.
+            // The source here is the checkpoint just written by this run, so
+            // it carries native schema 28. The replay envelope is unrelated
+            // and stays at 24.
             bProtectedCoreSourceLoadable =
                 EchoesSnapshotMigrationTestHelpers::
                     IsLoadableEmbeddedSnapshot(
                         ProtectedCoreSnapshot,
                         NativeLayout.SnapshotOffset,
                         NativeLayout.SnapshotLength,
-                        25U);
+                        echoes::sim::kSnapshotVersion);
         }
     }
     TestTrue(
@@ -933,14 +945,17 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     // With no receipt records left, the only bytes the walk down to schema 22
     // may drop are the empty receipt count, the protection mask, and the
     // schema-25 memory ledgers this map's dimensions already pinned above,
-    // plus the separately measured schema-26 work/projectile append.
+    // plus the separately measured schema-26 work/projectile, schema-27
+    // lifecycle, and schema-28 hostility-mask appends.
     TestTrue(
-        TEXT("Mission 14 converts zero receipts with the exact schema-26 append, memory-ledger, and five-byte shrink"),
+        TEXT("Mission 14 converts zero receipts with the exact schema-28, schema-27, and schema-26 appends, memory-ledger, and five-byte shrink"),
         EchoesSnapshotMigrationTestHelpers::
                 ConvertMission14EnvelopeSnapshotToV22(ZeroReceiptV22) &&
             ZeroReceiptNative.Num() - ZeroReceiptV22.Num() ==
                 5 + NativeLayout.MemoryLedgerSize +
-                    NativeLayout.Schema26AppendSize &&
+                    NativeLayout.Schema26AppendSize +
+                    NativeLayout.Schema27AppendSize +
+                    NativeLayout.Schema28AppendSize &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
                 ZeroReceiptV22) == 22U);
 
@@ -948,9 +963,11 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     const uint64 ExpectedNativeToV22Shrink = 5ULL +
         static_cast<uint64>(NativeLayout.ReceiptCount) * 19ULL +
         static_cast<uint64>(NativeLayout.MemoryLedgerSize) +
-        static_cast<uint64>(NativeLayout.Schema26AppendSize);
+        static_cast<uint64>(NativeLayout.Schema26AppendSize) +
+        static_cast<uint64>(NativeLayout.Schema27AppendSize) +
+        static_cast<uint64>(NativeLayout.Schema28AppendSize);
     TestTrue(
-        TEXT("The Mission 14 checkpoint converts through schemas 24 and 23 to its genuine schema-22 shape"),
+        TEXT("The Mission 14 checkpoint converts through every schema from 28 to its genuine schema-22 shape"),
         EchoesSnapshotMigrationTestHelpers::
                 ConvertMission14EnvelopeSnapshotToV22(V22Checkpoint) &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
@@ -1025,27 +1042,28 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TArray<uint8> ResavedNativePrimary;
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         ResavedNativeLayout;
-    // Resaving writes the native schema, which moved from 24 to 25 because
-    // per-player terrain and object memory is now serialized. The retained
-    // backup is a genuine migration fixture and stays at schema 22.
+    // Resaving writes native schema 28. The retained backup is a genuine
+    // migration fixture and stays at schema 22.
     TestTrue(
-        TEXT("The legacy-loaded Mission 14 state resaves natively as schema 26"),
+        TEXT("The legacy-loaded Mission 14 state resaves natively as schema 28"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, ResavedNativePrimary, MapFailure) &&
+            ExtractReplayCheckpointPayloadForTest(ResavedNativePrimary, Feedback) &&
             EchoesSnapshotMigrationTestHelpers::
                 InspectMission14EnvelopeSnapshot(
                     ResavedNativePrimary,
                     ResavedNativeLayout) &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
-                ResavedNativePrimary) == 26U);
+                ResavedNativePrimary) == echoes::sim::kSnapshotVersion);
     TArray<uint8> RetainedV22Backup;
     TestTrue(
-        TEXT("The first schema-26 resave retains the valid schema-22 Mission 14 generation"),
+        TEXT("The first schema-28 resave retains the valid schema-22 Mission 14 generation"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope,
             *(QuickSavePath + TEXT(".bak"))) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, RetainedV22Backup, MapFailure) &&
+            ExtractReplayCheckpointPayloadForTest(RetainedV22Backup, Feedback) &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
                 RetainedV22Backup) == 22U);
     TArray<uint8> CorruptedCheckpoint;
@@ -1145,7 +1163,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             Objective.SeveralVoicesPhaseAnchorId != 0 &&
             InitialCrisisRemaining > 0 && InitialCrisisRemaining <= 160);
     TestTrue(
-        TEXT("The crisis hold reconstructs through schema-26 quick load"),
+        TEXT("The crisis hold reconstructs through schema-28 quick load"),
         Bridge->QuickSaveScenario(Feedback) &&
             Bridge->QuickLoadScenario(Feedback) &&
             Bridge->GetSeveralVoicesOneCommandPhase() ==
@@ -1251,6 +1269,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             FEchoesCampaignMapCheckpoint::Inspect(
                 TamperedFailureMapEnvelope, MapIdentity,
                 TamperedFailureEnvelope, MapFailure) &&
+            ExtractReplayCheckpointPayloadForTest(TamperedFailureEnvelope, Feedback) &&
             TamperedFailureEnvelope.Num() > 10 &&
             TamperedFailureEnvelope[10] == 0x03);
     if (TamperedFailureEnvelope.Num() > 10)
@@ -1295,17 +1314,17 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     const FEchoesCampaignDecisionRecord* MissionRecord =
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::SeveralVoicesOneCommand);
-    // The commit is written now, so it stamps the current native snapshot
-    // schema. That moved from 24 to 25 because per-player terrain and object
-    // memory is now serialized; the replay envelope stays at 24.
+    // The commit is written now, so it stamps current native schema-28
+    // provenance; the replay envelope stays at schema 24.
     TestTrue(
-        TEXT("Mission 14 stores the protocol, all facts, and schema-26 provenance"),
+        TEXT("Mission 14 stores the protocol, all facts, and schema-28 provenance"),
         MissionRecord != nullptr &&
             MissionRecord->WellChoice == FutureWellChoice::Preserve &&
             MissionRecord->AvailableWellChoices ==
                 SeveralVoicesChoiceMask(FutureWellChoice::Preserve) &&
             MissionRecord->VerifiedFacts == 0xFF &&
-            MissionRecord->SimulationSnapshotVersion == 26 &&
+            MissionRecord->SimulationSnapshotVersion ==
+                echoes::sim::kSnapshotVersion &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0 &&
             Bridge->IsScenarioPaused());

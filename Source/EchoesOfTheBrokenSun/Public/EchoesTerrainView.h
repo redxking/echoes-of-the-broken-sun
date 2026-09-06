@@ -24,8 +24,8 @@ class UStaticMesh;
  *
  * FOG-001 boundary: a tile silhouette is instanced only where the local
  * player's information state is Explored or Visible. Unexplored tiles instance
- * nothing, so the view cannot draw terrain the player has not scouted. Gating
- * is presentation-only (SIM-002): what the simulation stores, reports, and
+ * nothing; explored tiles use the player's remembered terrain and passability.
+ * Gating is presentation-only (SIM-002): what the simulation stores, reports, and
  * checksums is untouched, and the authoritative census accessors below still
  * report the terrain the view was handed.
  */
@@ -40,7 +40,8 @@ public:
     // ScopedPlayer names the local player whose information state gates what is
     // drawn. Leaving it unset keeps the legacy unscoped behaviour, in which
     // every authored tile is drawn; callers that present to a human player must
-    // supply the local player id so unexplored terrain stays undrawn.
+    // supply the local player id so unexplored terrain stays undrawn and hidden
+    // changes to explored terrain stay at the player's last observed state.
     bool InitializeTerrain(
         const echoes::sim::Simulation& Simulation,
         float TileWorldSize,
@@ -58,10 +59,15 @@ public:
         std::optional<EEchoesOperationMode> OperationMode = std::nullopt);
     bool SyncScopedTerrain(
         const std::vector<echoes::sim::net::ScopedTileState>& Tiles);
+#if WITH_DEV_AUTOMATION_TESTS
+    // Historical decoration-fixture coverage only; production and observers
+    // always admit dressing against authored topology.
+    void UseDiagnosticDressingTopologyForTesting() { bDiagnosticDressingTopology = true; }
+#endif
 
     // Glass Scar dressing (map_dressing_v1): digest-pinned shelf and shard
     // records consumed as two more presentation-only instanced layers. A
-    // record is placed only where the live simulation still reports its cell
+    // record is placed only where the selected information source reports its cell
     // Blocked, drawn only where the local information state is not
     // Unexplored, and hidden while a Reshape Well holds that cell open, so
     // dressing can never imply an affordance the simulation does not grant.
@@ -317,8 +323,9 @@ private:
     int32 InstancedScarredTileCount = 0;
 
     bool bDressingActive = false;
-    // True between Initialize and the first Sync, which proves the live
-    // terrain is the bound compiled pack before anything draws.
+    bool bDiagnosticDressingTopology = false;
+    // Scoped consumers validate authored topology, never unexplored sentinels.
+    // Unscoped diagnostic consumers retain their explicit fixture check.
     bool bDressingAwaitingIdentity = false;
     int32 DressingRecordCount = 0;
     int32 DressingPlacedCount = 0;

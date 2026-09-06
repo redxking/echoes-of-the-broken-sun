@@ -59,9 +59,10 @@ public:
 
 #if WITH_DEV_AUTOMATION_TESTS
     /**
-     * Live-engine playback evidence for one cue, gathered from the world's
-     * audio device on the audio thread. Submission counters alone cannot
-     * prove a voice exists; these counts can.
+     * Live-engine playback evidence for one cue and this subsystem's
+     * concurrency policy, gathered from the world's audio device on the
+     * audio thread. Submission counters alone cannot prove a voice exists;
+     * these counts can.
      */
     struct FLiveVoiceEvidenceForTest
     {

@@ -83,7 +83,8 @@ bool FEchoesLumeReachDressingTest::RunTest(const FString& Parameters)
         return false;
     }
 
-    // 1. Explicit operation mode initialization
+    // 1. Historical overlay fixture, explicitly separate from current M10.
+    TerrainView->UseDiagnosticDressingTopologyForTesting();
     const bool bInitOk = TerrainView->InitializeTerrain(
         StandaloneSim,
         200.0f,
@@ -125,6 +126,7 @@ bool FEchoesLumeReachDressingTest::RunTest(const FString& Parameters)
         SpawnParameters);
     if (TestNotNull(TEXT("Auto-detect terrain view spawned"), AutoDetectTerrainView))
     {
+        AutoDetectTerrainView->UseDiagnosticDressingTopologyForTesting();
         const bool bAutoInitOk = AutoDetectTerrainView->InitializeTerrain(
             StandaloneSim,
             200.0f,
@@ -157,7 +159,10 @@ bool FEchoesLumeReachDressingTest::RunTest(const FString& Parameters)
             TestPlayer,
             EEchoesOperationMode::CampaignChoirAtLumeReach);
         TestTrue(TEXT("Scoped InitializeTerrain succeeds"), bScopedInitOk);
-        TestTrue(TEXT("Scoped dressing is active"), ScopedTerrainView->IsDressingActive());
+        TestFalse(TEXT("Legacy overlay dressing cannot bind current M10 through unexplored sentinels"),
+            ScopedTerrainView->IsDressingActive());
+        TestEqual(TEXT("Current M10 topology rejects the 34 incompatible legacy records before reveal"),
+            ScopedTerrainView->GetDressingRefusedCount(), 34);
         // Fresh simulation without scouts has all tiles Unexplored for TestPlayer
         TestEqual(
             TEXT("Unexplored tiles instance zero dressing records"),

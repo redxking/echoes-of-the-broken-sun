@@ -70,7 +70,8 @@ def main() -> int:
     # 1. Compile native binary
     build_harness(project_dir, harness_bin)
 
-    # 2. Run 1,000 matches
+    # 2. Run the diagnostic matrix. Only authoritative SimCore outcomes count;
+    # ongoing runs remain actionable stalls and never receive inferred winners.
     total_matches = int(os.environ.get("ECHOES_BALANCE_MATCHES", "1000"))
     threads = int(os.environ.get("ECHOES_BALANCE_THREADS", "0"))
     cmd = [
@@ -105,13 +106,17 @@ def main() -> int:
     primacy = data.get("strategy_primacy", {})
     determinism = data.get("determinism", {})
     battery = data.get("ai_competence_battery", {})
+    terminal_matches = data.get("authoritative_terminal_matches", 0)
+    actionable_stalls = data.get("actionable_stalls", 0)
 
-    md_content = f"""# Headless AI Balance & 1,000-Match Validation Report
+    md_content = f"""# Headless AI Match Diagnostic Report
 
-**Rules Commit SHA:** `{git_commit}`  
-**Total Matches:** {data.get('total_matches', 0)}  
-**Execution Duration:** {data.get('elapsed_seconds', 0.0):.2f} seconds ({data.get('throughput_matches_per_sec', 0.0):.1f} matches/sec)  
-**Requirement Specification:** `SPEC-BAL-001` through `SPEC-BAL-008`
+**Rules Commit SHA:** `{git_commit}`
+**Total Matches:** {data.get('total_matches', 0)}
+**Authoritative Terminal Matches:** {terminal_matches}
+**Actionable Stalls:** {actionable_stalls}
+**Execution Duration:** {data.get('elapsed_seconds', 0.0):.2f} seconds ({data.get('throughput_matches_per_sec', 0.0):.1f} matches/sec)
+**Evidence Boundary:** Diagnostic only; the fixture is one synthetic map and the competence battery is incomplete.
 
 ---
 
@@ -124,21 +129,18 @@ def main() -> int:
 | **Meridian vs Hollow Choir** (`SPEC-BAL-003`) | 40.0% – 60.0% | {asym.get('meridian_vs_choir', {}).get('rate', 0.0)*100:.1f}% | [{asym.get('meridian_vs_choir', {}).get('ci_lower', 0.0)*100:.1f}%, {asym.get('meridian_vs_choir', {}).get('ci_upper', 0.0)*100:.1f}%] | ±{asym.get('meridian_vs_choir', {}).get('margin', 0.0)*100:.1f}% | {'✅ PASS' if asym.get('meridian_vs_choir', {}).get('passed') else '❌ FAIL'} |
 | **Kharuun vs Hollow Choir** (`SPEC-BAL-003`) | 40.0% – 60.0% | {asym.get('kharuun_vs_choir', {}).get('rate', 0.0)*100:.1f}% | [{asym.get('kharuun_vs_choir', {}).get('ci_lower', 0.0)*100:.1f}%, {asym.get('kharuun_vs_choir', {}).get('ci_upper', 0.0)*100:.1f}%] | ±{asym.get('kharuun_vs_choir', {}).get('margin', 0.0)*100:.1f}% | {'✅ PASS' if asym.get('kharuun_vs_choir', {}).get('passed') else '❌ FAIL'} |
 | **Strategy Primacy (Adaptive vs Econ)** (`SPEC-BAL-005`) | > 75.0% | {primacy.get('rate', 0.0)*100:.1f}% | — | ±{primacy.get('margin', 0.0)*100:.1f}% | {'✅ PASS' if primacy.get('passed') else '❌ FAIL'} |
-| **Batch Replay Determinism** (`SPEC-BAL-006`) | 100% Bit-Exact | 100.0% | — | 0.0% | {'✅ PASS' if determinism.get('passed') else '❌ FAIL'} |
-| **AI Competence Battery** (`SPEC-BAL-008`) | 4/4 Tests Pass | 100.0% | — | 0.0% | {'✅ PASS' if battery.get('passed') else '❌ FAIL'} |
+| **Duplicate Deterministic Rerun** | Final state and termination match | {'MATCHED' if determinism.get('passed') else 'DIVERGED'} | — | — | {'✅ PASS' if determinism.get('passed') else '❌ FAIL'} |
+| **AI Competence Battery** (`SPEC-BAL-008`) | 4/4 Tests Pass | {battery.get('implemented_checks', 0)}/{battery.get('required_checks', 4)} implemented | — | — | INCOMPLETE |
 
 ---
 
 ## 2. Requirement Crosswalk & Qualification
 
-- **SPEC-BAL-001 (Headless Batch Simulation Harness):** PASS (Completed {total_matches} matches in {t_elapsed:.2f}s < 1,800s budget).
-- **SPEC-BAL-002 (Statistical Balance Reporting with Uncertainty):** PASS (Reported as Rate ± Margin of Error with 95% Wilson binomial confidence intervals).
-- **SPEC-BAL-003 (Faction Asymmetry Balance Band):** {'PASS' if asym.get('passed') else 'FAIL'} (Non-mirror matchups within 40%–60% window).
-- **SPEC-BAL-004 (Map and Spawn Symmetry Fairness):** {'PASS' if spawn.get('passed') else 'FAIL'} (Slot 0 win rate within 45%–55% window).
-- **SPEC-BAL-005 (Strategy Primacy Over Randomness):** {'PASS' if primacy.get('passed') else 'FAIL'} (Balanced adaptive doctrine defeats flawed economy doctrine at >75% rate).
-- **SPEC-BAL-006 (Batch Replayability & Verification):** {'PASS' if determinism.get('passed') else 'FAIL'} (10/10 sampled matches match tick-by-tick and checksums).
-- **SPEC-BAL-007 (Balance Evidence Expiry & Re-Validation):** PASS (Bound to commit `{git_commit}`).
-- **SPEC-BAL-008 (AI Instrument Competence Baseline):** {'PASS' if battery.get('passed') else 'FAIL'} (Retreat, focus fire, recon, resource saturation verified).
+- **Terminal integrity:** {terminal_matches}/{total_matches} runs reached an authoritative SimCore outcome. The remaining {actionable_stalls} runs are excluded from win-rate claims.
+- **Map scope:** The native harness uses `TournamentSymmetric48`; it does not represent the three shipping skirmish maps.
+- **Replay scope:** Duplicate execution {'matched' if determinism.get('passed') else 'diverged'}. This is deterministic rerun evidence, not full replay-path qualification.
+- **Competence scope:** {battery.get('implemented_checks', 0)}/{battery.get('required_checks', 4)} required checks are implemented. Focus fire, reconnaissance, and saturation remain unproven here.
+- **Revision:** Diagnostic generated from commit `{git_commit}`. A commit label does not qualify incomplete evidence.
 """
 
     with open(report_md, "w", encoding="utf-8") as f:
@@ -153,10 +155,10 @@ def main() -> int:
     )
 
     if overall_passed:
-        print("\n>>> ALL SPEC-BAL-001..008 REQUIREMENTS QUALIFIED SUCCESSFULLY! <<<")
+        print("\n>>> DIAGNOSTIC MATRIX COMPLETED WITHOUT QUALIFICATION GAPS <<<")
         return 0
     else:
-        print("\n>>> SOME SPEC-BAL REQUIREMENTS FAILED QUALIFICATION <<<", file=sys.stderr)
+        print("\n>>> DIAGNOSTIC COMPLETE; BALANCE QUALIFICATION REMAINS OPEN <<<", file=sys.stderr)
         return 1
 
 

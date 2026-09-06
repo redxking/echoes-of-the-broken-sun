@@ -23,6 +23,10 @@ from typing import Iterable
 
 
 MANIFEST_FORMAT = "EchoesTestSandbox/v1"
+AUTOMATION_STORAGE_PARTS = ("BuildArtifacts", "TestIO")
+SUITE_PREFIX = "EAT."
+LOCAL_CACHE_DIR_NAME = "DDC"
+UNREAL_DDC_MAX_PATH_LENGTH = 119
 
 
 def _resolved(path: Path) -> Path:
@@ -41,6 +45,55 @@ def _is_descendant(candidate: Path, parent: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def _prepare_automation_storage_root(project: Path, home_directory: Path) -> Path:
+    """Create and validate the fixed project-owned automation storage root."""
+    project = _resolved(project)
+    project_root = project.parent
+    # Home is a deny-only policy target. Keep it lexical so validation never
+    # stats, resolves, or enumerates real player data.
+    home_directory = _lexical_absolute(home_directory)
+    storage_root = project_root.joinpath(*AUTOMATION_STORAGE_PARTS)
+    player_save_root = project_root / "Saved" / "SaveGames"
+
+    if _is_descendant(storage_root, home_directory):
+        raise ValueError(
+            "project automation storage may not be inside the player's home directory")
+    if _is_descendant(storage_root, player_save_root):
+        raise ValueError(
+            "project automation storage may not be inside the real player SaveGames tree")
+
+    current = project_root
+    for component in AUTOMATION_STORAGE_PARTS:
+        current = current / component
+        if current.is_symlink():
+            raise ValueError(
+                "project automation storage may not traverse a symlink")
+    storage_root.mkdir(parents=True, exist_ok=True)
+
+    # Repeat the checks after creation so a pre-existing redirection cannot
+    # pass through mkdir. Same-user mutation of the project tree while this
+    # launcher is setting up is outside this local test boundary.
+    current = project_root
+    for component in AUTOMATION_STORAGE_PARTS:
+        current = current / component
+        if current.is_symlink():
+            raise ValueError(
+                "project automation storage may not traverse a symlink")
+    canonical_storage_root = _resolved(storage_root)
+    if canonical_storage_root != storage_root:
+        raise ValueError(
+            "project automation storage did not resolve to its fixed route")
+    if not _is_descendant(canonical_storage_root, project_root):
+        raise ValueError("project automation storage escaped the project root")
+    if _is_descendant(canonical_storage_root, home_directory):
+        raise ValueError(
+            "project automation storage may not be inside the player's home directory")
+    if _is_descendant(canonical_storage_root, player_save_root):
+        raise ValueError(
+            "project automation storage may not be inside the real player SaveGames tree")
+    return canonical_storage_root
 
 
 def _lisp_string(value: str) -> str:
@@ -232,17 +285,26 @@ def launch(args: argparse.Namespace) -> int:
     if not project.is_file():
         raise RuntimeError(f"Unreal project is absent: {project}")
 
-    # Do not let TMPDIR redirect test creation into a player-data location.
-    # This is the OS-owned per-user temporary hierarchy also used by UE on macOS.
-    temporary_root = subprocess.check_output(
-        ["/usr/bin/getconf", "DARWIN_USER_TEMP_DIR"], text=True).strip()
-    if not temporary_root.startswith("/var/folders/") and not temporary_root.startswith("/private/var/folders/"):
-        raise RuntimeError("macOS user temporary directory is outside the supported hierarchy")
+    home_value = os.environ.get("HOME")
+    if not home_value:
+        raise RuntimeError("HOME is unavailable; refusing to infer a player-data deny path")
+    # Keep the home deny target lexical: this launcher must not stat, enumerate,
+    # hash, or otherwise access the real player's home directory to protect it.
+    home_directory = _lexical_absolute(Path(home_value))
+    automation_storage_root = _prepare_automation_storage_root(
+        project, home_directory)
+    # Supplying dir= keeps Python, Unreal save routes, and DDC state on the
+    # project drive even when TMPDIR points at macOS' internal per-user temp.
     sandbox_root = Path(tempfile.mkdtemp(
-        prefix="EchoesAutomationSuite.", dir=temporary_root))
+        prefix=SUITE_PREFIX, dir=automation_storage_root))
     save_dir = sandbox_root / "SaveGames"
     user_dir = sandbox_root / "UserDir"
-    local_cache_dir = sandbox_root / "DerivedDataCache"
+    local_cache_dir = sandbox_root / LOCAL_CACHE_DIR_NAME
+    if len(str(local_cache_dir)) > UNREAL_DDC_MAX_PATH_LENGTH:
+        shutil.rmtree(sandbox_root)
+        raise RuntimeError(
+            "Unreal local DDC path exceeds the 119-character engine limit: "
+            f"{local_cache_dir}")
     save_dir.mkdir()
     user_dir.mkdir()
     local_cache_dir.mkdir()
@@ -261,12 +323,6 @@ def launch(args: argparse.Namespace) -> int:
     # file itself was already checked above; its hypothetical Saved/SaveGames
     # descendant must remain entirely untouched by this launcher.
     project_save_games = _lexical_absolute(project.parent / "Saved" / "SaveGames")
-    home_value = os.environ.get("HOME")
-    if not home_value:
-        raise RuntimeError("HOME is unavailable; refusing to infer a player-data deny path")
-    # Keep the home deny target lexical: this launcher must not stat, enumerate,
-    # hash, or otherwise access the real player's home directory to protect it.
-    home_directory = _lexical_absolute(Path(home_value))
     profile_path = sandbox_root / "sandbox.sb"
     # This fixture is created only after the policy is written and exists only
     # to prove the actual launch profile denies a protected descendant.
@@ -285,6 +341,9 @@ def launch(args: argparse.Namespace) -> int:
     result: dict[str, object] = {
         "format": MANIFEST_FORMAT,
         "os_boundary": "sandbox-exec targeted deny policy",
+        "automation_storage_root": str(automation_storage_root),
+        "sandbox_root": str(sandbox_root),
+        "local_cache_dir": str(local_cache_dir),
         "protected_paths_configured": [str(project_save_games), str(home_directory)],
         "protected_policy_clauses_verified": True,
         "user_dir_note": (

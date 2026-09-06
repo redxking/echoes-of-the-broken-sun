@@ -4,6 +4,8 @@
 
 #include "EchoesTestSaveEnvironment.h"
 #include "EchoesAssemblyOfTheMissingMissionModel.h"
+#include "EchoesBrokenSunTestTactics.h"
+#include "EchoesContinuanceTestTactics.h"
 #include "EchoesBrokenSunMissionModel.h"
 #include "EchoesCampaignProgress.h"
 #include "EchoesChoirAtLumeReachMissionModel.h"
@@ -26,6 +28,8 @@
 
 namespace
 {
+namespace BrokenSunTactics = EchoesBrokenSunTestTactics;
+
 using echoes::sim::ChoirIdentityState;
 using echoes::sim::CommandType;
 using echoes::sim::Entity;
@@ -2249,7 +2253,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     M05Plan.KharuunSpineSite);
         };
         const auto TickUntilMissionFiveCondition = [
-            Bridge,
+            Bridge, &Spec, &M05Plan, &Feedback,
             &AreMissionFiveSeedsLivingCompletedUnpowered,
             &ObserveMissionFiveState,
             &WriteMissionFiveDiagnostic](
@@ -2276,6 +2280,12 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 if (Predicate())
                 {
                     return true;
+                }
+                if (!EchoesContinuanceTestTactics::MaintainSpineDefense(
+                        Bridge, Spec.FoundingChoice, M05Plan, Feedback))
+                {
+                    WriteMissionFiveDiagnostic(ExpectedPhase);
+                    return false;
                 }
                 Bridge->Tick(0.05f);
             }
@@ -2383,6 +2393,12 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     bPlayerSitesOpen,
                     EEchoesTermsOfContinuancePhase::SynchronizeNetworks),
                 TEXT("Mission 05 leaves every authored player Power Link site buildable")))
+        {
+            return false;
+        }
+        if (!Require(EchoesContinuanceTestTactics::AssignSpineDefense(
+                Bridge, Spec.FoundingChoice, M05Plan, Feedback),
+                TEXT("Mission 05 assigns the existing five defenders to the exposed Reshape spine")))
         {
             return false;
         }
@@ -5400,6 +5416,197 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             Bridge->GetLocalObjectiveSnapshot();
         const TArray<EntityId> M12Workers =
             FindOwnedEntities(Bridge, EntityType::Worker);
+        const TArray<EntityId> M12Soldiers =
+            FindOwnedEntities(Bridge, EntityType::Soldier);
+        const TArray<EntityId> M12Heavies =
+            FindOwnedEntities(Bridge, EntityType::HeavyUnit);
+        if (!Require(M12Soldiers.Num() >= 3 && M12Heavies.Num() >= 1,
+                     TEXT("Mission 12 exposes four combat escorts")))
+        {
+            return false;
+        }
+        const TArray<EntityId> M12GuardIds = {
+            M12Soldiers[0], M12Heavies[0], M12Soldiers[1], M12Soldiers[2]};
+        TArray<EntityId> M12WardIds = {
+            M12Start.FutureWonOruunId, M12Start.FutureWonOruunId,
+            M12Start.FutureWonOruunId, M12Start.FutureWonOruunId};
+        FString M12FirstEscortLoss;
+        const auto RecordM12EscortLoss = [
+            Bridge, &M12GuardIds, &M12FirstEscortLoss](const TCHAR* Context)
+        {
+            if (!M12FirstEscortLoss.IsEmpty())
+            {
+                return;
+            }
+            for (const EntityId GuardId : M12GuardIds)
+            {
+                const Entity* Guard = Bridge->FindEntity(GuardId);
+                if (Guard == nullptr || Guard->hitPoints <= 0)
+                {
+                    M12FirstEscortLoss = FString::Printf(
+                        TEXT("firstEscortLoss={context=%s tick=%llu id=%u}"),
+                        Context,
+                        static_cast<unsigned long long>(
+                            Bridge->GetSimulation()->CurrentTick()),
+                        GuardId);
+                    return;
+                }
+            }
+        };
+        const auto M12Failure = [
+            Bridge, M12Start, &M12GuardIds, &M12Workers,
+            &M12FirstEscortLoss, &Feedback](const TCHAR* Context)
+        {
+            Feedback = FString::Printf(
+                TEXT("[M12_TACTICAL_FAILURE] context=%s tick=%llu phase=%u reason=%s %s %s %s"),
+                Context,
+                static_cast<unsigned long long>(Bridge->GetSimulation()->CurrentTick()),
+                static_cast<uint8>(Bridge->GetFutureThatWonPhase()),
+                *Bridge->GetMissionFailureReasonCode(),
+                *DescribeFreshJourneyEntity(TEXT("oruun"), M12Start.FutureWonOruunId,
+                    Bridge->FindEntity(M12Start.FutureWonOruunId)),
+                *DescribeFreshJourneyEntity(TEXT("verifier"), M12Start.FutureWonVerifierId,
+                    Bridge->FindEntity(M12Start.FutureWonVerifierId)),
+                *DescribeFreshJourneyEntity(TEXT("well"), M12Start.FutureWonWellId,
+                    Bridge->FindEntity(M12Start.FutureWonWellId)));
+            for (EntityId GuardId : M12GuardIds)
+            {
+                Feedback += TEXT(" ") + DescribeFreshJourneyEntity(
+                    TEXT("guard"), GuardId, Bridge->FindEntity(GuardId));
+            }
+            for (EntityId WorkerId : M12Workers)
+                Feedback += TEXT(" ") + DescribeFreshJourneyEntity(
+                    TEXT("worker"), WorkerId, Bridge->FindEntity(WorkerId));
+            const Entity* Well = Bridge->FindEntity(M12Start.FutureWonWellId);
+            if (Well != nullptr)
+                Feedback += FString::Printf(TEXT(" capturePlayer=%u captureProgress=%u contested=%d"),
+                    Well->wellCapturePlayer, Well->wellCaptureProgress,
+                    Bridge->GetSimulation()->IsFutureWellContested(*Well) ? 1 : 0);
+            if (!M12FirstEscortLoss.IsEmpty())
+            {
+                Feedback += TEXT(" ") + M12FirstEscortLoss;
+            }
+            return false;
+        };
+        const auto MaintainM12Guards = [
+            Bridge, &M12GuardIds, &M12WardIds, &M12Workers,
+            &RecordM12EscortLoss, &M12Failure, &Feedback]()
+        {
+            RecordM12EscortLoss(TEXT("guard"));
+            for (EntityId& Target : M12WardIds)
+            {
+                if (M12Workers.Contains(Target) && Bridge->FindEntity(Target) == nullptr)
+                    for (EntityId Candidate : M12Workers)
+                    {
+                        const Entity* Worker = Bridge->FindEntity(Candidate);
+                        if (Worker != nullptr && Worker->hitPoints > 0)
+                        { Target = Candidate; break; }
+                    }
+            }
+            for (int32 Index = 0; Index < M12GuardIds.Num(); ++Index)
+            {
+                const Entity* Guard = Bridge->FindEntity(M12GuardIds[Index]);
+                const Entity* Ward = Bridge->FindEntity(M12WardIds[Index]);
+                if (Ward == nullptr || Ward->hitPoints <= 0)
+                {
+                    return M12Failure(TEXT("guard-ward-loss"));
+                }
+                // Escorts may be lost in combat; only the mission's named
+                // protected losses fail this playthrough.
+                if (Guard == nullptr || Guard->hitPoints <= 0) continue;
+                if ((Guard->order.type != echoes::sim::OrderType::Guard ||
+                     Guard->order.target != Ward->id) &&
+                    !Bridge->IssueCommand(CommandType::Guard, Guard->id, Ward->id,
+                        Bridge->SimToWorld(Ward->position), FutureWellChoice::Dormant,
+                        Feedback))
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto RetargetM12Guards = [&M12WardIds, &MaintainM12Guards](EntityId Ward)
+        {
+            for (EntityId& Target : M12WardIds) Target = Ward;
+            return MaintainM12Guards();
+        };
+        const auto TickM12 = [Bridge, &MaintainM12Guards, &M12Failure](
+            const TFunction<bool()>& Predicate, int32 MaximumTicks)
+        {
+            for (int32 Index = 0; Index <= MaximumTicks; ++Index)
+            {
+                if (Bridge->GetFutureThatWonPhase() == EEchoesFutureThatWonPhase::Failed)
+                {
+                    return M12Failure(TEXT("wait-mission-failed"));
+                }
+                if (Predicate()) return true;
+                if (Index == MaximumTicks)
+                    return M12Failure(TEXT("wait-budget"));
+                if (!MaintainM12Guards()) return false;
+                Bridge->Tick(0.05f);
+            }
+            return false;
+        };
+        // Scouts outrun their combat escorts. Alternate short moves with
+        // regrouping instead of leaving protected witnesses alone at a site.
+        const auto MoveM12Witness = [
+            Bridge, &M12GuardIds, &M12WardIds, &MaintainM12Guards,
+            &M12Failure, &Feedback](EntityId WardId, const Vec2& Goal)
+        {
+            bool bMoving = false;
+            Vec2 LegStart;
+            for (int32 TickIndex = 0; TickIndex < 1800; ++TickIndex)
+            {
+                if (Bridge->GetFutureThatWonPhase() == EEchoesFutureThatWonPhase::Failed)
+                    return M12Failure(TEXT("convoy-mission-failed"));
+                if (Bridge->GetFutureThatWonPhase() == EEchoesFutureThatWonPhase::Complete)
+                    return IsAtSite(Bridge, WardId, Goal, 3);
+                if (!MaintainM12Guards()) return false;
+                const Entity* Ward = Bridge->FindEntity(WardId);
+                if (Ward == nullptr)
+                    return M12Failure(TEXT("convoy-ward-loss"));
+                if (IsAtSite(Bridge, WardId, Goal))
+                {
+                    return Bridge->IssueCommand(CommandType::Stop, WardId, 0,
+                        FVector::ZeroVector, FutureWellChoice::Dormant, Feedback);
+                }
+                if (bMoving && !IsAtSite(Bridge, WardId, LegStart, 2))
+                {
+                    if (!Bridge->IssueCommand(CommandType::Stop, WardId, 0,
+                        FVector::ZeroVector, FutureWellChoice::Dormant, Feedback))
+                        return false;
+                    bMoving = false;
+                }
+                else if (!bMoving)
+                {
+                    bool bRegrouped = true;
+                    for (int32 Index = 0; Index < M12GuardIds.Num(); ++Index)
+                    {
+                        const Entity* Guard = Bridge->FindEntity(M12GuardIds[Index]);
+                        if (Guard != nullptr && Guard->hitPoints > 0 &&
+                            M12WardIds[Index] == WardId &&
+                            !IsAtSite(Bridge, M12GuardIds[Index], Ward->position, 3))
+                            bRegrouped = false;
+                    }
+                    if (bRegrouped)
+                    {
+                        LegStart = Ward->position;
+                        if (!Bridge->IssueCommand(CommandType::Move, WardId, 0,
+                            Bridge->SimToWorld(Goal), FutureWellChoice::Dormant, Feedback))
+                            return false;
+                        bMoving = true;
+                    }
+                }
+                Bridge->Tick(0.05f);
+            }
+            return M12Failure(TEXT("convoy-budget"));
+        };
+        if (!Require(MaintainM12Guards(),
+                     TEXT("Mission 12 concentrates four Guard escorts on Oruun")))
+        {
+            return false;
+        }
+        Bridge->Tick(0.05f);
         Vec2 M12FirstLink;
         Vec2 M12SecondLink;
         const Vec2 ExpectedM12WellSite =
@@ -5450,6 +5657,146 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             }
             return Site;
         };
+        const auto MaintainM12WellScreen = [
+            Bridge, M12Start, M12Plan, &M12GuardIds,
+            &RecordM12EscortLoss, &M12Failure, &Feedback](
+            int32& OutVisibleThreats, bool& OutForceRallied)
+        {
+            RecordM12EscortLoss(TEXT("well-screen"));
+            if (Bridge->FindEntity(M12Start.FutureWonOruunId) == nullptr ||
+                Bridge->FindEntity(M12Start.FutureWonVerifierId) == nullptr ||
+                Bridge->FindEntity(M12Start.FutureWonWellId) == nullptr)
+            {
+                return M12Failure(TEXT("well-screen-protected-loss"));
+            }
+
+            const auto LocalView = Bridge->GetSimulation()->CreatePlayerView(
+                UEchoesSimulationSubsystem::LocalPlayerId);
+            if (!LocalView.has_value())
+            {
+                return M12Failure(TEXT("well-screen-view"));
+            }
+            constexpr int32 ThreatRadiusTiles = 8;
+            const int64 ThreatRadiusRaw =
+                static_cast<int64>(ThreatRadiusTiles) * echoes::sim::kFixedScale;
+            const Entity* NearestThreat = nullptr;
+            int64 NearestDistanceSquared = TNumericLimits<int64>::Max();
+            OutVisibleThreats = 0;
+            for (const Entity& Visible : LocalView->Entities())
+            {
+                if (!LocalView->Config().IsHostile(
+                        UEchoesSimulationSubsystem::LocalPlayerId,
+                        Visible.owner) ||
+                    Visible.hitPoints <= 0)
+                {
+                    continue;
+                }
+                const int64 DeltaX =
+                    static_cast<int64>(Visible.position.x.Raw()) -
+                    M12Plan.FutureWellSite.x.Raw();
+                const int64 DeltaY =
+                    static_cast<int64>(Visible.position.y.Raw()) -
+                    M12Plan.FutureWellSite.y.Raw();
+                const int64 DistanceSquared = DeltaX * DeltaX + DeltaY * DeltaY;
+                if (DistanceSquared > ThreatRadiusRaw * ThreatRadiusRaw)
+                {
+                    continue;
+                }
+                ++OutVisibleThreats;
+                if (DistanceSquared < NearestDistanceSquared ||
+                    (DistanceSquared == NearestDistanceSquared &&
+                     (NearestThreat == nullptr || Visible.id < NearestThreat->id)))
+                {
+                    NearestThreat = &Visible;
+                    NearestDistanceSquared = DistanceSquared;
+                }
+            }
+
+            OutForceRallied = true;
+            for (const EntityId GuardId : M12GuardIds)
+            {
+                const Entity* Guard = Bridge->FindEntity(GuardId);
+                if (Guard == nullptr || Guard->hitPoints <= 0)
+                {
+                    continue;
+                }
+                const bool bAtWell = IsAtSite(
+                    Bridge, GuardId, M12Plan.FutureWellSite, 3);
+                const bool bInsideLeash = IsAtSite(
+                    Bridge, GuardId, M12Plan.FutureWellSite, 6);
+                OutForceRallied = bAtWell && OutForceRallied;
+                const echoes::sim::OrderType DesiredOrder = !bInsideLeash
+                    ? echoes::sim::OrderType::Move
+                    : NearestThreat != nullptr
+                        ? echoes::sim::OrderType::AttackMove
+                        : bAtWell
+                            ? echoes::sim::OrderType::Hold
+                            : echoes::sim::OrderType::Move;
+                if (Guard->order.type == DesiredOrder)
+                {
+                    continue;
+                }
+                const CommandType DesiredCommand = !bInsideLeash
+                    ? CommandType::Move
+                    : NearestThreat != nullptr
+                        ? CommandType::AttackMove
+                        : bAtWell ? CommandType::Hold : CommandType::Move;
+                const Vec2 Destination = DesiredCommand == CommandType::AttackMove
+                    ? NearestThreat->position
+                    : M12Plan.FutureWellSite;
+                FString CommandFeedback;
+                if (!Bridge->IssueCommand(
+                        DesiredCommand,
+                        GuardId,
+                        0,
+                        Bridge->SimToWorld(Destination),
+                        FutureWellChoice::Dormant,
+                        CommandFeedback))
+                {
+                    M12Failure(TEXT("well-screen-command"));
+                    Feedback += FString::Printf(
+                        TEXT(" actor=%u command=%u commandFeedback=%s"),
+                        GuardId,
+                        static_cast<uint8>(DesiredCommand),
+                        *CommandFeedback);
+                    return false;
+                }
+            }
+            // Combat escorts are replaceable. Their loss cannot override the
+            // mission's authoritative failure rules or surviving capture progress.
+            return true;
+        };
+        const auto TickM12WellScreen = [
+            Bridge, &Spec, &MaintainM12WellScreen, &MaintainM12Guards, &M12Failure](
+            const TFunction<bool()>& Predicate, int32 MaximumTicks)
+        {
+            for (int32 TickIndex = 0; TickIndex <= MaximumTicks; ++TickIndex)
+            {
+                if (Bridge->GetFutureThatWonPhase() ==
+                    EEchoesFutureThatWonPhase::Failed)
+                {
+                    return M12Failure(TEXT("well-defense-mission-failed"));
+                }
+                if (Predicate())
+                {
+                    return true;
+                }
+                if (TickIndex == MaximumTicks)
+                {
+                    return M12Failure(TEXT("well-defense-budget"));
+                }
+                int32 VisibleThreats = 0;
+                bool bForceRallied = false;
+                if (!(Spec.LumeChoice == FutureWellChoice::Reshape
+                        ? MaintainM12WellScreen(VisibleThreats, bForceRallied)
+                        : MaintainM12Guards()))
+                {
+                    return false;
+                }
+                Bridge->Tick(0.05f);
+            }
+            return false;
+        };
         if (!Require(
                 M12Plan.FutureWellSite == ExpectedM12WellSite,
                 FString::Printf(
@@ -5479,21 +5826,25 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     M12WellApproach.x.FloorToInt(),
                     M12WellApproach.y.FloorToInt())) ||
             !Require(
-                M12Workers.Num() >= 2,
-                TEXT("Mission 12 exposes two Kharuun workers")) ||
+                M12Workers.Num() >= 3,
+                TEXT("Mission 12 exposes three Kharuun workers")) ||
             !Require(
-                Move(
+                Move(M12Workers[0], NearestPassableStand(M12Plan.FirstDistrictInputSite)) &&
+                    Move(M12Workers[1], NearestPassableStand(M12Plan.SecondDistrictInputSite)) &&
+                    Move(M12Workers[2], NearestPassableStand(M12Plan.FirstDistrictInputSite)),
+                TEXT("Mission 12 stages input workers concurrently with the convoy")) ||
+            !Require(
+                MoveM12Witness(
                     M12Start.FutureWonOruunId,
                     M12Plan.KharuunReadbackSite),
                 TEXT("Mission 12 Oruun accepts public readback")) ||
             !Require(
-                Move(
+                MoveM12Witness(
                     M12Start.FutureWonVerifierId,
                     M12Plan.MeridianReadbackSite),
                 TEXT("Mission 12 verifier accepts public readback")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickM12(
                     [Bridge]()
                     {
                         return Bridge->GetFutureThatWonPhase() ==
@@ -5531,8 +5882,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Feedback),
                 TEXT("Mission 12 accepts its second input link")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickM12(
                     [Bridge]()
                     {
                         return Bridge->GetFutureThatWonPhase() ==
@@ -5541,22 +5891,16 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     5600),
                 TEXT("Mission 12 verifies both recorded inputs")) ||
             !Require(
+                Bridge->GetSimulation()->IsEntityVisibleTo(
+                    UEchoesSimulationSubsystem::LocalPlayerId,
+                    M12Start.FutureWonWellId),
+                TEXT("Mission 12 readback legitimately reveals the Future Well")) ||
+            !Require(
                 Move(M12Workers[0], M12WellApproach),
                 FString::Printf(
-                    TEXT("Mission 12 worker accepts the literal Well approach (%d,%d)"),
+                    TEXT("Mission 12 worker accepts the Well approach (%d,%d)"),
                     M12WellApproach.x.FloorToInt(),
                     M12WellApproach.y.FloorToInt())) ||
-            !Require(
-                TickUntil(
-                    Bridge,
-                    [Bridge, M12Start]()
-                    {
-                        return Bridge->GetSimulation()->IsEntityVisibleTo(
-                            UEchoesSimulationSubsystem::LocalPlayerId,
-                            M12Start.FutureWonWellId);
-                    },
-                    2600),
-                TEXT("Mission 12 legitimately reveals the Future Well")) ||
             !Require(
                 Bridge->IssueCommand(
                     CommandType::FutureWell,
@@ -5566,9 +5910,35 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Spec.LumeChoice,
                     Feedback),
                 TEXT("Mission 12 accepts the recorded Lume protocol")) ||
+            !Require(Bridge->IssueCommand(CommandType::FutureWell, M12Workers[1], M12Start.FutureWonWellId,
+                    Bridge->SimToWorld(M12Plan.FutureWellSite), Spec.LumeChoice, Feedback),
+                TEXT("Mission 12 uses a second worker for capture continuity, without faster capture")) ||
+            !Require(Bridge->IssueCommand(CommandType::FutureWell, M12Workers[2], M12Start.FutureWonWellId,
+                    Bridge->SimToWorld(M12Plan.FutureWellSite), Spec.LumeChoice, Feedback),
+                TEXT("Mission 12 reserve worker supports the same fixed-rate capture")) ||
+            !Require(Spec.LumeChoice == FutureWellChoice::Reshape ||
+                    RetargetM12Guards(M12Workers[0]),
+                TEXT("Mission 12 protects the outer-Well capture worker")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                Move(M12Start.FutureWonOruunId,
+                    NearestPassableStand(M12Plan.FirstDistrictInputSite)),
+                TEXT("Mission 12 withdraws Oruun after protocol admission")) ||
+            !Require(
+                Move(M12Start.FutureWonVerifierId,
+                    NearestPassableStand(Vec2::FromTiles(
+                        M12Plan.FirstDistrictInputSite.x.FloorToInt() - 2,
+                        M12Plan.FirstDistrictInputSite.y.FloorToInt()))),
+                TEXT("Mission 12 withdraws the verifier after protocol admission")) ||
+            !Require(TickM12WellScreen([Bridge, M12Start]()
+                {
+                    const auto* Well = Bridge->FindEntity(M12Start.FutureWonWellId);
+                    return Well != nullptr &&
+                        (Well->owner == UEchoesSimulationSubsystem::LocalPlayerId ||
+                 (Well->wellCapturePlayer == UEchoesSimulationSubsystem::LocalPlayerId &&
+                  Well->wellCaptureProgress > 0));
+                }, 1000), TEXT("Mission 12 capturer begins authoritative Well capture")) ||
+            !Require(
+                TickM12WellScreen(
                     [Bridge]()
                     {
                         return Bridge->GetFutureThatWonPhase() ==
@@ -5577,9 +5947,10 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     2600),
                 TEXT("Mission 12 starts its stability hold")) ||
+            !Require(RetargetM12Guards(M12Start.FutureWonWellId),
+                TEXT("Mission 12 defends the committed Well independently of worker survival")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickM12(
                     [Bridge]()
                     {
                         return Bridge->GetFutureThatWonPhase() ==
@@ -5589,20 +5960,26 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     420),
                 TEXT("Mission 12 holds the complete stability window")) ||
             !Require(
-                Move(
+                Bridge->FindEntity(M12Start.FutureWonWellId) != nullptr &&
+                    Bridge->GetSimulation()->CurrentTick() ==
+                        Bridge->FindEntity(M12Start.FutureWonWellId)->wellActivationTick + 300,
+                TEXT("Mission 12 opens readback exactly 300 ticks after activation")) ||
+            !Require(RetargetM12Guards(M12Start.FutureWonVerifierId),
+                TEXT("Mission 12 protects the verifier's final readback")) ||
+            !Require(
+                MoveM12Witness(
                     M12Start.FutureWonOruunId,
                     NearestPassableStand(
                         M12Plan.FirstDistrictInputSite)),
                 TEXT("Mission 12 Oruun accepts the first readback")) ||
             !Require(
-                Move(
+                MoveM12Witness(
                     M12Start.FutureWonVerifierId,
                     NearestPassableStand(
                         M12Plan.SecondDistrictInputSite)),
                 TEXT("Mission 12 verifier accepts the second readback")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickM12(
                     [Bridge]()
                     {
                         return Bridge->GetFutureThatWonPhase() ==
@@ -5625,16 +6002,213 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             FindOwnedEntities(Bridge, EntityType::Worker);
         const TArray<EntityId> M13Cores =
             FindOwnedEntities(Bridge, EntityType::CommandCore);
+        const TArray<EntityId> M13Soldiers =
+            FindOwnedEntities(Bridge, EntityType::Soldier);
+        const TArray<EntityId> M13Heavies =
+            FindOwnedEntities(Bridge, EntityType::HeavyUnit);
         const EntityId M13WorkerId =
             M13Workers.IsEmpty() ? 0 : M13Workers[0];
         const EntityId M13CoreId = M13Cores.IsEmpty() ? 0 : M13Cores[0];
+        TArray<EntityId> M13GuardIds;
+        if (M13Soldiers.Num() >= 3 && !M13Heavies.IsEmpty())
+        {
+            M13GuardIds = {M13Soldiers[0], M13Heavies[0],
+                           M13Soldiers[1], M13Soldiers[2]};
+        }
+        TArray<EntityId> M13WardIds = {
+            M13Start.AssemblyOruunId, M13Start.AssemblyOruunId,
+            M13Start.AssemblyVerifierId, M13Start.AssemblyVerifierId};
         Vec2 M13Link;
+        const auto M13Failure = [
+            Bridge, M13Start, M13CoreId, &M13GuardIds, &Feedback]()
+        {
+            const FEchoesObjectiveSnapshot Current =
+                Bridge->GetLocalObjectiveSnapshot();
+            const echoes::sim::Simulation* Simulation = Bridge->GetSimulation();
+            Feedback = FString::Printf(
+                TEXT("[M13_TACTICAL_FAILURE] tick=%llu reason=%s phase=%u publicInterfaces=%s readback=%s linked=%s meridianWitness=%s kharuunWitness=%s %s %s %s"),
+                static_cast<unsigned long long>(
+                    Simulation != nullptr ? Simulation->CurrentTick() : 0),
+                *Bridge->GetMissionFailureReasonCode(),
+                static_cast<uint8>(Current.AssemblyOfTheMissingPhase),
+                Current.bAssemblyPublicInterfacesIntact ? TEXT("true") : TEXT("false"),
+                Current.bAssemblyPublicRecordReadbackEstablished ? TEXT("true") : TEXT("false"),
+                Current.bAssemblyCrownfallIndexLinked ? TEXT("true") : TEXT("false"),
+                Current.bAssemblyMeridianWitnessObserved ? TEXT("true") : TEXT("false"),
+                Current.bAssemblyKharuunWitnessObserved ? TEXT("true") : TEXT("false"),
+                *DescribeFreshJourneyEntity(
+                    TEXT("core"), M13CoreId, Bridge->FindEntity(M13CoreId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("oruun"), M13Start.AssemblyOruunId,
+                    Bridge->FindEntity(M13Start.AssemblyOruunId)),
+                *DescribeFreshJourneyEntity(
+                    TEXT("verifier"), M13Start.AssemblyVerifierId,
+                    Bridge->FindEntity(M13Start.AssemblyVerifierId)));
+            for (EntityId GuardId : M13GuardIds)
+            {
+                Feedback += TEXT(" ") + DescribeFreshJourneyEntity(
+                    TEXT("guard"), GuardId, Bridge->FindEntity(GuardId));
+            }
+            return false;
+        };
+        const auto MaintainM13Guards = [
+            Bridge, &M13GuardIds, &M13WardIds, &M13Failure, &Feedback]()
+        {
+            for (int32 Index = 0; Index < M13GuardIds.Num(); ++Index)
+            {
+                const Entity* Ward = Bridge->FindEntity(M13WardIds[Index]);
+                if (Ward == nullptr || Ward->hitPoints <= 0)
+                {
+                    return M13Failure();
+                }
+                const Entity* Guard = Bridge->FindEntity(M13GuardIds[Index]);
+                if (Guard == nullptr || Guard->hitPoints <= 0)
+                {
+                    continue;
+                }
+                if ((Guard->order.type != echoes::sim::OrderType::Guard ||
+                     Guard->order.target != Ward->id) &&
+                    !Bridge->IssueCommand(
+                        CommandType::Guard,
+                        Guard->id,
+                        Ward->id,
+                        Bridge->SimToWorld(Ward->position),
+                        FutureWellChoice::Dormant,
+                        Feedback))
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto TickM13 = [Bridge, &MaintainM13Guards, &M13Failure](
+            const TFunction<bool()>& Predicate, int32 MaximumTicks)
+        {
+            for (int32 Index = 0; Index <= MaximumTicks; ++Index)
+            {
+                if (Bridge->GetAssemblyOfTheMissingPhase() ==
+                    EEchoesAssemblyOfTheMissingPhase::Failed)
+                {
+                    return M13Failure();
+                }
+                if (Predicate())
+                {
+                    return true;
+                }
+                if (Index == MaximumTicks || !MaintainM13Guards())
+                {
+                    return M13Failure();
+                }
+                Bridge->Tick(0.05f);
+            }
+            return false;
+        };
+        const auto MoveM13Witness = [
+            Bridge, &M13GuardIds, &M13WardIds, &MaintainM13Guards,
+            &M13Failure, &Feedback](EntityId WardId, const Vec2& Goal)
+        {
+            bool bMoving = false;
+            Vec2 LegStart;
+            for (int32 TickIndex = 0; TickIndex < 1800; ++TickIndex)
+            {
+                if (Bridge->GetAssemblyOfTheMissingPhase() ==
+                    EEchoesAssemblyOfTheMissingPhase::Failed)
+                {
+                    return M13Failure();
+                }
+                if (Bridge->GetAssemblyOfTheMissingPhase() ==
+                    EEchoesAssemblyOfTheMissingPhase::Complete)
+                    return IsAtSite(Bridge, WardId, Goal, 3);
+                if (!MaintainM13Guards())
+                {
+                    return false;
+                }
+                const Entity* Ward = Bridge->FindEntity(WardId);
+                if (Ward == nullptr)
+                {
+                    return M13Failure();
+                }
+                if (IsAtSite(Bridge, WardId, Goal))
+                {
+                    return Bridge->IssueCommand(
+                        CommandType::Stop,
+                        WardId,
+                        0,
+                        FVector::ZeroVector,
+                        FutureWellChoice::Dormant,
+                        Feedback);
+                }
+                if (bMoving && !IsAtSite(Bridge, WardId, LegStart, 2))
+                {
+                    if (!Bridge->IssueCommand(
+                            CommandType::Stop,
+                            WardId,
+                            0,
+                            FVector::ZeroVector,
+                            FutureWellChoice::Dormant,
+                            Feedback))
+                    {
+                        return false;
+                    }
+                    bMoving = false;
+                }
+                else if (!bMoving)
+                {
+                    bool bRegrouped = true;
+                    for (int32 Index = 0; Index < M13GuardIds.Num(); ++Index)
+                    {
+                        const Entity* Guard =
+                            Bridge->FindEntity(M13GuardIds[Index]);
+                        if (Guard != nullptr && Guard->hitPoints > 0 &&
+                            M13WardIds[Index] == WardId &&
+                            !IsAtSite(
+                                Bridge,
+                                Guard->id,
+                                Ward->position,
+                                3))
+                        {
+                            bRegrouped = false;
+                        }
+                    }
+                    if (bRegrouped)
+                    {
+                        LegStart = Ward->position;
+                        if (!Bridge->IssueCommand(
+                                CommandType::Move,
+                                WardId,
+                                0,
+                                Bridge->SimToWorld(Goal),
+                                FutureWellChoice::Dormant,
+                                Feedback))
+                        {
+                            return false;
+                        }
+                        bMoving = true;
+                    }
+                }
+                Bridge->Tick(0.05f);
+            }
+            return M13Failure();
+        };
+        const auto StageM13Worker = [Bridge, M13WorkerId, &M13Link, &Move]()
+        {
+            // Keep the builder outside the future structure footprint.
+            const int32 Offsets[][2] = {{-2, 0}, {0, -2}, {2, 0}, {0, 2}};
+            for (const auto& Offset : Offsets)
+            {
+                const Vec2 Stand = Vec2::FromTiles(
+                    M13Link.x.FloorToInt() + Offset[0],
+                    M13Link.y.FloorToInt() + Offset[1]);
+                if (Bridge->GetSimulation()->IsPositionPassable(Stand))
+                    return Move(M13WorkerId, Stand);
+            }
+            return false;
+        };
         const auto OpenMissionThirteenObservation = [
             Bridge, M13Start, M13Plan, M13WorkerId, M13CoreId,
-            &M13Link, &Feedback]()
+            &M13Link, &M13GuardIds, &TickM13, &Feedback]()
         {
-            const bool bOpened = TickUntil(
-                Bridge,
+            const bool bOpened = TickM13(
                 [Bridge]()
                 {
                     return Bridge->GetAssemblyOfTheMissingPhase() ==
@@ -5723,6 +6297,11 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     M13WorkerId,
                     Bridge->FindEntity(M13WorkerId)),
                 *DescribeFreshJourneyEntity(TEXT("link"), LinkId, Link));
+            for (EntityId GuardId : M13GuardIds)
+            {
+                Feedback += TEXT(" ") + DescribeFreshJourneyEntity(
+                    TEXT("guard"), GuardId, Bridge->FindEntity(GuardId));
+            }
             return false;
         };
         if (!Require(
@@ -5736,18 +6315,55 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 !M13Workers.IsEmpty(),
                 TEXT("Mission 13 exposes a Kharuun construction worker")) ||
             !Require(
-                Move(
+                M13GuardIds.Num() == 4,
+                TEXT("Mission 13 exposes four combat escorts")) ||
+            !Require(
+                FindValidBuildSite(
+                    Bridge,
+                    M13Plan.CrownfallIndexSite,
+                    3,
+                    M13Link),
+                TEXT("Mission 13 exposes a valid Crownfall link")) ||
+            !Require(
+                MaintainM13Guards(),
+                TEXT("Mission 13 assigns two Guard escorts to each witness")) ||
+            !Require(
+                TickM13(
+                    [Bridge, &M13GuardIds, &M13WardIds]()
+                    {
+                        for (int32 Index = 0;
+                             Index < M13GuardIds.Num();
+                             ++Index)
+                        {
+                            const Entity* Guard =
+                                Bridge->FindEntity(M13GuardIds[Index]);
+                            if (Guard != nullptr && Guard->hitPoints > 0 &&
+                                (Guard->order.type !=
+                                     echoes::sim::OrderType::Guard ||
+                                 Guard->order.target != M13WardIds[Index]))
+                            {
+                                return false;
+                            }
+                        }
+                        return true;
+                    },
+                    3),
+                TEXT("Mission 13 admits both Guard screens before movement")) ||
+            !Require(
+                StageM13Worker(),
+                TEXT("Mission 13 stages its link worker during public readback")) ||
+            !Require(
+                MoveM13Witness(
                     M13Start.AssemblyOruunId,
                     M13Plan.KharuunPublicRecordSite),
                 TEXT("Mission 13 Oruun accepts public-record readback")) ||
             !Require(
-                Move(
+                MoveM13Witness(
                     M13Start.AssemblyVerifierId,
                     M13Plan.MeridianPublicRecordSite),
                 TEXT("Mission 13 verifier accepts public-record readback")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickM13(
                     [Bridge]()
                     {
                         return Bridge->GetAssemblyOfTheMissingPhase() ==
@@ -5756,13 +6372,6 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     },
                     6000),
                 TEXT("Mission 13 establishes paired public readback")) ||
-            !Require(
-                FindValidBuildSite(
-                    Bridge,
-                    M13Plan.CrownfallIndexSite,
-                    3,
-                    M13Link),
-                TEXT("Mission 13 exposes a valid Crownfall link")) ||
             !Require(
                 Bridge->IssueBuildCommand(
                     M13Workers[0],
@@ -5774,18 +6383,17 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 OpenMissionThirteenObservation(),
                 TEXT("Mission 13 opens independent observation")) ||
             !Require(
-                Move(
+                MoveM13Witness(
                     M13Start.AssemblyOruunId,
                     M13Plan.KharuunAssemblyWitnessSite),
                 TEXT("Mission 13 Oruun accepts assembly observation")) ||
             !Require(
-                Move(
+                MoveM13Witness(
                     M13Start.AssemblyVerifierId,
                     M13Plan.MeridianAssemblyWitnessSite),
                 TEXT("Mission 13 verifier accepts assembly observation")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickM13(
                     [Bridge]()
                     {
                         return Bridge->GetAssemblyOfTheMissingPhase() ==
@@ -5953,6 +6561,50 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             Bridge,
             EntityType::Barracks,
             echoes::sim::Faction::HollowChoir);
+        const TArray<EntityId> NemeGuards =
+            BrokenSunTactics::FindBrokenSunNemeGuards(
+                Bridge, Objective.BrokenSunAccordVoiceId);
+        const auto TickM15 = [
+            Bridge, &NemeGuards, &Objective, &Feedback](
+            const TFunction<bool()>& Predicate, int32 MaximumTicks)
+        {
+            for (int32 TickIndex = 0; TickIndex < MaximumTicks; ++TickIndex)
+            {
+                if (Bridge->GetBrokenSunPhase() ==
+                    EEchoesBrokenSunPhase::Failed)
+                {
+                    Feedback = BrokenSunTactics::BrokenSunTacticalDiagnostic(
+                        Bridge,
+                        TEXT("fresh-journey-wait"),
+                        Objective.BrokenSunNemeId,
+                        NemeGuards);
+                    return false;
+                }
+                if (Predicate())
+                {
+                    return true;
+                }
+                if (!BrokenSunTactics::MaintainBrokenSunNemeGuards(
+                        Bridge,
+                        Objective.BrokenSunNemeId,
+                        NemeGuards,
+                        Feedback))
+                {
+                    return false;
+                }
+                Bridge->Tick(0.05f);
+            }
+            if (Predicate())
+            {
+                return true;
+            }
+            Feedback = BrokenSunTactics::BrokenSunTacticalDiagnostic(
+                Bridge,
+                TEXT("fresh-journey-budget"),
+                Objective.BrokenSunNemeId,
+                NemeGuards);
+            return false;
+        };
         const EEchoesFinalResolution CandidateResolutions[] = {
             EEchoesFinalResolution::Restoration,
             EEchoesFinalResolution::ControlledStabilization,
@@ -5986,6 +6638,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         }
         if (!Require(
                 !Workers.IsEmpty() && !ResearchLooms.IsEmpty() &&
+                    NemeGuards.Num() == 2 &&
                     Resolution != EEchoesFinalResolution::None &&
                     Spec.ExpectedFinalResolutionMask != 0 &&
                     Plan.FoundingDoctrine == Spec.FoundingChoice &&
@@ -6006,6 +6659,17 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             return false;
         }
 
+        if (!Require(
+                BrokenSunTactics::MaintainBrokenSunNemeGuards(
+                    Bridge,
+                    Objective.BrokenSunNemeId,
+                    NemeGuards,
+                    Feedback),
+                TEXT("Mission 15 assigns both ordinary Soldier escorts to Neme")))
+        {
+            return false;
+        }
+
         Vec2 ApproachSite;
         if (!Require(
                 FindValidBuildSite(
@@ -6022,8 +6686,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Feedback),
                 TEXT("Mission 15 accepts its Approach Anchor")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickM15(
                     [Bridge]()
                     {
                         return Bridge->GetBrokenSunPhase() ==
@@ -6032,14 +6695,22 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     4000),
                 TEXT("Mission 15 secures the Crownfall approach")) ||
             !Require(
+                BrokenSunTactics::ClearBrokenSunNemeAccordApproach(
+                    Bridge,
+                    Objective,
+                    NemeGuards,
+                    Plan.NemeAccordSite,
+                    2400,
+                    Feedback),
+                TEXT("Mission 15 clears observable threats with the concentrated command force")) ||
+            !Require(
                 Bridge->IssueResearchCommand(
                     ResearchLooms[0],
                     ResearchType::ChoirHeldAlternatives,
                     Feedback),
                 TEXT("Mission 15 accepts Held Alternatives research")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickM15(
                     [Bridge]()
                     {
                         const echoes::sim::PlayerState* Player =
@@ -6083,11 +6754,16 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Plan.OruunAccordSite),
                 TEXT("Mission 15 Heavy accepts Oruun's accord site")) ||
             !Require(
-                Move(Objective.BrokenSunNemeId, Plan.NemeAccordSite),
-                TEXT("Mission 15 Neme accepts the Choir accord site")) ||
-            !Require(
-                TickUntil(
+                BrokenSunTactics::PaceBrokenSunNemeToSite(
                     Bridge,
+                    Objective.BrokenSunNemeId,
+                    NemeGuards,
+                    Plan.NemeAccordSite,
+                    2400,
+                    Feedback),
+                TEXT("Mission 15 convoys Neme to the defended Choir accord stand")) ||
+            !Require(
+                TickM15(
                     [Bridge, Objective, Plan]()
                     {
                         const Entity* Voice = Bridge->FindEntity(
@@ -6124,8 +6800,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Feedback),
                 TEXT("Mission 15 accepts Shared Resolution research")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickM15(
                     [Bridge]()
                     {
                         return Bridge->GetBrokenSunPhase() ==
@@ -6196,8 +6871,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Feedback),
                 TEXT("Mission 15 accepts the Resolution Conduit")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickM15(
                     [Bridge]()
                     {
                         return Bridge->GetBrokenSunPhase() ==
@@ -6206,8 +6880,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     4000),
                 TEXT("Mission 15 starts the final hold")) ||
             !Require(
-                TickUntil(
-                    Bridge,
+                TickM15(
                     [Bridge]()
                     {
                         return Bridge->GetBrokenSunPhase() ==
@@ -6222,11 +6895,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         const FEchoesCampaignDecisionRecord* Record =
             Bridge->GetCampaignProgress().FindDecision(
                 EEchoesCampaignMissionId::TheBrokenSun);
-        // This record is written by the live simulation as the journey
-        // ends, so it pins the CURRENT native snapshot schema. Terrain
-        // and object memory are now serialized into snapshots, so that
-        // schema moved 24 -> 25; the replay envelope shape is unchanged
-        // and stays at 24.
+        // This record is written by the live simulation as the journey ends,
+        // so it pins current schema 28. The replay envelope remains schema 24.
         if (!Require(
                 Record != nullptr &&
                     Record->VerifiedFacts == 0xFF &&
@@ -6234,7 +6904,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     Record->AvailableFinalResolutions ==
                         Spec.ExpectedFinalResolutionMask &&
                     Record->FinalPlanKey == Spec.ExpectedFinalPlanKey &&
-                    Record->SimulationSnapshotVersion == 26 &&
+                    Record->SimulationSnapshotVersion == 28 &&
                     Record->CompletionTick > 0 &&
                     Record->FinalStateChecksum != 0,
                 TEXT("Mission 15 retains full native ending provenance")) ||

@@ -4,7 +4,7 @@ author: Angelis Pseftis
 creator: Angelis Pseftis
 status: Historical evidence register; not current lifecycle authority
 created: 2026-08-28
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # Project Ledger
@@ -681,3 +681,29 @@ Version 0.91.0 accepts Mission 14's exact thirteen-record admission, 27-plan pro
 ## Historical next-task assessment — 0.93 checkpoint
 
 Version 0.93.0 accepts exact-next-mission journey resolution, failure retry, the completed title/archive boundary, transactional New Campaign and Restore behavior with one prior generation, replay-conflict return without ledger mutation, exact prerequisite-ledger-bound Mission 02–09 checkpoint containers, a 48/48 local Unreal automation report, two isolated headless empty-ledger routes through Mission 15, and a clean-source Mac-arm64 Development package whose specific world-surface instancing fallback is closed under packaged Metal. The next campaign qualification gate is an ordinary-player fresh-campaign traversal through all fifteen operations, followed by the remaining routes and endings. Named or multiple slots, recovery UX, deliberate multiprocess and power-loss durability testing, final dialogue/cinematics/audio/art, accessibility, broad balance, and human usability remain separate work. The distinct sustained 400-owned-entity, all-three-faction workload and fail-closed wrapper are implemented with active-time accounting, auditable heartbeats, exact population/view/faction invariants, isolated runtime state, clean-pushed-source and package-integrity checks, bounded command growth, replay exclusion, terminal/idle/cadence rejection, and failure-atomic evidence publication. The active acceptance gate is a valid 600-active-second preflight followed by one uninterrupted 60-minute run of the same package. The current GPU/render profile also remains over budget, and the captured overexposure/debug-overlay debt remains open. Developer ID signing, notarization, installer, and clean-machine qualification follow later. The next networking gate remains operating-system traffic conditioning followed by separate-process and separate-machine evidence; authenticated identity, protected credentials, encryption, private invitations, spectators, matchmaking, hostile-traffic and abuse qualification remain mandatory before internet-ready claims.
+
+
+## 2026-09-05 P1/P2 integration qualification (completed 2026-09-06 UTC)
+
+Candidate 20 at `bc051467d52ee3e6001ab42931a974449a5d6245` plus 501 archived dirty runtime inputs passed
+Editor compilation, all 111 Unreal tests without test warnings/errors, protected save isolation and exact
+fixture inventory, and Mac Shipping compilation/linking with ad-hoc signing for local execution.
+No fresh cook/package or distribution signature was produced. The unchanged core passed 102 native tests in
+optimized, debug and Address/UndefinedBehavior Sanitizer configurations. Source, archives, logs, hashes,
+failed predecessor runs and current receipts are retained under
+[BuildArtifacts/Evidence/p1-p2-completion-20260905](../../BuildArtifacts/Evidence/p1-p2-completion-20260905/).
+
+The implementation connects modular UMG/Slate shell and field HUD, three journey slots and mastery
+denial, immutable asynchronous checkpoints and interrupted skirmish recovery, owner-selected fair AI,
+normal Corefall outcomes, authoritative results and streaming detached replay. Final pointer repairs
+cancel placement at modal entry and refuse non-primary shell activation. Local save-budget measurements
+separate foreground capture/initiation from background completion.
+
+Rendered candidate-19 observations cover Options at 80%/150%, high contrast, display Revert, tutorial M01
+deployment and visible HUD production through native Slate input. OS/CUA mouse probes were not consistently
+attributable; standalone candidate 20 exited after Quit/Confirm input received while the coordinator was
+only reading metadata. Live input is paused for an idle computer window. The next verification is the
+standalone display, input, tactical pause, modal recovery and result/replay matrix. Gemini See Loop captured
+frames but returned `API_KEY_INVALID`; no Gemini assessment was obtained. No editor or heavy run remains
+active. The [current state entry](../RequirementsState.md) owns lifecycle and remaining gates; this ledger
+records development evidence only, with no P1/P2 delivery exit, packaged release or owner acceptance.

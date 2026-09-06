@@ -152,6 +152,49 @@ FString FutureThatWonQuickSavePath(
             TEXT("EchoesQuickSaveTheFutureThatWon-%08X.bin"),
             Fingerprint));
 }
+
+FString DescribeFutureThatWonEntity(
+    const TCHAR* Label,
+    echoes::sim::EntityId Id,
+    const echoes::sim::Entity* Current)
+{
+    if (Current == nullptr)
+    {
+        return FString::Printf(TEXT("%s{id=%u missing}"), Label, Id);
+    }
+    return FString::Printf(
+        TEXT("%s{id=%u hp=%d/%d pos=(%d,%d) order=%u target=%u destination=(%d,%d)}"),
+        Label,
+        Id,
+        Current->hitPoints,
+        Current->maxHitPoints,
+        Current->position.x.FloorToInt(),
+        Current->position.y.FloorToInt(),
+        static_cast<uint8>(Current->order.type),
+        Current->order.target,
+        Current->order.destination.x.FloorToInt(),
+        Current->order.destination.y.FloorToInt());
+}
+
+bool FutureThatWonEntityWithinTiles(
+    const UEchoesSimulationSubsystem* Bridge,
+    echoes::sim::EntityId EntityId,
+    const echoes::sim::Vec2& Site,
+    int32 RadiusTiles)
+{
+    const echoes::sim::Entity* Current = Bridge->FindEntity(EntityId);
+    if (Current == nullptr || Current->hitPoints <= 0)
+    {
+        return false;
+    }
+    const int64 DeltaX = static_cast<int64>(Current->position.x.Raw()) -
+        Site.x.Raw();
+    const int64 DeltaY = static_cast<int64>(Current->position.y.Raw()) -
+        Site.y.Raw();
+    const int64 RadiusRaw =
+        static_cast<int64>(RadiusTiles) * echoes::sim::kFixedScale;
+    return DeltaX * DeltaX + DeltaY * DeltaY <= RadiusRaw * RadiusRaw;
+}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -300,14 +343,13 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
         TEXT("Campaign persistence uses the current schema"),
         FEchoesCampaignProgress::SchemaVersion,
         static_cast<uint16>(2));
-    // Per-player terrain and object memory is now serialized into the
-    // snapshot, so the native snapshot schema advanced from 24 to 25.
-    // The replay envelope shape did not change and stays at 24; this
-    // assertion pins the snapshot schema only.
+    // Schema 28 appends player-hostility masks after schema 27 lifecycle state.
+    // The replay envelope shape did not change and stays at 24; this assertion
+    // pins the native snapshot schema only.
     TestEqual(
         TEXT("Mission 12 accepts the current simulation snapshot schema"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(26));
+        static_cast<uint32>(28));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();
@@ -696,25 +738,183 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             CampaignPath, ElevenRecords, Feedback));
 
     TArray<echoes::sim::EntityId> Workers;
+    TArray<echoes::sim::EntityId> Soldiers;
+    TArray<echoes::sim::EntityId> Heavies;
     for (const echoes::sim::Entity& Entity :
          Bridge->GetSimulation()->Entities())
     {
-        if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
-            Entity.type == echoes::sim::EntityType::Worker)
+        if (Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId)
+        {
+            continue;
+        }
+        if (Entity.type == echoes::sim::EntityType::Worker)
         {
             Workers.Add(Entity.id);
         }
+        else if (Entity.type == echoes::sim::EntityType::Soldier)
+        {
+            Soldiers.Add(Entity.id);
+        }
+        else if (Entity.type == echoes::sim::EntityType::HeavyUnit)
+        {
+            Heavies.Add(Entity.id);
+        }
     }
+    Soldiers.Sort();
+    Heavies.Sort();
     if (!TestTrue(
-            TEXT("At least two Kharuun construction workers are available"),
-            Workers.Num() >= 2))
+            TEXT("Mission 12 exposes three workers, three Soldiers, and one Heavy for ordinary guarded play"),
+            Workers.Num() >= 3 && Soldiers.Num() >= 3 &&
+                Heavies.Num() >= 1))
     {
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
 
-    const auto TickUntil = [Bridge](const TFunction<bool()>& Predicate,
-                                    int32 MaximumTicks)
+    const TArray<echoes::sim::EntityId> GuardIds = {
+        Soldiers[0], Heavies[0], Soldiers[1], Soldiers[2]};
+    TArray<echoes::sim::EntityId> GuardTargetIds = {
+        Start.FutureWonOruunId,
+        Start.FutureWonOruunId,
+        Start.FutureWonOruunId,
+        Start.FutureWonOruunId};
+    Bridge->SetScenarioPaused(false);
+    bool bGuardCommandsAccepted = true;
+    for (int32 GuardIndex = 0; GuardIndex < GuardIds.Num(); ++GuardIndex)
+    {
+        const echoes::sim::Entity* Ward =
+            Bridge->FindEntity(GuardTargetIds[GuardIndex]);
+        const bool bAccepted = Ward != nullptr && Bridge->IssueCommand(
+                echoes::sim::CommandType::Guard,
+                GuardIds[GuardIndex],
+                GuardTargetIds[GuardIndex],
+                Bridge->SimToWorld(Ward != nullptr ? Ward->position : Vec2{}),
+                FutureWellChoice::Dormant,
+                Feedback);
+        bGuardCommandsAccepted = bAccepted && bGuardCommandsAccepted;
+    }
+    if (!TestTrue(
+            TEXT("Three Soldiers and one Heavy guard Oruun on the exposed district route"),
+            bGuardCommandsAccepted))
+    {
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    Bridge->Tick(0.05f);
+
+    FString FirstTacticalFailure;
+    const auto WriteTacticalFailure = [
+        this,
+        Bridge,
+        Start,
+        &GuardIds,
+        &Workers,
+        &FirstTacticalFailure](const TCHAR* Context)
+    {
+        if (!FirstTacticalFailure.IsEmpty())
+        {
+            return;
+        }
+        FirstTacticalFailure = FString::Printf(
+            TEXT("[M12_TACTICAL_FAILURE] context=%s reason=%s phase=%s tick=%llu %s %s %s %s %s %s"),
+            Context,
+            *Bridge->GetMissionFailureReasonCode(),
+            FEchoesFutureThatWonMissionModel::StableName(
+                Bridge->GetFutureThatWonPhase()),
+            static_cast<unsigned long long>(
+                Bridge->GetSimulation()->CurrentTick()),
+            *DescribeFutureThatWonEntity(
+                TEXT("oruun"),
+                Start.FutureWonOruunId,
+                Bridge->FindEntity(Start.FutureWonOruunId)),
+            *DescribeFutureThatWonEntity(
+                TEXT("verifier"),
+                Start.FutureWonVerifierId,
+                Bridge->FindEntity(Start.FutureWonVerifierId)),
+            *DescribeFutureThatWonEntity(
+                TEXT("oruunGuard1"),
+                GuardIds[0],
+                Bridge->FindEntity(GuardIds[0])),
+            *DescribeFutureThatWonEntity(
+                TEXT("oruunGuard2"),
+                GuardIds[1],
+                Bridge->FindEntity(GuardIds[1])),
+            *DescribeFutureThatWonEntity(
+                TEXT("oruunGuard3"),
+                GuardIds[2],
+                Bridge->FindEntity(GuardIds[2])),
+            *DescribeFutureThatWonEntity(
+                TEXT("oruunGuard4"),
+                GuardIds[3],
+                Bridge->FindEntity(GuardIds[3])));
+        for (const auto WorkerId : Workers)
+            FirstTacticalFailure += TEXT(" ") + DescribeFutureThatWonEntity(
+                TEXT("worker"), WorkerId, Bridge->FindEntity(WorkerId));
+        const auto* Well = Bridge->FindEntity(Start.FutureWonWellId);
+        if (Well != nullptr)
+            FirstTacticalFailure += FString::Printf(TEXT(" wellOwner=%u capturePlayer=%u captureProgress=%u contested=%d"),
+                Well->owner, Well->wellCapturePlayer, Well->wellCaptureProgress,
+                Bridge->GetSimulation()->IsFutureWellContested(*Well) ? 1 : 0);
+        AddInfo(FirstTacticalFailure);
+    };
+    const auto MaintainGuards = [
+        Bridge,
+        &GuardIds,
+        &GuardTargetIds,
+        &Workers,
+        &WriteTacticalFailure]()
+    {
+        for (auto& Target : GuardTargetIds)
+        {
+            if (Workers.Contains(Target) && Bridge->FindEntity(Target) == nullptr)
+                for (auto Candidate : Workers)
+                {
+                    const auto* Worker = Bridge->FindEntity(Candidate);
+                    if (Worker != nullptr && Worker->hitPoints > 0)
+                    { Target = Candidate; break; }
+                }
+        }
+        for (int32 GuardIndex = 0; GuardIndex < GuardIds.Num(); ++GuardIndex)
+        {
+            const echoes::sim::Entity* Guard =
+                Bridge->FindEntity(GuardIds[GuardIndex]);
+            const echoes::sim::Entity* Ward =
+                Bridge->FindEntity(GuardTargetIds[GuardIndex]);
+            if (Ward == nullptr || Ward->hitPoints <= 0)
+            {
+                WriteTacticalFailure(TEXT("protected-witness-loss"));
+                return false;
+            }
+            if (Guard == nullptr || Guard->hitPoints <= 0)
+            {
+                continue;
+            }
+            if (Guard->order.type != echoes::sim::OrderType::Guard ||
+                Guard->order.target != GuardTargetIds[GuardIndex])
+            {
+                FString GuardFeedback;
+                if (!Bridge->IssueCommand(
+                        echoes::sim::CommandType::Guard,
+                        GuardIds[GuardIndex],
+                        GuardTargetIds[GuardIndex],
+                        Bridge->SimToWorld(Ward->position),
+                        FutureWellChoice::Dormant,
+                        GuardFeedback))
+                {
+                    WriteTacticalFailure(TEXT("guard-reassertion"));
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
+    const auto TickUntil = [
+        this,
+        Bridge,
+        &MaintainGuards,
+        &WriteTacticalFailure,
+        &FirstTacticalFailure](const TFunction<bool()>& Predicate,
+                               int32 MaximumTicks)
     {
         for (int32 TickIndex = 0; TickIndex < MaximumTicks; ++TickIndex)
         {
@@ -722,9 +922,175 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             {
                 return true;
             }
+            if (Bridge->GetFutureThatWonPhase() ==
+                    EEchoesFutureThatWonPhase::Failed ||
+                !MaintainGuards())
+            {
+                WriteTacticalFailure(TEXT("wait"));
+                return false;
+            }
             Bridge->Tick(0.05f);
         }
-        return Predicate();
+        if (Predicate())
+        {
+            return true;
+        }
+        if (Bridge->GetFutureThatWonPhase() ==
+                EEchoesFutureThatWonPhase::Failed ||
+            !MaintainGuards())
+        {
+            WriteTacticalFailure(TEXT("wait-boundary"));
+        }
+        return false;
+    };
+    const auto PaceWitness = [
+        Bridge,
+        &GuardIds,
+        &GuardTargetIds,
+        &MaintainGuards,
+        &WriteTacticalFailure](
+            echoes::sim::EntityId WitnessId,
+            int32 FirstGuardIndex,
+            const Vec2& Goal,
+            int32 MaximumTicks)
+    {
+        (void)FirstGuardIndex;
+        constexpr int32 StepRaw = 2 * echoes::sim::kFixedScale;
+        int32 RemainingTicks = MaximumTicks;
+        const auto EscortsReformed = [
+            Bridge,
+            WitnessId,
+            &GuardIds,
+            &GuardTargetIds]()
+        {
+            const echoes::sim::Entity* Witness =
+                Bridge->FindEntity(WitnessId);
+            if (Witness == nullptr || Witness->hitPoints <= 0)
+            {
+                return false;
+            }
+            for (int32 GuardIndex = 0; GuardIndex < GuardIds.Num(); ++GuardIndex)
+            {
+                if (GuardTargetIds[GuardIndex] != WitnessId) continue;
+                const echoes::sim::Entity* Guard =
+                    Bridge->FindEntity(GuardIds[GuardIndex]);
+                if (Guard == nullptr || Guard->hitPoints <= 0)
+                {
+                    continue;
+                }
+                if (Guard->order.type != echoes::sim::OrderType::Guard ||
+                    Guard->order.target != GuardTargetIds[GuardIndex] ||
+                    !FutureThatWonEntityWithinTiles(
+                        Bridge, GuardIds[GuardIndex], Witness->position, 3))
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+        while (RemainingTicks > 0)
+        {
+            if (Bridge->GetFutureThatWonPhase() ==
+                EEchoesFutureThatWonPhase::Complete)
+            {
+                return FutureThatWonEntityWithinTiles(
+                    Bridge, WitnessId, Goal, 3);
+            }
+            while (RemainingTicks > 0 && !EscortsReformed())
+            {
+                if (Bridge->GetFutureThatWonPhase() ==
+                        EEchoesFutureThatWonPhase::Failed ||
+                    !MaintainGuards())
+                {
+                    WriteTacticalFailure(TEXT("convoy-regroup"));
+                    return false;
+                }
+                Bridge->Tick(0.05f);
+                --RemainingTicks;
+            }
+            if (FutureThatWonEntityWithinTiles(
+                    Bridge, WitnessId, Goal, 1))
+            {
+                return true;
+            }
+            const echoes::sim::Entity* Witness =
+                Bridge->FindEntity(WitnessId);
+            if (Witness == nullptr || Witness->hitPoints <= 0 ||
+                RemainingTicks <= 0)
+            {
+                WriteTacticalFailure(TEXT("convoy-witness"));
+                return false;
+            }
+            const Vec2 StepStart = Witness->position;
+            FString MoveFeedback;
+            if (!Bridge->IssueCommand(
+                    echoes::sim::CommandType::Move,
+                    WitnessId,
+                    0,
+                    Bridge->SimToWorld(Goal),
+                    FutureWellChoice::Dormant,
+                    MoveFeedback))
+            {
+                WriteTacticalFailure(TEXT("convoy-move"));
+                return false;
+            }
+            bool bStepComplete = false;
+            while (RemainingTicks > 0 && !bStepComplete)
+            {
+                if (Bridge->GetFutureThatWonPhase() ==
+                        EEchoesFutureThatWonPhase::Failed ||
+                    !MaintainGuards())
+                {
+                    WriteTacticalFailure(TEXT("convoy-step"));
+                    return false;
+                }
+                Bridge->Tick(0.05f);
+                --RemainingTicks;
+                if (Bridge->GetFutureThatWonPhase() ==
+                    EEchoesFutureThatWonPhase::Complete)
+                {
+                    return FutureThatWonEntityWithinTiles(
+                        Bridge, WitnessId, Goal, 3);
+                }
+                Witness = Bridge->FindEntity(WitnessId);
+                if (Witness == nullptr || Witness->hitPoints <= 0)
+                {
+                    WriteTacticalFailure(TEXT("convoy-witness"));
+                    return false;
+                }
+                const int64 DeltaX =
+                    static_cast<int64>(Witness->position.x.Raw()) -
+                    StepStart.x.Raw();
+                const int64 DeltaY =
+                    static_cast<int64>(Witness->position.y.Raw()) -
+                    StepStart.y.Raw();
+                bStepComplete = FutureThatWonEntityWithinTiles(
+                    Bridge, WitnessId, Goal, 1) ||
+                    DeltaX * DeltaX + DeltaY * DeltaY >=
+                        static_cast<int64>(StepRaw) * StepRaw;
+            }
+            if (FutureThatWonEntityWithinTiles(
+                    Bridge, WitnessId, Goal, 1))
+            {
+                continue;
+            }
+            Witness = Bridge->FindEntity(WitnessId);
+            FString StopFeedback;
+            if (Witness == nullptr ||
+                !Bridge->IssueCommand(
+                    echoes::sim::CommandType::Stop,
+                    WitnessId,
+                    0,
+                    Bridge->SimToWorld(Witness->position),
+                    FutureWellChoice::Dormant,
+                    StopFeedback))
+            {
+                WriteTacticalFailure(TEXT("convoy-stop"));
+                return false;
+            }
+        }
+        WriteTacticalFailure(TEXT("convoy-budget"));
+        return false;
     };
     const Vec2 FirstLinkSite = Vec2::FromTiles(
         Plan.FirstDistrictInputSite.x.FloorToInt() + 2,
@@ -733,7 +1099,6 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
         Plan.SecondDistrictInputSite.x.FloorToInt() + 2,
         Plan.SecondDistrictInputSite.y.FloorToInt());
 
-    Bridge->SetScenarioPaused(false);
     TestFalse(
         TEXT("The local player cannot command Rhyse's public demonstrator"),
         Bridge->IssueCommand(
@@ -766,24 +1131,32 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
         TEXT("The early Well rejection is reason-coded"),
         Feedback.Contains(TEXT("FUTURE_THAT_WON_PROTOCOL_REQUIRED")));
 
+    // Stage workers concurrently with the convoy, before the readback unlocks
+    // construction, so Oruun need not wait exposed for their entire base journey.
+    for (int32 Index = 0; Index < 2; ++Index)
+    {
+        TestTrue(TEXT("An input worker accepts ordinary advance staging"),
+            Bridge->IssueCommand(echoes::sim::CommandType::Move, Workers[Index], 0,
+                Bridge->SimToWorld(Index == 0 ? Plan.FirstDistrictInputSite : Plan.SecondDistrictInputSite),
+                FutureWellChoice::Dormant, Feedback));
+    }
+    TestTrue(TEXT("The third worker stages as a capture reserve"),
+        Bridge->IssueCommand(echoes::sim::CommandType::Move, Workers[2], 0,
+            Bridge->SimToWorld(Plan.FirstDistrictInputSite), FutureWellChoice::Dormant, Feedback));
     TestTrue(
-        TEXT("Oruun accepts the Kharuun public readback"),
-        Bridge->IssueCommand(
-            echoes::sim::CommandType::Move,
+        TEXT("Oruun reaches the Kharuun public readback with surviving escorts regrouped"),
+        PaceWitness(
             Start.FutureWonOruunId,
             0,
-            Bridge->SimToWorld(Plan.KharuunReadbackSite),
-            FutureWellChoice::Dormant,
-            Feedback));
+            Plan.KharuunReadbackSite,
+            1800));
     TestTrue(
-        TEXT("The verifier accepts the Meridian public readback"),
-        Bridge->IssueCommand(
-            echoes::sim::CommandType::Move,
+        TEXT("The verifier reaches the Meridian public readback"),
+        PaceWitness(
             Start.FutureWonVerifierId,
-            0,
-            Bridge->SimToWorld(Plan.MeridianReadbackSite),
-            FutureWellChoice::Dormant,
-            Feedback));
+            2,
+            Plan.MeridianReadbackSite,
+            1800));
     TestTrue(
         TEXT("Two-person public readback opens recorded input verification"),
         TickUntil(
@@ -846,7 +1219,7 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             FutureWellChoice::Dormant,
             Feedback));
     TestTrue(
-        TEXT("The worker legitimately reveals the Future Well"),
+        TEXT("The player legitimately sees the Future Well"),
         TickUntil(
             [Bridge, Start]()
             {
@@ -877,6 +1250,34 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             Bridge->SimToWorld(Plan.FutureWellSite),
             FutureWellChoice::Preserve,
             Feedback));
+    TestTrue(TEXT("The second input worker supports the same capture without increasing its rate"),
+        Bridge->IssueCommand(echoes::sim::CommandType::FutureWell, Workers[1], Start.FutureWonWellId,
+            Bridge->SimToWorld(Plan.FutureWellSite), FutureWellChoice::Preserve, Feedback));
+    TestTrue(TEXT("The reserve worker supports the same fixed-rate capture"),
+        Bridge->IssueCommand(echoes::sim::CommandType::FutureWell, Workers[2], Start.FutureWonWellId,
+            Bridge->SimToWorld(Plan.FutureWellSite), FutureWellChoice::Preserve, Feedback));
+    for (auto& Target : GuardTargetIds) Target = Workers[0];
+    TestTrue(TEXT("Surviving escorts protect the worker's approach and capture"), MaintainGuards());
+    TestTrue(TEXT("Oruun withdraws to the first district during Well capture"),
+        Bridge->IssueCommand(echoes::sim::CommandType::Move, Start.FutureWonOruunId, 0,
+            Bridge->SimToWorld(Plan.FirstDistrictInputSite),
+            FutureWellChoice::Dormant, Feedback));
+    TestTrue(TEXT("The verifier also leaves the exposed readback during Well capture"),
+        Bridge->IssueCommand(echoes::sim::CommandType::Move, Start.FutureWonVerifierId, 0,
+            Bridge->SimToWorld(Vec2::FromTiles(
+                Plan.FirstDistrictInputSite.x.FloorToInt() - 2,
+                Plan.FirstDistrictInputSite.y.FloorToInt())),
+            FutureWellChoice::Dormant, Feedback));
+    TestTrue(TEXT("The guarded worker begins authoritative Well capture"),
+        TickUntil([Bridge, Start, &Workers]()
+        {
+            const auto* Well = Bridge->FindEntity(Start.FutureWonWellId);
+            const auto* Worker = Bridge->FindEntity(Workers[0]);
+            return Well != nullptr && Worker != nullptr &&
+                (Well->owner == UEchoesSimulationSubsystem::LocalPlayerId ||
+                 (Well->wellCapturePlayer == UEchoesSimulationSubsystem::LocalPlayerId &&
+                  Well->wellCaptureProgress > 0));
+        }, 1000));
     TestTrue(
         TEXT("The activation enters the bounded stability hold"),
         TickUntil(
@@ -886,6 +1287,8 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
                     EEchoesFutureThatWonPhase::HoldStabilityWindow;
             },
             2600));
+    for (auto& Target : GuardTargetIds) Target = Start.FutureWonWellId;
+    TestTrue(TEXT("Surviving escorts hold the committed Well independently of worker survival"), MaintainGuards());
     const FEchoesObjectiveSnapshot Activated =
         Bridge->GetLocalObjectiveSnapshot();
     TestTrue(
@@ -932,24 +1335,22 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             },
             420));
 
+    for (auto& Target : GuardTargetIds) Target = Start.FutureWonVerifierId;
+    TestTrue(TEXT("Surviving escorts protect the verifier's final readback"), MaintainGuards());
     TestTrue(
-        TEXT("Oruun accepts the first recorded district readback"),
-        Bridge->IssueCommand(
-            echoes::sim::CommandType::Move,
+        TEXT("Oruun reaches the first recorded district readback with surviving escorts regrouped"),
+        PaceWitness(
             Start.FutureWonOruunId,
             0,
-            Bridge->SimToWorld(Plan.FirstDistrictInputSite),
-            FutureWellChoice::Dormant,
-            Feedback));
+            Plan.FirstDistrictInputSite,
+            1800));
     TestTrue(
-        TEXT("The verifier accepts the second recorded district readback"),
-        Bridge->IssueCommand(
-            echoes::sim::CommandType::Move,
+        TEXT("The verifier reaches the second recorded district readback"),
+        PaceWitness(
             Start.FutureWonVerifierId,
-            0,
-            Bridge->SimToWorld(Plan.SecondDistrictInputSite),
-            FutureWellChoice::Dormant,
-            Feedback));
+            2,
+            Plan.SecondDistrictInputSite,
+            1800));
     TestTrue(
         TEXT("Ordinary paired readback commits Mission 12"),
         TickUntil(
@@ -964,18 +1365,17 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
     const FEchoesCampaignDecisionRecord* MissionRecord =
         Bridge->GetCampaignProgress().FindDecision(
             EEchoesCampaignMissionId::TheFutureThatWon);
-    // The commit is written now, so it carries native provenance. Per-player
-    // terrain and object memory is now serialized into the snapshot, so that
-    // native schema moved from 24 to 25. The replay envelope shape did not
-    // change and stays at 24; only the snapshot provenance moves here.
+    // The commit is written now, so it carries native schema-28 provenance.
+    // The replay envelope shape did not change and stays at 24.
     TestTrue(
-        TEXT("Mission 12 stores one recorded protocol, all eight facts, and schema-25 provenance"),
+        TEXT("Mission 12 stores one recorded protocol, all eight facts, and schema-28 provenance"),
         MissionRecord != nullptr &&
             MissionRecord->WellChoice == FutureWellChoice::Preserve &&
             MissionRecord->AvailableWellChoices ==
                 FutureThatWonChoiceMask(FutureWellChoice::Preserve) &&
             MissionRecord->VerifiedFacts == 0xFF &&
-            MissionRecord->SimulationSnapshotVersion == 26 &&
+            MissionRecord->SimulationSnapshotVersion ==
+                echoes::sim::kSnapshotVersion &&
             MissionRecord->CompletionTick > 0 &&
             MissionRecord->FinalStateChecksum != 0);
     FEchoesCampaignProgress Reloaded;
