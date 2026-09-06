@@ -1,0 +1,26 @@
+{
+  "valid": true,
+  "files": 409,
+  "bytes": 265566035,
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "archive": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-handoff-20260906/concept-pipeline-handoff-reviewed.zip",
+  "sha256": "5ee49ee60813cec1980b78e65aad6c7d024e50bb737dbe48ffa11e03c77f5d47",
+  "inventory_paths": 244,
+  "source_commit": "ce3c36c",
+  "verified_utc": "2026-09-06T21:21:56.617404+00:00",
+  "history": [
+    {
+      "valid": true,
+      "files": 405,
+      "bytes": 264336353,
+      "author": "Angelis Pseftis",
+      "creator": "Angelis Pseftis",
+      "archive": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-handoff-20260906/concept-pipeline-handoff.zip",
+      "sha256": "ec3eb7f49e8d4dbb385f5103b8a08e0e058be65a8e1426f824d9c367223423b4",
+      "inventory_paths": 244,
+      "status": "HISTORICAL_PRE_FINAL_QA_EXPORT"
+    }
+  ],
+  "boundary": "Local preservation export, not off-device backup, rights clearance, source-faithful modeling completion or Unreal acceptance"
+}
