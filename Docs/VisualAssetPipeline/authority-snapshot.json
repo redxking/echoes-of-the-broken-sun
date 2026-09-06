@@ -1,0 +1,96 @@
+{
+  "author": "Angelis Pseftis",
+  "base_commit": "1a60cb1fecdd5a709f940726a6a3e15b0fc378ff",
+  "observed_date": "2026-09-06",
+  "source_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "19a1e136c7c9ac237ab7c03c103d37e8583d7c16a3239893a6ae758bf72af06f",
+      "last_committed_revision": "76fcb8c797ecb15cd46f911642787f37a7e2917d",
+      "working_tree_differs_from_HEAD": false
+    },
+    {
+      "path": "Docs/README.md",
+      "sha256": "9716156ca3a84a509f21a781f2966027d5452eebcda7494f8b493c48c80cc7f4",
+      "last_committed_revision": "dd4f9ab967039af9c61962335658bd49407e32e3",
+      "working_tree_differs_from_HEAD": false
+    },
+    {
+      "path": "Docs/ArtDirection.md",
+      "sha256": "82f4052be2952606bb2e8384d271839e61d130997dfb656118983154b70ba5f8",
+      "last_committed_revision": "76fcb8c797ecb15cd46f911642787f37a7e2917d",
+      "working_tree_differs_from_HEAD": false
+    },
+    {
+      "path": "Docs/VisualTargetSpecification.md",
+      "sha256": "498e026ce1908d3521420c94536dc5f5ab136757880443014b20c0d4e4858efa",
+      "last_committed_revision": "dd4f9ab967039af9c61962335658bd49407e32e3",
+      "working_tree_differs_from_HEAD": false
+    },
+    {
+      "path": "Docs/ComponentDesignCatalog.md",
+      "sha256": "bcd4849ff401fb5a1819a0853fc8d99c0e86f8cce6efa978d36b09b97a5255de",
+      "last_committed_revision": "dd4f9ab967039af9c61962335658bd49407e32e3",
+      "working_tree_differs_from_HEAD": false
+    },
+    {
+      "path": "Docs/MapConcepts.md",
+      "sha256": "bbcadfcf3c0572790d8886876134b3ceb95652c7eb6ea3f618ab3aadef3420e9",
+      "last_committed_revision": "76fcb8c797ecb15cd46f911642787f37a7e2917d",
+      "working_tree_differs_from_HEAD": false
+    },
+    {
+      "path": "Docs/MapTechnicalBlueprint.md",
+      "sha256": "7b9ea925f5232690ee663d047ddcee1f87332d26bd4d7e56549c48996b592e17",
+      "last_committed_revision": "76fcb8c797ecb15cd46f911642787f37a7e2917d",
+      "working_tree_differs_from_HEAD": false
+    },
+    {
+      "path": "Docs/Archive/DevelopmentBible.md",
+      "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c",
+      "last_committed_revision": "76fcb8c797ecb15cd46f911642787f37a7e2917d",
+      "working_tree_differs_from_HEAD": false
+    },
+    {
+      "path": "Docs/Archive/AssetRegister.md",
+      "sha256": "583b9c415ac639ad8f8a3e5683ee80c4707339429721a75feb790c6e4c26fdac",
+      "last_committed_revision": "b19abe85f780a5154cbd6fa051badba4a6d24982",
+      "working_tree_differs_from_HEAD": true
+    },
+    {
+      "path": "Docs/Requirements.md",
+      "sha256": "467e263d65a4f33c07882631c7479401d75cce2447ae018859aa86a7d435100e",
+      "last_committed_revision": "1a60cb1fecdd5a709f940726a6a3e15b0fc378ff",
+      "working_tree_differs_from_HEAD": true
+    },
+    {
+      "path": "Docs/RequirementsState.md",
+      "sha256": "17010982185bee26479e992bf1f9a79489ba57edce2bc3ac7fb0cdb97e656a0b",
+      "last_committed_revision": "1a60cb1fecdd5a709f940726a6a3e15b0fc378ff",
+      "working_tree_differs_from_HEAD": true
+    },
+    {
+      "path": "Docs/GameCompletionDirective.md",
+      "sha256": "cc4e309ad843a81834f8cc206343db54e5ccd0431888b16f5ddbd87220f895b8",
+      "last_committed_revision": "76fcb8c797ecb15cd46f911642787f37a7e2917d",
+      "working_tree_differs_from_HEAD": false
+    }
+  ],
+  "branch_isolation": "docs/concept-production-pipeline; no writes to source checkout or its index",
+  "remote_main_observed": "1a60cb1fecdd5a709f940726a6a3e15b0fc378ff",
+  "specialists": [
+    {
+      "role": "evidence_researcher",
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "ownership": "read-only canon/provenance mapping"
+    },
+    {
+      "role": "evidence_researcher",
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "ownership": "read-only non-raster website discovery"
+    }
+  ]
+}
