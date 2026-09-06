@@ -32,7 +32,7 @@ import struct
 from dataclasses import dataclass, field
 
 AUTHOR = "Angelis Pseftis"
-KIT_REVISION = "ebs-meshkit-v1"
+KIT_REVISION = "ebs-meshkit-v2"  # v2: socket nodes as mesh children named SOCKET_<name>; rotation helper
 UV_WORLD_CM = 256.0  # one UV0 tile spans 256 cm (1024 texels -> 4 texels per cm)
 
 
@@ -110,6 +110,8 @@ class Socket:
     position: tuple
     yaw_deg: float = 0.0  # rotation about +Z; socket +X points along yaw
     purpose: str = ""
+    raw_gltf_rotation: tuple | None = None  # probe override: quaternion written verbatim
+    raw_gltf_scale: tuple | None = None     # probe override: scale written verbatim
 
 
 @dataclass
@@ -306,6 +308,11 @@ class Mesh:
             counts[k] = counts.get(k, 0) + len(p.points) - 2
         return dict(sorted(counts.items()))
 
+    def slot_names_in_primitive_order(self) -> list:
+        """Material slot names in the order the GLB writer emits primitives (empty slots skipped)."""
+        counts = self.triangle_count_by("slot")
+        return [name for name in self.slots if counts.get(name, 0) > 0]
+
     def components(self) -> list:
         seen = []
         for p in self.polygons:
@@ -392,7 +399,7 @@ class Mesh:
             handle.write(text)
         return sha256_file(path)
 
-    def write_glb(self, path: str, extras: dict | None = None):
+    def write_glb(self, path: str, extras: dict | None = None, include_collision: bool = True):
         """glTF 2.0 binary in the glTF frame (meters). One mesh with one primitive
         per material slot; SOCKET_ and UBX_ child nodes for Interchange."""
         def to_gltf_pos(p):
@@ -476,18 +483,26 @@ class Mesh:
         meshes = [{"name": self.name, "primitives": primitives}]
         nodes = [{"name": self.name, "mesh": 0}]
         root_children = [0]
+        mesh_children = []
         for socket in self.sockets:
-            half = math.radians(socket.yaw_deg) / 2.0
-            # Unreal yaw quaternion (0, 0, sin, cos) -> glTF (-x, -z, -y, w)
-            q = (0.0, -math.sin(half), 0.0, math.cos(half))
-            nodes.append({
-                "name": f"SOCKET_{self.name}_{socket.name}",
+            # Socket nodes must be descendants of the mesh node: with more than one mesh in the
+            # file (collision boxes are meshes too) Interchange attaches sockets by parent chain
+            # (InterchangePipelineMeshesUtilities.cpp, "Import of Local Sockets"). The socket
+            # name is the node name after the SOCKET_ prefix.
+            node = {
+                "name": f"SOCKET_{socket.name}",
                 "translation": [_r(c) for c in to_gltf_pos(socket.position)],
-                "rotation": [_r(c) for c in q],
+                "rotation": [_r(c) for c in (socket.raw_gltf_rotation or socket_rotation_gltf(socket.yaw_deg))],
                 "extras": {"purpose": socket.purpose, "unreal_yaw_deg": socket.yaw_deg},
-            })
-            root_children.append(len(nodes) - 1)
-        for index, box in enumerate(self.collision):
+            }
+            scale = socket.raw_gltf_scale or SOCKET_GLTF_SCALE
+            if tuple(scale) != (1.0, 1.0, 1.0):
+                node["scale"] = [_r(c) for c in scale]
+            nodes.append(node)
+            mesh_children.append(len(nodes) - 1)
+        if mesh_children:
+            nodes[0]["children"] = mesh_children
+        for index, box in enumerate(self.collision if include_collision else []):
             box_mesh = Mesh(f"UBX_{self.name}_{index + 1:02d}")
             box_mesh.slot("Collision")
             box_mesh.box(box.center, box.size, 0, "collision")
@@ -545,6 +560,44 @@ class Mesh:
             handle.write(struct.pack("<I4s", len(bin_bytes), b"BIN\x00"))
             handle.write(bin_bytes)
         return sha256_file(path)
+
+
+def q_axis(axis: int, deg: float):
+    """Quaternion (x, y, z, w) for a rotation of ``deg`` about glTF axis 0=X, 1=Y, 2=Z."""
+    half = math.radians(deg) / 2.0
+    s = math.sin(half)
+    return ((s if axis == 0 else 0.0), (s if axis == 1 else 0.0), (s if axis == 2 else 0.0), math.cos(half))
+
+
+def quat_mul(a, b):
+    """Hamilton product a*b for (x, y, z, w) quaternions."""
+    ax, ay, az, aw = a
+    bx, by, bz, bw = b
+    return (
+        aw * bx + ax * bw + ay * bz - az * by,
+        aw * by - ax * bz + ay * bw + az * bx,
+        aw * bz + ax * by - ay * bx + az * bw,
+        aw * bw - ax * bx - ay * by - az * bz,
+    )
+
+
+# Socket node encoding for the installed Unreal 5.8.2 Interchange glTF importer.
+# InterchangeMeshHelper.cpp ImportSockets() multiplies every socket transform by the
+# scene's AxisConversionInverseTransform, which for glTF is a Y/Z swap (a reflection):
+# an identity node imports as rotator (0, 180, -90) with scale (-1, 1, 1). The
+# encoding below was established by probe imports (evidence:
+# BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/import/probe-sweep
+# and probe-verify): node scale (-1, 1, 1) cancels the reflection, and the rotation
+# q = q_y(-yaw) * (q_y(180) * q_x(-90)) imports as a pure Unreal yaw with unit scale
+# for 0, 45, 90, -90 and 180 degrees. Re-verify with ArtSource/tools/socket_probe.py
+# whenever the engine build changes.
+SOCKET_BASIS_COMPENSATION = quat_mul(q_axis(1, 180.0), q_axis(0, -90.0))
+SOCKET_GLTF_SCALE = (-1.0, 1.0, 1.0)
+
+
+def socket_rotation_gltf(yaw_deg: float):
+    """glTF node quaternion for a socket whose Unreal rotation is a pure yaw (see above)."""
+    return quat_mul(q_axis(1, -yaw_deg), SOCKET_BASIS_COMPENSATION)
 
 
 # --- outlines ---------------------------------------------------------------

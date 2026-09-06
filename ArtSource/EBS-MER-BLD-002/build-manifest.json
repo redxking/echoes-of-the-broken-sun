@@ -108,7 +108,7 @@
   "note": "Only the cosmetic conduit stubs (and any later span component) leave the 2x2 footprint; they carry no collision, navigation or network authority (GAP-03)."
  },
  "front": "+X face carries the numbered panels and service bay; couplings on -Y (Left) and +Y (Right)",
- "kit_revision": "ebs-meshkit-v1",
+ "kit_revision": "ebs-meshkit-v2",
  "material_slot_policy": "3 provisional slots (contract material_slots_provisional_max 3); status slot is a state-masked emissive under the 15% visible-area ceiling",
  "material_slots": [
   "MI_EBS_MER_CeramicCivic",
@@ -199,10 +199,16 @@
      ]
     }
    ],
+   "collision_in_file": true,
    "lod": 0,
    "mesh": "SM_EBS_MER_BLD_002",
    "path": "export/SM_EBS_MER_BLD_002_LOD0.glb",
-   "sha256": "fafe0ead90748c58b8e8bb7417d01b0341247f2877c525ffa7a624d0ab4296b1",
+   "section_slot_names": [
+    "MI_EBS_MER_CeramicCivic",
+    "MI_EBS_MER_CompactFrame",
+    "MI_EBS_MER_StatusCyan"
+   ],
+   "sha256": "1ed61690842053ff3e167d5e0031bb5eb1013d86a46c45c7c4d3b3f9683e95cb",
    "sockets": [
     {
      "name": "Conduit_Left_01",
@@ -321,7 +327,7 @@
    "lod": 0,
    "mesh": "SM_EBS_MER_BLD_002",
    "path": "export/SM_EBS_MER_BLD_002_LOD0.obj",
-   "sha256": "e54841d1cc9f18471ace5738f6dc26259db9a68a69f2e7bb463256dff567afc6"
+   "sha256": "445452d6db85912cd4db3fbdfeb95034f52e9dc1e2b122a94dcecb7e41d7c9ae"
   },
   {
    "bounds_cm": [
@@ -346,10 +352,15 @@
     "MI_EBS_MER_CompactFrame": 124
    },
    "collision_boxes": [],
+   "collision_in_file": true,
    "lod": 0,
    "mesh": "SM_EBS_MER_BLD_002_Panel",
    "path": "export/SM_EBS_MER_BLD_002_Panel_LOD0.glb",
-   "sha256": "612bfcf8018eb58add3bc9ea766c077903055824fe8cbed1c74cef5cf2a1d364",
+   "section_slot_names": [
+    "MI_EBS_MER_CeramicCivic",
+    "MI_EBS_MER_CompactFrame"
+   ],
+   "sha256": "cec30de9b1e8ff9c31965dccc06c463ab2c70db80e5ac57e1f3956b4fcef01fe",
    "sockets": [
     {
      "name": "Label",
@@ -368,7 +379,7 @@
    "lod": 0,
    "mesh": "SM_EBS_MER_BLD_002_Panel",
    "path": "export/SM_EBS_MER_BLD_002_Panel_LOD0.obj",
-   "sha256": "5e2bb7d0c9a14020bd6a471270492019658f8f4fee5afa7e50687300b6c98dfa"
+   "sha256": "65a4578908d3fb44c00578f3de2569321431ee82b4cca563ada078257a20bca8"
   },
   {
    "bounds_cm": [
@@ -394,10 +405,15 @@
     "MI_EBS_MER_StatusCyan": 12
    },
    "collision_boxes": [],
+   "collision_in_file": true,
    "lod": 0,
    "mesh": "SM_EBS_MER_BLD_002_ConduitStub",
    "path": "export/SM_EBS_MER_BLD_002_ConduitStub_LOD0.glb",
-   "sha256": "680289b7b19cda56d1d37ae32cac0bb4319d8f526c202055f7510275e748ce60",
+   "section_slot_names": [
+    "MI_EBS_MER_CompactFrame",
+    "MI_EBS_MER_StatusCyan"
+   ],
+   "sha256": "bc9524fd87f2437cc1735af2b2bd4814125561df10db9bc7d25bb55e0bba6764",
    "sockets": [
     {
      "name": "Span_End",
@@ -416,7 +432,7 @@
    "lod": 0,
    "mesh": "SM_EBS_MER_BLD_002_ConduitStub",
    "path": "export/SM_EBS_MER_BLD_002_ConduitStub_LOD0.obj",
-   "sha256": "789b0d48eb25c3c0d383b15e441947df7fa611c6129d63ec4374c3ebb202ebf5"
+   "sha256": "73605f852f27d59cb96febdde2337618d14dfed1b0fd1338274351b756ea571f"
   },
   {
    "bounds_cm": [
@@ -501,10 +517,16 @@
      ]
     }
    ],
+   "collision_in_file": false,
    "lod": 1,
    "mesh": "SM_EBS_MER_BLD_002",
    "path": "export/SM_EBS_MER_BLD_002_LOD1.glb",
-   "sha256": "d413d37238809a71de4f21321cb65c8e70b5c835722d233805ec5824101bc337",
+   "section_slot_names": [
+    "MI_EBS_MER_CeramicCivic",
+    "MI_EBS_MER_CompactFrame",
+    "MI_EBS_MER_StatusCyan"
+   ],
+   "sha256": "977b9a3ec15b8d18fde886ad98bac7f4e7b9bfc3ea4970e5c83d8fa0a3d60326",
    "sockets": [
     {
      "name": "Conduit_Left_01",
@@ -623,7 +645,7 @@
    "lod": 1,
    "mesh": "SM_EBS_MER_BLD_002",
    "path": "export/SM_EBS_MER_BLD_002_LOD1.obj",
-   "sha256": "4c0c35a844300bba938cfbcf1f29c5ffad0f582ea77cb97142fd5320ecfe3116"
+   "sha256": "806e09928e57d1b629ecf7edc42282cb40a054473a3550ac0b5c2ac0b944dbad"
   },
   {
    "bounds_cm": [
@@ -645,10 +667,14 @@
     "MI_EBS_MER_CeramicCivic": 12
    },
    "collision_boxes": [],
+   "collision_in_file": false,
    "lod": 1,
    "mesh": "SM_EBS_MER_BLD_002_Panel",
    "path": "export/SM_EBS_MER_BLD_002_Panel_LOD1.glb",
-   "sha256": "fca8c5f1a29f102d98a6934fe53df93a15f052678ef23985142956757b931477",
+   "section_slot_names": [
+    "MI_EBS_MER_CeramicCivic"
+   ],
+   "sha256": "20dd2c899ac793a5866ac1b19650f13b5b0035a5ea01a529d81d606c3b664e07",
    "sockets": [
     {
      "name": "Label",
@@ -667,7 +693,7 @@
    "lod": 1,
    "mesh": "SM_EBS_MER_BLD_002_Panel",
    "path": "export/SM_EBS_MER_BLD_002_Panel_LOD1.obj",
-   "sha256": "1ed3de176176493d7c5aadfef9f9b3683e2f320aaf0e95b19c473a9084fd44df"
+   "sha256": "060b8e60736c132aa1d410845e765ef45860c18943a9252c8fd75272aa661991"
   },
   {
    "bounds_cm": [
@@ -693,10 +719,15 @@
     "MI_EBS_MER_StatusCyan": 12
    },
    "collision_boxes": [],
+   "collision_in_file": false,
    "lod": 1,
    "mesh": "SM_EBS_MER_BLD_002_ConduitStub",
    "path": "export/SM_EBS_MER_BLD_002_ConduitStub_LOD1.glb",
-   "sha256": "2eec896aa562227b28e4fde417b5f78f60cffb5470aa9845cca6f9c4917db98b",
+   "section_slot_names": [
+    "MI_EBS_MER_CompactFrame",
+    "MI_EBS_MER_StatusCyan"
+   ],
+   "sha256": "f8a97b5c806575dbf83e2263b713a3a8d60cadc94b1b200a6789c0decb4235d0",
    "sockets": [
     {
      "name": "Span_End",
@@ -715,7 +746,7 @@
    "lod": 1,
    "mesh": "SM_EBS_MER_BLD_002_ConduitStub",
    "path": "export/SM_EBS_MER_BLD_002_ConduitStub_LOD1.obj",
-   "sha256": "1b56e674afb4519b04293568dbd1cfa2e9fc0abb915255d613e480aca3e32e70"
+   "sha256": "52a1fc82dcda8d957371c9375d55d1da105c18e25ea0cb1c5787db2d2aa7a630"
   }
  ],
  "package_id": "EBS-PKG-MC-POWER-LINK",
@@ -743,7 +774,7 @@
    },
    "lod": 0,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/review/SM_EBS_MER_BLD_002_assembly_connected_LOD0.obj",
-   "sha256": "b9ebe33ac775750c2addabc9e9d2938a54098a0ab58064319c2b64c883620dad",
+   "sha256": "74726f8c9f7c662bd16525edcebf2079af91e8c0a69f347e4c359c2fa990f4c1",
    "state": "connected",
    "triangles": 1998
   },
@@ -767,7 +798,7 @@
    },
    "lod": 0,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/review/SM_EBS_MER_BLD_002_assembly_maintenance_LOD0.obj",
-   "sha256": "6af1d29da0d56d55d052efdf7768f9b57a217c12f53873d83976f4898d361d2b",
+   "sha256": "4e8e3f826bfd843124ad54de3abd947c718a4db12a899351f216e1419178df05",
    "state": "maintenance",
    "triangles": 1998
   },
@@ -791,12 +822,12 @@
    },
    "lod": 1,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/review/SM_EBS_MER_BLD_002_assembly_connected_LOD1.obj",
-   "sha256": "9f97e714603b65d343c0483f2edc87ed5636de33295a1240fb3756029d049927",
+   "sha256": "1dda6805262d21d3904f7ddef326cb58697e9bec72902b4dd6b4f0b10a65d40e",
    "state": "connected",
    "triangles": 1190
   }
  ],
- "revision": "ebs-mer-bld-002-blockout-v1",
+ "revision": "ebs-mer-bld-002-blockout-v2",
  "scale_basis": {
   "footprint_cells": [
    2,
@@ -848,9 +879,9 @@
  "stage_boundary": "Editable source geometry with review views; no textures, no Unreal import, no gate acceptance, no owner acceptance.",
  "tools": {
   "builder": "build_power_link.py",
-  "builder_sha256": "b8c24bcc23e0c1d84788877221100e0576c325787883665f8058e850642eaa88",
+  "builder_sha256": "2bd910bd02be9c375b59996e7da49f6a0ab326a97b0cb04808f4d3ded4c73c92",
   "meshkit": "../tools/ebs_meshkit.py",
-  "meshkit_sha256": "c1c8917f6f2892f54957aafc3ff2ea6203bebfddd327415defcf73d8cb9f50d3",
+  "meshkit_sha256": "47de1f163ada143005ca2d7d51ba7add2e50e5d32f865d05f0f7ec06385b0781",
   "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
   "python": "3.14.7"
  },

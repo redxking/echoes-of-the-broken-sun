@@ -135,11 +135,18 @@ class PowerLinkBlockoutTests(unittest.TestCase):
             m.write_glb(path)
             doc = kit.read_glb(path)
             names = [n["name"] for n in doc["nodes"]]
-            self.assertIn("SOCKET_SM_T_S", names)
+            self.assertIn("SOCKET_S", names)
+            mesh_node = doc["nodes"][0]
+            self.assertIn(names.index("SOCKET_S"), mesh_node["children"])
             self.assertIn("UBX_SM_T_01", names)
-            socket = next(n for n in doc["nodes"] if n["name"] == "SOCKET_SM_T_S")
+            socket = next(n for n in doc["nodes"] if n["name"] == "SOCKET_S")
             # Unreal (100, 200, 300) cm -> glTF (X, Z, Y) / 100 = (1.0, 3.0, 2.0) m
             self.assertEqual(socket["translation"], [1.0, 3.0, 2.0])
+            self.assertEqual(socket["scale"], [-1.0, 1.0, 1.0])
+            # Encoding established by the 5.8.2 probe imports: q_y(-90) * (q_y(180) * q_x(-90))
+            expect = kit.quat_mul(kit.q_axis(1, -90.0), kit.quat_mul(kit.q_axis(1, 180.0), kit.q_axis(0, -90.0)))
+            for got, want in zip(socket["rotation"], expect):
+                self.assertAlmostEqual(got, want, places=4)
             pos = doc["accessors"][doc["meshes"][0]["primitives"][0]["attributes"]["POSITION"]]
             self.assertAlmostEqual(pos["min"][0], 0.95, places=5)
             self.assertAlmostEqual(pos["max"][1], 1.0, places=5)   # Unreal Z 100 cm -> glTF Y 1.0 m

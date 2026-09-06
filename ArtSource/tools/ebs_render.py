@@ -1,14 +1,41 @@
 #!/usr/bin/env python3
 """ebs_render.py - review-view renderer for OBJ blockouts.
 
-Renders orthographic (front/side/rear/left/top) and Unreal-style perspective
-tactical views of triangle meshes stored in Wavefront OBJ files and writes
-8-bit RGB PNGs plus a JSON manifest. Used to validate 3D blockouts against the
-RTS camera before Unreal import.
+Renders orthographic review views (front/side/rear/left/top) and tactical
+views that reproduce the project's RTS camera (AEchoesRTSCameraPawn) of
+triangle meshes stored in Wavefront OBJ files and writes 8-bit RGB PNGs plus a
+JSON manifest. Used to validate 3D blockouts against the RTS camera before
+Unreal import.
 
 World convention (Unreal, left-handed): +X forward, +Y right, +Z up, units in
 centimeters. OBJ vertices are already in this frame; the OBJ file is a plain
 container and no Y-up conversion is applied.
+
+Tactical views (type "persp") are ORTHOGRAPHIC by default because the game
+camera is: Source/EchoesOfTheBrokenSun/Private/EchoesRTSCameraPawn.cpp sets
+Camera->ProjectionMode = Orthographic and SynchronizeOrthographicFraming()
+derives OrthoWidth = 2 * arm * tan(fov / 2) from the authored spring-arm
+distance and horizontal FOV. The spring-arm basis, position and target-plane
+extent are kept; only the projection differs. "projection": "perspective" is
+the labelled legacy option that keeps the true-perspective path (horizontal
+FOV across the image width) for comparison with older renders.
+
+Frame axis: UE 5.8 ships [/Script/Engine.LocalPlayer]
+AspectRatioAxisConstraint=AspectRatio_MaintainYFOV in BaseEngine.ini and the
+project does not override it, so at runtime OrthoWidth governs the VERTICAL
+extent and the visible width is OrthoWidth * aspect (CameraStackTypes.cpp:
+XAxisMultiplier = SizeY / SizeX; OrthoWidth / 2 is divided by it).
+"frame_axis": "height" (default) reproduces that engine behaviour;
+"frame_axis": "width" applies the authored width horizontally, which is what
+the game would show if Config/DefaultEngine.ini set
+AspectRatioAxisConstraint=AspectRatio_MaintainXFOV. The axis mapping is
+derived from engine source, not from an in-engine capture: confirm once
+against a PIE screenshot of the default preset before using renders for
+framing decisions.
+
+Perspective triangles and edges crossing the near plane are clipped in camera
+space (Sutherland-Hodgman against zc >= NEAR_PLANE_CM), so large ground
+plates that extend behind the camera still render up to the frame bottom.
 
 Standard library only. Deterministic: identical inputs give byte-identical PNGs.
 
@@ -30,6 +57,12 @@ TOOL_NAME = "ebs_render.py"
 AUTHOR = "Angelis Pseftis"
 NEAR_PLANE_CM = 1.0
 FEATURE_EDGE_DEG = 30.0
+# Edge overlay depth bias: a small constant fraction of the view extent plus a
+# slope term scaled by the occluding surface's local screen-space depth gradient.
+EDGE_BIAS_FRACTION = 0.0005
+EDGE_BIAS_SLOPE_PX = 1.0
+TACTICAL_PROJECTIONS = ("ortho", "perspective")
+FRAME_AXES = ("height", "width")
 DEFAULT_MATERIAL = "_default"
 DEFAULT_COLOR = (0.6, 0.6, 0.6)
 
@@ -203,17 +236,34 @@ class Batch:
         return edges
 
 
-def _color3(value, what):
+def _triple(value, what, label):
     if (not isinstance(value, (list, tuple))) or len(value) != 3:
-        raise RenderError(f"{what}: expected [r, g, b]")
+        raise RenderError(f"{what}: expected {label}")
     try:
         return (float(value[0]), float(value[1]), float(value[2]))
     except (TypeError, ValueError) as exc:
-        raise RenderError(f"{what}: expected numeric [r, g, b]") from exc
+        raise RenderError(f"{what}: expected numeric {label}") from exc
+
+
+def _color3(value, what):
+    return _triple(value, what, "[r, g, b]")
 
 
 def _vec3(value, what):
-    return _color3(value, what)
+    return _triple(value, what, "[x, y, z]")
+
+
+def _num(value, what):
+    """Float from a JSON scalar; non-numeric values are a RenderError, not a traceback."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise RenderError(f"{what}: expected a number (got {value!r})")
+    return float(value)
+
+
+def _int(value, what):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or int(value) != value:
+        raise RenderError(f"{what}: expected an integer (got {value!r})")
+    return int(value)
 
 
 def transform_vertices(verts, translate, yaw_deg, scale):
@@ -294,8 +344,8 @@ def build_ground_batches(ground, line_width_cm):
     """Subdivided ground plane, grid line strips and footprint outline."""
     if not ground:
         return []
-    tile = float(ground.get("tile_cm", 200.0))
-    tiles = int(ground.get("tiles", 12))
+    tile = _num(ground.get("tile_cm", 200.0), "ground.tile_cm")
+    tiles = _int(ground.get("tiles", 12), "ground.tiles")
     if tile <= 0 or tiles <= 0:
         raise RenderError("ground.tile_cm and ground.tiles must be positive")
     color = _color3(ground.get("color", [0.22, 0.23, 0.25]), "ground.color")
@@ -324,9 +374,10 @@ def build_ground_batches(ground, line_width_cm):
     if footprint:
         if (not isinstance(footprint, (list, tuple))) or len(footprint) != 2:
             raise RenderError("ground.footprint_cm: expected [x_cm, y_cm]")
-        fx, fy = float(footprint[0]) * 0.5, float(footprint[1]) * 0.5
+        fx = _num(footprint[0], "ground.footprint_cm[0]") * 0.5
+        fy = _num(footprint[1], "ground.footprint_cm[1]") * 0.5
         fcolor = _color3(ground.get("footprint_color", [0.95, 0.62, 0.18]), "ground.footprint_color")
-        fwidth = float(ground.get("footprint_line_cm", 6.0))
+        fwidth = _num(ground.get("footprint_line_cm", 6.0), "ground.footprint_line_cm")
         fverts = []
         ftris = []
         corners = [(-fx, -fy), (fx, -fy), (fx, fy), (-fx, fy)]
@@ -341,7 +392,7 @@ def build_ground_batches(ground, line_width_cm):
 def build_reference_figure(figure):
     if not figure:
         return None
-    height = float(figure.get("height_cm", 180.0))
+    height = _num(figure.get("height_cm", 180.0), "reference_figure.height_cm")
     pos = _vec3(figure.get("position", [0.0, 0.0, 0.0]), "reference_figure.position")
     color = _color3(figure.get("color", [0.92, 0.56, 0.20]), "reference_figure.color")
     center = (pos[0], pos[1], pos[2] + height * 0.5)
@@ -373,21 +424,25 @@ def union_bbox(batches):
 
 
 # --- cameras -------------------------------------------------------------------
-def ortho_axes(from_side, image_up="+X"):
-    """Camera basis for an ortho view: camera sits on `from_side`, looks at origin."""
+def ortho_axes(from_side, image_up=None):
+    """Camera basis for an ortho view: camera sits on `from_side`, looks at origin.
+
+    `image_up` is honoured on every view; it defaults to +Z for side views and
+    +X for the +Z/-Z views. An up hint parallel to the view is an error.
+    """
     if from_side not in AXIS_DIRS:
         raise RenderError(f"ortho 'from' must be one of {sorted(AXIS_DIRS)} (got {from_side!r})")
     side = AXIS_DIRS[from_side]
     forward = (-side[0], -side[1], -side[2])
-    if from_side in ("+Z", "-Z"):
-        if image_up not in AXIS_DIRS:
-            raise RenderError(f"ortho 'image_up' must be one of {sorted(AXIS_DIRS)} (got {image_up!r})")
-        up_hint = AXIS_DIRS[image_up]
-    else:
-        up_hint = (0.0, 0.0, 1.0)
-    right = v_normalize(v_cross(up_hint, forward))
+    if image_up is None:
+        image_up = "+X" if from_side in ("+Z", "-Z") else "+Z"
+    if image_up not in AXIS_DIRS:
+        raise RenderError(f"ortho 'image_up' must be one of {sorted(AXIS_DIRS)} (got {image_up!r})")
+    up_hint = AXIS_DIRS[image_up]
+    right = v_cross(up_hint, forward)
     if v_length(right) == 0.0:
-        raise RenderError(f"ortho view from {from_side}: up hint {image_up} is parallel to the view")
+        raise RenderError(f"ortho view from {from_side}: image_up {image_up} is parallel to the view")
+    right = v_normalize(right)
     up = v_cross(forward, right)
     return forward, right, up
 
@@ -520,7 +575,15 @@ def _clip_segment(x0, y0, x1, y1, W, H):
 
 
 def _draw_line(x0, y0, d0, x1, y1, d1, color, zb, cb, W, H, bias_c, bias_q):
-    """Integer Bresenham with per-pixel depth, z-tested with bias (no z write)."""
+    """Integer Bresenham with per-pixel depth, z-tested with bias (no z write).
+
+    The accepted depth slack is bias_c + bias_q * d * d (a small constant
+    fraction of the view extent) plus EDGE_BIAS_SLOPE_PX times the occluding
+    surface's local screen-space depth gradient, taken from the z-buffer
+    neighbours (per axis the smaller of the two sides, so a depth
+    discontinuity at a silhouette does not open the test). Surfaces facing the
+    camera therefore get almost no slack and shallow recesses stay hidden.
+    """
     clip = _clip_segment(x0, y0, x1, y1, W, H)
     if clip is None:
         return
@@ -532,8 +595,10 @@ def _draw_line(x0, y0, d0, x1, y1, d1, color, zb, cb, W, H, bias_c, bias_q):
     dd = d1 - d0
     ax, ay, ad = x0 + dx * t0, y0 + dy * t0, d0 + dd * t0
     bx, by, bd = x0 + dx * t1, y0 + dy * t1, d0 + dd * t1
-    ix, iy = int(ax), int(ay)
-    jx, jy = int(bx), int(by)
+    # nearest pixel (not truncation) keeps the drawn line within 0.5 px of the
+    # ideal one, which bounds the depth error the slope bias has to cover
+    ix, iy = int(ax + 0.5), int(ay + 0.5)
+    jx, jy = int(bx + 0.5), int(by + 0.5)
     if ix < 0:
         ix = 0
     if iy < 0:
@@ -559,10 +624,61 @@ def _draw_line(x0, y0, d0, x1, y1, d1, color, zb, cb, W, H, bias_c, bias_q):
     step_d = (bd - ad) / steps if steps > 0 else 0.0
     d = ad
     x, y = ix, iy
+    inf = math.inf
+    slope_px = EDGE_BIAS_SLOPE_PX
+    last_x = W - 1
+    last_y = H - 1
     while True:
         idx = y * W + x
-        if d <= zb[idx] + bias_c + bias_q * d * d:
+        zref = zb[idx]
+        if zref == inf:
             cb[idx] = color
+        else:
+            slope = 0.0
+            ga = gb = -1.0
+            if x > 0:
+                v = zb[idx - 1]
+                if v != inf:
+                    ga = zref - v
+                    if ga < 0.0:
+                        ga = -ga
+            if x < last_x:
+                v = zb[idx + 1]
+                if v != inf:
+                    gb = zref - v
+                    if gb < 0.0:
+                        gb = -gb
+            if ga >= 0.0 and gb >= 0.0:
+                slope = ga if ga < gb else gb
+            elif ga >= 0.0:
+                slope = ga
+            elif gb >= 0.0:
+                slope = gb
+            ga = gb = -1.0
+            if y > 0:
+                v = zb[idx - W]
+                if v != inf:
+                    ga = zref - v
+                    if ga < 0.0:
+                        ga = -ga
+            if y < last_y:
+                v = zb[idx + W]
+                if v != inf:
+                    gb = zref - v
+                    if gb < 0.0:
+                        gb = -gb
+            if ga >= 0.0 and gb >= 0.0:
+                g = ga if ga < gb else gb
+            elif ga >= 0.0:
+                g = ga
+            elif gb >= 0.0:
+                g = gb
+            else:
+                g = 0.0
+            if g > slope:
+                slope = g
+            if d <= zref + bias_c + bias_q * d * d + slope_px * slope:
+                cb[idx] = color
         if x == jx and y == jy:
             break
         e2 = 2 * err
@@ -594,11 +710,11 @@ class Lighting:
         self.direction = v_normalize(_vec3(cfg.get("direction", [-0.45, 0.35, -0.82]), "light.direction"))
         if v_length(self.direction) == 0.0:
             raise RenderError("light.direction must be non-zero")
-        self.ambient = float(cfg.get("ambient", 0.35))
-        self.key = float(cfg.get("key", 0.75))
+        self.ambient = _num(cfg.get("ambient", 0.35), "light.ambient")
+        self.key = _num(cfg.get("key", 0.75), "light.key")
         self.color = _color3(cfg.get("color", [1.0, 0.82, 0.62]), "light.color")
         self.fill_color = _color3(cfg.get("fill_color", [0.48, 0.60, 0.88]), "light.fill_color")
-        self.fill = float(cfg.get("fill", 0.25))
+        self.fill = _num(cfg.get("fill", 0.25), "light.fill")
         fc = self.fill_color
         # ambient tinted halfway toward the fill color
         self._amb = tuple(self.ambient * (0.5 + 0.5 * fc[i]) for i in range(3))
@@ -622,7 +738,8 @@ class Lighting:
 # --- view rendering -------------------------------------------------------------------
 class ViewSetup:
     __slots__ = ("kind", "position", "forward", "right", "up", "width_cm", "height_cm",
-                 "tan_half", "aspect", "bias_c", "bias_q", "line_width_cm", "target")
+                 "tan_half", "aspect", "bias_c", "bias_q", "line_width_cm", "target",
+                 "projection", "frame_axis")
 
 
 def setup_view(view, bbox, W, H):
@@ -631,12 +748,14 @@ def setup_view(view, bbox, W, H):
     vs = ViewSetup()
     vs.kind = kind
     vs.aspect = aspect
+    vs.projection = "ortho"
+    vs.frame_axis = None
     if kind == "ortho":
-        forward, right, up = ortho_axes(view.get("from", "+X"), view.get("image_up", "+X"))
+        forward, right, up = ortho_axes(view.get("from", "+X"), view.get("image_up"))
         target = _vec3(view.get("target", [0.0, 0.0, 0.0]), "view.target")
-        margin = float(view.get("margin", 1.15))
+        margin = _num(view.get("margin", 1.15), "view.margin")
         if "ortho_width_cm" in view:
-            width_cm = float(view["ortho_width_cm"])
+            width_cm = _num(view["ortho_width_cm"], "view.ortho_width_cm")
             if width_cm <= 0:
                 raise RenderError(f"view {view.get('name')}: ortho_width_cm must be positive")
         else:
@@ -659,24 +778,51 @@ def setup_view(view, bbox, W, H):
         vs.width_cm = width_cm
         vs.height_cm = width_cm / aspect
         vs.tan_half = 0.0
-        vs.bias_c = 0.0025 * width_cm
+        vs.bias_c = EDGE_BIAS_FRACTION * width_cm
         vs.bias_q = 0.0
         vs.line_width_cm = max(2.0, 1.5 * width_cm / W)
     elif kind == "persp":
+        # Tactical view: AEchoesRTSCameraPawn spring-arm framing. Orthographic
+        # by default (the game camera is), "projection": "perspective" is legacy.
         target = _vec3(view.get("target", [0.0, 0.0, 0.0]), "view.target")
-        pitch = float(view.get("pitch_deg", -48.0))
-        yaw = float(view.get("yaw_deg", -45.0))
-        arm = float(view.get("arm_cm", 3800.0))
-        fov = float(view.get("fov_deg", 55.0))
+        pitch = _num(view.get("pitch_deg", -48.0), "view.pitch_deg")
+        yaw = _num(view.get("yaw_deg", -45.0), "view.yaw_deg")
+        arm = _num(view.get("arm_cm", 3800.0), "view.arm_cm")
+        fov = _num(view.get("fov_deg", 55.0), "view.fov_deg")
         if arm <= 0 or not (0.0 < fov < 180.0):
             raise RenderError(f"view {view.get('name')}: arm_cm must be > 0 and 0 < fov_deg < 180")
+        projection = view.get("projection", "ortho")
+        if projection not in TACTICAL_PROJECTIONS:
+            raise RenderError(f"view {view.get('name')}: projection must be one of {TACTICAL_PROJECTIONS}"
+                              f" (got {projection!r})")
+        frame_axis = view.get("frame_axis", "height")
+        if frame_axis not in FRAME_AXES:
+            raise RenderError(f"view {view.get('name')}: frame_axis must be one of {FRAME_AXES}"
+                              f" (got {frame_axis!r})")
         position, forward, right, up = perspective_camera(pitch, yaw, arm, target)
         vs.position = position
         vs.tan_half = math.tan(math.radians(fov) * 0.5)
-        vs.width_cm = 2.0 * arm * vs.tan_half
-        vs.height_cm = vs.width_cm / aspect
-        vs.bias_c = 0.0
-        vs.bias_q = 0.0025 * arm
+        vs.projection = projection
+        vs.frame_axis = frame_axis
+        # EquivalentOrthoWidth in EchoesRTSCameraPawn.cpp (= perspective extent at the target plane)
+        extent_cm = 2.0 * arm * vs.tan_half
+        if projection == "ortho":
+            vs.kind = "ortho"
+            if frame_axis == "height":
+                # engine default AspectRatio_MaintainYFOV: OrthoWidth spans the vertical axis
+                vs.height_cm = extent_cm
+                vs.width_cm = extent_cm * aspect
+            else:
+                vs.width_cm = extent_cm
+                vs.height_cm = extent_cm / aspect
+            vs.bias_c = EDGE_BIAS_FRACTION * vs.width_cm
+            vs.bias_q = 0.0
+        else:
+            # legacy true perspective, horizontal FOV across the image width
+            vs.width_cm = extent_cm
+            vs.height_cm = extent_cm / aspect
+            vs.bias_c = 0.0
+            vs.bias_q = EDGE_BIAS_FRACTION * arm
         vs.line_width_cm = max(2.0, 1.5 * vs.width_cm / W)
     else:
         raise RenderError(f"view {view.get('name')!r}: type must be 'ortho' or 'persp' (got {kind!r})")
@@ -688,7 +834,12 @@ def setup_view(view, bbox, W, H):
 
 
 def _project(vs, verts, W, H):
-    """Project world vertices. Returns (px, py, depth, valid) parallel lists."""
+    """Project world vertices. Returns (px, py, depth, valid, cam) parallel lists.
+
+    `valid` is False for perspective vertices at or behind the near plane;
+    `cam` holds camera-space (xc, yc, zc) tuples for perspective views (used
+    for near-plane clipping) and is None for orthographic views.
+    """
     cx, cy, cz = vs.position
     fx, fy, fz = vs.forward
     rx, ry, rz = vs.right
@@ -700,6 +851,7 @@ def _project(vs, verts, W, H):
     OK = [True] * n
     halfW = 0.5 * W
     halfH = 0.5 * H
+    CS = None
     if vs.kind == "ortho":
         sx = halfW / (vs.width_cm * 0.5)
         sy = halfH / (vs.height_cm * 0.5)
@@ -716,19 +868,69 @@ def _project(vs, verts, W, H):
         inv_t = 1.0 / vs.tan_half
         inv_ty = vs.aspect / vs.tan_half
         near = NEAR_PLANE_CM
+        CS = [None] * n
         for i in range(n):
             x, y, z = verts[i]
             dx, dy, dz = x - cx, y - cy, z - cz
             zc = dx * fx + dy * fy + dz * fz
+            xc = dx * rx + dy * ry + dz * rz
+            yc = dx * ux + dy * uy + dz * uz
+            CS[i] = (xc, yc, zc)
             if zc <= near:
                 OK[i] = False
                 continue
-            xc = dx * rx + dy * ry + dz * rz
-            yc = dx * ux + dy * uy + dz * uz
             PX[i] = halfW + (xc / zc) * inv_t * halfW
             PY[i] = halfH - (yc / zc) * inv_ty * halfH
             PD[i] = -1.0 / zc
-    return PX, PY, PD, OK
+    return PX, PY, PD, OK, CS
+
+
+def _persp_projector(vs, W, H):
+    """Camera-space (xc, yc, zc) -> (px, py, depth) for a perspective view."""
+    halfW = 0.5 * W
+    halfH = 0.5 * H
+    inv_t = 1.0 / vs.tan_half
+    inv_ty = vs.aspect / vs.tan_half
+
+    def project(p):
+        xc, yc, zc = p
+        return (halfW + (xc / zc) * inv_t * halfW, halfH - (yc / zc) * inv_ty * halfH, -1.0 / zc)
+
+    return project
+
+
+def _clip_triangle_near(a, b, c, project):
+    """Sutherland-Hodgman clip of a camera-space triangle against zc > NEAR_PLANE_CM.
+
+    Returns the projected polygon as a list of (px, py, depth) with 0, 3 or 4
+    vertices (fan-triangulate from vertex 0)."""
+    near = NEAR_PLANE_CM
+    out = []
+    prev = c
+    prev_in = prev[2] > near
+    for cur in (a, b, c):
+        cur_in = cur[2] > near
+        if cur_in != prev_in:
+            t = (near - prev[2]) / (cur[2] - prev[2])
+            out.append((prev[0] + (cur[0] - prev[0]) * t, prev[1] + (cur[1] - prev[1]) * t, near))
+        if cur_in:
+            out.append(cur)
+        prev, prev_in = cur, cur_in
+    return [project(p) for p in out]
+
+
+def _clip_edge_near(a, b):
+    """Clip a camera-space segment to zc > NEAR_PLANE_CM; returns (a, b) or None."""
+    near = NEAR_PLANE_CM
+    a_in = a[2] > near
+    b_in = b[2] > near
+    if a_in and b_in:
+        return a, b
+    if not a_in and not b_in:
+        return None
+    t = (near - a[2]) / (b[2] - a[2])
+    m = (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, near)
+    return (a, m) if a_in else (m, b)
 
 
 def render_view(view, batches, bbox, lighting, background, W, H, ground_cfg):
@@ -742,16 +944,22 @@ def render_view(view, batches, bbox, lighting, background, W, H, ground_cfg):
     persp = vs.kind == "persp"
     cam = vs.position
     fwd = vs.forward
+    project = _persp_projector(vs, W, H) if persp else None
     projected = []
     for batch in all_batches:
-        PX, PY, PD, OK = _project(vs, batch.verts, W, H)
-        projected.append((PX, PY, PD, OK))
+        PX, PY, PD, OK, CS = _project(vs, batch.verts, W, H)
+        projected.append((PX, PY, PD, OK, CS))
         normals = batch.normals()
         verts = batch.verts
         color_cache = {}
         for t, (i, j, k, base, unlit) in enumerate(batch.tris):
+            clipped = None
             if persp and not (OK[i] and OK[j] and OK[k]):
-                continue
+                if not (OK[i] or OK[j] or OK[k]):
+                    continue
+                clipped = _clip_triangle_near(CS[i], CS[j], CS[k], project)
+                if len(clipped) < 3:
+                    continue
             n = normals[t]
             if unlit:
                 key = (base, None)
@@ -777,14 +985,28 @@ def render_view(view, batches, bbox, lighting, background, W, H, ground_cfg):
                 if color is None:
                     color = _pack(lighting.shade(base, n))
                     color_cache[key] = color
-            raster(PX[i], PY[i], PD[i], PX[j], PY[j], PD[j], PX[k], PY[k], PD[k], color, zb, cb, W, H)
+            if clipped is None:
+                raster(PX[i], PY[i], PD[i], PX[j], PY[j], PD[j], PX[k], PY[k], PD[k], color, zb, cb, W, H)
+            else:
+                x0, y0, d0 = clipped[0]
+                for m in range(1, len(clipped) - 1):
+                    x1, y1, d1 = clipped[m]
+                    x2, y2, d2 = clipped[m + 1]
+                    raster(x0, y0, d0, x1, y1, d1, x2, y2, d2, color, zb, cb, W, H)
     if view.get("edges"):
         edge_color = _pack(_color3(view.get("edge_color", [0.05, 0.05, 0.07]), "view.edge_color"))
-        for batch, (PX, PY, PD, OK) in zip(all_batches, projected):
+        for batch, (PX, PY, PD, OK, CS) in zip(all_batches, projected):
             if not batch.draw_edges:
                 continue
             for a, b in batch.feature_edges():
                 if persp and not (OK[a] and OK[b]):
+                    seg = _clip_edge_near(CS[a], CS[b])
+                    if seg is None:
+                        continue
+                    pa = project(seg[0])
+                    pb = project(seg[1])
+                    _draw_line(pa[0], pa[1], pa[2], pb[0], pb[1], pb[2], edge_color,
+                               zb, cb, W, H, vs.bias_c, vs.bias_q)
                     continue
                 _draw_line(PX[a], PY[a], PD[a], PX[b], PY[b], PD[b], edge_color,
                            zb, cb, W, H, vs.bias_c, vs.bias_q)
@@ -902,8 +1124,8 @@ def load_scene(scene_path):
         seen.add(name)
         if view.get("type") not in ("ortho", "persp"):
             raise RenderError(f"view {name!r}: type must be 'ortho' or 'persp'")
-    width = int(scene.get("width", 1920))
-    height = int(scene.get("height", 1080))
+    width = _int(scene.get("width", 1920), "scene.width")
+    height = _int(scene.get("height", 1080), "scene.height")
     if width <= 0 or height <= 0:
         raise RenderError("scene.width and scene.height must be positive")
     return scene
@@ -914,7 +1136,12 @@ def build_scene_batches(scene, scene_dir):
     if not isinstance(materials_cfg, dict):
         raise RenderError("scene.materials must be an object")
     materials = {name: _color3(rgb, f"materials.{name}") for name, rgb in materials_cfg.items()}
-    emissive = set(scene.get("emissive", []) or [])
+    emissive_cfg = scene.get("emissive", [])
+    if emissive_cfg is None:
+        emissive_cfg = []
+    if not isinstance(emissive_cfg, list) or any(not isinstance(n, str) for n in emissive_cfg):
+        raise RenderError("scene.emissive must be a list of material names")
+    emissive = set(emissive_cfg)
     batches = []
     mesh_records = []
     for index, mesh in enumerate(scene.get("meshes", [])):
@@ -927,8 +1154,10 @@ def build_scene_batches(scene, scene_dir):
         if not faces:
             raise RenderError(f"meshes[{index}]: '{obj_path}' has no faces")
         translate = _vec3(mesh.get("translate", [0.0, 0.0, 0.0]), f"meshes[{index}].translate")
-        yaw = float(mesh.get("yaw_deg", 0.0))
-        scale = float(mesh.get("scale", 1.0))
+        yaw = _num(mesh.get("yaw_deg", 0.0), f"meshes[{index}].yaw_deg")
+        scale = _num(mesh.get("scale", 1.0), f"meshes[{index}].scale")
+        if scale <= 0:
+            raise RenderError(f"meshes[{index}].scale must be positive")
         world = transform_vertices(verts, translate, yaw, scale)
         batches.append(build_mesh_batch(f"mesh{index}", world, faces, materials, emissive))
         mesh_records.append({
@@ -937,6 +1166,7 @@ def build_scene_batches(scene, scene_dir):
             "triangles": len(faces),
             "translate": list(translate),
             "yaw_deg": yaw,
+            "scale": scale,
         })
     return batches, mesh_records
 
@@ -956,8 +1186,8 @@ def render_scene(scene_path, out_dir, scale=1.0, view_names=None, log=None):
     lighting = Lighting(scene.get("light"))
     background = _color3(scene.get("background", [0.11, 0.12, 0.14]), "background")
     ground_cfg = scene.get("ground")
-    W = max(1, int(round(int(scene.get("width", 1920)) * scale)))
-    H = max(1, int(round(int(scene.get("height", 1080)) * scale)))
+    W = max(1, int(round(_int(scene.get("width", 1920), "scene.width") * scale)))
+    H = max(1, int(round(_int(scene.get("height", 1080), "scene.height") * scale)))
 
     views = scene["views"]
     if view_names:
@@ -1001,6 +1231,8 @@ def render_scene(scene_path, out_dir, scale=1.0, view_names=None, log=None):
                 "target": list(vs.target),
                 "width_cm": round(vs.width_cm, 3),
                 "height_cm": round(vs.height_cm, 3),
+                "projection": vs.projection,
+                "frame_axis": vs.frame_axis,
             },
         })
         manifest["views"].append(record)
@@ -1015,7 +1247,7 @@ def render_scene(scene_path, out_dir, scale=1.0, view_names=None, log=None):
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog=TOOL_NAME,
-        description="Render review views (ortho + Unreal-style tactical perspective) of OBJ blockouts.",
+        description="Render review views (ortho + RTS tactical camera) of OBJ blockouts.",
     )
     parser.add_argument("--scene", required=True, help="scene JSON path")
     parser.add_argument("--out", required=True, help="output directory")
@@ -1027,6 +1259,9 @@ def main(argv=None):
         render_scene(args.scene, args.out, args.scale, names, log=lambda m: print(m, file=sys.stderr))
     except RenderError as exc:
         print(f"{TOOL_NAME}: error: {exc}", file=sys.stderr)
+        return 2
+    except (TypeError, ValueError) as exc:
+        print(f"{TOOL_NAME}: error: invalid scene value: {exc}", file=sys.stderr)
         return 2
     return 0
 

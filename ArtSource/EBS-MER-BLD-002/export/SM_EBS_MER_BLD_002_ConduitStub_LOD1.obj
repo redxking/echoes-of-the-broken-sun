@@ -1,9 +1,9 @@
 # SM_EBS_MER_BLD_002_ConduitStub
 # Author: Angelis Pseftis
 # Frame: Unreal +X forward, +Y right, +Z up; centimeters; no axis conversion
-# Kit: ebs-meshkit-v1
+# Kit: ebs-meshkit-v2
 # Production ID EBS-MER-BLD-002
-# Revision ebs-mer-bld-002-blockout-v1
+# Revision ebs-mer-bld-002-blockout-v2
 # LOD1
 o SM_EBS_MER_BLD_002_ConduitStub
 v 0.0 12.0 0.0

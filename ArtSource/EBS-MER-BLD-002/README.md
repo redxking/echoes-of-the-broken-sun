@@ -6,6 +6,7 @@ created: 2026-09-06
 package: EBS-PKG-MC-POWER-LINK
 production_asset_id: EBS-MER-BLD-002
 production_maturity: BLOCKOUT
+revision: ebs-mer-bld-002-blockout-v2
 canon_status: CANDIDATE (delegated design selection; not owner acceptance)
 status: Isolated production source; no Unreal integration authorization
 ---
@@ -85,7 +86,7 @@ in §1 before geometry was authored (this document, 2026-09-06). Open items are 
 | Height | **1,244 cm — PROVISIONAL BLOCKOUT ESTIMATE** | No authority states a height. The candidate's ~3.9:1 column-to-base proportion applied to a 320 cm plinth. ComponentDesignCatalog's "18-metre hexagonal pylon" is a subordinate proposal, not adopted. |
 | Noted discrepancy | `SPEC-SKM-011` says "64×64 tiles at 100 cm simulation scale" while presentation places tiles at 200 cm | The mesh follows the presentation tile constant the runtime uses to place structures; recorded, not resolved here. |
 
-## 4. Geometry (revision `ebs-mer-bld-002-blockout-v1`)
+## 4. Geometry (revision `ebs-mer-bld-002-blockout-v2`; v1 → v2 changed only the glTF socket-node encoding)
 
 Deterministic generator: [build_power_link.py](build_power_link.py) on [../tools/ebs_meshkit.py](../tools/ebs_meshkit.py)
 (Python 3 standard library; no DCC application exists on this workstation, so the generator is the
@@ -104,9 +105,9 @@ editable native source). Exact dimensions, counts, hashes and bounds are in
 
 | Mesh | LOD0 tris | LOD1 tris | Slots |
 |---|---|---|---|
-| `SM_EBS_MER_BLD_002` (main) | 1,118 | 838 | ceramic / frame / status |
+| `SM_EBS_MER_BLD_002` (main) | 1,118 | 886 | ceramic / frame / status |
 | `SM_EBS_MER_BLD_002_Panel` (×4) | 136 | 12 | ceramic / frame |
-| `SM_EBS_MER_BLD_002_ConduitStub` (×4) | 84 | 76 | frame / status |
+| `SM_EBS_MER_BLD_002_ConduitStub` (×4) | 84 | 64 | frame / status |
 | **Assembled** | **1,998 ≤ 3,500** | **1,190 ≤ 1,200** | 3 provisional slots |
 
 Material slots: `MI_EBS_MER_CeramicCivic` (existing `T_EchoesCeramicCivic` family),
@@ -122,8 +123,13 @@ adapter names; they become real Unreal sockets only at import.
 
 Export recipe: OBJ in the Unreal frame (renderer container); GLB in the glTF frame using the inverse
 of the installed 5.8.2 Interchange conversion `UE = (X_g, Z_g, Y_g)` (so `glTF = (X, Z, Y)/100`,
-metres), triangle winding re-derived per triangle from the stored outward normal, `SOCKET_<mesh>_<name>`
-and `UBX_<mesh>_NN` child nodes for Interchange. LOD1 is a separate GLB combined at import.
+metres), triangle winding re-derived per triangle from the stored outward normal. Sockets are
+`SOCKET_<name>` child nodes of the mesh node (Interchange attaches sockets by parent chain when a file
+holds more than one mesh, and collision boxes are meshes), encoded with node scale (−1, 1, 1) and
+rotation `q_y(−yaw)·(q_y(180)·q_x(−90))` to cancel the reflection that `ImportSockets()` applies
+through the axis-conversion inverse; the encoding was established and verified by probe imports
+(`import/probe-sweep`, `import/probe-verify` in the evidence root). Collision boxes are `UBX_<mesh>_NN`
+sibling nodes. LOD1 is a separate GLB attached at import.
 
 ## 5. States and required tracks (static structure; `REL-BLD-015.MC.LINK.ASSET` .ANIM_RIG = NOT APPLICABLE)
 
@@ -146,18 +152,22 @@ Evidence root: `/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifact
 `scenes/` the renderer inputs; `renders/<state>/` the PNGs and `render-manifest.json`).
 
 Rendered with [../tools/ebs_render.py](../tools/ebs_render.py) (pure Python, Unreal camera
-conventions): orthographic front/right/rear/left/top with feature edges, and perspective views at the
-game's spring-arm settings (`EchoesRTSCameraPawn.cpp`: 3,800 uu, FOV 55°, pitch −48° default and −60°
-gameplay, yaw −45°), plus far zoom (7,600 uu), a reverse angle, a monochrome pass, a four-pylon crowd
-scene and the maintenance and disconnected states.
+conventions, adversarially verified against the engine headers): orthographic front/right/rear/left/top
+with feature edges, and tactical views reproducing the game camera (`EchoesRTSCameraPawn.cpp`: spring arm
+3,800 uu at pitch −48° default / −60° gameplay, yaw −45°; `Camera->ProjectionMode = Orthographic` with
+`OrthoWidth = 2·arm·tan(55°/2) = 3,956 cm`; with the engine's default `AspectRatio_MaintainYFOV` and no
+project override that width spans the image height, so the 16:9 frame covers 7,033 × 3,956 cm), plus
+far zoom (7,600 uu), a reverse angle, a monochrome pass, a four-pylon crowd scene and the maintenance
+and disconnected states. The frame-axis behaviour is derived from engine source, not yet confirmed by
+an in-editor capture; a first perspective-projection pass was superseded by these orthographic renders.
 
 Checks performed:
 
 - Component counts, panel order, bay span, socket pairing/orientation, budgets, footprint containment,
   pivot, slot count, glTF axis rule, glTF winding, OBJ frame, deterministic bytes: 15 tests in
   [test_power_link_build.py](test_power_link_build.py), all passing.
-- Emissive pixel share of the mesh area (status colour over non-background pixels): 0.17% default
-  tactical, 0.15% gameplay tactical, 0.11% far, 1.7% front orthographic — under the 15% ceiling with
+- Emissive pixel share of the mesh area (status colour over non-background pixels): 0.11% default
+  tactical, 0.09% gameplay tactical, 0.09% far, 1.7% front orthographic — under the 15% ceiling with
   wide margin (`renders/area_check/emissive-area.json`).
 - Visual inspection of every render by the author: silhouette, four panel rows, lit collar, couplings
   and stubs read at both tactical pitches; the base separates from charcoal ground only after the
@@ -167,11 +177,49 @@ Checks performed:
 What this evidence is not: no in-engine render, no crowded combat scene with units, no fog, no
 selection halo, no textures, no measured performance, no human recognition test, no owner review.
 
+### 6.1 Isolated Unreal import (installed 5.8.2, sandbox project)
+
+Evidence: `import/` under the evidence root — `heavy-run-receipt.json` (reservation and outcome),
+`import-job.json`, `import-report.json` (final clean run), `UnrealEditor-Cmd-import-run*.log`, and the
+socket probes `probe/`, `probe-sweep/`, `probe-verify/` that established the socket encoding.
+Sandbox: `IsolatedPreview/EBSPreview/EBSPreview.uproject` (Blueprint-only, PythonScriptPlugin +
+Interchange, Nanite/VSM off); the shared game project was not opened. Tool:
+[../tools/ue_import_inspect.py](../tools/ue_import_inspect.py) run through `UnrealEditor-Cmd -nullrhi
+-unattended -ExecutePythonScript`, importing with an explicit `InterchangeGenericAssetsPipeline`
+(static meshes only, collision by mesh name, sockets on, Nanite off, no generated lightmap UVs, normals
+not recomputed, materials not imported) passed through `InterchangePipelineStackOverride`, then LOD1
+through `StaticMeshEditorSubsystem.import_lod` with a by-name section-to-slot restore.
+
+| Check (final clean run) | Main | Panel | Conduit stub |
+|---|---|---|---|
+| Scale/axes: bounds max (cm) | (166, 200, 1244) | (7.5, 58, 105) | (92, 17, 17) |
+| LOD0 / LOD1 triangles vs export | 1,118 / 886 ✓ | 136 / 12 ✓ | 84 / 64 ✓ |
+| Sections → slots LOD0 / LOD1 | [0,1,2] / [0,1,2] | [0,1] / [0] | [0,1] / [0,1] |
+| UV channels, lightmap index | 2, index 1 | 2, index 1 | 2, index 1 |
+| Sockets (name, location, rotation, scale) | 11, all exact, unit scale | `Label` | `Span_End` |
+| Simple collision | 2 boxes (UBX) | 0 | 0 |
+| Nanite | off | off | off |
+| Replace-reimport | identical counts/bounds/sockets | identical | identical |
+
+Importer facts established for this engine build: glTF metres import at 1 m = 100 cm; sockets attach
+only through the mesh node's parent chain when a file holds more than one mesh; `ImportSockets()`
+applies the axis-conversion inverse (a reflection) to socket transforms, so a plain node imports with
+rotator (0, 180, −90) and X scale −1 — the kit's encoding cancels it (verified at yaw 0/45/90/−90/180);
+the custom-LOD import path merges any `UBX_` mesh into the LOD and maps all sections to slot 0, hence
+collision only in the LOD0 file and the by-name slot restore. Limits: no in-engine render (`-nullrhi`),
+default lightmap resolution (4) and LOD screen sizes untouched, materials left as the engine default
+because the production material instances do not exist yet, and "reimport" here means replace-import
+of the same file, not the asset's Reimport action.
+
 ## 7. Reproduction
 
 ```sh
 cd "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/ArtSource/EBS-MER-BLD-002"
 python3 build_power_link.py --evidence-dir "<evidence root>/EBS-MER-BLD-002"
+# isolated import (exclusive editor run; see heavy-run receipt):
+# EBS_IMPORT_JOB=<root>/EBS-MER-BLD-002/import/import-job.json "/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd" \
+#   <root>/IsolatedPreview/EBSPreview/EBSPreview.uproject -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+#   -ExecutePythonScript=../tools/ue_import_inspect.py -abslog=<root>/EBS-MER-BLD-002/import/UnrealEditor-Cmd-import.log
 python3 build_power_link.py --evidence-dir "<evidence root>/EBS-MER-BLD-002" --check
 python3 test_power_link_build.py
 python3 ../tools/ebs_render.py --scene "<evidence root>/EBS-MER-BLD-002/scenes/connected.json" --out "<evidence root>/EBS-MER-BLD-002/renders/connected"
@@ -199,7 +247,9 @@ Open items:
 - Textures (1024² base colour / normal / packed MR plus the state and numeral mask), material
   instances against the existing master materials, and the non-colour grid markings are the next
   stage (ART_ALPHA prerequisites).
-- Unreal import and inspection (sockets, collision, LOD1 attach, bounds, slot names, reimport
-  behaviour) require an exclusive editor run; see the evidence root for the import receipt when it
-  exists.
+- In-engine rendered inspection (Static Mesh Editor and a lit level at the game camera) still needs a
+  GPU editor run; the headless import above proves structure, not appearance.
+- Socket encoding is importer-build-specific (5.8.2): re-run `socket_probe.py` after any engine change.
+- Confirm the orthographic frame axis (7,033 × 3,956 cm at the 3,800 preset) with one in-editor capture
+  of `AEchoesRTSCameraPawn` before using these renders for framing or occlusion decisions.
 - Gameplay proxy integration, three-gate review, and owner acceptance remain outside this lane.

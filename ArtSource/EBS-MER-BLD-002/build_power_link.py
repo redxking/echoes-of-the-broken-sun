@@ -42,7 +42,7 @@ AUTHOR = "Angelis Pseftis"
 PACKAGE_ID = "EBS-PKG-MC-POWER-LINK"
 PRODUCTION_ID = "EBS-MER-BLD-002"
 ASSET = "SM_EBS_MER_BLD_002"
-REVISION = "ebs-mer-bld-002-blockout-v1"
+REVISION = "ebs-mer-bld-002-blockout-v2"  # v2: socket nodes re-encoded for Interchange 5.8.2 (mesh children, SOCKET_<name>, reflection-cancelling basis); geometry unchanged from v1
 PLANNED_FOLDER = "/Game/Echoes/Production/MER/BLD/EBS_MER_BLD_002/"
 
 # Material slots (provisional max 3 per contract): index order is the slot order.
@@ -297,10 +297,14 @@ def main_cli() -> int:
             mesh = builder(lod)
             meshes[(mesh.name, lod)] = mesh
             base = os.path.join(export_dir, f"{mesh.name}_LOD{lod}")
+            # Collision nodes travel only in the LOD0 file: Interchange's custom-LOD import path would
+            # merge UBX meshes into LOD1 geometry instead of treating them as collision.
             glb = mesh.write_glb(base + ".glb", extras={"production_id": PRODUCTION_ID, "package_id": PACKAGE_ID, "revision": REVISION, "lod": lod,
-                                                        "units": "meters in file; authored centimeters", "planned_unreal_folder": PLANNED_FOLDER})
+                                                        "units": "meters in file; authored centimeters", "planned_unreal_folder": PLANNED_FOLDER},
+                                 include_collision=(lod == 0))
             obj = mesh.write_obj(base + ".obj", header_lines=[f"Production ID {PRODUCTION_ID}", f"Revision {REVISION}", f"LOD{lod}"])
             outputs.append({"path": os.path.relpath(base + ".glb", HERE), "sha256": glb, "lod": lod, "mesh": mesh.name, "triangles": mesh.triangle_count(),
+                            "section_slot_names": mesh.slot_names_in_primitive_order(), "collision_in_file": lod == 0,
                             "by_slot": mesh.triangle_count_by("slot"), "by_component": mesh.triangle_count_by("component"),
                             "bounds_cm": mesh.bounds(), "sockets": [{"name": s.name, "position_cm": s.position, "yaw_deg": s.yaw_deg, "purpose": s.purpose} for s in mesh.sockets],
                             "collision_boxes": [{"name": c.name, "center_cm": c.center, "size_cm": c.size} for c in mesh.collision]})
