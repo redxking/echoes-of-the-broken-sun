@@ -149,6 +149,38 @@ material cell offset. The packing is recorded in [bake-manifest.json](bake-manif
 world frames, families, decal rules) and is the input of the texture baker
 ([../tools/ebs_texbake.py](../tools/ebs_texbake.py)). Density and coverage are in the build manifest.
 
+### 4.2 Textures and material plan (material-and-state half of the pilot)
+
+Baked from the atlas by [../tools/ebs_texbake.py](../tools/ebs_texbake.py) (pure Python, world-space
+sampling of the project's registered `ceramic_civic` / `compact_metal` recipes so adjacent charts stay
+continuous; report in `textures/bake-report.json` with per-map hashes and channel statistics):
+
+| Map (1024², 8-bit) | Channels | Use |
+|---|---|---|
+| `T_EBS_MER_BLD_002_BaseColor` | sRGB colour: pale ceramic, charcoal machined frame, cyan status elements; numeral strip 01–04 (4 cells) on the label plate; non-colour grid markings and edge wear on the panel plates; bottom-20 cm scuff on walls | base colour |
+| `T_EBS_MER_BLD_002_Normal` | tangent-space, Unreal/DirectX green-down; bevels, machining, wear pits | normal |
+| `T_EBS_MER_BLD_002_MRE` | R metallic (ceramic 0.04, frame 0.85), G roughness (ceramic 0.34 rising with wear, frame 0.45–0.6), B emissive mask (status elements) | the project's `_MRE` packing (`echoes_texture_synth.py`) |
+| `T_EBS_MER_BLD_002_StateMask` | R collar-segment id band (k/8 per segment 1–8), G indicator / conduit-pulse strips (pulse strip carries a 0→1 gradient along its length), B team-band mask | state and ownership drive |
+| `T_EBS_MER_BLD_002_AtlasDebug` | chart rectangles by slot with checkers | in-engine UV verification only |
+
+Material contract for the integration task (the existing `M_EchoesSurface` master exposes `Color`,
+`Metallic`, `Roughness`, `EmissiveStrength`, `UVScale` and one family's BaseColor/MRE/Normal samplers;
+a production master or instance family adds the per-asset samplers and these parameters):
+
+| Parameter | Type | Driven by |
+|---|---|---|
+| `BaseColor`, `Normal`, `MRE`, `StateMask` | texture | the four maps above; same maps on all three slots, slot difference is which mask channels apply |
+| `TeamColor` | vector | owner colour (the runtime already sets `Color` on presentation materials); applied where StateMask.B > 0 |
+| `Connected` | scalar 0/1 | authoritative network connection: collar segments (R band) and G strips lit only when 1 |
+| `CollarSegments` | scalar 0–8 | optional progressive lighting of segments 1..k during connection gain / loss |
+| `PulsePhase` | scalar | conduit pulse travelling along the G gradient while `Connected`; held steady under reduced motion |
+| `PanelCell` (per panel instance) | scalar 0–3 | selects the numeral cell 01–04 by offsetting the label-plate UVs |
+| `Damage` | scalar 0–1 | darkens one collar segment and raises roughness/soot where MRE.B == 0 below the 30% critical threshold (`REL-ART-027`) |
+| `ConstructionProgress` | scalar 0–1 | world-Z clip of the ceramic slot during construction so the frame rails and plinth show first |
+
+None of these parameters exist in the game yet; they are the presentation interface this asset was
+authored against, and every value must be read from authoritative state (event rule).
+
 ## 5. States and required tracks (static structure; `REL-BLD-015.MC.LINK.ASSET` .ANIM_RIG = NOT APPLICABLE)
 
 | Track (contract) | Presentation plan | Authority read |

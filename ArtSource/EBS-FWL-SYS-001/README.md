@@ -101,8 +101,10 @@ mid-fold, spent, preserve, reshape and LOD1 at the game's orthographic framing, 
 monochrome pass). Checks: 8 structural tests in [test_future_well_build.py](test_future_well_build.py)
 (inventory and thirteen presentations, one-tile containment of every raised component and the
 collision box, apron relief ≤20 cm, sockets, spire stands/collapses inside the tile, budgets and slots,
-determinism), all passing; author's visual inspection of every state render. Not yet: import,
-textures, in-engine capture, gates.
+determinism), all passing; author's visual inspection of every state render. Headless import into
+the sandbox project (`import/`, UE 5.8.2, `-nullrhi`): both meshes import with LOD0/LOD1 triangle
+parity, three slots restored on LOD1, seven sockets at exact positions and yaws, one collision box,
+Nanite off, replace-reimport identical. Not yet: textures, in-engine capture, gates.
 
 ## 7. Reproduction
 
@@ -123,5 +125,6 @@ python3 ../tools/ebs_render.py --scene "<evidence root>/EBS-FWL-SYS-001/scenes/d
    because the petals sprawled across walkable apron.
 3. The Reshape trace points +X; the map places the asset so the trace faces the authored feature.
 4. Open: `REL-ART-014` amendment must be applied by the integration task before the amber Harvest is
-   master-compliant; import inspection; textures (2048² per contract); the doubled-shadow decal; VFX
-   for the amber climb, custody pulse and trace; emissive-share measurement; gates and owner review.
+   master-compliant; textures (2048² per contract); the doubled-shadow decal; VFX for the amber climb,
+   custody pulse and trace; in-engine capture; gates and owner review. Emissive share at full Preserve
+   ring measures 7.3% of mesh area at the game framing (`renders/area_check/emissive-area.json`).
