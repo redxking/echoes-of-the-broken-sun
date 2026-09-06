@@ -1,0 +1,755 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "schema_version": 1,
+  "created": "2026-09-06",
+  "scope": "15 campaign locations and three named offline skirmish environments; individual branch/ending and multiplayer format variants remain later work.",
+  "authority": "Candidate supplementary artwork. Requirements, DevelopmentBible and registered map source retain authority. IDs in this isolated namespace must be collision-checked at integration.",
+  "maps": [
+    {
+      "map_id": "M01",
+      "mission_title": "What the Ledger Keeps",
+      "place": "Glass Scar evacuation margin",
+      "concept_id": "EBS-CON-WRL-ENV-101",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "An asymmetric civic-edge evacuation landscape in a narrow vitrified impact basin: dark glass shelves and low broken basalt shoulders flank a fitted pale-ceramic archive working court. The court contains empty low carrier cradles, retained cargo lashings and loading rails. A broad worn service route links the court back to a small receiving threshold. A separate worker approach runs between scar shoulders to ONE small dormant Future Well, well away from the loading court. Low connected landforms and actual usable quiet open ground dominate, with shard fields only along margins. No skirmish three-crossing composition, sprawling city skyline or faction base.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-101",
+          "display_name": "Archive loading furniture",
+          "brief": "Low ceramic carrier cradle, cargo lashings and recessed loading rail on fitted paving.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-102",
+          "display_name": "Vitrified scar shoulder",
+          "brief": "Load-bearing dark basalt with a thin black glass skin, edge spall and faint ember-dim interior seam; no lava.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-103",
+          "display_name": "Matter outcrop",
+          "brief": "Small cyan-white faceted material deposit embedded in matte dark stone, readable shape with restrained glow.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No Understone cavern exposure, collapsed bridge event, nursery, dead civilians, invented rescue, decorative roads into voids or giant crystal Well.",
+      "reference_images": [
+        "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/glass-scar-routes.png",
+        "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/future-well-candidate.png"
+      ],
+      "branch_boundary": "Pre-commitment view; original recovery/Well/withdrawal sites and actual coordinates remain authoritative.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M01 — Glass Scar evacuation margin\". Mission: What the Ledger Keeps.\nMain scene: An asymmetric civic-edge evacuation landscape in a narrow vitrified impact basin: dark glass shelves and low broken basalt shoulders flank a fitted pale-ceramic archive working court. The court contains empty low carrier cradles, retained cargo lashings and loading rails. A broad worn service route links the court back to a small receiving threshold. A separate worker approach runs between scar shoulders to ONE small dormant Future Well, well away from the loading court. Low connected landforms and actual usable quiet open ground dominate, with shard fields only along margins. No skirmish three-crossing composition, sprawling city skyline or faction base.\nBottom detail panels left to right:\n1. \"Archive loading furniture\" — Low ceramic carrier cradle, cargo lashings and recessed loading rail on fitted paving.\n2. \"Vitrified scar shoulder\" — Load-bearing dark basalt with a thin black glass skin, edge spall and faint ember-dim interior seam; no lava.\n3. \"Matter outcrop\" — Small cyan-white faceted material deposit embedded in matte dark stone, readable shape with restrained glow.\nSpecific exclusions: No Understone cavern exposure, collapsed bridge event, nursery, dead civilians, invented rescue, decorative roads into voids or giant crystal Well.\nEvidence boundary (inform composition, do not print paragraph): Pre-commitment view; original recovery/Well/withdrawal sites and actual coordinates remain authoritative."
+    },
+    {
+      "map_id": "M02",
+      "mission_title": "Seven Accounts of Rain",
+      "place": "Shivergrass migration basin",
+      "concept_id": "EBS-CON-WRL-ENV-102",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "A spacious wind-combed basin with broad pale lilac-gray shivergrass ribbons between stepped black basalt scarps. An asymmetric central basalt divider makes migration lanes legible; polished rock shoulders and compressed lane edges show repeated passage. Observation sills face the basin. Three route families are readable as different terrain conditions, but do not claim all are simultaneously open: one route remains a fractured rough margin. Distant terraces rather than city or mountain fantasy.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-104",
+          "display_name": "Shivergrass patch",
+          "brief": "Sparse bent pale blades and clumped roots, low enough for RTS units to remain visible.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-105",
+          "display_name": "Migration shoulder",
+          "brief": "Polished basalt lip with compressed grass edge and mineral striation.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-106",
+          "display_name": "Observation sill",
+          "brief": "Low worked mineral-stone ledge seated directly in layered bedrock; practical, non-ceremonial.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No animals, giant grazing herd, glowing runes, tribal shrines, fog-revealing movement trails or invented stealth mechanics.",
+      "reference_images": [
+        "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/shivergrass-basin.jpg"
+      ],
+      "branch_boundary": "Founding doctrine controls active route; sheet illustrates terrain families, not simultaneous navigable branches.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M02 — Shivergrass migration basin\". Mission: Seven Accounts of Rain.\nMain scene: A spacious wind-combed basin with broad pale lilac-gray shivergrass ribbons between stepped black basalt scarps. An asymmetric central basalt divider makes migration lanes legible; polished rock shoulders and compressed lane edges show repeated passage. Observation sills face the basin. Three route families are readable as different terrain conditions, but do not claim all are simultaneously open: one route remains a fractured rough margin. Distant terraces rather than city or mountain fantasy.\nBottom detail panels left to right:\n1. \"Shivergrass patch\" — Sparse bent pale blades and clumped roots, low enough for RTS units to remain visible.\n2. \"Migration shoulder\" — Polished basalt lip with compressed grass edge and mineral striation.\n3. \"Observation sill\" — Low worked mineral-stone ledge seated directly in layered bedrock; practical, non-ceremonial.\nSpecific exclusions: No animals, giant grazing herd, glowing runes, tribal shrines, fog-revealing movement trails or invented stealth mechanics.\nEvidence boundary (inform composition, do not print paragraph): Founding doctrine controls active route; sheet illustrates terrain families, not simultaneous navigable branches."
+    },
+    {
+      "map_id": "M03",
+      "mission_title": "A City on Reserve",
+      "place": "Ark-city reserve service district",
+      "concept_id": "EBS-CON-WRL-ENV-103",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "An elevated three-quarter service-district landscape behind the gates of Lume Reach. Three clearly separated maintenance branches are connected by exposed reserve trunks: tiered cisterns with paired ducts at the back, long raised ribbed transit decks to one side, windowless stepped archive stacks to the other. Distributed utility backstreets and reachable service galleries, NOT a formal central palace plaza. Pale ceramic masses on charcoal plinths; large machinery sits outside broad quiet lanes. Small cyan powered bands and dark offline bands reflect partial service, never full city recovery.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-107",
+          "display_name": "Cistern service wall",
+          "brief": "Tiered ceramic wall with large discharge grille and two accessible redundant ducts.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-108",
+          "display_name": "Transit coffer",
+          "brief": "Ribbed ceramic deck seated on a charcoal coffer, maintenance gallery and replacement bracket.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-109",
+          "display_name": "Archive service bank",
+          "brief": "Windowless ceramic cassette doors with recessed servo rail and detachable service panel.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No dense cyberpunk neon, generic factory smokestacks, full-city relighting, crowds, readable invented census records or faction military bases.",
+      "reference_images": [],
+      "branch_boundary": "Service-state staging only; site operation results remain simulation-owned.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M03 — Ark-city reserve service district\". Mission: A City on Reserve.\nMain scene: An elevated three-quarter service-district landscape behind the gates of Lume Reach. Three clearly separated maintenance branches are connected by exposed reserve trunks: tiered cisterns with paired ducts at the back, long raised ribbed transit decks to one side, windowless stepped archive stacks to the other. Distributed utility backstreets and reachable service galleries, NOT a formal central palace plaza. Pale ceramic masses on charcoal plinths; large machinery sits outside broad quiet lanes. Small cyan powered bands and dark offline bands reflect partial service, never full city recovery.\nBottom detail panels left to right:\n1. \"Cistern service wall\" — Tiered ceramic wall with large discharge grille and two accessible redundant ducts.\n2. \"Transit coffer\" — Ribbed ceramic deck seated on a charcoal coffer, maintenance gallery and replacement bracket.\n3. \"Archive service bank\" — Windowless ceramic cassette doors with recessed servo rail and detachable service panel.\nSpecific exclusions: No dense cyberpunk neon, generic factory smokestacks, full-city relighting, crowds, readable invented census records or faction military bases.\nEvidence boundary (inform composition, do not print paragraph): Service-state staging only; site operation results remain simulation-owned."
+    },
+    {
+      "map_id": "M04",
+      "mission_title": "The Unburied Road",
+      "place": "Kharuun subsurface transit artery",
+      "concept_id": "EBS-CON-WRL-ENV-104",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "A cutaway elevated cavern environment showing an asymmetric sequence of grown mineral vault chambers and narrow supported transit spans above deep side voids. Thick ribbed walls transfer load visibly into strata. Maintained docking hollows and rooting fixtures are embedded beside, not across, the usable route. A distinct terminal chamber has a small recessed memory-shard custody niche. Warm restrained amber cavity light against dark mineral gray; show credible material thickness and rooted structural continuity. This is an engineered mineral-organic transit artery, not a fantasy mine.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-110",
+          "display_name": "Vault rib",
+          "brief": "Curved stratified mineral rib merging into solid bedrock buttress with credible load transfer.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-111",
+          "display_name": "Rooting dock",
+          "brief": "Shallow maintained docking hollow with compact mineral root clamps and wear at contact points.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-112",
+          "display_name": "Memory custody niche",
+          "brief": "Small stone-backed recessed shard receptacle with one modest mineral shard; no magical giant crystal.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No lava river, industrial cranes, glowing crystal forest, unsupported floating walkway, tribal carvings, exposed M01 birthing cavern or claim of restored memory.",
+      "reference_images": [],
+      "branch_boundary": "Pre-recovery composition; authoritative spans and moving infrastructure paths require later exact layout binding.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M04 — Kharuun subsurface transit artery\". Mission: The Unburied Road.\nMain scene: A cutaway elevated cavern environment showing an asymmetric sequence of grown mineral vault chambers and narrow supported transit spans above deep side voids. Thick ribbed walls transfer load visibly into strata. Maintained docking hollows and rooting fixtures are embedded beside, not across, the usable route. A distinct terminal chamber has a small recessed memory-shard custody niche. Warm restrained amber cavity light against dark mineral gray; show credible material thickness and rooted structural continuity. This is an engineered mineral-organic transit artery, not a fantasy mine.\nBottom detail panels left to right:\n1. \"Vault rib\" — Curved stratified mineral rib merging into solid bedrock buttress with credible load transfer.\n2. \"Rooting dock\" — Shallow maintained docking hollow with compact mineral root clamps and wear at contact points.\n3. \"Memory custody niche\" — Small stone-backed recessed shard receptacle with one modest mineral shard; no magical giant crystal.\nSpecific exclusions: No lava river, industrial cranes, glowing crystal forest, unsupported floating walkway, tribal carvings, exposed M01 birthing cavern or claim of restored memory.\nEvidence boundary (inform composition, do not print paragraph): Pre-recovery composition; authoritative spans and moving infrastructure paths require later exact layout binding."
+    },
+    {
+      "map_id": "M05",
+      "mission_title": "Terms of Continuance",
+      "place": "Line of Parity treaty corridor",
+      "concept_id": "EBS-CON-WRL-ENV-105",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "A long oblique corridor across old provincial ground, bounded by north and south chasm faults. Worn dark stone approach with repaired revetments and low pale ceramic curbwork, neutral ownership. Along the route, a compact ceramic relay and a separate rooted mineral spine remain visibly distinct. Two offset witness stations: a ceramic kiosk on a paved setback and a grown strata bench on a mineral setback. Open corridor continues clearly between them; no mirrored bases. Quiet amber dusk and muted stone.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-113",
+          "display_name": "Repair revetment",
+          "brief": "Layered basalt repair course with pale ceramic stitching plates, visibly serviced.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-114",
+          "display_name": "Ceramic witness kiosk",
+          "brief": "Small open-faced civic instrument kiosk on a low charcoal footing, no weapon silhouette.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-115",
+          "display_name": "Mineral witness bench",
+          "brief": "Grown strata observation bench rooted into shoulder rock with a clear usable standing pad.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No treaty signing scene, attack, attributed Choir sabotage, territorial winner, merged faction architecture or new blockage mechanics.",
+      "reference_images": [],
+      "branch_boundary": "Neutral pre-interaction corridor; witness and access contracts govern placement.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M05 — Line of Parity treaty corridor\". Mission: Terms of Continuance.\nMain scene: A long oblique corridor across old provincial ground, bounded by north and south chasm faults. Worn dark stone approach with repaired revetments and low pale ceramic curbwork, neutral ownership. Along the route, a compact ceramic relay and a separate rooted mineral spine remain visibly distinct. Two offset witness stations: a ceramic kiosk on a paved setback and a grown strata bench on a mineral setback. Open corridor continues clearly between them; no mirrored bases. Quiet amber dusk and muted stone.\nBottom detail panels left to right:\n1. \"Repair revetment\" — Layered basalt repair course with pale ceramic stitching plates, visibly serviced.\n2. \"Ceramic witness kiosk\" — Small open-faced civic instrument kiosk on a low charcoal footing, no weapon silhouette.\n3. \"Mineral witness bench\" — Grown strata observation bench rooted into shoulder rock with a clear usable standing pad.\nSpecific exclusions: No treaty signing scene, attack, attributed Choir sabotage, territorial winner, merged faction architecture or new blockage mechanics.\nEvidence boundary (inform composition, do not print paragraph): Neutral pre-interaction corridor; witness and access contracts govern placement."
+    },
+    {
+      "map_id": "M06",
+      "mission_title": "Names Without Births",
+      "place": "Sector 9 edged absence",
+      "concept_id": "EBS-CON-WRL-ENV-106",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "A civic landscape where a diagonal stepped bounded absence cuts through pale-ceramic blocks. Streets and service conduits terminate cleanly at a stable engineered-looking rim, showing real material thickness, not broken debris piles. Worn remaining streets contrast with clean unused foundations. Archive approach and protected extraction path remain visually separated and continuous on solid ground. Composition uses a strong diagonal void with offset street blocks, quiet cold light, tiny restrained cyan status fixtures.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-116",
+          "display_name": "Terminated conduit",
+          "brief": "Two thick service ducts end cleanly at a solid wall section, no exposed sparking wires.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-117",
+          "display_name": "Unused foundation",
+          "brief": "Pristine empty ceramic footing beside worn fitted street pavers, no tombstone.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-118",
+          "display_name": "Census bay",
+          "brief": "Sealed civic cassette bay with blank unasserted record face and distinct service access.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No graveyard, names, dead people, invented population totals, crater explosion explanation, rescue crowd, invisible floor or cause of absence.",
+      "reference_images": [],
+      "branch_boundary": "Representative route composition; founding doctrine variants retained, no cause or missing-person identity asserted.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M06 — Sector 9 edged absence\". Mission: Names Without Births.\nMain scene: A civic landscape where a diagonal stepped bounded absence cuts through pale-ceramic blocks. Streets and service conduits terminate cleanly at a stable engineered-looking rim, showing real material thickness, not broken debris piles. Worn remaining streets contrast with clean unused foundations. Archive approach and protected extraction path remain visually separated and continuous on solid ground. Composition uses a strong diagonal void with offset street blocks, quiet cold light, tiny restrained cyan status fixtures.\nBottom detail panels left to right:\n1. \"Terminated conduit\" — Two thick service ducts end cleanly at a solid wall section, no exposed sparking wires.\n2. \"Unused foundation\" — Pristine empty ceramic footing beside worn fitted street pavers, no tombstone.\n3. \"Census bay\" — Sealed civic cassette bay with blank unasserted record face and distinct service access.\nSpecific exclusions: No graveyard, names, dead people, invented population totals, crater explosion explanation, rescue crowd, invisible floor or cause of absence.\nEvidence boundary (inform composition, do not print paragraph): Representative route composition; founding doctrine variants retained, no cause or missing-person identity asserted."
+    },
+    {
+      "map_id": "M07",
+      "mission_title": "The Shape of Silence",
+      "place": "Listening-Spine ridge",
+      "concept_id": "EBS-CON-WRL-ENV-107",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "A stepped exposed basalt ridge above a distant sharply bounded civic absence. Repeated resonant stone ribs seated in maintained sockets rise along a spine, with distinct old fracture scars. Two widely separated witness approaches climb from solid quiet terraces toward a low confluence hollow; a separate rooted Waystone setting sits off the main path. Wide elevated camera sees practical approaches, elevation and negative space. Mineral gray, dusty amber, very faint magenta resonance only in instrument recesses.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-119",
+          "display_name": "Resonant rib socket",
+          "brief": "Weathered vertical mineral rib firmly socketed in striated bedrock with visible maintenance collar.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-120",
+          "display_name": "Witness stone",
+          "brief": "Low practical observation stone and clear standing surface with restrained edge wear.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-121",
+          "display_name": "Confluence hollow",
+          "brief": "Shallow stable mineral depression framed by low strata shelves, no magic pool.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No proven Choir identity, named culprit, dead Well, tribal shrine, unsupported floating slabs or decorative climbable routes.",
+      "reference_images": [],
+      "branch_boundary": "Cinder/Held/Folded route contexts are retained; artwork is representative, not a branch selection.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M07 — Listening-Spine ridge\". Mission: The Shape of Silence.\nMain scene: A stepped exposed basalt ridge above a distant sharply bounded civic absence. Repeated resonant stone ribs seated in maintained sockets rise along a spine, with distinct old fracture scars. Two widely separated witness approaches climb from solid quiet terraces toward a low confluence hollow; a separate rooted Waystone setting sits off the main path. Wide elevated camera sees practical approaches, elevation and negative space. Mineral gray, dusty amber, very faint magenta resonance only in instrument recesses.\nBottom detail panels left to right:\n1. \"Resonant rib socket\" — Weathered vertical mineral rib firmly socketed in striated bedrock with visible maintenance collar.\n2. \"Witness stone\" — Low practical observation stone and clear standing surface with restrained edge wear.\n3. \"Confluence hollow\" — Shallow stable mineral depression framed by low strata shelves, no magic pool.\nSpecific exclusions: No proven Choir identity, named culprit, dead Well, tribal shrine, unsupported floating slabs or decorative climbable routes.\nEvidence boundary (inform composition, do not print paragraph): Cinder/Held/Folded route contexts are retained; artwork is representative, not a branch selection."
+    },
+    {
+      "map_id": "M08",
+      "mission_title": "The Shape Beside Us",
+      "place": "Confluence verge",
+      "concept_id": "EBS-CON-WRL-ENV-108",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "An offset terrace landscape near the edge of an old central ring. Two separate and unmistakably solid approaches pass near-duplicate charcoal and pale ceramic frames toward a modest public contact plinth. Frame joints stop just short of meeting; paired structural lines appear to align from one viewing angle while remaining materially distinct. Delicate magenta threads only between frame fixtures. All traversable floors are stable matte slabs with readable edges. Broad dry basin foreground; asymmetry and quiet negative space.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-122",
+          "display_name": "Offset frame joint",
+          "brief": "Two nearly matching manufactured frame ends with a deliberate narrow air gap; stable independent supports.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-123",
+          "display_name": "Stable terrace edge",
+          "brief": "Continuous dark paving below subtly misaligned non-walkable overhead frame.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-124",
+          "display_name": "Contact plinth",
+          "brief": "Low civic/mineral contact surface on intact solid ground, discreet separate interfaces.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No floor flicker, invisible holes, time portal, duplicated characters, resolved metaphysical explanation or fully playable Choir army.",
+      "reference_images": [],
+      "branch_boundary": "Public-contact environment only; inherited route variants and uncertainty remain explicit.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M08 — Confluence verge\". Mission: The Shape Beside Us.\nMain scene: An offset terrace landscape near the edge of an old central ring. Two separate and unmistakably solid approaches pass near-duplicate charcoal and pale ceramic frames toward a modest public contact plinth. Frame joints stop just short of meeting; paired structural lines appear to align from one viewing angle while remaining materially distinct. Delicate magenta threads only between frame fixtures. All traversable floors are stable matte slabs with readable edges. Broad dry basin foreground; asymmetry and quiet negative space.\nBottom detail panels left to right:\n1. \"Offset frame joint\" — Two nearly matching manufactured frame ends with a deliberate narrow air gap; stable independent supports.\n2. \"Stable terrace edge\" — Continuous dark paving below subtly misaligned non-walkable overhead frame.\n3. \"Contact plinth\" — Low civic/mineral contact surface on intact solid ground, discreet separate interfaces.\nSpecific exclusions: No floor flicker, invisible holes, time portal, duplicated characters, resolved metaphysical explanation or fully playable Choir army.\nEvidence boundary (inform composition, do not print paragraph): Public-contact environment only; inherited route variants and uncertainty remain explicit."
+    },
+    {
+      "map_id": "M09",
+      "mission_title": "Reserve Authority",
+      "place": "Authority Exchange",
+      "concept_id": "EBS-CON-WRL-ENV-109",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "A formal allocation plaza inside Lume Reach centered on a low exchange hall, with three distinct and widely separated district interfaces opening toward Life Support cistern walls, Transit ribbed decks, and Archive windowless stacks. Clear large civic paving and radial service trunks distinguish this from M03 maintenance backstreets. REPRESENTATIVE BRANCH: Life Support and Transit show restrained cyan status bands; Archive remains intact, maintained and dark. Exactly those two district branches show power, not all three. Architecture long, low, stepped pale ceramic on charcoal plinths.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-125",
+          "display_name": "Life Support allocation",
+          "brief": "Paired duct allocation valve with one restrained cyan status band.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-126",
+          "display_name": "Transit allocation",
+          "brief": "Ribbed coffer service fixture with a cyan geometric status marker.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-127",
+          "display_name": "Deferred Archive",
+          "brief": "Intact sealed cassette interface, dark status band, clean maintenance fittings; no ruin.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No third powered district, archive destruction, restored population, throne room, crowded city spectacle or universal recovery.",
+      "reference_images": [],
+      "branch_boundary": "Illustrative Life Support + Transit allocation; Archive deferred. Other two allocations remain valid and unillustrated variants.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M09 — Authority Exchange\". Mission: Reserve Authority.\nMain scene: A formal allocation plaza inside Lume Reach centered on a low exchange hall, with three distinct and widely separated district interfaces opening toward Life Support cistern walls, Transit ribbed decks, and Archive windowless stacks. Clear large civic paving and radial service trunks distinguish this from M03 maintenance backstreets. REPRESENTATIVE BRANCH: Life Support and Transit show restrained cyan status bands; Archive remains intact, maintained and dark. Exactly those two district branches show power, not all three. Architecture long, low, stepped pale ceramic on charcoal plinths.\nBottom detail panels left to right:\n1. \"Life Support allocation\" — Paired duct allocation valve with one restrained cyan status band.\n2. \"Transit allocation\" — Ribbed coffer service fixture with a cyan geometric status marker.\n3. \"Deferred Archive\" — Intact sealed cassette interface, dark status band, clean maintenance fittings; no ruin.\nSpecific exclusions: No third powered district, archive destruction, restored population, throne room, crowded city spectacle or universal recovery.\nEvidence boundary (inform composition, do not print paragraph): Illustrative Life Support + Transit allocation; Archive deferred. Other two allocations remain valid and unillustrated variants."
+    },
+    {
+      "map_id": "M10",
+      "mission_title": "The Choir at Lume Reach",
+      "place": "Liability district and Well court",
+      "concept_id": "EBS-CON-WRL-ENV-110",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "An oblique civic perimeter route with a dark but maintained district frontage, a separate liability interface, two sequential narrow spine settings along solid public paving, and a distinct open Future Well court beyond them. One dormant Future Well: low dark circular geological bowl with a single modest black center spire. Offset translucent Choir panes occupy separate standing fixtures beside civic frames, without merging into buildings. Quiet cyan civic markers and faint magenta non-walkable frame threads, not active battle.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-128",
+          "display_name": "Civic-mineral adapter",
+          "brief": "Exposed mechanical adapter joining a ceramic service end and separate grown mineral contact, both readable.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-129",
+          "display_name": "Deferred district face",
+          "brief": "Dark maintained stepped civic facade with usable service door and intact status recess.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-130",
+          "display_name": "Civic Well rim",
+          "brief": "Paving terminates around a geological black basalt bowl rim; one small dark center spire, no reactor.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No army battle, Mara enemy, restored citizens, destroyed Well, all-three-district power or fake final outcome.",
+      "reference_images": [
+        "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/future-well-candidate.png"
+      ],
+      "branch_boundary": "Illustrative deferred Archive frontage consistent with M09 example; inherited approach and allocation combinations are retained.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M10 — Liability district and Well court\". Mission: The Choir at Lume Reach.\nMain scene: An oblique civic perimeter route with a dark but maintained district frontage, a separate liability interface, two sequential narrow spine settings along solid public paving, and a distinct open Future Well court beyond them. One dormant Future Well: low dark circular geological bowl with a single modest black center spire. Offset translucent Choir panes occupy separate standing fixtures beside civic frames, without merging into buildings. Quiet cyan civic markers and faint magenta non-walkable frame threads, not active battle.\nBottom detail panels left to right:\n1. \"Civic-mineral adapter\" — Exposed mechanical adapter joining a ceramic service end and separate grown mineral contact, both readable.\n2. \"Deferred district face\" — Dark maintained stepped civic facade with usable service door and intact status recess.\n3. \"Civic Well rim\" — Paving terminates around a geological black basalt bowl rim; one small dark center spire, no reactor.\nSpecific exclusions: No army battle, Mara enemy, restored citizens, destroyed Well, all-three-district power or fake final outcome.\nEvidence boundary (inform composition, do not print paragraph): Illustrative deferred Archive frontage consistent with M09 example; inherited approach and allocation combinations are retained.",
+      "open_decisions": [
+        "MAP-DEC-004: Concept depicts an intact Well; executable destruction/failure-state behavior requires authority reconciliation between SPEC-WEL-004 and mission failure clauses."
+      ]
+    },
+    {
+      "map_id": "M11",
+      "mission_title": "No Neutral Ledger",
+      "place": "Census Forecourt",
+      "concept_id": "EBS-CON-WRL-ENV-111",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "A broad public forecourt in front of Lume Reach's central Census Gate, framed by long low pale-ceramic stepped architecture. Two separated district contribution interfaces, two distinct public evidence stations (one civic ceramic kiosk and one grown mineral pillar), and a protocol rally pad form an asymmetric sequence of readable places. Solid quiet paving and generous circulation. Cables and rooted mineral interfaces meet only through visible adapters. No faction base or ceremonial palace.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-131",
+          "display_name": "Public adapter junction",
+          "brief": "Serviceable ceramic-to-mineral adapter seated beside a clear walkway, exposed connection logic.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-132",
+          "display_name": "Civic evidence station",
+          "brief": "Compact pale-ceramic record housing with blank readback face and cassette access.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-133",
+          "display_name": "Mineral record pillar",
+          "brief": "Stratified grown record pillar with maintained contact recess and clear observation pad.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No faction merger, trust-score display, invented record text, toll war, civilian roster or crowd implying unmodeled people.",
+      "reference_images": [],
+      "branch_boundary": "Paired contributions depend on recorded allocation; this sheet preserves interfaces without asserting branch completion.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M11 — Census Forecourt\". Mission: No Neutral Ledger.\nMain scene: A broad public forecourt in front of Lume Reach's central Census Gate, framed by long low pale-ceramic stepped architecture. Two separated district contribution interfaces, two distinct public evidence stations (one civic ceramic kiosk and one grown mineral pillar), and a protocol rally pad form an asymmetric sequence of readable places. Solid quiet paving and generous circulation. Cables and rooted mineral interfaces meet only through visible adapters. No faction base or ceremonial palace.\nBottom detail panels left to right:\n1. \"Public adapter junction\" — Serviceable ceramic-to-mineral adapter seated beside a clear walkway, exposed connection logic.\n2. \"Civic evidence station\" — Compact pale-ceramic record housing with blank readback face and cassette access.\n3. \"Mineral record pillar\" — Stratified grown record pillar with maintained contact recess and clear observation pad.\nSpecific exclusions: No faction merger, trust-score display, invented record text, toll war, civilian roster or crowd implying unmodeled people.\nEvidence boundary (inform composition, do not print paragraph): Paired contributions depend on recorded allocation; this sheet preserves interfaces without asserting branch completion.",
+      "open_decisions": [
+        "MAP-DEC-004: Concept depicts an intact Well; executable destruction/failure-state behavior requires authority reconciliation between SPEC-WEL-004 and mission failure clauses."
+      ]
+    },
+    {
+      "map_id": "M12",
+      "mission_title": "The Future That Won",
+      "place": "Demonstrator Spine at Reserve Gate",
+      "concept_id": "EBS-CON-WRL-ENV-112",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "A formal civic instrument court organized around one long neutral demonstrator spine at Lume Reach's Reserve Gate. Redundant calibration frames and replaceable pale-ceramic instrument modules sit in a precise low line, with visible contained signal paths. Independent ceramic and grown-mineral readback stations have separate unobstructed approaches. Paired district input sockets remain distinct; a separate dormant Future Well activation area is set well aside from the spine. Apparatus credible, attributable and bounded; no giant beam.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-134",
+          "display_name": "Calibration frame",
+          "brief": "Compact paired measurement frame with visible base, adjustment screws and contained sensor path.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-135",
+          "display_name": "Instrument cartridge",
+          "brief": "Replaceable pale ceramic instrument module with service grip, keyed mounting and blank status surface.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-136",
+          "display_name": "Independent readback",
+          "brief": "Separate ceramic and mineral readback interfaces, each with its own observation pad, no merged console.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No restored city, energy waterfall, literal population restoration, Rhyse character portrait, permanent outcome, destroyed Well or impossible floating machinery.",
+      "reference_images": [
+        "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/future-well-candidate.png"
+      ],
+      "branch_boundary": "Pre-activation instrument composition; authoritative activation/hold/receipt states require separate future variant sheets.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M12 — Demonstrator Spine at Reserve Gate\". Mission: The Future That Won.\nMain scene: A formal civic instrument court organized around one long neutral demonstrator spine at Lume Reach's Reserve Gate. Redundant calibration frames and replaceable pale-ceramic instrument modules sit in a precise low line, with visible contained signal paths. Independent ceramic and grown-mineral readback stations have separate unobstructed approaches. Paired district input sockets remain distinct; a separate dormant Future Well activation area is set well aside from the spine. Apparatus credible, attributable and bounded; no giant beam.\nBottom detail panels left to right:\n1. \"Calibration frame\" — Compact paired measurement frame with visible base, adjustment screws and contained sensor path.\n2. \"Instrument cartridge\" — Replaceable pale ceramic instrument module with service grip, keyed mounting and blank status surface.\n3. \"Independent readback\" — Separate ceramic and mineral readback interfaces, each with its own observation pad, no merged console.\nSpecific exclusions: No restored city, energy waterfall, literal population restoration, Rhyse character portrait, permanent outcome, destroyed Well or impossible floating machinery.\nEvidence boundary (inform composition, do not print paragraph): Pre-activation instrument composition; authoritative activation/hold/receipt states require separate future variant sheets.",
+      "open_decisions": [
+        "MAP-DEC-004: Concept depicts an intact Well; executable destruction/failure-state behavior requires authority reconciliation between SPEC-WEL-004 and mission failure clauses."
+      ]
+    },
+    {
+      "map_id": "M13",
+      "mission_title": "Assembly of the Missing",
+      "place": "Crownfall public index",
+      "concept_id": "EBS-CON-WRL-ENV-113",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "A tiered functional public index precinct on dark Crownfall terraces, with an accessible central indexed structure of horizontal stacked record housings and service aisles. Separate ceramic and mineral record interfaces connect to the neutral linkage; two distinct witness platforms sit apart. Blank unasserted record surfaces, no writing. Low ash-gray stone, black glass and pale ceramic with quiet fine magenta atmospheric resonance. Diagonal terrace sequence and broad usable platforms, not graveyard rows.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-137",
+          "display_name": "Neutral index module",
+          "brief": "Horizontal modular blank record drawer stack with service rails, mechanically credible and clearly not a headstone.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-138",
+          "display_name": "Paired record housings",
+          "brief": "Distinct civic cassette receiver and grown mineral receiver, linked by a visible neutral adapter.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-139",
+          "display_name": "Witness platform",
+          "brief": "Low stable dark-stone platform with clear approach and minimal edge marker, no shrine.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No gravestones, funerary crosses, named dead, culpability evidence, survivors, crowds or claim of authenticity.",
+      "reference_images": [],
+      "branch_boundary": "Pre-readback index composition; unasserted records remain unasserted.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M13 — Crownfall public index\". Mission: Assembly of the Missing.\nMain scene: A tiered functional public index precinct on dark Crownfall terraces, with an accessible central indexed structure of horizontal stacked record housings and service aisles. Separate ceramic and mineral record interfaces connect to the neutral linkage; two distinct witness platforms sit apart. Blank unasserted record surfaces, no writing. Low ash-gray stone, black glass and pale ceramic with quiet fine magenta atmospheric resonance. Diagonal terrace sequence and broad usable platforms, not graveyard rows.\nBottom detail panels left to right:\n1. \"Neutral index module\" — Horizontal modular blank record drawer stack with service rails, mechanically credible and clearly not a headstone.\n2. \"Paired record housings\" — Distinct civic cassette receiver and grown mineral receiver, linked by a visible neutral adapter.\n3. \"Witness platform\" — Low stable dark-stone platform with clear approach and minimal edge marker, no shrine.\nSpecific exclusions: No gravestones, funerary crosses, named dead, culpability evidence, survivors, crowds or claim of authenticity.\nEvidence boundary (inform composition, do not print paragraph): Pre-readback index composition; unasserted records remain unasserted."
+    },
+    {
+      "map_id": "M14",
+      "mission_title": "Several Voices, One Command",
+      "place": "Crownfall command-crisis basin",
+      "concept_id": "EBS-CON-WRL-ENV-114",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "A broad black-glass basin below high broken Crownfall shelves. Separate Possible and Manifest site terraces remain visibly distinct, with a small central command position and a separate empty crisis-anchor setting; a research work surface sits off one approach. Non-walkable repeated Choir frames have controlled offsets, pale translucent panes and faint magenta joins, but all floors remain matte stable and legible. Subtly doubled distant horizon only, no giant portal or two whole suns. Asymmetric multi-site basin and clear force placement.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-140",
+          "display_name": "Phase frame support",
+          "brief": "Offset paired frame uprights seated on independent solid footings, fine magenta filament only at a contained joint.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-141",
+          "display_name": "Platform edge",
+          "brief": "Stable black-glass paving over thick basalt shelf with safe readable edge and wear at contact.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-142",
+          "display_name": "Crisis anchor setting",
+          "brief": "Empty low keyed anchor socket embedded in ground with separate cable/mineral access, no invented installed machine.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No permanent unified identity, restored failed hold, final ending resolution, army spectacle, flickering floor or invisible bridge.",
+      "reference_images": [],
+      "branch_boundary": "Pre-binding environment; Possible/Manifest distinction and irreversible failure consequences remain governed by contracts.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M14 — Crownfall command-crisis basin\". Mission: Several Voices, One Command.\nMain scene: A broad black-glass basin below high broken Crownfall shelves. Separate Possible and Manifest site terraces remain visibly distinct, with a small central command position and a separate empty crisis-anchor setting; a research work surface sits off one approach. Non-walkable repeated Choir frames have controlled offsets, pale translucent panes and faint magenta joins, but all floors remain matte stable and legible. Subtly doubled distant horizon only, no giant portal or two whole suns. Asymmetric multi-site basin and clear force placement.\nBottom detail panels left to right:\n1. \"Phase frame support\" — Offset paired frame uprights seated on independent solid footings, fine magenta filament only at a contained joint.\n2. \"Platform edge\" — Stable black-glass paving over thick basalt shelf with safe readable edge and wear at contact.\n3. \"Crisis anchor setting\" — Empty low keyed anchor socket embedded in ground with separate cable/mineral access, no invented installed machine.\nSpecific exclusions: No permanent unified identity, restored failed hold, final ending resolution, army spectacle, flickering floor or invisible bridge.\nEvidence boundary (inform composition, do not print paragraph): Pre-binding environment; Possible/Manifest distinction and irreversible failure consequences remain governed by contracts."
+    },
+    {
+      "map_id": "M15",
+      "mission_title": "The Broken Sun",
+      "place": "Solar Fall accord dais",
+      "concept_id": "EBS-CON-WRL-ENV-115",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "A wide elevated RTS environment study of a geometric obsidian accord dais beneath distant shattered stellar fragments. A distinct approach-anchor foundation leads onto solid broad black paving; three separated witness sites retain civic ceramic, grown mineral and offset glass construction languages. One EMPTY resolution mounting location awaits the selected ending's conduit: do not display any ending machine or four alternatives. Stable interconnected grounded platforms, void perimeter and distant restrained coronal fractures; sky small enough that gameplay sites dominate.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-143",
+          "display_name": "Obsidian dais edge",
+          "brief": "Thick supported obsidian edge with visible load-bearing substructure and restrained wear.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-144",
+          "display_name": "Accord interfaces",
+          "brief": "Three small separate interface fittings: civic ceramic, grown strata, offset glass; connected through visible neutral mounts, no blended motif.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-145",
+          "display_name": "Resolution mount",
+          "brief": "Single empty low keyed mounting pad before ending commitment, solid floor and service access.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No four ending conduits, selected happy ending, universal reconciliation, social aftermath, restored sun, floating playable slabs or protected-witness combat.",
+      "reference_images": [],
+      "branch_boundary": "Pre-ending commitment. Each eligible ending needs its own later conduit/state reference; this sheet selects none.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M15 — Solar Fall accord dais\". Mission: The Broken Sun.\nMain scene: A wide elevated RTS environment study of a geometric obsidian accord dais beneath distant shattered stellar fragments. A distinct approach-anchor foundation leads onto solid broad black paving; three separated witness sites retain civic ceramic, grown mineral and offset glass construction languages. One EMPTY resolution mounting location awaits the selected ending's conduit: do not display any ending machine or four alternatives. Stable interconnected grounded platforms, void perimeter and distant restrained coronal fractures; sky small enough that gameplay sites dominate.\nBottom detail panels left to right:\n1. \"Obsidian dais edge\" — Thick supported obsidian edge with visible load-bearing substructure and restrained wear.\n2. \"Accord interfaces\" — Three small separate interface fittings: civic ceramic, grown strata, offset glass; connected through visible neutral mounts, no blended motif.\n3. \"Resolution mount\" — Single empty low keyed mounting pad before ending commitment, solid floor and service access.\nSpecific exclusions: No four ending conduits, selected happy ending, universal reconciliation, social aftermath, restored sun, floating playable slabs or protected-witness combat.\nEvidence boundary (inform composition, do not print paragraph): Pre-ending commitment. Each eligible ending needs its own later conduit/state reference; this sheet selects none."
+    },
+    {
+      "map_id": "SK01",
+      "mission_title": "Glass Scar",
+      "place": "Three-crossing skirmish basin",
+      "concept_id": "EBS-CON-WRL-ENV-116",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "An elevated near-top-down tactical landscape of a compact square basin, north and south opposed starting shelves separated by a central east-west fractured ridge. Exactly THREE clear crossing gaps through that separating ridge: WEST Ash Cut is a raw scalloped dark trench; CENTER Buried Causeway is a continuous ribbed pale-ceramic deck over the cut; EAST Folded Verge uses stable offset plates across the cut. One small dormant Future Well near center beneath a broken transit-span remnant that does NOT form an extra route. Six modest cyan-white Matter deposits: two safe home, two side contested, two central. No buildings, keep broad quiet unit routes. All three passages plainly distinguishable.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-146",
+          "display_name": "Ash Cut",
+          "brief": "Raw scalloped basalt trench with sloped solid route floor and rough dark shoulders.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-147",
+          "display_name": "Buried Causeway",
+          "brief": "Continuous ribbed pale ceramic deck over charcoal load-bearing coffers with intact route surface.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-148",
+          "display_name": "Folded Verge",
+          "brief": "Stable offset plates forming one visible crossing; joints are readable, no invisible gap.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No fourth route, blocked required crossing, giant Well crystal, lava, faction bases or copied M01 evacuation court.",
+      "reference_images": [
+        "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/glass-scar-routes.png",
+        "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/future-well-candidate.png"
+      ],
+      "branch_boundary": "SPEC-SKM-011 composition study; 64×64 contract, travel-time targets and fairness require source-bound blockout, not inference from image.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"SK01 — Three-crossing skirmish basin\". Mission: Glass Scar.\nMain scene: An elevated near-top-down tactical landscape of a compact square basin, north and south opposed starting shelves separated by a central east-west fractured ridge. Exactly THREE clear crossing gaps through that separating ridge: WEST Ash Cut is a raw scalloped dark trench; CENTER Buried Causeway is a continuous ribbed pale-ceramic deck over the cut; EAST Folded Verge uses stable offset plates across the cut. One small dormant Future Well near center beneath a broken transit-span remnant that does NOT form an extra route. Six modest cyan-white Matter deposits: two safe home, two side contested, two central. No buildings, keep broad quiet unit routes. All three passages plainly distinguishable.\nBottom detail panels left to right:\n1. \"Ash Cut\" — Raw scalloped basalt trench with sloped solid route floor and rough dark shoulders.\n2. \"Buried Causeway\" — Continuous ribbed pale ceramic deck over charcoal load-bearing coffers with intact route surface.\n3. \"Folded Verge\" — Stable offset plates forming one visible crossing; joints are readable, no invisible gap.\nSpecific exclusions: No fourth route, blocked required crossing, giant Well crystal, lava, faction bases or copied M01 evacuation court.\nEvidence boundary (inform composition, do not print paragraph): SPEC-SKM-011 composition study; 64×64 contract, travel-time targets and fairness require source-bound blockout, not inference from image."
+    },
+    {
+      "map_id": "SK02",
+      "mission_title": "Crownfall Basin",
+      "place": "Twin-ridge skirmish basin",
+      "concept_id": "EBS-CON-WRL-ENV-117",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "An elevated near-top-down tactical environment of a compact square basin with twin NORTH-SOUTH dark ridges, north and south shelf walls, and exactly THREE EAST-WEST gate corridors through the ridge system: north gate, middle gate, south gate. Clear west and east home shelves, near expansions, broad clean routes. One small dormant Future Well offset NORTH of center. Eight modest cyan-white Matter deposits: two home, two near expansions, four contested. Collapsed old civic foundations are embedded in outer cliffs, with pale-tide-polished geological gate walls. No vertical fantasy city; strategically readable rugged basin.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-149",
+          "display_name": "Foundation cliff",
+          "brief": "Weathered pale-ceramic civic foundation embedded in black layered cliff, no new destructible bridge.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-150",
+          "display_name": "Pale-tide gate wall",
+          "brief": "Smooth chalk-pale mineral polish on a dark basalt gate wall, dry stable route floor, no liquid hazard.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-151",
+          "display_name": "Matter seam",
+          "brief": "Small cyan-white mineral deposit nested into a matte rock shoulder, crisp silhouette and limited glow.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No extra gate, blocked required gate, central Well instead of north-offset, flood hazard, damage aura, faction bases or invented tide mechanics.",
+      "reference_images": [
+        "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/future-well-candidate.png"
+      ],
+      "branch_boundary": "SPEC-SKM-012 composition study; resource counts and gate topology must be bound and verified in later authored map data.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"SK02 — Twin-ridge skirmish basin\". Mission: Crownfall Basin.\nMain scene: An elevated near-top-down tactical environment of a compact square basin with twin NORTH-SOUTH dark ridges, north and south shelf walls, and exactly THREE EAST-WEST gate corridors through the ridge system: north gate, middle gate, south gate. Clear west and east home shelves, near expansions, broad clean routes. One small dormant Future Well offset NORTH of center. Eight modest cyan-white Matter deposits: two home, two near expansions, four contested. Collapsed old civic foundations are embedded in outer cliffs, with pale-tide-polished geological gate walls. No vertical fantasy city; strategically readable rugged basin.\nBottom detail panels left to right:\n1. \"Foundation cliff\" — Weathered pale-ceramic civic foundation embedded in black layered cliff, no new destructible bridge.\n2. \"Pale-tide gate wall\" — Smooth chalk-pale mineral polish on a dark basalt gate wall, dry stable route floor, no liquid hazard.\n3. \"Matter seam\" — Small cyan-white mineral deposit nested into a matte rock shoulder, crisp silhouette and limited glow.\nSpecific exclusions: No extra gate, blocked required gate, central Well instead of north-offset, flood hazard, damage aura, faction bases or invented tide mechanics.\nEvidence boundary (inform composition, do not print paragraph): SPEC-SKM-012 composition study; resource counts and gate topology must be bound and verified in later authored map data."
+    },
+    {
+      "map_id": "SK03",
+      "mission_title": "The Confluence Ring",
+      "place": "Four-gate skirmish ring",
+      "concept_id": "EBS-CON-WRL-ENV-118",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "classification": "derived_environment_composition",
+      "scene": "An elevated near-top-down tactical landscape with one central complete low walled ring and exactly FOUR large cardinal entrances at north, east, south, west. No other wall breaks. One small dormant Future Well sits inside the ring center, a low black geological bowl and one dark spire. Separate west and east shard formations sit OUTSIDE the ring; repeated offset Choir frames echo the wall geometry while leaving floors stable. Eight cyan-white Matter deposits: two home and six distributed contested, outside the central Well space. Two opposed home shelves, broad quiet approaches, gray ash ground and restrained magenta frame threads.",
+      "details": [
+        {
+          "concept_id": "EBS-CON-WRL-PRP-152",
+          "display_name": "Ring gateway",
+          "brief": "One broad opening in thick low charcoal ring wall with pale edge cap and solid stable ground.",
+          "object_locator": "bottom left detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-153",
+          "display_name": "Offset wall joint",
+          "brief": "Near-duplicate non-walkable frame lines and offset glass pane rooted in independent supported wall fixtures.",
+          "object_locator": "bottom center detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        },
+        {
+          "concept_id": "EBS-CON-WRL-PRP-154",
+          "display_name": "Dormant Well",
+          "brief": "Low circular basalt bowl with one modest dark center spire and almost no glow; same family as reference.",
+          "object_locator": "bottom right detail panel",
+          "canon_status": "CANDIDATE",
+          "production_maturity": "NOT_STARTED"
+        }
+      ],
+      "exclusions": "No fifth gate, wall gaps masquerading as extra routes, giant portal, five Wells, flickering floor, faction bases or new teleportation mechanics.",
+      "reference_images": [
+        "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/future-well-candidate.png"
+      ],
+      "branch_boundary": "SPEC-SKM-013 composition study; four entrances and eight deposits require later source-bound placement verification.",
+      "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"SK03 — Four-gate skirmish ring\". Mission: The Confluence Ring.\nMain scene: An elevated near-top-down tactical landscape with one central complete low walled ring and exactly FOUR large cardinal entrances at north, east, south, west. No other wall breaks. One small dormant Future Well sits inside the ring center, a low black geological bowl and one dark spire. Separate west and east shard formations sit OUTSIDE the ring; repeated offset Choir frames echo the wall geometry while leaving floors stable. Eight cyan-white Matter deposits: two home and six distributed contested, outside the central Well space. Two opposed home shelves, broad quiet approaches, gray ash ground and restrained magenta frame threads.\nBottom detail panels left to right:\n1. \"Ring gateway\" — One broad opening in thick low charcoal ring wall with pale edge cap and solid stable ground.\n2. \"Offset wall joint\" — Near-duplicate non-walkable frame lines and offset glass pane rooted in independent supported wall fixtures.\n3. \"Dormant Well\" — Low circular basalt bowl with one modest dark center spire and almost no glow; same family as reference.\nSpecific exclusions: No fifth gate, wall gaps masquerading as extra routes, giant portal, five Wells, flickering floor, faction bases or new teleportation mechanics.\nEvidence boundary (inform composition, do not print paragraph): SPEC-SKM-013 composition study; four entrances and eight deposits require later source-bound placement verification."
+    }
+  ]
+}

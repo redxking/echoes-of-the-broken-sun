@@ -1,0 +1,103 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "observed_at": "2026-09-06T22:53:03.668939+00:00",
+  "primary_checkout": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project",
+  "primary_commit": "57afedc0882d963dc4d52a3854678f5c8d42a1a0",
+  "primary_dirty_paths": [
+    "M Source/EchoesOfTheBrokenSun/Private/EchoesFieldHudView.cpp",
+    " M Source/EchoesOfTheBrokenSun/Private/EchoesFieldHudWidget.cpp",
+    " M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerController.cpp",
+    " M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerFieldHud.cpp",
+    " M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerTutorial.cpp",
+    " M Source/EchoesOfTheBrokenSun/Private/EchoesTacticalInput.cpp",
+    " M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesFieldHudRoutesTest.cpp",
+    " M Source/EchoesOfTheBrokenSun/Public/EchoesFieldHudView.h",
+    " M Source/EchoesOfTheBrokenSun/Public/EchoesFieldHudWidget.h",
+    " M Source/EchoesOfTheBrokenSun/Public/EchoesPlayerController.h"
+  ],
+  "art_checkout": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/map-environment-concepts",
+  "art_branch": "docs/map-environment-concepts",
+  "art_base_commit": "8d9ba30300045f5aa1c348e209d77abfe952d9e8",
+  "parallel_production_checkout": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline",
+  "parallel_production_commit": "82fc808f7638119d182d95fd9c7b7cbf3133582a",
+  "authority_files": [
+    {
+      "path": "AGENTS.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/AGENTS.md",
+      "sha256": "19a1e136c7c9ac237ab7c03c103d37e8583d7c16a3239893a6ae758bf72af06f",
+      "last_change_commit": "76fcb8c797ecb15cd46f911642787f37a7e2917d"
+    },
+    {
+      "path": "Docs/README.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/README.md",
+      "sha256": "992fe7767c687c026efbb9e5a4dfb0b276a9e76b37aeb5a8ab9f231fdd83abdf",
+      "last_change_commit": "57afedc0882d963dc4d52a3854678f5c8d42a1a0"
+    },
+    {
+      "path": "Docs/Requirements.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/Requirements.md",
+      "sha256": "1ec65a1511c49344c524da47b4876e8b49d3020e45034c39fd238f4f3c2faae9",
+      "last_change_commit": "57afedc0882d963dc4d52a3854678f5c8d42a1a0"
+    },
+    {
+      "path": "Docs/RequirementsState.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/RequirementsState.md",
+      "sha256": "2ef71614801143852dbb92b25b16e5a1dd52d38fd2b200698a697e02577dfc7f",
+      "last_change_commit": "57afedc0882d963dc4d52a3854678f5c8d42a1a0"
+    },
+    {
+      "path": "Docs/Archive/DevelopmentBible.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/Archive/DevelopmentBible.md",
+      "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c",
+      "last_change_commit": "76fcb8c797ecb15cd46f911642787f37a7e2917d"
+    },
+    {
+      "path": "Docs/MapConcepts.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/MapConcepts.md",
+      "sha256": "bbcadfcf3c0572790d8886876134b3ceb95652c7eb6ea3f618ab3aadef3420e9",
+      "last_change_commit": "76fcb8c797ecb15cd46f911642787f37a7e2917d"
+    },
+    {
+      "path": "Docs/MapTechnicalBlueprint.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/MapTechnicalBlueprint.md",
+      "sha256": "7b9ea925f5232690ee663d047ddcee1f87332d26bd4d7e56549c48996b592e17",
+      "last_change_commit": "76fcb8c797ecb15cd46f911642787f37a7e2917d"
+    },
+    {
+      "path": "Docs/ArtDirection.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/ArtDirection.md",
+      "sha256": "82f4052be2952606bb2e8384d271839e61d130997dfb656118983154b70ba5f8",
+      "last_change_commit": "76fcb8c797ecb15cd46f911642787f37a7e2917d"
+    },
+    {
+      "path": "Docs/VisualTargetSpecification.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/VisualTargetSpecification.md",
+      "sha256": "498e026ce1908d3521420c94536dc5f5ab136757880443014b20c0d4e4858efa",
+      "last_change_commit": "dd4f9ab967039af9c61962335658bd49407e32e3"
+    },
+    {
+      "path": "Docs/ComponentDesignCatalog.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/ComponentDesignCatalog.md",
+      "sha256": "bcd4849ff401fb5a1819a0853fc8d99c0e86f8cce6efa978d36b09b97a5255de",
+      "last_change_commit": "dd4f9ab967039af9c61962335658bd49407e32e3"
+    }
+  ],
+  "visual_inputs": [
+    {
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/future-well-candidate.png",
+      "sha256": "b16e84cb4465c3c3cee46a71fb4b661256c0bdcbb9a030994fd7d7262ed60ba7",
+      "use": "Supplementary identity/material/ecology reference; source not overwritten; placeholder details excluded by prompt."
+    },
+    {
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/glass-scar-routes.png",
+      "sha256": "c8c06108f69e87412259f0015283c1ac50bfd2aead4138f17106734fd2f1e373",
+      "use": "Supplementary identity/material/ecology reference; source not overwritten; placeholder details excluded by prompt."
+    },
+    {
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/shivergrass-basin.jpg",
+      "sha256": "0e7ecb0417ed5199b7cefdd8f339ff7b660cbc0859ebeacec0f1d802a0c0e2dd",
+      "use": "Supplementary identity/material/ecology reference; source not overwritten; placeholder details excluded by prompt."
+    }
+  ]
+}
