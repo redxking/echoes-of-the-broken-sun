@@ -59,7 +59,7 @@ bool AEchoesPlayerController::CommitTutorialLesson(uint16 Bit, const TCHAR* Less
     {
         if (TutorialPractice.TargetLessonBit() != Bit) return false;
     }
-    else if ((PlayerProfile.TutorialVerifiedMask & (Bit - 1)) != Bit - 1 ||
+    else if (((PlayerProfile.TutorialVerifiedMask | TutorialSkippedMask) & (Bit - 1)) != Bit - 1 ||
              (PlayerProfile.TutorialVerifiedMask & Bit) != 0 ||
              bTutorialProgressSaveFailed)
     {
@@ -80,6 +80,18 @@ bool AEchoesPlayerController::CommitTutorialLesson(uint16 Bit, const TCHAR* Less
         PlayerFlow.Push(EEchoesShellScreen::Help);
         ShellMessage = FText::Format(LOCTEXT("PracticeComplete", "Practice complete: {0}."),
             FText::FromString(LessonName)).ToString();
+        return true;
+    }
+    if ((TutorialSkippedMask & (Bit - 1)) != 0)
+    {
+        // An earlier lesson was skipped in this session. Do not append non-contiguous bit to durable profile,
+        // which preserves IsOrderedTutorialMask integrity, but advance the current lesson in session.
+        TutorialActiveLessonBit = 0;
+        if (auto* Narrative = GetGameInstance() ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>() : nullptr)
+        {
+            const FString Signal = FString::Printf(TEXT("tutorial_lesson_verified:%s"), LessonName);
+            Narrative->EnqueueSignal(EEchoesOperationMode::CampaignPrologue, Signal, World->GetRealTimeSeconds());
+        }
         return true;
     }
     const auto Prior = PlayerProfile;
@@ -250,7 +262,7 @@ void AEchoesPlayerController::TickTutorialObservation()
     const uint16 ProgressMask = PracticeTarget != 0
         ? static_cast<uint16>(FEchoesTutorialPracticeState::ImplementedLessonMask &
             ~PracticeTarget)
-        : PlayerProfile.TutorialVerifiedMask;
+        : static_cast<uint16>(PlayerProfile.TutorialVerifiedMask | TutorialSkippedMask);
     static const TCHAR* LessonNames[] = {
         TEXT("survey"), TEXT("roster"), TEXT("muster"),
         TEXT("route"), TEXT("reserve")};
@@ -271,8 +283,26 @@ void AEchoesPlayerController::TickTutorialObservation()
     if ((ProgressMask & 1) == 0)
     {
         const int32 Waypoint = TutorialSurvey.CompletedWaypoints();
-        TutorialInstruction = FText::Format(LOCTEXT("SurveyInstruction",
-            "Survey: pan and zoom fully in and out, then return to your starting view. Select your Anchor. Keep the camera centered for 1.5 seconds over each marked site in order: Anchor, archive marker A, evacuation marker E. Sites: {0}/3."), FText::AsNumber(Waypoint));
+        if (Waypoint == 0)
+        {
+            TutorialInstruction = LOCTEXT("SurveySite0",
+                "Survey: pan and zoom fully in and out, then return to your starting view. Select your Anchor and keep the camera centered over it for 1.5 seconds.");
+        }
+        else if (Waypoint == 1)
+        {
+            TutorialInstruction = LOCTEXT("SurveySite1",
+                "Anchor verified. Next, locate the Archive Recovery Site marked on your minimap and keep the camera centered over it for 1.5 seconds.");
+        }
+        else if (Waypoint == 2)
+        {
+            TutorialInstruction = LOCTEXT("SurveySite2",
+                "Archive Recovery Site verified. Next, find the Evacuation Site marked on your minimap and keep the camera centered over it for 1.5 seconds.");
+        }
+        else
+        {
+            TutorialInstruction = LOCTEXT("SurveySiteComplete",
+                "All survey sites verified: Anchor, Archive Recovery Site, and Evacuation Site. Select your Anchor to complete the survey.");
+        }
         if (Camera->GetNavigationRevision() != TutorialInitialNavigationRevision)
         {
             FEchoesTutorialSurveySample Sample;
@@ -481,4 +511,81 @@ void AEchoesPlayerController::TickM01Opening()
         FinishMissionDeployment();
     }
 }
+
+void AEchoesPlayerController::OpenTutorialSkipModal()
+{
+    if (TutorialSkipModal.bVisible || !bTutorialOperationAuthorized) return;
+    auto* World = GetWorld();
+    auto* Bridge = World ? World->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    TutorialSkipModal.bVisible = true;
+    TutorialSkipModal.bScenarioWasPaused = Bridge ? Bridge->IsScenarioPaused() : false;
+    if (Bridge && Bridge->IsScenarioReady())
+    {
+        Bridge->SetScenarioPaused(true);
+        SetNarrativePlaybackPausedOutsideCinematic(true);
+    }
+    SetIgnoreMoveInput(true);
+    SetIgnoreLookInput(true);
+    RefreshFieldHud();
+}
+
+void AEchoesPlayerController::CloseTutorialSkipModal(bool bRestorePause)
+{
+    if (!TutorialSkipModal.bVisible) return;
+    const bool bWasPaused = TutorialSkipModal.bScenarioWasPaused;
+    TutorialSkipModal.bVisible = false;
+    TutorialSkipModal.bScenarioWasPaused = false;
+    auto* World = GetWorld();
+    auto* Bridge = World ? World->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    if (bRestorePause && Bridge && Bridge->IsScenarioReady())
+    {
+        Bridge->SetScenarioPaused(bWasPaused);
+        SetNarrativePlaybackPausedOutsideCinematic(bWasPaused);
+    }
+    else if (!bRestorePause && Bridge && Bridge->IsScenarioReady())
+    {
+        Bridge->SetScenarioPaused(false);
+        SetNarrativePlaybackPausedOutsideCinematic(false);
+    }
+    const bool bKeepInputHeld = IsModalOverlayVisible();
+    SetIgnoreMoveInput(bKeepInputHeld);
+    SetIgnoreLookInput(bKeepInputHeld);
+    RefreshFieldHud();
+}
+
+void AEchoesPlayerController::SkipTutorialCurrentStep()
+{
+    if (!bTutorialOperationAuthorized)
+    {
+        CloseTutorialSkipModal(false);
+        return;
+    }
+    const uint16 CurrentBit = TutorialPresentedLessonBit != 0
+        ? TutorialPresentedLessonBit
+        : (TutorialActiveLessonBit != 0 ? TutorialActiveLessonBit : 1);
+    TutorialSkippedMask |= CurrentBit;
+    CloseTutorialSkipModal(false);
+    TutorialActiveLessonBit = 0;
+    TutorialPresentedLessonBit = 0;
+    SetStatusMessage(LOCTEXT("StepSkipped", "Step skipped. Progress recorded as skipped (no mastery awarded).").ToString(), 8.0f);
+    RefreshFieldHud();
+}
+
+void AEchoesPlayerController::EndAllTutorials()
+{
+    CloseTutorialSkipModal(false);
+    bTutorialOperationAuthorized = false;
+    TutorialActiveLessonBit = 0;
+    TutorialPresentedLessonBit = 0;
+    TutorialInstruction = FText::GetEmpty();
+    ResetTutorialObservation();
+    SetStatusMessage(LOCTEXT("TutorialEnded", "Tutorial ended. Standard controls restored.").ToString(), 8.0f);
+    RefreshFieldHud();
+}
+
+void AEchoesPlayerController::CancelTutorialSkipModal()
+{
+    CloseTutorialSkipModal(true);
+}
+
 #undef LOCTEXT_NAMESPACE

@@ -460,6 +460,8 @@ void AEchoesPlayerController::HandleFieldHudAction(EEchoesFieldHudAction Action,
              Action == EEchoesFieldHudAction::ProductionCancelBack)) ||
         (View.Surface == EEchoesFieldHudSurface::Battlefield && !IsModalOverlayVisible() &&
             View.bObjectiveVisible && Contains(View.ObjectiveControls)) ||
+        (View.TutorialSkipModal.bVisible && Contains(View.TutorialSkipModal.Controls)) ||
+        (Action == EEchoesFieldHudAction::OpenTutorialSkipModal && bTutorialOperationAuthorized) ||
         (View.Campaign.bVisible && Contains(View.Campaign.Controls)) ||
         (View.Online.bVisible && Contains(View.Online.Controls));
     if (View.Technology.bVisible)
@@ -578,6 +580,18 @@ void AEchoesPlayerController::HandleFieldHudAction(EEchoesFieldHudAction Action,
                 static_cast<unsigned long long>(TutorialOrders.DeliveredMatterObserved())), 15.0f);
             break;
         }
+        case EEchoesFieldHudAction::OpenTutorialSkipModal:
+            OpenTutorialSkipModal();
+            break;
+        case EEchoesFieldHudAction::TutorialSkipCurrentStep:
+            SkipTutorialCurrentStep();
+            break;
+        case EEchoesFieldHudAction::TutorialEndAll:
+            EndAllTutorials();
+            break;
+        case EEchoesFieldHudAction::TutorialCancelSkipModal:
+            CancelTutorialSkipModal();
+            break;
         case EEchoesFieldHudAction::None: return;
     }
     RefreshShell();

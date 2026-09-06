@@ -79,6 +79,15 @@ public:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void PlayerTick(float DeltaTime) override;
     [[nodiscard]] FText GetTutorialInstruction() const { return TutorialInstruction; }
+    [[nodiscard]] bool IsTutorialOperationAuthorized() const { return bTutorialOperationAuthorized; }
+    void SetTutorialOperationAuthorized(bool bAuthorized) { bTutorialOperationAuthorized = bAuthorized; }
+    [[nodiscard]] bool IsTutorialSkipModalVisible() const { return TutorialSkipModal.bVisible; }
+    [[nodiscard]] uint16 GetTutorialSkippedMask() const { return TutorialSkippedMask; }
+    void OpenTutorialSkipModal();
+    void CloseTutorialSkipModal(bool bRestorePause);
+    void SkipTutorialCurrentStep();
+    void EndAllTutorials();
+    void CancelTutorialSkipModal();
     virtual void SetupInputComponent() override;
     virtual bool InputKey(const FInputKeyEventArgs& Params) override;
 
@@ -430,7 +439,7 @@ public:
     {
         return bM01OpeningPending || PlayerFlow.HasOverlay() || PlayerFlow.Is(EEchoesShellScreen::Title) || PlayerFlow.Is(EEchoesShellScreen::Briefing) ||
                PlayerFlow.Is(EEchoesShellScreen::Pause) || bTechnologyPanelVisible ||
-               PendingProductionCancellation.bVisible ||
+               PendingProductionCancellation.bVisible || TutorialSkipModal.bVisible ||
                PlayerFlow.Is(EEchoesShellScreen::Results) || bOnlineLocalMenuVisible ||
                bCampaignOperationsMapVisible ||
                IsOpponentReconnectGraceActive() ||
@@ -989,6 +998,12 @@ private:
     uint64 TutorialPendingRejectionAttempt = 0;
     uint16 TutorialActiveLessonBit = 0;
     uint16 TutorialPresentedLessonBit = 0;
+    uint16 TutorialSkippedMask = 0;
+    struct FEchoesTutorialSkipModal final
+    {
+        bool bVisible = false;
+        bool bScenarioWasPaused = false;
+    } TutorialSkipModal;
     uint64 TutorialLastTick = 0;
     uint64 TutorialInitialNavigationRevision = 0;
     bool bTutorialHasTick = false;

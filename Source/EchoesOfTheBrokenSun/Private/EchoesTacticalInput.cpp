@@ -233,6 +233,11 @@ void AEchoesPlayerController::BeginBuildPlacement(
         SetStatusMessage(LOCTEXT("OnlinePlacementUnavailable", "[BUILD_PREVIEW_OFFLINE_ONLY] Online construction waits for the authoritative placement path.").ToString());
         return;
     }
+    if (bTutorialOperationAuthorized)
+    {
+        SetStatusMessage(LOCTEXT("TutorialBuildUnavailable", "[TUTORIAL] Construction is unavailable during guided onboarding.").ToString());
+        return;
+    }
     const std::optional<echoes::sim::PlayerView> ScopedView =
         Bridge != nullptr && Bridge->GetSimulation() != nullptr
             ? Bridge->GetSimulation()->CreatePlayerView(
@@ -443,6 +448,11 @@ bool AEchoesPlayerController::HandleFieldHudPointer(
     if (Bridge->IsReplayPlaybackActive())
     {
         SetStatusMessage(LOCTEXT("ReplayOrdersReadOnly", "REPLAY VIEW — tactical orders are read-only.").ToString());
+        return true;
+    }
+    if (bTutorialOperationAuthorized && ((PlayerProfile.TutorialVerifiedMask | TutorialSkippedMask) & 2) == 0)
+    {
+        SetStatusMessage(LOCTEXT("TutorialUntaughtMinimap", "[TUTORIAL] Follow the active tutorial step before issuing orders.").ToString());
         return true;
     }
     // P2's offline adapter consumes only the local scoped view. Hidden markers

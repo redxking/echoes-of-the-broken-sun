@@ -224,6 +224,29 @@ bool FEchoesFieldHudRoutesTest::RunTest(const FString& Parameters)
         View.Surface == EEchoesFieldHudSurface::Battlefield &&
             View.Authority == EEchoesFieldHudAuthority::LivePlayerView);
 
+    // SPEC-TUT-006 Tutorial skip modal routes
+    Controller->SetTutorialOperationAuthorized(true);
+    Controller->OpenTutorialSkipModal();
+    TestTrue(TEXT("Tutorial skip modal is visible after open"), Controller->IsTutorialSkipModalVisible());
+    View = Controller->BuildFieldHudView();
+    TestTrue(TEXT("Tutorial skip modal is reflected in field HUD view"), View.TutorialSkipModal.bVisible);
+    TestEqual(TEXT("Tutorial skip modal has 3 action controls"), View.TutorialSkipModal.Controls.Num(), 3);
+
+    Controller->HandleFieldHudAction(EEchoesFieldHudAction::TutorialSkipCurrentStep);
+    TestFalse(TEXT("Skip current step closes modal"), Controller->IsTutorialSkipModalVisible());
+    TestTrue(TEXT("Skip current step records in session skipped mask"), (Controller->GetTutorialSkippedMask() & 1) != 0);
+    TestEqual(TEXT("Skip current step does not grant durable profile mastery"), Controller->GetPlayerProfile().TutorialVerifiedMask, static_cast<uint16>(0));
+
+    Controller->OpenTutorialSkipModal();
+    Controller->HandleFieldHudAction(EEchoesFieldHudAction::TutorialCancelSkipModal);
+    TestFalse(TEXT("Cancel closes tutorial skip modal"), Controller->IsTutorialSkipModalVisible());
+
+    Controller->OpenTutorialSkipModal();
+    Controller->HandleFieldHudAction(EEchoesFieldHudAction::TutorialEndAll);
+    TestFalse(TEXT("End all tutorials turns off tutorial authorization"), Controller->IsTutorialOperationAuthorized());
+    TestFalse(TEXT("End all tutorials closes skip modal"), Controller->IsTutorialSkipModalVisible());
+    TestEqual(TEXT("End all tutorials does not grant durable profile mastery"), Controller->GetPlayerProfile().TutorialVerifiedMask, static_cast<uint16>(0));
+
     // A model-emitted command-card action reaches the existing controller
     // authority and nowhere else.
     Controller->SelectCombatForce();

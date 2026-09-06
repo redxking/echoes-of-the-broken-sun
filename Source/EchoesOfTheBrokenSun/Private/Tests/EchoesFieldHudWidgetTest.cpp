@@ -206,9 +206,9 @@ bool FEchoesFieldHudWidgetTest::RunTest(const FString& Parameters)
     UWidget* InitialRoot = Widget->GetRootWidget();
     TestNotNull(TEXT("Field HUD owns a native UMG root"), InitialRoot);
     TestEqual(TEXT("Every semantic field panel is a modular child widget"),
-        Widget->GetSectionCount(), 11);
+        Widget->GetSectionCount(), 12);
     for (uint8 Index = 0;
-         Index <= static_cast<uint8>(EEchoesFieldHudSection::Reconnect);
+         Index <= static_cast<uint8>(EEchoesFieldHudSection::TutorialModal);
          ++Index)
     {
         TestNotNull(TEXT("Semantic panel role is materialized"),

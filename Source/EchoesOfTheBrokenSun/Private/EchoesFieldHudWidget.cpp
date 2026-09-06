@@ -1282,6 +1282,19 @@ bool UEchoesFieldHudWidget::IsPointerOverChrome(
 {
     const FGeometry RootGeometry = GetCachedGeometry();
     const float ViewportScale = UWidgetLayoutLibrary::GetViewportScale(this);
+    if (View.bTutorialActive && !View.TutorialSkipModal.bVisible)
+    {
+        const float PanelWidth = 190.0f;
+        const float PanelHeight = 34.0f;
+        const FVector2D LocalSize = RootGeometry.GetLocalSize();
+        const FVector2D SkipPos(LocalSize.X - PanelWidth - 20.0f, 16.0f);
+        const FBox2D SkipBox(SkipPos, SkipPos + FVector2D(PanelWidth, PanelHeight));
+        const FVector2D LocalPointer = ScreenPosition / FMath::Max(0.01f, ViewportScale);
+        if (SkipBox.IsInside(LocalPointer))
+        {
+            return true;
+        }
+    }
     for (const UEchoesFieldHudSectionWidget* Section : Sections)
     {
         if (Section != nullptr &&
@@ -1398,6 +1411,8 @@ void UEchoesFieldHudWidget::BuildStableTree()
         FAnchors(0.31f, 0.24f, 0.69f, 0.76f), FMargin(0));
     AddSection(EEchoesFieldHudSection::Reconnect,
         FAnchors(0.24f, 0.03f, 0.76f, 0.16f), FMargin(0));
+    AddSection(EEchoesFieldHudSection::TutorialModal,
+        FAnchors(0.30f, 0.28f, 0.70f, 0.72f), FMargin(0));
 
     MinimapWidget = WidgetTree->ConstructWidget<UEchoesFieldHudMinimapWidget>(
         UEchoesFieldHudMinimapWidget::StaticClass());
@@ -1861,6 +1876,26 @@ void UEchoesFieldHudWidget::ApplyView()
             ? ESlateVisibility::Visible
             : ESlateVisibility::Collapsed);
 
+    Panel = GetSection(EEchoesFieldHudSection::TutorialModal);
+    if (Panel != nullptr)
+    {
+        Lines.Reset();
+        if (!View.TutorialSkipModal.Description.IsEmpty())
+        {
+            Lines.Add(View.TutorialSkipModal.Description);
+        }
+        Panel->SetContent(
+            View.TutorialSkipModal.Title,
+            Lines,
+            View.TutorialSkipModal.Controls,
+            View.bHighContrast,
+            Scale);
+        Panel->SetVisibility(
+            View.TutorialSkipModal.bVisible
+                ? ESlateVisibility::Visible
+                : ESlateVisibility::Collapsed);
+    }
+
     MinimapWidget->SetView(View.Minimap, View.bHighContrast);
     MinimapWidget->SetVisibility(bBattlefield && View.Minimap.bVisible
         ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
@@ -2069,7 +2104,8 @@ bool UEchoesFieldHudWidget::ActivateFocused()
 
 bool UEchoesFieldHudWidget::IsModalSurface() const
 {
-    return View.Technology.bVisible ||
+    return View.TutorialSkipModal.bVisible ||
+        View.Technology.bVisible ||
         View.Production.Cancellation.bVisible ||
         View.Surface == EEchoesFieldHudSurface::CampaignOperations ||
         View.Surface == EEchoesFieldHudSurface::OnlineFrontDoor ||
@@ -2084,6 +2120,12 @@ FReply UEchoesFieldHudWidget::NativeOnPreviewKeyDown(
 {
     if (!IsModalSurface())
     {
+        if (View.bTutorialActive && !View.TutorialSkipModal.bVisible &&
+            InKeyEvent.GetKey() == EKeys::SpaceBar && !InKeyEvent.IsRepeat())
+        {
+            bHoldToSkipSpacePressed = true;
+            return FReply::Handled();
+        }
         return Super::NativeOnPreviewKeyDown(InGeometry, InKeyEvent);
     }
     const FKey Key = InKeyEvent.GetKey();
@@ -2109,4 +2151,286 @@ FReply UEchoesFieldHudWidget::NativeOnPreviewKeyDown(
         return ActivateFocused() ? FReply::Handled() : FReply::Unhandled();
     }
     return Super::NativeOnPreviewKeyDown(InGeometry, InKeyEvent);
+}
+
+FReply UEchoesFieldHudWidget::NativeOnKeyUp(
+    const FGeometry& InGeometry,
+    const FKeyEvent& InKeyEvent)
+{
+    if (InKeyEvent.GetKey() == EKeys::SpaceBar && bHoldToSkipSpacePressed)
+    {
+        bHoldToSkipSpacePressed = false;
+        HoldToSkipCurrentSeconds = 0.0f;
+        return FReply::Handled();
+    }
+    return Super::NativeOnKeyUp(InGeometry, InKeyEvent);
+}
+
+void UEchoesFieldHudWidget::NativeTick(
+    const FGeometry& MyGeometry,
+    float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    if (View.bTutorialActive && !View.TutorialSkipModal.bVisible)
+    {
+        if (bHoldToSkipPointerPressed || bHoldToSkipSpacePressed)
+        {
+            HoldToSkipCurrentSeconds += InDeltaTime;
+            if (HoldToSkipCurrentSeconds >= 1.5f)
+            {
+                HoldToSkipCurrentSeconds = 0.0f;
+                bHoldToSkipPointerPressed = false;
+                bHoldToSkipSpacePressed = false;
+                DispatchAction(EEchoesFieldHudAction::OpenTutorialSkipModal, 0);
+            }
+        }
+        else
+        {
+            HoldToSkipCurrentSeconds = 0.0f;
+        }
+    }
+    else
+    {
+        HoldToSkipCurrentSeconds = 0.0f;
+        bHoldToSkipPointerPressed = false;
+        bHoldToSkipSpacePressed = false;
+    }
+}
+
+int32 UEchoesFieldHudWidget::NativePaint(
+    const FPaintArgs& Args,
+    const FGeometry& AllottedGeometry,
+    const FSlateRect& MyCullingRect,
+    FSlateWindowElementList& OutDrawElements,
+    int32 LayerId,
+    const FWidgetStyle& InWidgetStyle,
+    bool bParentEnabled) const
+{
+    int32 MaxLayer = Super::NativePaint(
+        Args, AllottedGeometry, MyCullingRect, OutDrawElements,
+        LayerId, InWidgetStyle, bParentEnabled);
+
+    if (!View.bTutorialActive)
+    {
+        return MaxLayer;
+    }
+
+    const FVector2D LocalSize = AllottedGeometry.GetLocalSize();
+    if (LocalSize.X <= 0.0f || LocalSize.Y <= 0.0f)
+    {
+        return MaxLayer;
+    }
+
+    // 1. Spotlight & UI Dimming (SPEC-TUT-005)
+    if (View.TutorialSpotlight.bActive && !View.TutorialSkipModal.bVisible)
+    {
+        const float ViewportScale = FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this));
+        const FVector2D LocalCenter = View.TutorialSpotlight.ScreenCenter / ViewportScale;
+        const FVector2D HalfSize = (View.TutorialSpotlight.ScreenSize * 0.5f) / ViewportScale;
+
+        const float MinX = FMath::Clamp(LocalCenter.X - HalfSize.X, 0.0f, LocalSize.X);
+        const float MaxX = FMath::Clamp(LocalCenter.X + HalfSize.X, 0.0f, LocalSize.X);
+        const float MinY = FMath::Clamp(LocalCenter.Y - HalfSize.Y, 0.0f, LocalSize.Y);
+        const float MaxY = FMath::Clamp(LocalCenter.Y + HalfSize.Y, 0.0f, LocalSize.Y);
+
+        const FLinearColor DimColor = View.bHighContrast
+            ? FLinearColor(0.0f, 0.0f, 0.0f, 0.75f)
+            : FLinearColor(0.0f, 0.0f, 0.0f, 0.58f);
+
+        // Dim 4 boxes around the cutout hole
+        if (MinY > 0.0f)
+        {
+            DrawBox(OutDrawElements, MaxLayer + 1, AllottedGeometry,
+                FVector2D(0.0f, 0.0f), FVector2D(LocalSize.X, MinY), DimColor);
+        }
+        if (MaxY < LocalSize.Y)
+        {
+            DrawBox(OutDrawElements, MaxLayer + 1, AllottedGeometry,
+                FVector2D(0.0f, MaxY), FVector2D(LocalSize.X, LocalSize.Y - MaxY), DimColor);
+        }
+        if (MinX > 0.0f && MaxY > MinY)
+        {
+            DrawBox(OutDrawElements, MaxLayer + 1, AllottedGeometry,
+                FVector2D(0.0f, MinY), FVector2D(MinX, MaxY - MinY), DimColor);
+        }
+        if (MaxX < LocalSize.X && MaxY > MinY)
+        {
+            DrawBox(OutDrawElements, MaxLayer + 1, AllottedGeometry,
+                FVector2D(MaxX, MinY), FVector2D(LocalSize.X - MaxX, MaxY - MinY), DimColor);
+        }
+
+        // Spotlight highlight border
+        const FLinearColor SpotlightColor = View.bHighContrast
+            ? FLinearColor(1.0f, 0.85f, 0.1f, 1.0f)
+            : FLinearColor(0.96f, 0.68f, 0.18f, 0.95f);
+
+        DrawLine(OutDrawElements, MaxLayer + 2, AllottedGeometry,
+            { FVector2D(MinX, MinY), FVector2D(MaxX, MinY),
+              FVector2D(MaxX, MaxY), FVector2D(MinX, MaxY) },
+            SpotlightColor, 2.0f, true);
+
+        // Target name label
+        if (!View.TutorialSpotlight.TargetName.IsEmpty())
+        {
+            const FSlateFontInfo NameFont = FCoreStyle::GetDefaultFontStyle("Bold", 12);
+            const FVector2D LabelPos(MinX, FMath::Max(4.0f, MinY - 22.0f));
+            FSlateDrawElement::MakeText(
+                OutDrawElements,
+                MaxLayer + 3,
+                AllottedGeometry.ToPaintGeometry(
+                    FVector2D(250.0f, 22.0f),
+                    FSlateLayoutTransform(LabelPos)),
+                View.TutorialSpotlight.TargetName.ToString(),
+                NameFont,
+                ESlateDrawEffect::None,
+                SpotlightColor);
+        }
+
+        // Ghost indicator pointing towards spotlight center (SPEC-TUT-005)
+        const UWorld* World = GetWorld();
+        const float TimeSeconds = World != nullptr ? World->GetTimeSeconds() : 0.0f;
+        const float Oscillation = View.bReducedMotion
+            ? 0.0f
+            : FMath::Sin(TimeSeconds * 4.0f) * 6.0f;
+
+        const FVector2D IndicatorTip(LocalCenter.X, FMath::Max(14.0f, MinY - 6.0f + Oscillation));
+        const TArray<FVector2D> ArrowPoints = {
+            IndicatorTip + FVector2D(-10.0f, -12.0f),
+            IndicatorTip,
+            IndicatorTip + FVector2D(10.0f, -12.0f)
+        };
+        DrawLine(OutDrawElements, MaxLayer + 3, AllottedGeometry,
+            ArrowPoints, SpotlightColor, 2.5f, false);
+    }
+
+    // 2. Top-right low-emphasis "Hold to skip" control with circular meter (SPEC-TUT-006)
+    if (!View.TutorialSkipModal.bVisible)
+    {
+        const float PanelWidth = 190.0f;
+        const float PanelHeight = 34.0f;
+        const FVector2D SkipPos(LocalSize.X - PanelWidth - 20.0f, 16.0f);
+        const FVector2D SkipDim(PanelWidth, PanelHeight);
+
+        // Panel background
+        const FLinearColor PanelBg = View.bHighContrast
+            ? FLinearColor(0.0f, 0.0f, 0.0f, 0.85f)
+            : FLinearColor(0.02f, 0.03f, 0.05f, 0.70f);
+        DrawBox(OutDrawElements, MaxLayer + 2, AllottedGeometry,
+            SkipPos, SkipDim, PanelBg);
+
+        // Border
+        const FLinearColor BorderCol = View.bHighContrast
+            ? FLinearColor(0.6f, 0.6f, 0.6f, 0.8f)
+            : FLinearColor(0.25f, 0.35f, 0.40f, 0.55f);
+        DrawLine(OutDrawElements, MaxLayer + 3, AllottedGeometry,
+            { SkipPos, SkipPos + FVector2D(PanelWidth, 0.0f),
+              SkipPos + FVector2D(PanelWidth, PanelHeight),
+              SkipPos + FVector2D(0.0f, PanelHeight) },
+            BorderCol, 1.2f, true);
+
+        // Text
+        const FSlateFontInfo SkipFont = FCoreStyle::GetDefaultFontStyle("Regular", 10);
+        const FLinearColor TextCol = View.bHighContrast
+            ? FLinearColor::White
+            : FLinearColor(0.72f, 0.78f, 0.82f, 0.90f);
+        FSlateDrawElement::MakeText(
+            OutDrawElements,
+            MaxLayer + 4,
+            AllottedGeometry.ToPaintGeometry(
+                FVector2D(135.0f, 20.0f),
+                FSlateLayoutTransform(SkipPos + FVector2D(10.0f, 9.0f))),
+            TEXT("HOLD TO SKIP"),
+            SkipFont,
+            ESlateDrawEffect::None,
+            TextCol);
+
+        // Circular progress meter
+        const FVector2D MeterCenter = SkipPos + FVector2D(PanelWidth - 20.0f, PanelHeight * 0.5f);
+        const float MeterRadius = 8.5f;
+
+        // Background meter circle (16 segments)
+        TArray<FVector2D> BgCircle;
+        constexpr int32 CircleSegments = 16;
+        for (int32 i = 0; i <= CircleSegments; ++i)
+        {
+            const float Angle = (static_cast<float>(i) / CircleSegments) * 2.0f * PI;
+            BgCircle.Add(MeterCenter + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * MeterRadius);
+        }
+        DrawLine(OutDrawElements, MaxLayer + 3, AllottedGeometry,
+            BgCircle, FLinearColor(0.25f, 0.30f, 0.35f, 0.5f), 1.2f, true);
+
+        // Active hold arc
+        const float HoldProgress = FMath::Clamp(HoldToSkipCurrentSeconds / 1.5f, 0.0f, 1.0f);
+        if (HoldProgress > 0.0f)
+        {
+            TArray<FVector2D> ArcPoints;
+            const int32 ArcSegments = FMath::Max(2, FMath::CeilToInt(HoldProgress * 20.0f));
+            for (int32 i = 0; i <= ArcSegments; ++i)
+            {
+                const float Frac = static_cast<float>(i) / ArcSegments;
+                const float Angle = -PI * 0.5f + Frac * HoldProgress * 2.0f * PI;
+                ArcPoints.Add(MeterCenter + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * MeterRadius);
+            }
+            const FLinearColor MeterColor = View.bHighContrast
+                ? FLinearColor(1.0f, 0.85f, 0.1f, 1.0f)
+                : FLinearColor(0.96f, 0.68f, 0.18f, 1.0f);
+            DrawLine(OutDrawElements, MaxLayer + 4, AllottedGeometry,
+                ArcPoints, MeterColor, 2.2f, false);
+        }
+    }
+
+    return MaxLayer + 5;
+}
+
+FReply UEchoesFieldHudWidget::NativeOnMouseButtonDown(
+    const FGeometry& InGeometry,
+    const FPointerEvent& InMouseEvent)
+{
+    if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton &&
+        View.bTutorialActive && !View.TutorialSkipModal.bVisible)
+    {
+        const FVector2D LocalPos = InGeometry.AbsoluteToLocal(InMouseEvent.GetScreenSpacePosition());
+        const float PanelWidth = 190.0f;
+        const float PanelHeight = 34.0f;
+        const FVector2D LocalSize = InGeometry.GetLocalSize();
+        const FVector2D SkipPos(LocalSize.X - PanelWidth - 20.0f, 16.0f);
+        const FBox2D SkipBox(SkipPos, SkipPos + FVector2D(PanelWidth, PanelHeight));
+        if (SkipBox.IsInside(LocalPos))
+        {
+            bHoldToSkipPointerPressed = true;
+            return FReply::Handled().CaptureMouse(TakeWidget());
+        }
+    }
+    return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+}
+
+FReply UEchoesFieldHudWidget::NativeOnMouseButtonUp(
+    const FGeometry& InGeometry,
+    const FPointerEvent& InMouseEvent)
+{
+    if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && bHoldToSkipPointerPressed)
+    {
+        bHoldToSkipPointerPressed = false;
+        HoldToSkipCurrentSeconds = 0.0f;
+        return FReply::Handled().ReleaseMouseCapture();
+    }
+    return Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
+}
+
+void UEchoesFieldHudWidget::NativeOnMouseCaptureLost(
+    const FCaptureLostEvent& CaptureLostEvent)
+{
+    Super::NativeOnMouseCaptureLost(CaptureLostEvent);
+    bHoldToSkipPointerPressed = false;
+    HoldToSkipCurrentSeconds = 0.0f;
+}
+
+void UEchoesFieldHudWidget::NativeOnFocusLost(
+    const FFocusEvent& InFocusEvent)
+{
+    Super::NativeOnFocusLost(InFocusEvent);
+    bHoldToSkipPointerPressed = false;
+    bHoldToSkipSpacePressed = false;
+    HoldToSkipCurrentSeconds = 0.0f;
 }

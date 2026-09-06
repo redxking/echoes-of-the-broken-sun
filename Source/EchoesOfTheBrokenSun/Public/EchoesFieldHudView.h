@@ -75,7 +75,11 @@ enum class EEchoesFieldHudAction : uint8
     ProductionMoveUp,          // Argument is a 1-based waiting slot.
     ProductionMoveDown,        // Argument is a 1-based waiting slot.
     AcknowledgeTutorialRejection,
-    InspectTutorialReserve
+    InspectTutorialReserve,
+    OpenTutorialSkipModal,
+    TutorialSkipCurrentStep,
+    TutorialEndAll,
+    TutorialCancelSkipModal
 };
 
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudControl final
@@ -305,6 +309,24 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudOnlineView final
     TArray<FEchoesFieldHudControl> Controls;
 };
 
+/** SPEC-TUT-005 spotlight data for tutorial onboarding. */
+struct ECHOESOFTHEBROKENSUN_API FEchoesTutorialSpotlightView final
+{
+    bool bActive = false;
+    FVector2D ScreenCenter = FVector2D::ZeroVector;
+    FVector2D ScreenSize = FVector2D::ZeroVector;
+    FText TargetName;
+};
+
+/** SPEC-TUT-006 tutorial skip modal data. */
+struct ECHOESOFTHEBROKENSUN_API FEchoesTutorialSkipModalView final
+{
+    bool bVisible = false;
+    FText Title;
+    FText Description;
+    TArray<FEchoesFieldHudControl> Controls;
+};
+
 /**
  * Immutable-by-convention snapshot consumed by UMG. It owns all strings and
  * arrays and contains no simulation, controller, actor, or UObject pointer.
@@ -317,6 +339,9 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudView final
     bool bReducedMotion = false;
     bool bReducedFlashing = false;
     float HudScale = 1.0f;
+    bool bTutorialActive = false;
+    FEchoesTutorialSpotlightView TutorialSpotlight;
+    FEchoesTutorialSkipModalView TutorialSkipModal;
     FEchoesFieldHudResourceView Resources;
     FEchoesFieldHudSelectionView Selection;
     FEchoesFieldHudProductionView Production;

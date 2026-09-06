@@ -996,6 +996,9 @@ void BuildMissionMarkers(
     switch (Objective.OperationMode)
     {
         case EEchoesOperationMode::TrainingReadiness:
+            Add(UEchoesSimulationSubsystem::GetArchiveRecoverySite(), LOCTEXT("MapArchiveFull", "Archive"), Objective.ProloguePhase != EEchoesProloguePhase::RecoverArchive);
+            Add(UEchoesSimulationSubsystem::GetEvacuationSite(), LOCTEXT("MapEvacFull", "Evac"), Objective.ProloguePhase == EEchoesProloguePhase::Complete);
+            break;
         case EEchoesOperationMode::CampaignPrologue:
             Add(UEchoesSimulationSubsystem::GetArchiveRecoverySite(), LOCTEXT("MapArchive", "A"), Objective.ProloguePhase != EEchoesProloguePhase::RecoverArchive);
             Add(UEchoesSimulationSubsystem::GetEvacuationSite(), LOCTEXT("MapEvac", "E"), Objective.ProloguePhase == EEchoesProloguePhase::Complete);
@@ -1669,6 +1672,84 @@ bool FEchoesFieldHudModel::Build(
         if (OutView.Production.Cancellation.bVisible)
         {
             OutView.ObjectiveControls.Reset();
+        }
+        OutView.bTutorialActive = Controller.IsTutorialOperationAuthorized() && !Controller.IsReplayInputActive();
+        if (Controller.IsTutorialSkipModalVisible())
+        {
+            OutView.TutorialSkipModal.bVisible = true;
+            OutView.TutorialSkipModal.Title = LOCTEXT("TutorialSkipModalTitle", "TUTORIAL OPTIONS");
+            OutView.TutorialSkipModal.Description = LOCTEXT("TutorialSkipModalDesc", "Choose an option to manage the tutorial guidance:");
+            OutView.TutorialSkipModal.Controls.Add({LOCTEXT("SkipStepBtn", "Skip this step only"), FText::GetEmpty(), EEchoesFieldHudAction::TutorialSkipCurrentStep, 0, true, false, false});
+            OutView.TutorialSkipModal.Controls.Add({LOCTEXT("EndAllBtn", "End all tutorials"), FText::GetEmpty(), EEchoesFieldHudAction::TutorialEndAll, 0, true, false, false});
+            OutView.TutorialSkipModal.Controls.Add({LOCTEXT("CancelSkipBtn", "Cancel"), FText::GetEmpty(), EEchoesFieldHudAction::TutorialCancelSkipModal, 0, true, true, true});
+        }
+        else if (OutView.bTutorialActive && Bridge.GetOperationMode() == EEchoesOperationMode::TrainingReadiness)
+        {
+            const uint16 Mask = Controller.GetPlayerProfile().TutorialVerifiedMask | Controller.GetTutorialSkippedMask();
+            if ((Mask & 1) == 0)
+            {
+                FVector TargetWorld = Bridge.SimToWorld(UEchoesSimulationSubsystem::GetArchiveRecoverySite());
+                FText TargetName = LOCTEXT("SpotlightArchive", "Archive Recovery Site");
+                if (const auto* Simulation = Bridge.GetSimulation())
+                {
+                    if (const auto View = Simulation->CreatePlayerView(UEchoesSimulationSubsystem::LocalPlayerId))
+                    {
+                        for (const auto& Entity : View->Entities())
+                        {
+                            if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                                Entity.type == echoes::sim::EntityType::CommandCore)
+                            {
+                                TargetWorld = Bridge.SimToWorld(Entity.position);
+                                TargetName = LOCTEXT("SpotlightAnchor", "Anchor");
+                                break;
+                            }
+                        }
+                    }
+                }
+                FVector2D ScreenPos;
+                if (Controller.ProjectWorldLocationToScreen(TargetWorld, ScreenPos))
+                {
+                    OutView.TutorialSpotlight.bActive = true;
+                    OutView.TutorialSpotlight.ScreenCenter = ScreenPos;
+                    OutView.TutorialSpotlight.ScreenSize = FVector2D(140.0f, 140.0f);
+                    OutView.TutorialSpotlight.TargetName = TargetName;
+                }
+            }
+            else if ((Mask & 2) == 0)
+            {
+                if (Controller.GetSelectedEntityIds().IsEmpty())
+                {
+                    if (const auto* Simulation = Bridge.GetSimulation())
+                    {
+                        if (const auto View = Simulation->CreatePlayerView(UEchoesSimulationSubsystem::LocalPlayerId))
+                        {
+                            for (const auto& Entity : View->Entities())
+                            {
+                                if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                                    Entity.type == echoes::sim::EntityType::Worker)
+                                {
+                                    FVector2D ScreenPos;
+                                    if (Controller.ProjectWorldLocationToScreen(Bridge.SimToWorld(Entity.position), ScreenPos))
+                                    {
+                                        OutView.TutorialSpotlight.bActive = true;
+                                        OutView.TutorialSpotlight.ScreenCenter = ScreenPos;
+                                        OutView.TutorialSpotlight.ScreenSize = FVector2D(120.0f, 120.0f);
+                                        OutView.TutorialSpotlight.TargetName = LOCTEXT("SpotlightSurveyor", "Surveyor");
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    OutView.TutorialSpotlight.bActive = true;
+                    OutView.TutorialSpotlight.ScreenCenter = FVector2D(530.0f, 610.0f);
+                    OutView.TutorialSpotlight.ScreenSize = FVector2D(520.0f, 180.0f);
+                    OutView.TutorialSpotlight.TargetName = LOCTEXT("SpotlightSelectionPanel", "Selection Panel");
+                }
+            }
         }
     }
     if (Context.Narrative != nullptr)

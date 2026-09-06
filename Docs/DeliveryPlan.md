@@ -378,3 +378,30 @@ Window startup repair built successfully. Actual cold launch reached the title m
 
 
 2026-09-06 owner handoff direction: Angelis reported clicking Deploy and intentionally pressing Escape to bypass the unfinished cutscene, then directed continuation of tutorial work. This supersedes any inference that the observed cutscene frame establishes a new camera defect. Gated onboarding remains unimplemented; window-startup full requalification and the connected journey remain pending. The owner requested a Gemini continuation handoff and then explicitly requested committing all local project changes and pushing main. The continuation context is retained in [GeminiContinuationHandoff.md](Prompts/GeminiContinuationHandoff.md); this does not confer P0–P4 completion or owner acceptance.
+
+### 2026-09-06 — SPEC-TUT-005 and SPEC-TUT-006 implementation and full requalification
+
+Gated onboarding (`SPEC-TUT-005`) and intentional tutorial exit (`SPEC-TUT-006`) are implemented and qualified across native and engine automation suites:
+1. Gated onboarding presentation (`SPEC-TUT-005`):
+   - Controller authority and Field HUD spotlight: actively darkens surrounding viewport UI with a four-box cutout frame and projects real screen-space spotlight bounds around the active target (Anchor, Archive Recovery Site, Surveyor).
+   - Animated ghost indicator pulse with accessibility compliance (suppressed when `bReducedMotion` is active).
+   - Plain site names displayed ("Anchor", "Archive Recovery Site", "Evacuation Site") with clear step-by-step guidance.
+   - Gameplay gating: freezes unrelated gameplay and blocks untaught actions (structure placement preview, untaught minimap movement/attack orders, and context orders prior to unit selection) while permitting taught controls, pause, accessibility, and tutorial exit.
+2. Intentional tutorial exit (`SPEC-TUT-006`):
+   - Low-emphasis top-right "Hold to skip" panel with 1.5-second hold requirement and circular meter.
+   - Fail-closed cancellation on pointer release, key release (Space), mouse capture loss, focus loss, or screen transitions.
+   - Modal dialog that pauses simulation and presents three explicit paths:
+     a. "Skip this step only": advances current instructional step and unlocks dependent controls, recorded in controller session `TutorialSkippedMask` without granting durable profile mastery (`PlayerProfile.TutorialVerifiedMask` never forged or corrupted with non-contiguous bits).
+     b. "End all tutorials": terminates guidance, removes all tutorial gating, restores general player control immediately without readiness proof.
+     c. "Cancel": restores instructional step and prior scenario pause state.
+3. Automated test verification:
+   - Native simulation suite: 108/108 passed in optimized, debug, and ASan/UBSan configurations (`test_sim.sh`, exit 0).
+   - Content suite: 100% passed (`test_content.sh`, exit 0).
+   - Full Unreal automation suite: 116/116 passed with 0 errors and 0 warnings (`BuildArtifacts/Automation/20260906T230510Z-40157/index.json`), including `Echoes.Runtime.FieldHud.ControllerAuthorityRoutes`, `Echoes.Runtime.UI.FieldHudWidget`, and all `Echoes.Runtime.Campaign.Tutorial*` tests.
+   - Save isolation boundary passed: exact deny clauses and synthetic protected-data denial passed; scoped storage clean.
+4. Review and audit artifacts:
+   - Authored and linked `Project/Docs/Prompts/P0P4CodeReviewPrompt.md` for comprehensive P0–P4 review against Unreal Engine 5.8.2 and Epic Developer Community standards.
+5. Open gates:
+   - Rendered physical human playthrough observation by Angelis Pseftis;
+   - Final owner acceptance of P0–P4;
+   - P5 remains held.
