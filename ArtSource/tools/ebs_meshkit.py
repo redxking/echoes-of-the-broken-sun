@@ -271,7 +271,7 @@ class Mesh:
         self.add_convex_solid(faces, slot, component)
 
     def merge(self, other: "Mesh", translate=(0.0, 0.0, 0.0), yaw_deg=0.0, pitch_deg=0.0,
-              component_prefix="", include_sockets=True):
+              component_prefix="", include_sockets=True, socket_prefix=""):
         """Append another mesh transformed by pitch (about Y) then yaw (about Z),
         then translation; material slots are matched by name."""
         slot_map = {i: self.slot(name) for i, name in enumerate(other.slots)}
@@ -285,7 +285,7 @@ class Mesh:
         if include_sockets:
             for s in other.sockets:
                 q = rot_yp(s.position, yaw_deg, pitch_deg)
-                self.sockets.append(Socket(component_prefix + s.name, v_add(q, translate), s.yaw_deg + yaw_deg, s.purpose))
+                self.sockets.append(Socket(socket_prefix + s.name, v_add(q, translate), s.yaw_deg + yaw_deg, s.purpose))
 
     # -- measurement ---------------------------------------------------------
     def triangles(self):

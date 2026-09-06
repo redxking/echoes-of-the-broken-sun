@@ -60,15 +60,57 @@
    "package_id": "EBS-PKG-MC-SURVEYOR",
    "production_asset_id": "EBS-MER-UNT-001",
    "subject": "Surveyor",
-   "production_maturity": "NOT_STARTED",
-   "next": "rig/animation pilot after the Power Link pilot"
+   "production_maturity": "BLOCKOUT",
+   "next": "skinned export + headless skeletal import inspection, posed renders per track, then textures",
+   "asset_name": "SK_EBS_MER_UNT_001",
+   "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_001/",
+   "canon_status": "CANDIDATE (KEEP direction under delegation; not owner acceptance)",
+   "source_root": "ArtSource/EBS-MER-UNT-001/",
+   "authoritative_document": "ArtSource/EBS-MER-UNT-001/README.md",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT",
+     "date": "2026-09-06",
+     "revision": "ebs-mer-unt-001-blockout-v1",
+     "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-001/",
+     "what_exists": "Rest-stance geometry with 12-bone rigid binding, socket definitions, 13 keyframed clip definitions, compatibility static parts for the runtime M01 rig, review renders (orthographic sheets, tactical at 1.5x, LOD1, context with the Power Link), 11 structural tests.",
+     "what_does_not_exist": "Skinned GLB export and import (pending skeletal-kit verification), posed renders, textures, in-engine playback, gate reviews, owner acceptance."
+    }
+   ],
+   "gates": {
+    "art": "NOT_EVALUATED",
+    "gameplay": "NOT_EVALUATED",
+    "technical": "NOT_EVALUATED"
+   },
+   "owner_acceptance": "NOT_ACCEPTED"
   },
   {
    "package_id": "EBS-PKG-EBS-FAM-FWL-001",
    "production_asset_id": "EBS-FWL-SYS-001",
    "subject": "Future Well family",
-   "production_maturity": "NOT_STARTED",
-   "next": "state-family pilot after the Surveyor pilot"
+   "production_maturity": "BLOCKOUT",
+   "next": "headless import inspection, texture bake (2048^2), state-mask material plan",
+   "asset_name": "SM_EBS_FWL_SYS_001",
+   "planned_unreal_folder": "/Game/Echoes/Production/FWL/SYS/EBS_FWL_SYS_001/",
+   "canon_status": "CANDIDATE (one-family direction under delegation; REL-ART-014 amendment prepared, not applied)",
+   "source_root": "ArtSource/EBS-FWL-SYS-001/",
+   "authoritative_document": "ArtSource/EBS-FWL-SYS-001/README.md",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT",
+     "date": "2026-09-06",
+     "revision": "ebs-fwl-sys-001-blockout-v1",
+     "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-FWL-SYS-001/",
+     "what_exists": "One-tile bowl mass with a walkable apron (relief <= 16 cm), four-petal spire part with inward-tilt-and-sink collapse pose, thirteen state presentations, sockets, review renders for dormant / harvest telegraph / mid-fold / spent / preserve / reshape / LOD1, emissive-area measurement (7.3% at full Preserve ring), 8 structural tests.",
+     "what_does_not_exist": "Import inspection, textures, VFX, doubled-shadow decal, in-engine capture, gate reviews, owner acceptance; REL-ART-014 amendment application belongs to the integration task."
+    }
+   ],
+   "gates": {
+    "art": "NOT_EVALUATED",
+    "gameplay": "NOT_EVALUATED",
+    "technical": "NOT_EVALUATED"
+   },
+   "owner_acceptance": "NOT_ACCEPTED"
   },
   {
    "package_id": "EBS-PKG-MC-LANCER",
