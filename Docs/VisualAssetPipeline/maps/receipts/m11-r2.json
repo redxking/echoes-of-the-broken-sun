@@ -1,0 +1,32 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "map_id": "M11",
+  "revision": 2,
+  "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Preserve broad Census forecourt layout, two separate contribution stations, civic evidence kiosk, mineral record pillar, adapter and rally pad. Replace tall pointed cathedral gate with a long LOW stepped civic Census Gate: wide rectilinear ceramic opening, charcoal plinth and sober service seams, no pointed arch, heraldry or castle aesthetic. Remove ornamental Earthlike trees and banners; leave low bare mineral planters/maintained paving. Change magenta on the KHARUUN record pillar/interface (upper scene and bottom-right) to restrained AMBER mineral signal, retain its grown roots and distinct construction. No monuments, readable records, crowd or new objects. Keep labels and panels.",
+  "reference_images": [
+    "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-ff7168a8-0ba2-4fb9-a096-51016c2e0c51.png"
+  ],
+  "generated_original": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-48016f50-e5b9-4b74-bdbb-af9803793faf.png",
+  "generator": "Built-in image generation tool; backend model unspecified",
+  "status": "RETAINED_CANDIDATE",
+  "output_hint": "Generated images are saved to /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17 as /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-48016f50-e5b9-4b74-bdbb-af9803793faf.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "sha256": "c1b46e383f9591160d42c5a69ee6e32d9f6c2056282ea119647ed18bdb4bbde7",
+  "prompt_sha256": "749c7fa4d9ed752062beafadbad9575e12737f195a63d9f870730ed97a6cfae5",
+  "retained_inputs": [
+    {
+      "original_path": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-ff7168a8-0ba2-4fb9-a096-51016c2e0c51.png",
+      "retained_path": "reference-inputs/18526e0a2ea4d8b5.png",
+      "sha256": "18526e0a2ea4d8b516925b0752255890454a56100c2c2107b9b23886c11a33c5",
+      "role": "Edit target"
+    }
+  ],
+  "evidence_copy": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/map-concepts-20260906/generated-originals/m11-r2.png",
+  "evidence_copy_sha256": "c1b46e383f9591160d42c5a69ee6e32d9f6c2056282ea119647ed18bdb4bbde7",
+  "selected_image": "images/m11-environment-candidate.png",
+  "visual_inspection": {
+    "selected_revision": 2,
+    "status": "RETAINED_CANDIDATE",
+    "observation": "Corrected Census Gate is a low rectilinear civic frontage. Two contribution settings, separate ceramic/mineral evidence stations and rally pad are visible; mineral record uses amber. Ornamental trees and banners were removed. No record text, deaths or faction merger is asserted."
+  }
+}

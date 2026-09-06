@@ -1,0 +1,32 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "map_id": "M10",
+  "revision": 2,
+  "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Preserve scene layout, Well identity, two separate Choir pane settings, paving, panels and labels. Replace the tall ceremonial ivory gate/frontage on upper left with long LOW stepped windowless pale-ceramic ARCHIVE service blocks on a charcoal plinth, wide rectilinear cassette doors, recessed service rails, no pointed cathedral arch or decorative gold crest. The deferred district must be intact but DARK: remove all powered cyan/amber light from that frontage and bottom-center deferred district facade; retain non-emissive metal trim. Civic path markers may stay subtle cyan. In bottom-left adapter, change ONLY magenta veins on the rooted KHARUUN mineral endpoint to quiet amber; preserve magenta on the two CHOIR panes and Well fractures. No building destruction.",
+  "reference_images": [
+    "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-22cb40ee-15fa-4f42-a744-be08308c74ba.png"
+  ],
+  "generated_original": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-c6611d7f-a37d-49b2-a975-a6eadafd6b35.png",
+  "generator": "Built-in image generation tool; backend model unspecified",
+  "status": "RETAINED_CANDIDATE",
+  "output_hint": "Generated images are saved to /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17 as /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-c6611d7f-a37d-49b2-a975-a6eadafd6b35.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "sha256": "95daa7a349fd163fc1c79539e645dc9d1f4d999bde1fe93a8c7e43291d5b80ef",
+  "prompt_sha256": "13c970cfb1682b641599a11d008e92820857da346d3e55988731e9f54b961cc6",
+  "retained_inputs": [
+    {
+      "original_path": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-22cb40ee-15fa-4f42-a744-be08308c74ba.png",
+      "retained_path": "reference-inputs/af44713cc615aabf.png",
+      "sha256": "af44713cc615aabfa1e8416aefe7831a64f7e90bbd3ab1ee2001c92c50e2862f",
+      "role": "Edit target"
+    }
+  ],
+  "evidence_copy": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/map-concepts-20260906/generated-originals/m10-r2.png",
+  "evidence_copy_sha256": "95daa7a349fd163fc1c79539e645dc9d1f4d999bde1fe93a8c7e43291d5b80ef",
+  "selected_image": "images/m10-environment-candidate.png",
+  "visual_inspection": {
+    "selected_revision": 2,
+    "status": "RETAINED_CANDIDATE",
+    "observation": "Corrected frontage is long, low and stepped; deferred Archive indicators remain dark and intact. Civic-mineral adapter uses amber on mineral side, distinct from magenta Choir panes. One dormant Well remains separate. Well failure-state authority conflict is unresolved."
+  }
+}

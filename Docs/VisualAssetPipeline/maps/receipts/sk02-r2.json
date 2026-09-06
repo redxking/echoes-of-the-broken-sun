@@ -1,0 +1,26 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "map_id": "SK02",
+  "revision": 2,
+  "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Repaint ONLY upper tactical scene, preserving header/footer and three bottom detail panels. Use near-TOP-DOWN view, top=NORTH. TWO continuous NORTH-SOUTH basalt ridges run VERTICALLY from the top shelf wall to the bottom shelf wall, dividing WEST home area, central corridor, EAST home area. THREE EAST-WEST gate corridors run HORIZONTALLY across BOTH ridges: north third, middle, south third. Each of those three continuous cross-corridors makes aligned gaps in the two ridges. Therefore six ridge openings form THREE aligned gate corridors, not three horizontal ridges. One dormant Well in CENTRAL corridor offset NORTH of map center, off the north gate path. Exactly EIGHT separate cyan-white deposits: west/east home two; west/east near expansion two; four contested beside ridge approaches. Empty usable starting shelves, no bases, clear quiet paths, dry pale-tide polish and old civic foundation fragments at OUTER edges. Keep north/south shelf walls with no extra exits. Do not rotate the specified geometry.",
+  "reference_images": [
+    "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-5329d52d-a9b1-4124-81d1-95af11c00af9.png"
+  ],
+  "generated_original": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-fa0874b5-976a-41ab-8c29-15b88ca72190.png",
+  "generator": "Built-in image generation tool; backend model unspecified",
+  "status": "SUPERSEDED_BY_TARGETED_CORRECTION",
+  "output_hint": "Generated images are saved to /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17 as /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-fa0874b5-976a-41ab-8c29-15b88ca72190.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "sha256": "154198c6a17a421a2d3315638b590edd56ad85d7152d6982b9eb381359aef410",
+  "prompt_sha256": "daf9f0b9243ec738e39e56dfd40ded197160ab7c75dc8b9421f745592c9c8104",
+  "retained_inputs": [
+    {
+      "original_path": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-5329d52d-a9b1-4124-81d1-95af11c00af9.png",
+      "retained_path": "reference-inputs/310a877a35e12eb9.png",
+      "sha256": "310a877a35e12eb91eba7a1b443939e42973ffd7423f07043d5f204359943361",
+      "role": "Edit target"
+    }
+  ],
+  "evidence_copy": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/map-concepts-20260906/generated-originals/sk02-r2.png",
+  "evidence_copy_sha256": "154198c6a17a421a2d3315638b590edd56ad85d7152d6982b9eb381359aef410"
+}

@@ -1,0 +1,30 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "map_id": "M02",
+  "revision": 1,
+  "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"M02 — Shivergrass migration basin\". Mission: Seven Accounts of Rain.\nMain scene: A spacious wind-combed basin with broad pale lilac-gray shivergrass ribbons between stepped black basalt scarps. An asymmetric central basalt divider makes migration lanes legible; polished rock shoulders and compressed lane edges show repeated passage. Observation sills face the basin. Three route families are readable as different terrain conditions, but do not claim all are simultaneously open: one route remains a fractured rough margin. Distant terraces rather than city or mountain fantasy.\nBottom detail panels left to right:\n1. \"Shivergrass patch\" — Sparse bent pale blades and clumped roots, low enough for RTS units to remain visible.\n2. \"Migration shoulder\" — Polished basalt lip with compressed grass edge and mineral striation.\n3. \"Observation sill\" — Low worked mineral-stone ledge seated directly in layered bedrock; practical, non-ceremonial.\nSpecific exclusions: No animals, giant grazing herd, glowing runes, tribal shrines, fog-revealing movement trails or invented stealth mechanics.\nEvidence boundary (inform composition, do not print paragraph): Founding doctrine controls active route; sheet illustrates terrain families, not simultaneous navigable branches.",
+  "reference_images": [
+    "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/shivergrass-basin.jpg"
+  ],
+  "generated_original": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-479c1fd2-63f4-4ba5-a7e4-dbd52bdaa792.png",
+  "generator": "Built-in image generation tool; backend model unspecified",
+  "status": "SUPERSEDED_BY_TARGETED_CORRECTION",
+  "visual_inspection": {
+    "method": "Direct full-sheet visual inspection",
+    "observation": "Grass/basalt composition retained; observation sills incorrectly use civic ceramic/electronics. Targeted correction requested."
+  },
+  "output_hint": "Generated images are saved to /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17 as /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-479c1fd2-63f4-4ba5-a7e4-dbd52bdaa792.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "sha256": "a23388229c6b3f157020140f00446481a1b522507e008567f5123153c0e9a706",
+  "prompt_sha256": "7414e0ae6a6d43cc5038137126f3a5e78c93fb9e646d55ce978657282c14e3cb",
+  "retained_inputs": [
+    {
+      "original_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/shivergrass-basin.jpg",
+      "retained_path": "reference-inputs/0e7ecb0417ed5199.jpg",
+      "sha256": "0e7ecb0417ed5199b7cefdd8f339ff7b660cbc0859ebeacec0f1d802a0c0e2dd",
+      "role": "Supplementary visual reference"
+    }
+  ],
+  "evidence_copy": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/map-concepts-20260906/generated-originals/m02-r1.png",
+  "evidence_copy_sha256": "a23388229c6b3f157020140f00446481a1b522507e008567f5123153c0e9a706"
+}

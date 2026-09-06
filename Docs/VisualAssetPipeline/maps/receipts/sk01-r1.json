@@ -1,0 +1,33 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "map_id": "SK01",
+  "revision": 1,
+  "prompt": "Use case: stylized-concept.\nCreate a high-detail professional ENVIRONMENT CONCEPT SHEET for the original science-fiction RTS Echoes of the Broken Sun. Landscape format. Large elevated three-quarter tactical scene occupies the upper 70%, THREE separate labeled environmental detail studies along the bottom 25%, tasteful clean ivory header and narrow separators. This is illustrated production concept art, not a UI screenshot, photomontage, vector diagram or executable map. Believable sculptural surfaces, visible thickness, joints, support, purposeful weathering; refined painterly realism. Tactical view must make calm usable ground and route silhouettes readable before decoration. Sparse background atmosphere, no lens flare. Charcoal basalt and vitrified black, pale ceramic civic forms, controlled broken-sun amber, quiet cyan status fixtures; magenta only for fracture/Choir signals. No generic fantasy temples, skulls, giant neon crystals, lush Earth forests, giant mountains dominating the playfield, or faction armies. Avoid busy microtexture across walkable lanes. Do not invent a new interactable hazard or objective.\nWhen a Future Well reference is supplied, it is identity reference ONLY: use the DORMANT low basalt bowl and single small dark central spire, never other active states, infographic labels or giant crystals. Original landform references are material/ecology references ONLY; do not duplicate their old placeholder buildings, creatures, rune marks or composition.\nHeader text: \"ECHOES OF THE BROKEN SUN\". Then the map code and short place name given below. Footer text: \"ENVIRONMENT CONCEPT • CANDIDATE • COMPOSITION STUDY\". Minimal clear typography, no other paragraphs. Bottom details should be large useful close studies; exactly three panels with the requested short labels. The scene may reuse instances, but the detail designs remain individually identifiable.\n\nMap: \"SK01 — Three-crossing skirmish basin\". Mission: Glass Scar.\nMain scene: An elevated near-top-down tactical landscape of a compact square basin, north and south opposed starting shelves separated by a central east-west fractured ridge. Exactly THREE clear crossing gaps through that separating ridge: WEST Ash Cut is a raw scalloped dark trench; CENTER Buried Causeway is a continuous ribbed pale-ceramic deck over the cut; EAST Folded Verge uses stable offset plates across the cut. One small dormant Future Well near center beneath a broken transit-span remnant that does NOT form an extra route. Six modest cyan-white Matter deposits: two safe home, two side contested, two central. No buildings, keep broad quiet unit routes. All three passages plainly distinguishable.\nBottom detail panels left to right:\n1. \"Ash Cut\" — Raw scalloped basalt trench with sloped solid route floor and rough dark shoulders.\n2. \"Buried Causeway\" — Continuous ribbed pale ceramic deck over charcoal load-bearing coffers with intact route surface.\n3. \"Folded Verge\" — Stable offset plates forming one visible crossing; joints are readable, no invisible gap.\nSpecific exclusions: No fourth route, blocked required crossing, giant Well crystal, lava, faction bases or copied M01 evacuation court.\nEvidence boundary (inform composition, do not print paragraph): SPEC-SKM-011 composition study; 64×64 contract, travel-time targets and fairness require source-bound blockout, not inference from image.\nMaterial separation reminder: where GROWN MINERAL is requested it must have continuous stratified, root-like load paths with no brick masonry and no cyan machinery. Where CIVIC CERAMIC is requested it uses engineered joints and serviceable fittings. Do not flatten these into one generic architecture. Neutral observation stone is simple worked rock with no electronic terminal unless expressly requested.",
+  "reference_images": [
+    "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/glass-scar-routes.png",
+    "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/future-well-candidate.png"
+  ],
+  "generated_original": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-97f65e45-a8f8-4412-94af-fdcefa58ba21.png",
+  "generator": "Built-in image generation tool; backend model unspecified",
+  "status": "SUPERSEDED_BY_TARGETED_CORRECTION",
+  "output_hint": "Generated images are saved to /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17 as /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-97f65e45-a8f8-4412-94af-fdcefa58ba21.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "sha256": "27d8fbf5a691b84669966af5aa6f5a6f6a9f0ccb384117ad4cd17cc2e75c70ff",
+  "prompt_sha256": "fe53729cdd7859afb1a536810fba9ba58901772738c281a6298829b7deba8e0a",
+  "retained_inputs": [
+    {
+      "original_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/glass-scar-routes.png",
+      "retained_path": "reference-inputs/c8c06108f69e8741.png",
+      "sha256": "c8c06108f69e87412259f0015283c1ac50bfd2aead4138f17106734fd2f1e373",
+      "role": "Supplementary visual reference"
+    },
+    {
+      "original_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/future-well-candidate.png",
+      "retained_path": "reference-inputs/b16e84cb4465c3c3.png",
+      "sha256": "b16e84cb4465c3c3cee46a71fb4b661256c0bdcbb9a030994fd7d7262ed60ba7",
+      "role": "Supplementary visual reference"
+    }
+  ],
+  "evidence_copy": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/map-concepts-20260906/generated-originals/sk01-r1.png",
+  "evidence_copy_sha256": "27d8fbf5a691b84669966af5aa6f5a6f6a9f0ccb384117ad4cd17cc2e75c70ff"
+}

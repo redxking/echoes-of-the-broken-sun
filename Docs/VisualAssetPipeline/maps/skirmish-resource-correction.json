@@ -1,0 +1,12 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "job": {
+    "map_id": "SK02",
+    "revision": 4,
+    "reference_images": [
+      "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-3b21a8c1-1791-4ebe-b956-928707a633d5.png"
+    ],
+    "prompt": "Use case: precise-object-edit. Make ONE tiny correction to this exact SK02 environment sheet. Keep ALL terrain, roads, SIX ridge openings, three corridors, one central Well, cliff walls, text, three bottom panels and lighting unchanged. The upper scene currently has SIX cyan-white Matter clusters. ADD exactly TWO modest cyan-white Matter clusters to the blank ground on the INNER SIDE of the LEFT ridge: one approximately at pixel (600, 285) and one at (600, 480), matching the two existing inner-right clusters at about (935,285) and (935,480). These two additions produce EIGHT clusters total in upper scene: four outer clusters plus four inner clusters. Do not move, remove, duplicate or change any existing cluster. Do not add clusters anywhere else. Do not touch the detail panels. Preserve current six ridge openings and all roads exactly. Only paint those two small missing clusters."
+  }
+}

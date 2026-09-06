@@ -1,0 +1,12 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "job": {
+    "map_id": "SK02",
+    "revision": 3,
+    "reference_images": [
+      "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-fa0874b5-976a-41ab-8c29-15b88ca72190.png"
+    ],
+    "prompt": "Use case: precise-object-edit. Fix ONLY the upper overview of this SK02 Crownfall Basin concept sheet; bottom three studies, header and footer stay identical. The overview currently has two vertical ridges but the three gates wrongly CROSS THE CENTRAL VALLEY. Correct it so armies can cross horizontally from the west home valley to east home valley through BOTH ridges. At each of THREE horizontal levels (roughly image y=210, y=410, y=610 in the 1536x1024 sheet), cut a BROAD LEVEL EAST-WEST ROAD CONTINUOUSLY ACROSS THE ENTIRE UPPER MAP. Every road must have an unmistakable large pass cut right THROUGH THE LEFT VERTICAL RIDGE and THROUGH THE RIGHT VERTICAL RIDGE, for six visible mountain cuts total, aligned into three horizontal corridors. Remove the three wall/gate fixtures currently crossing the central valley and move their framing pieces to the SIX newly cut ridge passes. Do NOT draw a wall across any road. Road floors connect the west home region, central region, east home region without an obstruction. Keep portions of both north-south ridges intact BETWEEN the horizontal passes. Preserve all EIGHT cyan-white deposits in their existing general zones, one small dormant Well north of center off the roads, and old cliff-side foundations. Quiet ground. Top=NORTH. The sole correction is continuous east-west CROSS-RIDGE access in three places. The three roads should be clearly visible as full left-to-right horizontal bands through both dark ridges, not north-south lanes between unbroken mountain walls. Maintain illustrated terrain realism; no arrows, colored overlay or diagram text."
+  }
+}
