@@ -1,0 +1,92 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "jobs": [
+    {
+      "key": "meridian",
+      "refs": [
+        "anchor-review/anchor-candidate.png",
+        "power-link-review/power-link-maintenance-complete.png",
+        "array-foundry-review/array-foundry-aligned-output-candidate.png"
+      ],
+      "prompt": "Use case: stylized-concept. Create one polished landscape concept-art sheet for Echoes of the Broken Sun, realistic painted hard-surface/mineral science-fiction RTS production design. Large elevated 45-degree tactical three-quarter base view occupying 75% of sheet; below it a narrow strip of three closeup infrastructure details. Warm light parchment presentation background, dark crisp technical labels, refined hand-painted geometry, readable silhouette, soft natural daylight, restrained emission. Not a screenshot, no game HUD. Present a SMALL functional settlement with only four principal buildings and generous clear unit movement lanes, foundations joined into the surrounding dusty alien ground, not four disconnected object portraits. Infrastructure should visibly terminate at building sockets rather than float or pass through geometry. Use reference images as building identity references, not as layouts to copy. Title large upper left, small footer 'SETTLEMENT CONNECTION STUDY \u2014 CANDIDATE'. New layout and infrastructure are proposals, preserve recognizable existing architecture. No enclosing forcefield bubble or territorial border. No cinematic bloom obscuring the connections. Clear flow and negative space between buildings. Title 'MERIDIAN COMPACT \u2014 BASIC BASE'. References 1 Anchor squat white ceramic circular drum with tall central service mast and three front worker bays; 2 Power Link tall rectangular pillar with FOUR stacked panels and cyan collar, 2couplings4conduits; 3 Array Foundry elongated open longitudinal fabrication hall, opposed end ramps. Layout: Anchor rear-left; one Power Link central-left; Array Foundry right, exit facing open foreground; small Aegis Post foreground-right is a three-legged stationary ceramic turret with two emitters, no pillbox. Power Link must be distinctly much smaller than Anchor. White ceramic panels over charcoal frames, modest brass service marks, cyan energy. Draw the engineered network explicitly: paired thick dark physical conduits from Anchor rear-side socket to Power Link coupling, branch at a small flush junction to Foundry side socket and Aegis base. Run conduits along service-lane edges, with recessed covered crossings where necessary; keep building entrances and production exit open. Cyan narrow inserts and sparse traveling pulse marks indicate powered connections; physical pipes remain dark and solid. Modest modular concrete/ceramic service pads and maintenance tracks establish faction presence without paving entire area. Label each building with fine leader lines. Bottom three detailed insets labeled 'POWERED CONNECTION', 'OFFLINE \u2014 CONDUIT REMAINS', 'COVERED ROUTE CROSSING': first exact socket/pipes glowing narrowly; second same pipes/collar dark; third flush cover over two buried pipes with unobstructed path above. Add short note 'Illustrative routing \u2014 gameplay graph governs power'. Do not invent generators, extra vehicles, or new buildings.",
+      "reference_bindings": [
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/anchor-review/anchor-candidate.png",
+          "sha256": "4564283f7f1ca3f9330b9b56cf4f887f8d106806d8bbf639e13ea8674b352fd3"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/power-link-review/power-link-maintenance-complete.png",
+          "sha256": "b3816b9e6ec6f56629fc73c29f461187df4274b8f3514d637f9c9d48a883bf20"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/array-foundry-review/array-foundry-aligned-output-candidate.png",
+          "sha256": "4e258375377dc766312ac932f55e3eb3738dbd726047ae506ee455e751f5f169"
+        }
+      ]
+    },
+    {
+      "key": "kharuun",
+      "refs": [
+        "memory-hearth-review/memory-hearth-candidate.png",
+        "growth-basin-review/growth-basin-state-contrast.png",
+        "listening-spine-review/listening-spine-candidate.png"
+      ],
+      "prompt": "Use case: stylized-concept. Create one polished landscape concept-art sheet for Echoes of the Broken Sun, realistic painted hard-surface/mineral science-fiction RTS production design. Large elevated 45-degree tactical three-quarter base view occupying 75% of sheet; below it a narrow strip of three closeup infrastructure details. Warm light parchment presentation background, dark crisp technical labels, refined hand-painted geometry, readable silhouette, soft natural daylight, restrained emission. Not a screenshot, no game HUD. Present a SMALL functional settlement with only four principal buildings and generous clear unit movement lanes, foundations joined into the surrounding dusty alien ground, not four disconnected object portraits. Infrastructure should visibly terminate at building sockets rather than float or pass through geometry. Use reference images as building identity references, not as layouts to copy. Title large upper left, small footer 'SETTLEMENT CONNECTION STUDY \u2014 CANDIDATE'. New layout and infrastructure are proposals, preserve recognizable existing architecture. No enclosing forcefield bubble or territorial border. No cinematic bloom obscuring the connections. Clear flow and negative space between buildings. Title 'KHARUUN ASSEMBLIES \u2014 BASIC BASE'. References 1Memory Hearth layered charcoal basalt dome with seven crown spires and four worker hollows; 2Growth Basin dark mineral pool with amber liquid lattice and four marginal niches; 3Listening Spine single curving rib with twelve amber sensor nodules. Layout: Memory Hearth rear-left largest, Growth Basin right with open approach, Listening Spine foreground-right; fourth small rooted Waystone foreground-left, one compact rough mineral monolith on four broad low carriage pads, eight roots, no machinery or wheels. Keep approximate scale hierarchy and exact recognizable silhouettes. Buildings belong to one organically rooted mineral settlement, NOT Zerg flesh or vegetation: branching shallow petrified roots connect foundation aprons and sink below open paths, strata/crust feather into ash and gravel. Sparse narrow amber seams run inside charcoal root channels. No cyan, metal pipes, reactors, mechanical power pylons, electric fences, full-area creep carpet or giant trees. Root network follows ground and skirts entrances. Amber effects indicate local life/activity visually, NOT an invented faction power grid. Four readable labels with fine leaders. Bottom insets 'ROOTED INTERFACE', 'QUIET / ACTIVE VEIN', 'OPEN MOVEMENT CROSSING': root-to-foundation interlocking mineral lamellae; adjacent dark and amber seam versions of same root; roots dive beneath shallow mineral path leaving level traversable surface. Clearly print short note 'Root continuity is visual \u2014 no new power mechanic'. Quiet believable daylight and delicate restrained amber glows, keep most ground bare and traversable.",
+      "reference_bindings": [
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/memory-hearth-review/memory-hearth-candidate.png",
+          "sha256": "dea8c81b1e6d64307316a80bbbec73aa98a51b69ee0675e437f838a0591a274d"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/growth-basin-review/growth-basin-state-contrast.png",
+          "sha256": "fcb480d64e119226b5b8ff3237322c3698d649cfce91ca45632b05748bef75de"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/listening-spine-review/listening-spine-candidate.png",
+          "sha256": "b61e2856ab445811ffacbf12da6710cb3f671a1ba61c987eb5d11e6061123e56"
+        }
+      ]
+    },
+    {
+      "key": "hollow-choir",
+      "refs": [
+        "concordance-review/concordance-candidate.png",
+        "chorus-loom-review/chorus-loom-state-contrast.png",
+        "phase-anchor-review/phase-anchor-magenta-field.png"
+      ],
+      "prompt": "Use case: stylized-concept. Create one polished landscape concept-art sheet for Echoes of the Broken Sun, realistic painted hard-surface/mineral science-fiction RTS production design. Large elevated 45-degree tactical three-quarter base view occupying 75% of sheet; below it a narrow strip of three closeup infrastructure details. Warm light parchment presentation background, dark crisp technical labels, refined hand-painted geometry, readable silhouette, soft natural daylight, restrained emission. Not a screenshot, no game HUD. Present a SMALL functional settlement with only four principal buildings and generous clear unit movement lanes, foundations joined into the surrounding dusty alien ground, not four disconnected object portraits. Infrastructure should visibly terminate at building sockets rather than float or pass through geometry. Use reference images as building identity references, not as layouts to copy. Title large upper left, small footer 'SETTLEMENT CONNECTION STUDY \u2014 CANDIDATE'. New layout and infrastructure are proposals, preserve recognizable existing architecture. No enclosing forcefield bubble or territorial border. No cinematic bloom obscuring the connections. Clear flow and negative space between buildings. Title 'HOLLOW CHOIR \u2014 BASIC BASE'. References 1Concordance ring of dark glasslike planar slabs, use exactly SIX PAIRS/TWELVE panes, broad front intake opening, empty center with faint held interference; 2Chorus Loom TWO planar pylons, one horizontal research pane above subtle fine threads, full ground platform; 3Phase Anchor a SINGLE narrow exactly registered dark faceted spire with thin MAGENTA ring. Layout: Concordance rear-left largest, Chorus Loom rear-right, small Phase Anchor central-front-right whose thin partial local ground coverage ring stays distinct from the entire base footprint, fourth small Interval Loom front-left as TWO dark intersecting/perpendicular spans with physical crown clearance and one drop-pane. Maintain sparse dark planar architecture, no towers/castles/crystal clusters, no central giant glowing orb. Ground: broken angular slate-like registration marks feathering into gray ash, interrupted sparse parallel traces, mostly clear ground. Connections: extremely thin restrained magenta/violet projected filaments joining a few precise foundation endpoints, drawn just above/along ground and dipping out of main pathways; these are a PROPOSED visual coherence language, not electrical cables or beams in air, not free-upkeep links. A few subtly misregistered ground traces express Choir character, but Phase Anchor itself stays single and sharply registered. Keep all entrance gaps and open lanes clear. Four building labels. Bottom insets 'COHERENCE ENDPOINT', 'STABLE / DEFICIT CUE', 'PHASE FIELD BOUNDARY': precise endpoint fine filaments, same trace stable vs broken/quiet deficit with no violent flashes, thin magenta field ring separate from connection line. Short note 'Coherence effects are visual \u2014 field and upkeep follow gameplay'. Avoid continuous neon network dominating the design or opaque walls between buildings.",
+      "reference_bindings": [
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/concordance-review/concordance-candidate.png",
+          "sha256": "e6f15555cfaf1397678293e58b14ff291898af93bb5984093f4a1b17e28439da"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/chorus-loom-review/chorus-loom-state-contrast.png",
+          "sha256": "14a07fa7f264ae356df87eb5fa43cc8858e1d7f676c3403c26be9db2697625f7"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/phase-anchor-review/phase-anchor-magenta-field.png",
+          "sha256": "7c71ffc61f788e0c57f3de5896ba0158525550064c05e2dc2b22f0751c83135f"
+        }
+      ]
+    }
+  ],
+  "correction_prompts": [
+  {
+    "key": "meridian",
+    "path": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-2a9be26c-79ae-4a41-9ab4-148bfcdc4455.png",
+    "prompt": "Precise local edit of this settlement sheet. Preserve the entire layout, all buildings, all captions, framing, colors and main image exactly. Change ONLY the bottom CENTER inset labeled OFFLINE — CONDUIT REMAINS: remove ALL cyan/blue luminous inserts and glow from BOTH physical conduits and the endpoint collar in that inset, replacing with unlit neutral dark charcoal gray inserts. Physical pipes/collars remain visible and intact. All other insets and main base remain cyan-powered unchanged. This must show no energy emission whatsoever in the offline inset. No other changes."
+  },
+  {
+    "key": "hollow-choir",
+    "path": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-98a41b27-22df-44cd-95a6-6ad6f411e6e4.png",
+    "prompt": "Precise corrective edit of this settlement concept sheet. Preserve layout, architecture style, all four buildings' positions, ground, bottom insets and overall composition. Three targeted corrections only: 1 change the top-left Concordance role label [PRODUCTION] to [CORE]. 2 Concordance must have exactly SIX PAIRS of dark vertical panes, twelve individual panes total arranged around the ring with one broad front entry gap. Current ring has too many pairs; simplify to SIX distinctly readable pairs at approximately evenly spaced angular locations, retain paired slightly offset slabs, same general ring diameter, height language and empty center. 3 make the very thin magenta cosmetic connection coming from the left ground junction continue all the way to a tiny socket on the Phase Anchor BASE, crossing the thin circular field line WITHOUT joining or branching from the circle. Ring remains independent circle around the single spire, not a cable. All other elements unchanged."
+  }
+],
+  "status": "CANDIDATE",
+  "production_maturity": "NOT_STARTED",
+  "scope": "Three proposed faction settlement compositions and infrastructure details; not canonical connection mechanics or Unreal implementation",
+  "generation_method": "Built-in image generation with retained concept images as references",
+  "resource_boundary": "Remote image generation; no local Unreal session or GPU run started; preserve unrelated ArtSource work"
+}
