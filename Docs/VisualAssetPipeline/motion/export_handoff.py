@@ -19,14 +19,16 @@ def verify(path):
    data=z.read(x['member'])
    if digest(data)!=x['sha256'] or len(data)!=x['bytes']:raise ValueError('Archive payload changed')
   return dict(valid=True,files=len(m['files']),bytes=sum(x['bytes'] for x in m['files']))
-def export(repo,evidence,output):
+def export(repo,evidence,output,source_root=None):
  repo=repo.resolve();evidence=evidence.resolve();output=output.resolve();docs=repo/'Docs/VisualAssetPipeline'
  if output.exists():raise ValueError('Refuse to overwrite existing archive')
  if output.is_relative_to(repo) or output.is_relative_to(evidence):raise ValueError('Output must be outside source trees')
+ source_root=(source_root or repo).resolve()
+ if output.is_relative_to(source_root):raise ValueError('Output must be outside visual source tree')
  files=[]
  inventory=json.loads((docs/'sources.json').read_text())['files']
  for x in inventory:
-  f=repo/x['path']
+  f=source_root/x['path']
   files.append((f,'repository/'+x['path'],x.get('payload_sha256') or x['sha256'],'inventory source'))
  for root,prefix in [(docs,'pipeline'),(evidence,'evidence')]:
   for f in sorted(root.rglob('*')):
@@ -35,7 +37,7 @@ def export(repo,evidence,output):
  manifest=[]
  for f,member,expected,kind in files:
   if f.is_symlink() or not f.is_file():raise ValueError('Missing or symlink input: '+str(f))
-  if kind=='inventory source' and not f.resolve().is_relative_to(repo):raise ValueError('Source outside repo')
+  if kind=='inventory source' and not f.resolve().is_relative_to(source_root):raise ValueError('Source outside repo')
   data=f.read_bytes();sha=digest(data)
   if expected and sha!=expected:raise ValueError('Inventory source drift: '+str(f))
   manifest.append(dict(original_path=str(f),member=member,sha256=sha,bytes=len(data),kind=kind))
@@ -46,13 +48,13 @@ def export(repo,evidence,output):
    data=f.read_bytes()
    if digest(data)!=m['sha256']:raise ValueError('Input changed during packaging')
    z.writestr(member,data)
-  z.writestr('handoff-manifest.json',json.dumps(dict(author='Angelis Pseftis',creator='Angelis Pseftis',created_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),source_head=git_info(repo,['rev-parse','HEAD']),source_dirty_paths=git_info(repo,['status','--short']),boundary='Local preservation export; no rights clearance, off-device backup or asset acceptance. Historical absolute paths map to archive members here. Original documents remain authoritative.',files=manifest),indent=2)+'\n')
+  z.writestr('handoff-manifest.json',json.dumps(dict(author='Angelis Pseftis',creator='Angelis Pseftis',created_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),source_head=git_info(repo,['rev-parse','HEAD']),visual_source_root=str(source_root),visual_source_head=git_info(source_root,['rev-parse','HEAD']),source_dirty_paths=git_info(repo,['status','--short']),boundary='Local preservation export; no rights clearance, off-device backup or asset acceptance. Historical absolute paths map to archive members here. Original documents remain authoritative.',files=manifest),indent=2)+'\n')
  result=verify(output);result.update(author='Angelis Pseftis',creator='Angelis Pseftis',archive=str(output),sha256=digest(output.read_bytes()),inventory_paths=len(inventory))
  return result
 if __name__=='__main__':
- ap=argparse.ArgumentParser();ap.add_argument('--repo',type=pathlib.Path);ap.add_argument('--evidence',type=pathlib.Path);ap.add_argument('--output',type=pathlib.Path);ap.add_argument('--verify',type=pathlib.Path);a=ap.parse_args()
+ ap=argparse.ArgumentParser();ap.add_argument('--repo',type=pathlib.Path);ap.add_argument('--evidence',type=pathlib.Path);ap.add_argument('--output',type=pathlib.Path);ap.add_argument('--verify',type=pathlib.Path);ap.add_argument('--source-root',type=pathlib.Path,help='Optional read-only root holding hash-matched full image payloads');a=ap.parse_args()
  if a.verify:result=verify(a.verify)
  else:
   if not all([a.repo,a.evidence,a.output]):ap.error('repo, evidence and output required')
-  result=export(a.repo,a.evidence,a.output)
+  result=export(a.repo,a.evidence,a.output,a.source_root)
  print(json.dumps(result,indent=2))

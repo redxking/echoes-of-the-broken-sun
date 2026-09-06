@@ -27,4 +27,7 @@ class HandoffTests(unittest.TestCase):
   export(self.repo,self.e,self.out)
   with zipfile.ZipFile(self.out,'a') as z:z.writestr('extra',b'extra')
   with self.assertRaises(ValueError):verify(self.out)
+ def test_full_payload_from_read_only_root(self):
+  source=self.p/'full';source.mkdir();(source/'art.png').write_bytes(b'original');self.img.write_bytes(b'LFS pointer')
+  self.assertTrue(export(self.repo,self.e,self.out,source)['valid']);self.assertEqual(self.img.read_bytes(),b'LFS pointer');self.assertEqual((source/'art.png').read_bytes(),b'original')
 if __name__=='__main__':unittest.main()

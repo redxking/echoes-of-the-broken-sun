@@ -11,7 +11,7 @@
     "candidate_records": 21,
     "control_checks": 4,
     "construction_topology_tests": 7,
-    "handoff_integrity_tests": 6
+    "handoff_integrity_tests": 7
   },
   "browser_visual_review": "BLOCKED: browser security policy verification unavailable; no workaround attempted",
   "primary_checkout_head": "1a60cb1fecdd5a709f940726a6a3e15b0fc378ff",
@@ -113,5 +113,11 @@
     "ARTIFACT_READY": 9,
     "DEFERRED_TO_INTEGRATION": 19
   },
-  "authority_conflicts": 3
+  "authority_conflicts": 3,
+  "preservation_preflight": {
+    "inventory_paths": 244,
+    "full_payloads_matching_in_primary": 244,
+    "isolated_worktree_pointer_paths": 79,
+    "resolution": "Read primary payloads with --source-root; no hydration or writes"
+  }
 }
