@@ -61,7 +61,7 @@
    "production_asset_id": "EBS-MER-UNT-001",
    "subject": "Surveyor",
    "production_maturity": "BLOCKOUT",
-   "next": "skinned export + headless skeletal import inspection, posed renders per track, then textures",
+   "next": "textures (2048² stack per REL-FAC-025), emissive-share measurement, in-engine playback capture, gate reviews",
    "asset_name": "SK_EBS_MER_UNT_001",
    "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_001/",
    "canon_status": "CANDIDATE (KEEP direction under delegation; not owner acceptance)",
@@ -75,6 +75,14 @@
      "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-001/",
      "what_exists": "Rest-stance geometry with 12-bone rigid binding, socket definitions, 13 keyframed clip definitions, compatibility static parts for the runtime M01 rig, review renders (orthographic sheets, tactical at 1.5x, LOD1, context with the Power Link), 11 structural tests.",
      "what_does_not_exist": "Skinned GLB export and import (pending skeletal-kit verification), posed renders, textures, in-engine playback, gate reviews, owner acceptance."
+    },
+    {
+     "stage": "BLOCKOUT",
+     "date": "2026-09-06",
+     "revision": "ebs-mer-unt-001-blockout-v2",
+     "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-001/",
+     "what_exists": "v2 clip pass (planted-feet leans, cradle-presenting deliver dip, backward-settle collapse; no vertex below -1 cm in any clip at 20 ms sampling), skinned GLB export (1 skin, 12 joints, 13 clips, sockets under joints), headless skeletal import run 2 with the idempotent inspector (import/skeletal-report-run2.json: 0 errors, 13 AnimSequences per mesh, sockets and reference pose as authored), posed review stills and renders for twelve clip samples (renders/pose_*), 14 structural tests.",
+     "what_does_not_exist": "Textures, emissive-share measurement, in-engine playback capture, gate reviews, owner acceptance."
     }
    ],
    "gates": {
@@ -189,6 +197,12 @@
   "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
   "review_renderer": "ArtSource/tools/ebs_render.py",
   "evidence_receipt": "ArtSource/tools/make_evidence_receipt.py",
-  "dependencies": "Python 3 standard library only; no DCC application is installed on the workstation (Blender absent), which is why editable source is a deterministic generator rather than a native DCC file."
+  "dependencies": "Python 3 standard library only; no DCC application is installed on the workstation (Blender absent), which is why editable source is a deterministic generator rather than a native DCC file.",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py (rig binding, posing, skinned glTF with animations; encodings verified against UE 5.8.2 Interchange, see SKELETAL_ENCODING)",
+  "skeletal_probe": "ArtSource/tools/skeletal_probe.py (encoding probe asset + check of the inspector report)",
+  "texture_baker": "ArtSource/tools/ebs_texbake.py (BaseColor/Normal/MRE/StateMask/AtlasDebug from a bake manifest)",
+  "unreal_import_inspector_static": "ArtSource/tools/ue_import_inspect.py (headless Interchange import + StaticMesh inspection in the sandbox project)",
+  "unreal_import_inspector_skeletal": "ArtSource/tools/ue_import_inspect_skeletal.py (headless skeletal import into a unique per-run folder + bone/socket/AnimSequence inspection)",
+  "tests": "ArtSource/tools/test_ebs_render.py, test_ebs_skelkit.py, test_ebs_texbake.py and each package's test_*.py"
  }
 }

@@ -1,0 +1,762 @@
+{
+ "acceptance": {
+  "art_gate": "NOT_EVALUATED",
+  "gameplay_gate": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical_gate": "NOT_EVALUATED"
+ },
+ "asset_name": "SK_EBS_MER_UNT_001",
+ "author": "Angelis Pseftis",
+ "budgets": {
+  "lod0_cap": 4500,
+  "lod0_triangles": 1096,
+  "lod0_within_cap": true,
+  "lod1_cap": 1800,
+  "lod1_triangles": 604,
+  "lod1_within_cap": true
+ },
+ "clips": [
+  {
+   "bones": [
+    "body",
+    "l_shoulder",
+    "l_thigh",
+    "r_shoulder",
+    "r_thigh"
+   ],
+   "duration_s": 2.0,
+   "loop": true,
+   "name": "idle",
+   "purpose": "standing service frame: breathing lean, tools at rest, feet planted"
+  },
+  {
+   "bones": [
+    "body",
+    "l_foot",
+    "l_shin",
+    "l_shoulder",
+    "l_thigh",
+    "r_foot",
+    "r_shin",
+    "r_shoulder",
+    "r_thigh"
+   ],
+   "duration_s": 0.5,
+   "loop": true,
+   "name": "move",
+   "purpose": "walk cycle authored for 360 cm/s (two 90 cm strides); play rate scales with authoritative velocity; <= 2 cm vertical bob"
+  },
+  {
+   "bones": [
+    "body",
+    "l_foot",
+    "l_forearm",
+    "l_shin",
+    "l_shoulder",
+    "l_thigh",
+    "r_foot",
+    "r_forearm",
+    "r_shin",
+    "r_shoulder",
+    "r_thigh"
+   ],
+   "duration_s": 0.5,
+   "loop": true,
+   "name": "carry",
+   "purpose": "loaded walk: same cycle, body pitched forward, arms tucked; cargo visibility follows the authoritative load"
+  },
+  {
+   "bones": [
+    "body",
+    "l_foot",
+    "l_shin",
+    "l_thigh",
+    "r_foot",
+    "r_shin",
+    "r_thigh"
+   ],
+   "duration_s": 0.5,
+   "loop": true,
+   "name": "turn",
+   "purpose": "stationary shuffle while the runtime sweeps heading (SPEC-MOV-010); no root yaw in the clip"
+  },
+  {
+   "bones": [
+    "body",
+    "l_thigh",
+    "r_thigh"
+   ],
+   "duration_s": 0.3,
+   "loop": false,
+   "name": "stop",
+   "purpose": "short settle on stop (Bible): forward lean and recover, feet planted"
+  },
+  {
+   "bones": [
+    "body",
+    "l_shoulder",
+    "l_thigh",
+    "r_forearm",
+    "r_shoulder",
+    "r_thigh"
+   ],
+   "duration_s": 1.0,
+   "loop": true,
+   "name": "gather",
+   "purpose": "drill down at the deposit ahead of the feet (tip ~4-8 cm above ground, 80-88 cm forward); drill spin is a material effect gated by this state"
+  },
+  {
+   "bones": [
+    "body",
+    "l_foot",
+    "l_shin",
+    "l_shoulder",
+    "l_thigh",
+    "r_foot",
+    "r_shin",
+    "r_shoulder",
+    "r_thigh"
+   ],
+   "duration_s": 0.8,
+   "loop": false,
+   "name": "deliver",
+   "purpose": "cradle presentation: knees dip and the torso tilts back to present the rear cradle (the arms cannot reach it); cargo empties only on the authorized transfer event"
+  },
+  {
+   "bones": [
+    "body",
+    "l_forearm",
+    "l_shoulder",
+    "l_thigh",
+    "r_forearm",
+    "r_shoulder",
+    "r_thigh"
+   ],
+   "duration_s": 1.0,
+   "loop": true,
+   "name": "build",
+   "purpose": "both arms extended forward to the footprint (Bible build pose), slight forward lean; welder effect on the left palm"
+  },
+  {
+   "bones": [
+    "body",
+    "l_forearm",
+    "l_shoulder",
+    "l_thigh",
+    "r_shoulder",
+    "r_thigh"
+   ],
+   "duration_s": 1.0,
+   "loop": true,
+   "name": "repair_when_authorized",
+   "purpose": "welder arm only (Bible); the drill stays at rest"
+  },
+  {
+   "bones": [
+    "body",
+    "l_shoulder",
+    "l_thigh",
+    "r_shoulder",
+    "r_thigh"
+   ],
+   "duration_s": 0.3,
+   "loop": false,
+   "name": "damage",
+   "purpose": "flinch on authoritative damage: torso jolts back, arms lift; no displacement"
+  },
+  {
+   "bones": [
+    "body",
+    "l_foot",
+    "l_forearm",
+    "l_shin",
+    "l_shoulder",
+    "l_thigh",
+    "r_foot",
+    "r_forearm",
+    "r_shin",
+    "r_shoulder",
+    "r_thigh"
+   ],
+   "duration_s": 1.0,
+   "loop": false,
+   "name": "death",
+   "purpose": "engineered collapse: knees fold, the frame drops and settles back onto its cradle, tools splay to the ground; final pose held (cosmetic debris <= 200 ticks)"
+  },
+  {
+   "bones": [
+    "body",
+    "l_forearm",
+    "l_shoulder",
+    "l_thigh",
+    "r_forearm",
+    "r_shoulder",
+    "r_thigh"
+   ],
+   "duration_s": 0.3,
+   "loop": false,
+   "name": "cancel",
+   "purpose": "tools return to rest from the work lean; drill spin stops on travel/cancel (GAP-01)"
+  },
+  {
+   "bones": [
+    "body",
+    "l_foot",
+    "l_forearm",
+    "l_shin",
+    "l_shoulder",
+    "l_thigh",
+    "r_foot",
+    "r_forearm",
+    "r_shin",
+    "r_shoulder",
+    "r_thigh",
+    "root"
+   ],
+   "duration_s": 0.0,
+   "loop": false,
+   "name": "restore",
+   "purpose": "single-frame rest pose used when reconstructing presentation from saved state; never replays a one-shot"
+  }
+ ],
+ "component_inventory": {
+  "bones": {
+   "built": 12,
+   "contract": 12,
+   "names": [
+    "root",
+    "body",
+    "r_thigh",
+    "r_shin",
+    "r_foot",
+    "l_thigh",
+    "l_shin",
+    "l_foot",
+    "r_shoulder",
+    "r_forearm",
+    "l_shoulder",
+    "l_forearm"
+   ]
+  },
+  "feet": {
+   "built": 2
+  },
+  "legs": {
+   "built": 2,
+   "contract": 2
+  },
+  "optical_mast": {
+   "built": 1,
+   "contract": 1
+  },
+  "rear_canisters": {
+   "built": 3,
+   "contract": 3
+  },
+  "sockets": {
+   "built": [
+    "Cargo_Drop_Anchor",
+    "Center_Hitbox_Socket",
+    "Harvest_Tether_Muzzle"
+   ],
+   "contract": [
+    "Harvest_Tether_Muzzle",
+    "Cargo_Drop_Anchor",
+    "Center_Hitbox_Socket"
+   ]
+  },
+  "tool_arms": {
+   "built": 2,
+   "contract": 2,
+   "left": "gripper",
+   "right": "drill"
+  },
+  "tracks": {
+   "built": [
+    "idle",
+    "move",
+    "carry",
+    "turn",
+    "stop",
+    "gather",
+    "deliver",
+    "build",
+    "repair_when_authorized",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "contract": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "damage",
+    "death",
+    "cancel",
+    "restore",
+    "gather",
+    "carry",
+    "deliver",
+    "build",
+    "repair_when_authorized"
+   ]
+  }
+ },
+ "creator": "Angelis Pseftis",
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "2 slots (contract max 2); status band, canister windows, lens and team colour are texture channels of the ceramic slot; the review OBJ keeps a third pseudo slot so renders show the cyan",
+ "material_slots": [
+  "MI_EBS_MER_UnitFrame",
+  "MI_EBS_MER_UnitCeramic"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -42.5,
+     -61.5,
+     0.0
+    ],
+    [
+     92.93844696917827,
+     62.0,
+     176.0
+    ]
+   ],
+   "by_bone": {
+    "body": 396,
+    "l_foot": 36,
+    "l_forearm": 124,
+    "l_shin": 64,
+    "l_shoulder": 52,
+    "l_thigh": 52,
+    "r_foot": 36,
+    "r_forearm": 168,
+    "r_shin": 64,
+    "r_shoulder": 52,
+    "r_thigh": 52
+   },
+   "by_slot": {
+    "MI_EBS_MER_UnitCeramic": 420,
+    "MI_EBS_MER_UnitFrame": 676
+   },
+   "kind": "static rest pose",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_001",
+   "path": "export/SK_EBS_MER_UNT_001_LOD0_static.glb",
+   "sha256": "b2e82814b2ce7eeaf380ae94891a77cf1a83ce9b79965594ffc8e63e548751c8",
+   "sockets": [
+    {
+     "bone": "body",
+     "name": "Cargo_Drop_Anchor",
+     "position_cm": [
+      -31.0,
+      0.0,
+      104.0
+     ],
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "body",
+     "name": "Center_Hitbox_Socket",
+     "position_cm": [
+      0.0,
+      0.0,
+      102.0
+     ],
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "r_forearm",
+     "name": "Harvest_Tether_Muzzle",
+     "position_cm": [
+      91.30434782608695,
+      54.0,
+      17.477315484718034
+     ],
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 1096
+  },
+  {
+   "clips": [
+    "idle",
+    "move",
+    "carry",
+    "turn",
+    "stop",
+    "gather",
+    "deliver",
+    "build",
+    "repair_when_authorized",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_001",
+   "path": "export/SK_EBS_MER_UNT_001_LOD0.glb",
+   "sha256": "83c972ce0a642a13c5ed99f91e80ba8b6a36fa98c02280c5b1667d34097b4209"
+  },
+  {
+   "kind": "compatibility part",
+   "lod": 0,
+   "mesh": "EBS_MER_UNT_001_UpperLeg",
+   "path": "export/SM_EBS_MER_UNT_001_UpperLeg_LOD0.glb",
+   "sha256": "317491f57e42656aae744a3db3b87a525600f59600a62bf0765b89310859e887",
+   "triangles": 52
+  },
+  {
+   "kind": "compatibility part",
+   "lod": 0,
+   "mesh": "EBS_MER_UNT_001_LowerLeg",
+   "path": "export/SM_EBS_MER_UNT_001_LowerLeg_LOD0.glb",
+   "sha256": "9ab2988d8d0f7a296bec87c58d9117128b312f9ba4f4ccabfab1b49f3670e6a6",
+   "triangles": 64
+  },
+  {
+   "kind": "compatibility part",
+   "lod": 0,
+   "mesh": "EBS_MER_UNT_001_Foot",
+   "path": "export/SM_EBS_MER_UNT_001_Foot_LOD0.glb",
+   "sha256": "f6f446f0575e03824767f9ec2f70e5b63fecabdf415e9629333e9c8ff6236450",
+   "triangles": 36
+  },
+  {
+   "bounds_cm": [
+    [
+     -42.5,
+     -61.5,
+     0.0
+    ],
+    [
+     93.32602121211477,
+     62.0,
+     176.0
+    ]
+   ],
+   "by_bone": {
+    "body": 252,
+    "l_foot": 24,
+    "l_forearm": 72,
+    "l_shin": 24,
+    "l_shoulder": 24,
+    "l_thigh": 24,
+    "r_foot": 24,
+    "r_forearm": 88,
+    "r_shin": 24,
+    "r_shoulder": 24,
+    "r_thigh": 24
+   },
+   "by_slot": {
+    "MI_EBS_MER_UnitCeramic": 336,
+    "MI_EBS_MER_UnitFrame": 268
+   },
+   "kind": "static rest pose",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_001",
+   "path": "export/SK_EBS_MER_UNT_001_LOD1_static.glb",
+   "sha256": "5bde5adee445b355469c180c4261a1ddfded23a5b5ca2ae53bc4ce8bc0318456",
+   "sockets": [
+    {
+     "bone": "body",
+     "name": "Cargo_Drop_Anchor",
+     "position_cm": [
+      -31.0,
+      0.0,
+      104.0
+     ],
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "body",
+     "name": "Center_Hitbox_Socket",
+     "position_cm": [
+      0.0,
+      0.0,
+      102.0
+     ],
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "r_forearm",
+     "name": "Harvest_Tether_Muzzle",
+     "position_cm": [
+      91.30434782608695,
+      54.0,
+      17.477315484718034
+     ],
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 604
+  },
+  {
+   "clips": [
+    "idle",
+    "move",
+    "carry",
+    "turn",
+    "stop",
+    "gather",
+    "deliver",
+    "build",
+    "repair_when_authorized",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_001",
+   "path": "export/SK_EBS_MER_UNT_001_LOD1.glb",
+   "sha256": "19889d78d155d4398198cf4640aec7e53c2f778adf37c1e1b93e6e84d9bce7e4"
+  },
+  {
+   "kind": "compatibility part",
+   "lod": 1,
+   "mesh": "EBS_MER_UNT_001_UpperLeg",
+   "path": "export/SM_EBS_MER_UNT_001_UpperLeg_LOD1.glb",
+   "sha256": "f990a4d2585132d1931d7610a1b408738ce765785dbcb911dfe69acaf6567575",
+   "triangles": 24
+  },
+  {
+   "kind": "compatibility part",
+   "lod": 1,
+   "mesh": "EBS_MER_UNT_001_LowerLeg",
+   "path": "export/SM_EBS_MER_UNT_001_LowerLeg_LOD1.glb",
+   "sha256": "729d67972df66bf4b8347df573dbe04295ed5b8b2910d59ee8fc26dd31d1d463",
+   "triangles": 24
+  },
+  {
+   "kind": "compatibility part",
+   "lod": 1,
+   "mesh": "EBS_MER_UNT_001_Foot",
+   "path": "export/SM_EBS_MER_UNT_001_Foot_LOD1.glb",
+   "sha256": "77d9f3cda42bf6d5a3ed22f08678f2bb1a6b4f84e612df4f516ec68f1723d133",
+   "triangles": 24
+  }
+ ],
+ "package_id": "EBS-PKG-MC-SURVEYOR",
+ "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_001/",
+ "production_asset_id": "EBS-MER-UNT-001",
+ "review": [
+  {
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-001/review/SK_EBS_MER_UNT_001_rest_LOD0.obj",
+   "sha256": "4694d106ece8b7b1bc07de1159527119d022e736f1aacbdc7218fea49921ae69",
+   "triangles": 1096
+  },
+  {
+   "lod": 1,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-001/review/SK_EBS_MER_UNT_001_rest_LOD1.obj",
+   "sha256": "ba842ad57cf813ef4ead933262812707de9121c12ee533c1fbdd9f2452bd0e04",
+   "triangles": 604
+  }
+ ],
+ "revision": "ebs-mer-unt-001-blockout-v2",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "ground contact centre; never carries simulation translation"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     76.0
+    ],
+    "name": "body",
+    "parent": "root",
+    "purpose": "pelvis and torso as one rigid mass; mast and cradle ride on it"
+   },
+   {
+    "head_cm": [
+     0.0,
+     21.0,
+     76.0
+    ],
+    "name": "r_thigh",
+    "parent": "body",
+    "purpose": "hip hinge (pitch) and turn (yaw)"
+   },
+   {
+    "head_cm": [
+     26.99707960683465,
+     21.0,
+     43.826133389002926
+    ],
+    "name": "r_shin",
+    "parent": "r_thigh",
+    "purpose": "knee hinge (pitch)"
+   },
+   {
+    "head_cm": [
+     -4.176510176014894,
+     21.0,
+     10.0
+    ],
+    "name": "r_foot",
+    "parent": "r_shin",
+    "purpose": "ankle; planted foot"
+   },
+   {
+    "head_cm": [
+     0.0,
+     -21.0,
+     76.0
+    ],
+    "name": "l_thigh",
+    "parent": "body",
+    "purpose": "hip hinge (pitch) and turn (yaw)"
+   },
+   {
+    "head_cm": [
+     26.99707960683465,
+     -21.0,
+     43.826133389002926
+    ],
+    "name": "l_shin",
+    "parent": "l_thigh",
+    "purpose": "knee hinge (pitch)"
+   },
+   {
+    "head_cm": [
+     -4.176510176014894,
+     -21.0,
+     10.0
+    ],
+    "name": "l_foot",
+    "parent": "l_shin",
+    "purpose": "ankle; planted foot"
+   },
+   {
+    "head_cm": [
+     10.0,
+     48.0,
+     108.0
+    ],
+    "name": "r_shoulder",
+    "parent": "body",
+    "purpose": "shoulder (pitch/yaw)"
+   },
+   {
+    "head_cm": [
+     24.0,
+     54.0,
+     71.01351598218614
+    ],
+    "name": "r_forearm",
+    "parent": "r_shoulder",
+    "purpose": "elbow (pitch); carries the tool"
+   },
+   {
+    "head_cm": [
+     10.0,
+     -48.0,
+     108.0
+    ],
+    "name": "l_shoulder",
+    "parent": "body",
+    "purpose": "shoulder (pitch/yaw)"
+   },
+   {
+    "head_cm": [
+     24.0,
+     -54.0,
+     71.01351598218614
+    ],
+    "name": "l_forearm",
+    "parent": "l_shoulder",
+    "purpose": "elbow (pitch); carries the tool"
+   }
+  ],
+  "policy": "identity rest orientation; hinge pitch about +Y at the joint; no decorative bones; drill spin via material; canisters rigid with the body and emptied by the authoritative transfer (visibility/material), not by animation",
+  "rest_stance": {
+   "ankle": [
+    -4.176510176014894,
+    21.0,
+    10.0
+   ],
+   "elbow": [
+    24.0,
+    54.0,
+    71.01351598218614
+   ],
+   "fore_dir_pitch": -38.499950409247866,
+   "knee": [
+    26.99707960683465,
+    21.0,
+    43.826133389002926
+   ],
+   "shin_dir_pitch": -132.6631397076147,
+   "thigh_dir_pitch": -50.0,
+   "upper_dir_pitch": -69.26751130198598,
+   "wrist": [
+    60.0,
+    54.0,
+    42.377873855633425
+   ]
+  }
+ },
+ "scale_basis": {
+  "canon": "about as tall as a person and half again as wide at the shoulder (Bible line 509)",
+  "existing_envelope": "welded placeholder ~180 cm tall; M01 parts thigh 42 / shin 46 / foot 32 cm",
+  "height_cm": 176.0,
+  "shoulder_width_cm": 115.0,
+  "status": "PROVISIONAL BLOCKOUT ESTIMATE"
+ },
+ "skel_revision": "ebs-skelkit-v1",
+ "source_bindings": {
+  "book": {
+   "paragraphs": [
+    143,
+    1536,
+    1607
+   ],
+   "sha256": "994e7df5d37a6ef1532c65a7b742d71e81b4ea7752311f5e5acc2e04c817ef83"
+  },
+  "candidate_image": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/surveyor-review/surveyor-reference.png",
+   "sha256": "98c3a0ef2300178942d30e0f2ff8d725ef94a51d38877639638c3cd90b6fd913",
+   "status": "DERIVED_REFERENCE_FOR_REVIEW; the derived turnaround in the same folder was rejected (canister drift, reversed side labels)"
+  },
+  "canon_row": {
+   "line": 509,
+   "path": "Docs/Archive/DevelopmentBible.md"
+  },
+  "contract": {
+   "package_id": "EBS-PKG-MC-SURVEYOR",
+   "path": "Docs/VisualAssetPipeline/motion/gap-decisions.json"
+  },
+  "gameplay_record": {
+   "id": "mc_surveyor (SPEC-UNIT-001: 360 cm/s, logistics footprint 1, work rate 10, cargo 10)",
+   "path": "Content/Data/Source/units.json"
+  }
+ },
+ "stage": "BLOCKOUT",
+ "stage_boundary": "Rest-stance geometry, 12-bone rig definition and keyframed clip data; skinned export only when the skeletal kit is verified; no textures, no import, no acceptance.",
+ "tools": {
+  "builder_sha256": "f0cba2220aaf1209d5966b76d17888e183fde380583046aa3de566ccafe5a18f",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.7"
+ },
+ "units": {
+  "authored": "centimeters at unit scale 1.0 (runtime PresentationScale 1.5 for workers)",
+  "axes": "+X forward, +Y right, +Z up",
+  "pivot": "ground-contact centre (root)"
+ }
+}
