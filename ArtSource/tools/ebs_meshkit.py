@@ -32,7 +32,7 @@ import struct
 from dataclasses import dataclass, field
 
 AUTHOR = "Angelis Pseftis"
-KIT_REVISION = "ebs-meshkit-v2"  # v2: socket nodes as mesh children named SOCKET_<name>; rotation helper
+KIT_REVISION = "ebs-meshkit-v3"  # v3: unique UV0 atlas packer and bake manifest; v2: Interchange socket encoding
 UV_WORLD_CM = 256.0  # one UV0 tile spans 256 cm (1024 texels -> 4 texels per cm)
 
 
@@ -102,6 +102,9 @@ class Polygon:
     slot: int
     component: str
     uv_axis: tuple | None = None  # optional (u_dir, v_dir) override for planar mapping
+    uv_override: list | None = None  # atlas UV0 per point, set by pack_atlas
+    atlas_cells: int = 1  # chart width multiplier (numeral strips: material selects a cell per instance)
+    chart_id: int | None = None
 
 
 @dataclass
@@ -338,6 +341,8 @@ class Mesh:
     # -- UV generation -------------------------------------------------------
     @staticmethod
     def _planar_uv(poly: Polygon):
+        if poly.uv_override is not None:
+            return list(poly.uv_override)
         n = poly.normal
         if poly.uv_axis is not None:
             u_dir, v_dir = poly.uv_axis
@@ -430,15 +435,16 @@ class Mesh:
             accessors.append(acc)
             return len(accessors) - 1
 
-        materials = [{"name": name, "pbrMetallicRoughness": {"baseColorFactor": [0.8, 0.8, 0.8, 1.0], "metallicFactor": 0.0, "roughnessFactor": 0.7}, "doubleSided": False} for name in self.slots]
-        primitives = []
         per_slot = {i: [] for i in range(len(self.slots))}
         for tri in self.triangles():
             per_slot[tri[4]].append(tri)
-        for slot_index in range(len(self.slots)):
+        used_slots = [i for i in range(len(self.slots)) if per_slot[i]]
+        # Only slots with geometry become glTF materials (an unused material would create a stray slot at import).
+        materials = [{"name": self.slots[i], "pbrMetallicRoughness": {"baseColorFactor": [0.8, 0.8, 0.8, 1.0], "metallicFactor": 0.0, "roughnessFactor": 0.7}, "doubleSided": False} for i in used_slots]
+        material_index = {slot: k for k, slot in enumerate(used_slots)}
+        primitives = []
+        for slot_index in used_slots:
             tris = per_slot[slot_index]
-            if not tris:
-                continue
             pos_bytes, nrm_bytes, uv0_bytes, uv1_bytes, idx_bytes = bytearray(), bytearray(), bytearray(), bytearray(), bytearray()
             mins = [float("inf")] * 3
             maxs = [float("-inf")] * 3
@@ -477,7 +483,7 @@ class Mesh:
                     "TEXCOORD_1": accessor(uv1_view, vertex, 5126, "VEC2"),
                 },
                 "indices": accessor(idx_view, vertex, 5125, "SCALAR"),
-                "material": slot_index,
+                "material": material_index[slot_index],
                 "mode": 4,
             })
         meshes = [{"name": self.name, "primitives": primitives}]
@@ -529,7 +535,7 @@ class Mesh:
             fmax = [struct.unpack("<f", struct.pack("<f", m))[0] for m in maxs]
             meshes.append({"name": box_mesh.name, "primitives": [{
                 "attributes": {"POSITION": accessor(pos_view, vertex, 5126, "VEC3", (fmin, fmax))},
-                "indices": accessor(idx_view, vertex, 5125, "SCALAR"), "mode": 4}]})
+                "indices": accessor(idx_view, vertex, 5125, "SCALAR"), "material": 0, "mode": 4}]})  # material silences the importer warning; UBX meshes never render
             nodes.append({"name": box_mesh.name, "mesh": len(meshes) - 1, "extras": {"collision": "box", "name": box.name}})
             root_children.append(len(nodes) - 1)
         gltf = {
@@ -598,6 +604,113 @@ SOCKET_GLTF_SCALE = (-1.0, 1.0, 1.0)
 def socket_rotation_gltf(yaw_deg: float):
     """glTF node quaternion for a socket whose Unreal rotation is a pure yaw (see above)."""
     return quat_mul(q_axis(1, -yaw_deg), SOCKET_BASIS_COMPENSATION)
+
+
+# --- unique UV atlas ----------------------------------------------------------
+def planar_frame(poly: Polygon):
+    """Upright tangent frame for a polygon: v runs down the wall (world -Z projected onto
+    the plane) for walls, along +Y for floors/ceilings; u completes a frame with the normal.
+    Returns (origin, u_dir, v_dir, width_cm, height_cm, projected 2D points)."""
+    n = poly.normal
+    if abs(n[2]) < 0.9:
+        down = (0.0, 0.0, -1.0)
+        v_dir = v_norm(v_sub(down, v_mul(n, v_dot(down, n))))
+        u_dir = v_norm(v_cross(v_dir, n))
+    else:
+        u_dir = (1.0, 0.0, 0.0) if n[2] > 0 else (-1.0, 0.0, 0.0)
+        v_dir = v_norm(v_cross(n, u_dir))
+    proj = [(v_dot(p, u_dir), v_dot(p, v_dir)) for p in poly.points]
+    min_u, min_v = min(q[0] for q in proj), min(q[1] for q in proj)
+    max_u, max_v = max(q[0] for q in proj), max(q[1] for q in proj)
+    origin = v_add(v_mul(u_dir, min_u), v_mul(v_dir, min_v))
+    return origin, u_dir, v_dir, max_u - min_u, max_v - min_v, [(q[0] - min_u, q[1] - min_v) for q in proj]
+
+
+def _poly_key(poly: Polygon):
+    return (poly.component, tuple(sorted(tuple(round(c, 2) for c in p) for p in poly.points)))
+
+
+def pack_atlas(meshes, size: int = 1024, gutter_px: int = 2, min_px: int = 4, fill_target: float = 0.80):
+    """Pack every polygon of every mesh into one unique, non-overlapping UV0 atlas.
+
+    Identical polygons (same component and point set, e.g. LOD0/LOD1 twins) share a chart.
+    Texel density is uniform (px per cm) and chosen so the shelf packing fits ``size``;
+    ``atlas_cells`` widens a chart into a strip of identical cells. Deterministic.
+    Returns the atlas description (charts with pixel rects and world frames)."""
+    entries = {}
+    order = []
+    for mesh, lod in meshes:
+        for index, poly in enumerate(mesh.polygons):
+            key = _poly_key(poly)
+            if key not in entries:
+                origin, u_dir, v_dir, w, h, proj = planar_frame(poly)
+                entries[key] = {"polys": [], "origin": origin, "u_dir": u_dir, "v_dir": v_dir, "w_cm": w, "h_cm": h,
+                                "proj": proj, "component": poly.component, "slot": mesh.slots[poly.slot], "cells": max(1, poly.atlas_cells),
+                                "normal": poly.normal, "meshes": []}
+                order.append(key)
+            entries[key]["polys"].append((mesh, index, poly))
+            entries[key]["meshes"].append(f"{mesh.name}:LOD{lod}")
+            entries[key]["cells"] = max(entries[key]["cells"], poly.atlas_cells)
+    total_area = sum(max(e["w_cm"], 1.0) * max(e["h_cm"], 1.0) * e["cells"] for e in entries.values())
+    density = math.sqrt(size * size * fill_target / max(total_area, 1.0))
+    for _attempt in range(60):
+        rects = []
+        for key in order:
+            e = entries[key]
+            cell_w = max(min_px, math.ceil(e["w_cm"] * density))
+            h = max(min_px, math.ceil(e["h_cm"] * density))
+            rects.append((key, cell_w * e["cells"] + 2 * gutter_px, h + 2 * gutter_px, cell_w, h))
+        rects.sort(key=lambda r: (-r[2], -r[1], r[0]))
+        x = y = shelf_h = 0
+        placed = {}
+        ok = True
+        for key, rw, rh, cell_w, h in rects:
+            if x + rw > size:
+                x = 0
+                y += shelf_h
+                shelf_h = 0
+            if y + rh > size or rw > size:
+                ok = False
+                break
+            placed[key] = (x + gutter_px, y + gutter_px, cell_w, h)
+            x += rw
+            shelf_h = max(shelf_h, rh)
+        if ok:
+            break
+        density *= 0.96
+    else:
+        raise RuntimeError("atlas packing failed")
+    charts = []
+    for chart_id, key in enumerate(order):
+        e = entries[key]
+        px, py, cell_w, h = placed[key]
+        uv = []
+        for (u, v) in e["proj"]:
+            fu = (px + (u / e["w_cm"] * cell_w if e["w_cm"] > 1e-9 else 0.0)) / size
+            fv = (py + (v / e["h_cm"] * h if e["h_cm"] > 1e-9 else 0.0)) / size
+            uv.append((_r(fu), _r(fv)))
+        for mesh, index, poly in e["polys"]:
+            poly.uv_override = list(uv)
+            poly.chart_id = chart_id
+        charts.append({"id": chart_id, "component": e["component"], "slot": e["slot"], "meshes": sorted(set(e["meshes"])),
+                       "rect_px": [px, py, cell_w * e["cells"], h], "cell_px": [cell_w, h], "cells": e["cells"],
+                       "origin_cm": [_r(c) for c in e["origin"]], "u_dir": [_r(c) for c in e["u_dir"]], "v_dir": [_r(c) for c in e["v_dir"]],
+                       "normal": [_r(c) for c in e["normal"]], "size_cm": [_r(e["w_cm"]), _r(e["h_cm"])],
+                       "polygon_uv": uv, "polygon_world": [[_r(c) for c in p] for p in e["polys"][0][2].points]})
+    return {"size": size, "density_px_per_cm": _r(density), "gutter_px": gutter_px, "charts": charts,
+            "used_fraction": _r(sum(c["rect_px"][2] * c["rect_px"][3] for c in charts) / float(size * size))}
+
+
+def write_bake_manifest(path: str, atlas: dict, extras: dict | None = None):
+    doc = {"author": AUTHOR, "creator": AUTHOR, "kit_revision": KIT_REVISION,
+           "frame": "Unreal +X forward, +Y right, +Z up, centimeters; atlas pixel origin top-left, v down",
+           "atlas": atlas}
+    if extras:
+        doc.update(extras)
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(doc, handle, indent=1, sort_keys=True)
+        handle.write("\n")
+    return sha256_file(path)
 
 
 # --- outlines ---------------------------------------------------------------

@@ -26,7 +26,7 @@
     {
      "stage": "BLOCKOUT",
      "date": "2026-09-06",
-     "revision": "ebs-mer-bld-002-blockout-v2",
+     "revision": "ebs-mer-bld-002-blockout-v3",
      "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/",
      "receipt": "receipt.json in that root (file inventory with SHA-256, source identity, environment, commands)",
      "what_exists": "Deterministic editable source geometry (Python builder + mesh kit), glTF/OBJ exports for LOD0/LOD1 of the main mesh and two part meshes, sockets and simple collision boxes, review renders of front/side/rear/left/top and Unreal-camera tactical views for connected, disconnected, maintenance, LOD1 and crowd states, structural tests.",
@@ -35,11 +35,17 @@
     {
      "stage": "ISOLATED_IMPORT_EVIDENCE (BLOCKOUT retained; not UE_INTEGRATED)",
      "date": "2026-09-06",
-     "revision": "ebs-mer-bld-002-blockout-v2",
+     "revision": "ebs-mer-bld-002-blockout-v3",
      "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/import/",
      "engine": "UE 5.8.2 (56702186), sandbox project IsolatedPreview/EBSPreview, -nullrhi",
      "what_exists": "Headless Interchange import of all three meshes with LOD1, sockets, collision, UV channels, lightmap index, Nanite-off, replace-reimport equality, all checks passing; socket-encoding probes.",
      "what_does_not_exist": "In-engine rendered inspection, materials, integration into the shared game, gate passes, owner acceptance."
+    },
+    {
+     "stage": "INTERNAL_GATE_REVIEW (QA, not a gate pass)",
+     "date": "2026-09-06",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/gate-review-blockout-internal.json",
+     "result": "Three lenses, two skeptics per finding; upheld findings dispositioned in revision v3 (see README 6.2); the mast-proportion finding was refuted because the blockout follows the contract's construction reference; slenderness versus the painted candidate recorded as an owner question."
     }
    ],
    "gates": {
@@ -47,7 +53,8 @@
     "gameplay": "NOT_EVALUATED",
     "technical": "NOT_EVALUATED"
    },
-   "owner_acceptance": "NOT_ACCEPTED"
+   "owner_acceptance": "NOT_ACCEPTED",
+   "next": "Texture bake (1024^2 BaseColor/Normal/MRE/StateMask) from the v3 atlas, material-instance definitions against the existing master materials, then state presentation plan review; ART_ALPHA requires those plus owner direction on the slenderness question."
   },
   {
    "package_id": "EBS-PKG-MC-SURVEYOR",

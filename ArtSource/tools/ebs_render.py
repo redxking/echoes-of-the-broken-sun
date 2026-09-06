@@ -691,7 +691,20 @@ def _draw_line(x0, y0, d0, x1, y1, d1, color, zb, cb, W, H, bias_c, bias_q):
         d += step_d
 
 
+OUTPUT_SRGB = False  # set from scene["srgb"]; encodes linear shading with the sRGB transfer curve
+
+
+def _srgb(c):
+    if c <= 0.0:
+        return 0.0
+    if c >= 1.0:
+        return 1.0
+    return c * 12.92 if c <= 0.0031308 else 1.055 * (c ** (1.0 / 2.4)) - 0.055
+
+
 def _pack(rgb):
+    if OUTPUT_SRGB:
+        rgb = (_srgb(rgb[0]), _srgb(rgb[1]), _srgb(rgb[2]))
     r = int(rgb[0] * 255.0 + 0.5)
     g = int(rgb[1] * 255.0 + 0.5)
     b = int(rgb[2] * 255.0 + 0.5)
@@ -1100,6 +1113,8 @@ def load_scene(scene_path):
     try:
         with open(scene_path, "r", encoding="utf-8") as fh:
             scene = json.load(fh)
+            global OUTPUT_SRGB
+            OUTPUT_SRGB = bool(scene.get('srgb', False)) if isinstance(scene, dict) else False
     except OSError as exc:
         raise RenderError(f"cannot open scene '{scene_path}': {exc}") from exc
     except ValueError as exc:

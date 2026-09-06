@@ -6,7 +6,7 @@ created: 2026-09-06
 package: EBS-PKG-MC-POWER-LINK
 production_asset_id: EBS-MER-BLD-002
 production_maturity: BLOCKOUT
-revision: ebs-mer-bld-002-blockout-v2
+revision: ebs-mer-bld-002-blockout-v3
 canon_status: CANDIDATE (delegated design selection; not owner acceptance)
 status: Isolated production source; no Unreal integration authorization
 ---
@@ -83,10 +83,19 @@ in §1 before geometry was authored (this document, 2026-09-06). Open items are 
 |---|---|---|
 | Footprint | 2×2 cells = **400 × 400 cm** | `buildings.json` cells; `TileWorldSize = 200.0f` in `Source/EchoesOfTheBrokenSun/Public/EchoesSimulationSubsystem.h`, `kPresentationTileWorldUnits = 200` |
 | Units / axes / pivot | centimeters; +X forward (service face), +Y right, +Z up; pivot at ground-contact centre | contract `import_policy` |
-| Height | **1,244 cm — PROVISIONAL BLOCKOUT ESTIMATE** | No authority states a height. The candidate's ~3.9:1 column-to-base proportion applied to a 320 cm plinth. ComponentDesignCatalog's "18-metre hexagonal pylon" is a subordinate proposal, not adopted. |
+| Height | **1,238 cm — PROVISIONAL BLOCKOUT ESTIMATE** | No authority states a height. The proportions are the contract's construction reference (`motion/construction/component-geometry.json`, the GAP-01 geometry source: base 1.0, shaft 0.46 wide, top at 3.8, collar 2.77–2.93, panels 0.40 × 0.78) mapped to a 320 cm base unit; the contract excludes painted measurements. The painted candidate is about twice as stocky (column ≈2.6–2.8:1, total ≈2.0–2.4× base). ComponentDesignCatalog's "18-metre hexagonal pylon" is a subordinate proposal, not adopted. |
 | Noted discrepancy | `SPEC-SKM-011` says "64×64 tiles at 100 cm simulation scale" while presentation places tiles at 200 cm | The mesh follows the presentation tile constant the runtime uses to place structures; recorded, not resolved here. |
 
-## 4. Geometry (revision `ebs-mer-bld-002-blockout-v2`; v1 → v2 changed only the glTF socket-node encoding)
+## 4. Geometry (revision `ebs-mer-bld-002-blockout-v3`)
+
+v1 → v2 changed only the glTF socket-node encoding. v2 → v3 (after the internal gate review, §6.2): plinth
+widened to 360 cm so the base announces the 2×2 footprint on both axes; panels narrowed to 100 × 200 cm so
+they sit inside the 106 cm flat face without touching the corner rails; a ceramic **team band** (stripes on
+the cladding plates and a band under the collar) added as the ownership-colour carrier for the texture's
+team mask; the two status lights the candidate does not show (cap tell-tale, bay indicator) removed; the
+rails stop 2 cm below the cap plane and the ports stand 2 cm proud of the couplings (no coincident faces);
+the maintenance state hangs the unplugged conduit from its port instead of detaching it; unused glTF
+materials dropped and collision meshes given a material index; unique UV0 atlas added (§4.1).
 
 Deterministic generator: [build_power_link.py](build_power_link.py) on [../tools/ebs_meshkit.py](../tools/ebs_meshkit.py)
 (Python 3 standard library; no DCC application exists on this workstation, so the generator is the
@@ -105,16 +114,16 @@ editable native source). Exact dimensions, counts, hashes and bounds are in
 
 | Mesh | LOD0 tris | LOD1 tris | Slots |
 |---|---|---|---|
-| `SM_EBS_MER_BLD_002` (main) | 1,118 | 886 | ceramic / frame / status |
+| `SM_EBS_MER_BLD_002` (main) | 1,180 | 876 | ceramic / frame / status |
 | `SM_EBS_MER_BLD_002_Panel` (×4) | 136 | 12 | ceramic / frame |
 | `SM_EBS_MER_BLD_002_ConduitStub` (×4) | 84 | 64 | frame / status |
-| **Assembled** | **1,998 ≤ 3,500** | **1,190 ≤ 1,200** | 3 provisional slots |
+| **Assembled** | **2,060 ≤ 3,500** | **1,180 ≤ 1,200** | 3 provisional slots |
 
 Material slots: `MI_EBS_MER_CeramicCivic` (existing `T_EchoesCeramicCivic` family),
 `MI_EBS_MER_CompactFrame` (charcoal machined metal), `MI_EBS_MER_StatusCyan` (state-masked emissive
 for collar segments, indicator strips, conduit pulse strips, bay indicator, cap tell-tale).
-UV0 is a world-scale planar projection (one tile = 256 cm, 4 texels/cm at 1024²); UV1 is a
-non-overlapping per-polygon cell layout reserved for lightmaps. Simple collision: two `UBX_` boxes
+UV0 is a unique, non-overlapping atlas shared by the main mesh and both parts at both LODs (§4.1); UV1 is
+a non-overlapping per-polygon cell layout reserved for lightmaps. Simple collision: two `UBX_` boxes
 (plinth, mast) for asset inspection only; the runtime presentation component disables collision.
 
 Sockets on the main mesh: `Panel_01..04`, `Conduit_Left_01/02` (yaw −90°), `Conduit_Right_01/02`
@@ -130,6 +139,15 @@ rotation `q_y(−yaw)·(q_y(180)·q_x(−90))` to cancel the reflection that `Im
 through the axis-conversion inverse; the encoding was established and verified by probe imports
 (`import/probe-sweep`, `import/probe-verify` in the evidence root). Collision boxes are `UBX_<mesh>_NN`
 sibling nodes. LOD1 is a separate GLB attached at import.
+
+### 4.1 UV atlas and bake manifest
+
+`pack_atlas` in the mesh kit gives every polygon its own upright planar chart (walls read top-down),
+deduplicates LOD0/LOD1 twins, and shelf-packs the charts at one uniform texel density into a 1024²
+atlas; the numeral label plate gets a four-cell strip so one panel mesh can show 01–04 through a
+material cell offset. The packing is recorded in [bake-manifest.json](bake-manifest.json) (chart rects,
+world frames, families, decal rules) and is the input of the texture baker
+([../tools/ebs_texbake.py](../tools/ebs_texbake.py)). Density and coverage are in the build manifest.
 
 ## 5. States and required tracks (static structure; `REL-BLD-015.MC.LINK.ASSET` .ANIM_RIG = NOT APPLICABLE)
 
@@ -166,22 +184,42 @@ Checks performed:
 - Component counts, panel order, bay span, socket pairing/orientation, budgets, footprint containment,
   pivot, slot count, glTF axis rule, glTF winding, OBJ frame, deterministic bytes: 15 tests in
   [test_power_link_build.py](test_power_link_build.py), all passing.
-- Emissive pixel share of the mesh area (status colour over non-background pixels): 0.11% default
-  tactical, 0.09% gameplay tactical, 0.09% far, 1.7% front orthographic — under the 15% ceiling with
-  wide margin (`renders/area_check/emissive-area.json`).
+- Emissive pixel share of the mesh area (unlit render, magenta-keyed ground, exact colour counts): 2.0%
+  default tactical, 2.2% gameplay tactical, 2.5% far (6,200 uu), 1.6% front orthographic — under the 15%
+  ceiling (`renders/area_check/emissive-area.json`; the first method counted the lit ground and was wrong).
 - Visual inspection of every render by the author: silhouette, four panel rows, lit collar, couplings
-  and stubs read at both tactical pitches; the base separates from charcoal ground only after the
-  ceramic cladding was added (first pass failed that check and was corrected in the same revision).
+  and stubs read at both tactical pitches with the pylon as pale ceramic over a charcoal base; the base
+  separates from charcoal ground only after the ceramic cladding was added; the maintenance state shows the
+  open bay, both removed panels and the conduit hanging from its port (`maintenance/tactical_near.png`,
+  `tactical_service_face.png`).
 - Monochrome pass: connection state remains readable by luminance alone.
 
 What this evidence is not: no in-engine render, no crowded combat scene with units, no fog, no
 selection halo, no textures, no measured performance, no human recognition test, no owner review.
 
+### 6.2 Internal gate review (three lenses, adversarial refutation)
+
+An independent three-lens review (art fidelity, technical contract, gameplay readability) of the v1/v2
+package, with every finding attacked by two skeptics, is retained as
+`gate-review-blockout-internal.json` in the evidence root (internal QA, not a gate pass). Disposition:
+
+| Finding (upheld unless noted) | Disposition in v3 |
+|---|---|
+| Tactical renders used a perspective camera; the game camera is orthographic | Renderer verified against the engine headers and re-based on the orthographic spring-arm framing (§6). |
+| Emissive-area method counted the lit ground plane | Unlit magenta-keyed method; share 2.0–2.5% at tactical framing, 1.6% front (`renders/area_check/emissive-area.json`). |
+| Ceramic mast read as charcoal (far-side key light, no sRGB) | Key light from the camera side; sRGB output; the pylon now reads pale ceramic over a charcoal base. |
+| Unplugged conduit detached from its coupling (GAP-01 traceability) | Hangs from its port at −30° pitch to the ground. |
+| No ownership/team-colour carrier | Ceramic team band (cladding stripes, under-collar band) masked in the texture's B channel. |
+| Sockets absent / mis-rotated after import; LOD1 sections on slot 0 | Fixed in v2 (encoding, probes) and the LOD1 slot restore; all checks pass (§6.1). |
+| Base under-announces the footprint on X; panel wider than the flat face; coincident faces; far zoom 7,600 unreachable (max 6,200); unused glTF material; extra status lights | Plinth 360; panel 100 wide; rails/ports offset; far view at 6,200; materials trimmed; cap tell-tale and bay indicator removed. |
+| Mast proportion "twice the candidate" — **refuted** by both skeptics | The blockout matches the contract's construction reference (3.8:1), which GAP-01 names as the geometry source; the painting is ~2× stockier. Recorded as an owner question (§8). |
+| Service face invisible at default placement — refuted as already recorded | Unchanged; see §8 decision 1. |
+
 ### 6.1 Isolated Unreal import (installed 5.8.2, sandbox project)
 
-Evidence: `import/` under the evidence root — `heavy-run-receipt.json` (reservation and outcome),
-`import-job.json`, `import-report.json` (final clean run), `UnrealEditor-Cmd-import-run*.log`, and the
-socket probes `probe/`, `probe-sweep/`, `probe-verify/` that established the socket encoding.
+Evidence: `import/` under the evidence root — `heavy-run-receipt.json` (reservation and outcome, runs
+1–6), `import-job.json`, `import-report.json` (final clean run of the v3 exports), `UnrealEditor-Cmd-import-run*.log`,
+and the socket probes `probe/`, `probe-sweep/`, `probe-verify/` that established the socket encoding.
 Sandbox: `IsolatedPreview/EBSPreview/EBSPreview.uproject` (Blueprint-only, PythonScriptPlugin +
 Interchange, Nanite/VSM off); the shared game project was not opened. Tool:
 [../tools/ue_import_inspect.py](../tools/ue_import_inspect.py) run through `UnrealEditor-Cmd -nullrhi
@@ -192,8 +230,8 @@ through `StaticMeshEditorSubsystem.import_lod` with a by-name section-to-slot re
 
 | Check (final clean run) | Main | Panel | Conduit stub |
 |---|---|---|---|
-| Scale/axes: bounds max (cm) | (166, 200, 1244) | (7.5, 58, 105) | (92, 17, 17) |
-| LOD0 / LOD1 triangles vs export | 1,118 / 886 ✓ | 136 / 12 ✓ | 84 / 64 ✓ |
+| Scale/axes: bounds max (cm) | (188, 200, 1238) | (7.5, 50, 100) | (92, 17, 17) |
+| LOD0 / LOD1 triangles vs export | 1,180 / 876 ✓ | 136 / 12 ✓ | 84 / 64 ✓ |
 | Sections → slots LOD0 / LOD1 | [0,1,2] / [0,1,2] | [0,1] / [0] | [0,1] / [0,1] |
 | UV channels, lightmap index | 2, index 1 | 2, index 1 | 2, index 1 |
 | Sockets (name, location, rotation, scale) | 11, all exact, unit scale | `Label` | `Span_End` |
@@ -233,8 +271,12 @@ Decisions made under the owner's delegation (routine implementation choices):
    faces, so at default placement the numbered panels face away; the collar, couplings and conduits
    carry the identity from every side. The integration task may spawn Power Links with yaw 180° or
    rely on `SPEC-BLD-001` rotation. Recorded, not changed here.
-2. Height 1,244 cm follows the candidate proportion. A compact variant is not built; occlusion of units
-   behind the mast is a Gameplay Gate question to answer with in-engine crowd evidence.
+2. Height 1,238 cm follows the contract's construction reference (3.8 × base). The selected painting is
+   about twice as stocky and the other lane's settlement study also draws a shorter pylon; the reviewers'
+   occlusion estimate is ~4–5 tiles of ground strip behind the mast at the default pitch (the orthographic
+   frame is 7,033 cm wide, so the mast itself is ~1% of the frame). **OWNER-QUESTION:** keep the slim
+   3.8:1 reference proportion (canon "slim pylon", book "slender pylons") or move toward the painted
+   candidate's ~2.2× base? Height is one constant in the generator; UVs and sockets regenerate.
 3. Panels and conduit stubs are separate part meshes (precedent: the M01 Surveyor/Bulwark articulation
    parts in `Scripts/generate_art_assets.py`) so damage/maintenance states move geometry rather than
    faking it with lights.

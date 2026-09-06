@@ -8,10 +8,10 @@
  "asset_name": "SM_EBS_MER_BLD_002",
  "author": "Angelis Pseftis",
  "budgets": {
-  "lod0_assembled_triangles": 1998,
+  "lod0_assembled_triangles": 2060,
   "lod0_cap": 3500,
   "lod0_within_cap": true,
-  "lod1_assembled_triangles": 1190,
+  "lod1_assembled_triangles": 1180,
   "lod1_cap": 1200,
   "lod1_within_cap": true
  },
@@ -54,10 +54,10 @@
   "conduit_stub_length": 90.0,
   "coupling": [
    104.0,
-   50.0,
+   48.0,
    86.0
   ],
-  "coupling_centre_y": 175.0,
+  "coupling_centre_y": 174.0,
   "foundation_ring": [
    236.0,
    236.0,
@@ -65,25 +65,25 @@
   ],
   "panel": [
    6.0,
-   116.0,
-   210.0
+   100.0,
+   200.0
   ],
   "panel_centres_z": {
-   "01": 1070.0,
-   "02": 745.0,
-   "03": 495.0,
-   "04": 235.0
+   "01": 1072.0,
+   "02": 748.0,
+   "03": 498.0,
+   "04": 238.0
   },
   "plinth": [
-   320.0,
-   320.0,
+   360.0,
+   360.0,
    48.0
   ],
   "plinth_step_top_z": 60.0,
   "port_radius": 14.0,
   "service_bay_z": [
-   388.0,
-   852.0
+   392.0,
+   854.0
   ],
   "shaft": [
    150.0,
@@ -99,16 +99,16 @@
    400.0
   ],
   "ground_contact_z_cm": 0.0,
-  "height_cm": 1244.0,
+  "height_cm": 1238.0,
   "main_mesh_within_footprint": true,
   "main_mesh_xy_extent_cm": [
-   332.0,
+   376.0,
    400.0
   ],
   "note": "Only the cosmetic conduit stubs (and any later span component) leave the 2x2 footprint; they carry no collision, navigation or network authority (GAP-03)."
  },
  "front": "+X face carries the numbered panels and service bay; couplings on -Y (Left) and +Y (Right)",
- "kit_revision": "ebs-meshkit-v2",
+ "kit_revision": "ebs-meshkit-v3",
  "material_slot_policy": "3 provisional slots (contract material_slots_provisional_max 3); status slot is a state-masked emissive under the 15% visible-area ceiling",
  "material_slots": [
   "MI_EBS_MER_CeramicCivic",
@@ -119,18 +119,18 @@
   {
    "bounds_cm": [
     [
-     -166.0,
+     -188.0,
      -200.0,
      0.0
     ],
     [
-     166.0,
+     188.0,
      200.0,
-     1244.0
+     1238.0
     ]
    ],
    "by_component": {
-    "cap": 46,
+    "cap": 34,
     "collar_assembly": 112,
     "collar_segment_01": 12,
     "collar_segment_02": 12,
@@ -158,18 +158,19 @@
     "rear_conduit_02": 52,
     "rear_junction": 12,
     "service_bay": 58,
-    "service_bay_conduits": 108,
+    "service_bay_conduits": 96,
     "shaft_groove_01": 16,
     "shaft_groove_02": 14,
     "shaft_row_01": 22,
     "shaft_row_02": 14,
     "shaft_row_03": 14,
-    "shaft_row_04": 22
+    "shaft_row_04": 22,
+    "team_band": 86
    },
    "by_slot": {
-    "MI_EBS_MER_CeramicCivic": 204,
+    "MI_EBS_MER_CeramicCivic": 290,
     "MI_EBS_MER_CompactFrame": 770,
-    "MI_EBS_MER_StatusCyan": 144
+    "MI_EBS_MER_StatusCyan": 120
    },
    "collision_boxes": [
     {
@@ -180,8 +181,8 @@
      ],
      "name": "plinth",
      "size_cm": [
-      320.0,
-      320.0,
+      372.0,
+      372.0,
       60.0
      ]
     },
@@ -208,7 +209,7 @@
     "MI_EBS_MER_CompactFrame",
     "MI_EBS_MER_StatusCyan"
    ],
-   "sha256": "1ed61690842053ff3e167d5e0031bb5eb1013d86a46c45c7c4d3b3f9683e95cb",
+   "sha256": "8b2355c6c48f8ac876498f2bf75c38fd103f1d80495a85e57a70af6e746de693",
    "sockets": [
     {
      "name": "Conduit_Left_01",
@@ -255,7 +256,7 @@
      "position_cm": [
       75.0,
       0.0,
-      1070.0
+      1072.0
      ],
      "purpose": "removable numbered ceramic access panel 01; plate extends +X",
      "yaw_deg": 0.0
@@ -265,7 +266,7 @@
      "position_cm": [
       75.0,
       0.0,
-      745.0
+      748.0
      ],
      "purpose": "removable numbered ceramic access panel 02; plate extends +X",
      "yaw_deg": 0.0
@@ -275,7 +276,7 @@
      "position_cm": [
       75.0,
       0.0,
-      495.0
+      498.0
      ],
      "purpose": "removable numbered ceramic access panel 03; plate extends +X",
      "yaw_deg": 0.0
@@ -285,7 +286,7 @@
      "position_cm": [
       75.0,
       0.0,
-      235.0
+      238.0
      ],
      "purpose": "removable numbered ceramic access panel 04; plate extends +X",
      "yaw_deg": 0.0
@@ -315,71 +316,19 @@
      "position_cm": [
       75.0,
       0.0,
-      620.0
+      623.0
      ],
      "purpose": "maintenance / damage exposure effects",
      "yaw_deg": 0.0
     }
    ],
-   "triangles": 1118
+   "triangles": 1180
   },
   {
    "lod": 0,
    "mesh": "SM_EBS_MER_BLD_002",
    "path": "export/SM_EBS_MER_BLD_002_LOD0.obj",
-   "sha256": "445452d6db85912cd4db3fbdfeb95034f52e9dc1e2b122a94dcecb7e41d7c9ae"
-  },
-  {
-   "bounds_cm": [
-    [
-     0.0,
-     -58.0,
-     -105.0
-    ],
-    [
-     7.5,
-     58.0,
-     105.0
-    ]
-   ],
-   "by_component": {
-    "panel_fasteners": 112,
-    "panel_label": 12,
-    "panel_plate": 12
-   },
-   "by_slot": {
-    "MI_EBS_MER_CeramicCivic": 12,
-    "MI_EBS_MER_CompactFrame": 124
-   },
-   "collision_boxes": [],
-   "collision_in_file": true,
-   "lod": 0,
-   "mesh": "SM_EBS_MER_BLD_002_Panel",
-   "path": "export/SM_EBS_MER_BLD_002_Panel_LOD0.glb",
-   "section_slot_names": [
-    "MI_EBS_MER_CeramicCivic",
-    "MI_EBS_MER_CompactFrame"
-   ],
-   "sha256": "cec30de9b1e8ff9c31965dccc06c463ab2c70db80e5ac57e1f3956b4fcef01fe",
-   "sockets": [
-    {
-     "name": "Label",
-     "position_cm": [
-      6.0,
-      -28.0,
-      79.0
-     ],
-     "purpose": "numeral decal / non-color grid marking anchor",
-     "yaw_deg": 0.0
-    }
-   ],
-   "triangles": 136
-  },
-  {
-   "lod": 0,
-   "mesh": "SM_EBS_MER_BLD_002_Panel",
-   "path": "export/SM_EBS_MER_BLD_002_Panel_LOD0.obj",
-   "sha256": "65a4578908d3fb44c00578f3de2569321431ee82b4cca563ada078257a20bca8"
+   "sha256": "78d6d959ef9fdfc2ef49ea4b5b468dffb1061a0765a58f4795770274f04e6459"
   },
   {
    "bounds_cm": [
@@ -413,7 +362,7 @@
     "MI_EBS_MER_CompactFrame",
     "MI_EBS_MER_StatusCyan"
    ],
-   "sha256": "bc9524fd87f2437cc1735af2b2bd4814125561df10db9bc7d25bb55e0bba6764",
+   "sha256": "71adfa8ced764d79d33d083b35b5af3ee87dda1a40e91ab98646a4c19c2dd6f3",
    "sockets": [
     {
      "name": "Span_End",
@@ -432,17 +381,69 @@
    "lod": 0,
    "mesh": "SM_EBS_MER_BLD_002_ConduitStub",
    "path": "export/SM_EBS_MER_BLD_002_ConduitStub_LOD0.obj",
-   "sha256": "73605f852f27d59cb96febdde2337618d14dfed1b0fd1338274351b756ea571f"
+   "sha256": "31812fc877234129572ff7f04765dafea3daf151fe74ec1061acd84c0b04233e"
   },
   {
    "bounds_cm": [
     [
-     -166.0,
+     0.0,
+     -50.0,
+     -100.0
+    ],
+    [
+     7.5,
+     50.0,
+     100.0
+    ]
+   ],
+   "by_component": {
+    "panel_fasteners": 112,
+    "panel_label": 12,
+    "panel_plate": 12
+   },
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 12,
+    "MI_EBS_MER_CompactFrame": 124
+   },
+   "collision_boxes": [],
+   "collision_in_file": true,
+   "lod": 0,
+   "mesh": "SM_EBS_MER_BLD_002_Panel",
+   "path": "export/SM_EBS_MER_BLD_002_Panel_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_MER_CeramicCivic",
+    "MI_EBS_MER_CompactFrame"
+   ],
+   "sha256": "9f2c859129ca7b3a1775f0402c592ebd9e293a9e6c756d198eb9661b33ed80d1",
+   "sockets": [
+    {
+     "name": "Label",
+     "position_cm": [
+      6.0,
+      -20.0,
+      74.0
+     ],
+     "purpose": "numeral decal / non-color grid marking anchor",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 136
+  },
+  {
+   "lod": 0,
+   "mesh": "SM_EBS_MER_BLD_002_Panel",
+   "path": "export/SM_EBS_MER_BLD_002_Panel_LOD0.obj",
+   "sha256": "0d0765d2dc5855f6ea7b9489971f2b00c7ac1966b5dd1510eddf59fc61420842"
+  },
+  {
+   "bounds_cm": [
+    [
+     -186.0,
      -200.0,
      0.0
     ],
     [
-     166.0,
+     186.0,
      200.0,
      1238.0
     ]
@@ -458,10 +459,10 @@
     "collar_segment_06": 12,
     "collar_segment_07": 12,
     "collar_segment_08": 12,
-    "coupling_left": 34,
+    "coupling_left": 22,
     "coupling_left_port_01": 20,
     "coupling_left_port_02": 20,
-    "coupling_right": 34,
+    "coupling_right": 22,
     "coupling_right_port_01": 20,
     "coupling_right_port_02": 20,
     "foundation_ring": 64,
@@ -482,10 +483,11 @@
     "shaft_row_01": 22,
     "shaft_row_02": 14,
     "shaft_row_03": 14,
-    "shaft_row_04": 22
+    "shaft_row_04": 22,
+    "team_band": 14
    },
    "by_slot": {
-    "MI_EBS_MER_CeramicCivic": 204,
+    "MI_EBS_MER_CeramicCivic": 194,
     "MI_EBS_MER_CompactFrame": 562,
     "MI_EBS_MER_StatusCyan": 120
    },
@@ -498,8 +500,8 @@
      ],
      "name": "plinth",
      "size_cm": [
-      320.0,
-      320.0,
+      372.0,
+      372.0,
       60.0
      ]
     },
@@ -526,7 +528,7 @@
     "MI_EBS_MER_CompactFrame",
     "MI_EBS_MER_StatusCyan"
    ],
-   "sha256": "977b9a3ec15b8d18fde886ad98bac7f4e7b9bfc3ea4970e5c83d8fa0a3d60326",
+   "sha256": "bb1b319df3769f167a0dd02d80bcd9dd220e60b340fa219f5674d675d4829e70",
    "sockets": [
     {
      "name": "Conduit_Left_01",
@@ -573,7 +575,7 @@
      "position_cm": [
       75.0,
       0.0,
-      1070.0
+      1072.0
      ],
      "purpose": "removable numbered ceramic access panel 01; plate extends +X",
      "yaw_deg": 0.0
@@ -583,7 +585,7 @@
      "position_cm": [
       75.0,
       0.0,
-      745.0
+      748.0
      ],
      "purpose": "removable numbered ceramic access panel 02; plate extends +X",
      "yaw_deg": 0.0
@@ -593,7 +595,7 @@
      "position_cm": [
       75.0,
       0.0,
-      495.0
+      498.0
      ],
      "purpose": "removable numbered ceramic access panel 03; plate extends +X",
      "yaw_deg": 0.0
@@ -603,7 +605,7 @@
      "position_cm": [
       75.0,
       0.0,
-      235.0
+      238.0
      ],
      "purpose": "removable numbered ceramic access panel 04; plate extends +X",
      "yaw_deg": 0.0
@@ -633,67 +635,19 @@
      "position_cm": [
       75.0,
       0.0,
-      620.0
+      623.0
      ],
      "purpose": "maintenance / damage exposure effects",
      "yaw_deg": 0.0
     }
    ],
-   "triangles": 886
+   "triangles": 876
   },
   {
    "lod": 1,
    "mesh": "SM_EBS_MER_BLD_002",
    "path": "export/SM_EBS_MER_BLD_002_LOD1.obj",
-   "sha256": "806e09928e57d1b629ecf7edc42282cb40a054473a3550ac0b5c2ac0b944dbad"
-  },
-  {
-   "bounds_cm": [
-    [
-     0.0,
-     -58.0,
-     -105.0
-    ],
-    [
-     6.0,
-     58.0,
-     105.0
-    ]
-   ],
-   "by_component": {
-    "panel_plate": 12
-   },
-   "by_slot": {
-    "MI_EBS_MER_CeramicCivic": 12
-   },
-   "collision_boxes": [],
-   "collision_in_file": false,
-   "lod": 1,
-   "mesh": "SM_EBS_MER_BLD_002_Panel",
-   "path": "export/SM_EBS_MER_BLD_002_Panel_LOD1.glb",
-   "section_slot_names": [
-    "MI_EBS_MER_CeramicCivic"
-   ],
-   "sha256": "20dd2c899ac793a5866ac1b19650f13b5b0035a5ea01a529d81d606c3b664e07",
-   "sockets": [
-    {
-     "name": "Label",
-     "position_cm": [
-      6.0,
-      -28.0,
-      79.0
-     ],
-     "purpose": "numeral decal / non-color grid marking anchor",
-     "yaw_deg": 0.0
-    }
-   ],
-   "triangles": 12
-  },
-  {
-   "lod": 1,
-   "mesh": "SM_EBS_MER_BLD_002_Panel",
-   "path": "export/SM_EBS_MER_BLD_002_Panel_LOD1.obj",
-   "sha256": "060b8e60736c132aa1d410845e765ef45860c18943a9252c8fd75272aa661991"
+   "sha256": "c4f92e1cbf9f0ad1f8cfcf2d413ee8ea903ce71c14a3cfdbdd7d3d90a80a633c"
   },
   {
    "bounds_cm": [
@@ -727,7 +681,7 @@
     "MI_EBS_MER_CompactFrame",
     "MI_EBS_MER_StatusCyan"
    ],
-   "sha256": "f8a97b5c806575dbf83e2263b713a3a8d60cadc94b1b200a6789c0decb4235d0",
+   "sha256": "788e685b26ffc7e7ab8baeba837e9e9c377d6817dc161260dc28926fb4f9c75c",
    "sockets": [
     {
      "name": "Span_End",
@@ -746,7 +700,55 @@
    "lod": 1,
    "mesh": "SM_EBS_MER_BLD_002_ConduitStub",
    "path": "export/SM_EBS_MER_BLD_002_ConduitStub_LOD1.obj",
-   "sha256": "52a1fc82dcda8d957371c9375d55d1da105c18e25ea0cb1c5787db2d2aa7a630"
+   "sha256": "11b4a7bdf65430e4edc05e9da896e36bf7108739adb954f558d69cb703a76620"
+  },
+  {
+   "bounds_cm": [
+    [
+     0.0,
+     -50.0,
+     -100.0
+    ],
+    [
+     6.0,
+     50.0,
+     100.0
+    ]
+   ],
+   "by_component": {
+    "panel_plate": 12
+   },
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 12
+   },
+   "collision_boxes": [],
+   "collision_in_file": false,
+   "lod": 1,
+   "mesh": "SM_EBS_MER_BLD_002_Panel",
+   "path": "export/SM_EBS_MER_BLD_002_Panel_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_MER_CeramicCivic"
+   ],
+   "sha256": "74f2f7ac6de6bf769ee8181edee2cc45cc43ab88953748698210fc5764fa324f",
+   "sockets": [
+    {
+     "name": "Label",
+     "position_cm": [
+      6.0,
+      -20.0,
+      74.0
+     ],
+     "purpose": "numeral decal / non-color grid marking anchor",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 12
+  },
+  {
+   "lod": 1,
+   "mesh": "SM_EBS_MER_BLD_002_Panel",
+   "path": "export/SM_EBS_MER_BLD_002_Panel_LOD1.obj",
+   "sha256": "3711bf484a00125fd002a63702df7603d3c374df060cf0ae6128b282b156ac05"
   }
  ],
  "package_id": "EBS-PKG-MC-POWER-LINK",
@@ -757,77 +759,77 @@
   {
    "bounds_cm": [
     [
-     -166.0,
+     -188.0,
      -292.0,
      0.0
     ],
     [
-     166.0,
-     292.0,
-     1244.0
-    ]
-   ],
-   "by_slot": {
-    "MI_EBS_MER_CeramicCivic": 252,
-    "MI_EBS_MER_CompactFrame": 1554,
-    "MI_EBS_MER_StatusCyan": 192
-   },
-   "lod": 0,
-   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/review/SM_EBS_MER_BLD_002_assembly_connected_LOD0.obj",
-   "sha256": "74726f8c9f7c662bd16525edcebf2079af91e8c0a69f347e4c359c2fa990f4c1",
-   "state": "connected",
-   "triangles": 1998
-  },
-  {
-   "bounds_cm": [
-    [
-     -166.0,
-     -292.0,
-     -5.0
-    ],
-    [
-     545.0,
-     323.1743371481683,
-     1244.0
-    ]
-   ],
-   "by_slot": {
-    "MI_EBS_MER_CeramicCivic": 252,
-    "MI_EBS_MER_CompactFrame": 1554,
-    "MI_EBS_MER_StatusCyan": 192
-   },
-   "lod": 0,
-   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/review/SM_EBS_MER_BLD_002_assembly_maintenance_LOD0.obj",
-   "sha256": "4e8e3f826bfd843124ad54de3abd947c718a4db12a899351f216e1419178df05",
-   "state": "maintenance",
-   "triangles": 1998
-  },
-  {
-   "bounds_cm": [
-    [
-     -166.0,
-     -292.0,
-     0.0
-    ],
-    [
-     166.0,
+     188.0,
      292.0,
      1238.0
     ]
    ],
    "by_slot": {
-    "MI_EBS_MER_CeramicCivic": 252,
+    "MI_EBS_MER_CeramicCivic": 338,
+    "MI_EBS_MER_CompactFrame": 1554,
+    "MI_EBS_MER_StatusCyan": 168
+   },
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/review/SM_EBS_MER_BLD_002_assembly_connected_LOD0.obj",
+   "sha256": "3f7d32309ffc10541e155c213cfb306f07ac8f5c328f161f608d2c8f509b75d0",
+   "state": "connected",
+   "triangles": 2060
+  },
+  {
+   "bounds_cm": [
+    [
+     -188.0,
+     -292.0,
+     -14.722431864335448
+    ],
+    [
+     540.0,
+     292.0,
+     1238.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 338,
+    "MI_EBS_MER_CompactFrame": 1554,
+    "MI_EBS_MER_StatusCyan": 168
+   },
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/review/SM_EBS_MER_BLD_002_assembly_maintenance_LOD0.obj",
+   "sha256": "ee4bab820561a5be8a0f33779b05d29a99c5a5539dbe2384aecf592ca35d718d",
+   "state": "maintenance",
+   "triangles": 2060
+  },
+  {
+   "bounds_cm": [
+    [
+     -186.0,
+     -292.0,
+     0.0
+    ],
+    [
+     186.0,
+     292.0,
+     1238.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 242,
     "MI_EBS_MER_CompactFrame": 770,
     "MI_EBS_MER_StatusCyan": 168
    },
    "lod": 1,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/review/SM_EBS_MER_BLD_002_assembly_connected_LOD1.obj",
-   "sha256": "1dda6805262d21d3904f7ddef326cb58697e9bec72902b4dd6b4f0b10a65d40e",
+   "sha256": "6db99387b3e15944efb8b7c4e37927ffa57c1964ffa384514635c13b77c22c92",
    "state": "connected",
-   "triangles": 1190
+   "triangles": 1180
   }
  ],
- "revision": "ebs-mer-bld-002-blockout-v2",
+ "revision": "ebs-mer-bld-002-blockout-v3",
  "scale_basis": {
   "footprint_cells": [
    2,
@@ -879,9 +881,9 @@
  "stage_boundary": "Editable source geometry with review views; no textures, no Unreal import, no gate acceptance, no owner acceptance.",
  "tools": {
   "builder": "build_power_link.py",
-  "builder_sha256": "2bd910bd02be9c375b59996e7da49f6a0ab326a97b0cb04808f4d3ded4c73c92",
+  "builder_sha256": "7828b60d5b472b26dbc7dba5b6c2e08ada4f95649a40dca01256a7b1af42d0d9",
   "meshkit": "../tools/ebs_meshkit.py",
-  "meshkit_sha256": "47de1f163ada143005ca2d7d51ba7add2e50e5d32f865d05f0f7ec06385b0781",
+  "meshkit_sha256": "745cd5802d58e175f55019450ceab9b0750c5ce72cad04d6c3865b2ad567e652",
   "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
   "python": "3.14.7"
  },
@@ -889,5 +891,14 @@
   "authored": "centimeters",
   "axes": "authored +X forward, +Y right, +Z up; glTF export applies glTF=(X,Z,Y)",
   "glb": "meters (glTF spec); Interchange expected to import at 1 m = 100 cm; verify at import"
+ },
+ "uv_atlas": {
+  "charts": 722,
+  "density_px_per_cm": 0.4287,
+  "path": "bake-manifest.json",
+  "sha256": "39acc14972b79b8c2c90446ab9333add5755179afe75466f8445a186e60db325",
+  "size": 1024,
+  "used_fraction": 0.4601,
+  "uv1": "per-polygon lightmap cells (unchanged)"
  }
 }

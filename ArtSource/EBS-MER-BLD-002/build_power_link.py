@@ -42,7 +42,7 @@ AUTHOR = "Angelis Pseftis"
 PACKAGE_ID = "EBS-PKG-MC-POWER-LINK"
 PRODUCTION_ID = "EBS-MER-BLD-002"
 ASSET = "SM_EBS_MER_BLD_002"
-REVISION = "ebs-mer-bld-002-blockout-v2"  # v2: socket nodes re-encoded for Interchange 5.8.2 (mesh children, SOCKET_<name>, reflection-cancelling basis); geometry unchanged from v1
+REVISION = "ebs-mer-bld-002-blockout-v3"  # v3: plinth 360 (footprint announcement), team band, panel fits the flat face, z-fight fixes, hanging conduit state, unique UV0 atlas + bake manifest; proportions per construction reference unchanged; v2: Interchange socket encoding
 PLANNED_FOLDER = "/Game/Echoes/Production/MER/BLD/EBS_MER_BLD_002/"
 
 # Material slots (provisional max 3 per contract): index order is the slot order.
@@ -53,8 +53,8 @@ STATUS = "MI_EBS_MER_StatusCyan"      # cyan status collars, indicator strips, c
 # --- provisional blockout dimensions (cm) ------------------------------------
 TILE_CM = 200.0
 FOOTPRINT = (2 * TILE_CM, 2 * TILE_CM)
-PLINTH_HALF, PLINTH_CHAMFER, PLINTH_TOP = 160.0, 20.0, 48.0
-STEP_HALF, STEP_CHAMFER, STEP_TOP = 140.0, 16.0, 60.0
+PLINTH_HALF, PLINTH_CHAMFER, PLINTH_TOP = 180.0, 24.0, 48.0
+STEP_HALF, STEP_CHAMFER, STEP_TOP = 156.0, 18.0, 60.0
 RING_OUT_HALF, RING_OUT_CH, RING_IN_HALF, RING_IN_CH, RING_TOP = 118.0, 14.0, 84.0, 10.0, 112.0
 SHAFT_HALF, SHAFT_CHAMFER, SHAFT_TOP = 75.0, 22.0, 1200.0
 # Ceramic shaft rows (bottom, top) and the charcoal grooves between them.
@@ -66,13 +66,13 @@ COLLAR_OUT_HALF, COLLAR_OUT_CH, COLLAR_IN_HALF, COLLAR_IN_CH = 118.0, 30.0, 77.0
 SEGMENT_Z = (902.0, 928.0)
 CAP_HALF, CAP_CH, CAP_TOP = 82.0, 24.0, 1216.0
 SERVICE_CAP = (64.0, 64.0, 22.0)
-PANEL_W, PANEL_H, PANEL_T = 116.0, 210.0, 6.0
+PANEL_W, PANEL_H, PANEL_T = 100.0, 200.0, 6.0   # fits the 106 cm flat face; 2:1 as the construction reference
 # Panel centres from the top (01) to the bottom (04): decision GAP-01.
-PANEL_Z = {"01": 1070.0, "02": 745.0, "03": 495.0, "04": 235.0}
-BAY_Z = (388.0, 852.0)            # maintenance opening spans panels 02 and 03 (GAP-02)
-BAY_HALF_W, BAY_DEPTH = 58.0, 30.0
-COUPLING = (104.0, 50.0, 86.0)    # X, Y (depth), Z
-COUPLING_Y = 175.0                # centre; spans 150..200 on each side, inside the footprint
+PANEL_Z = {"01": 1072.0, "02": 748.0, "03": 498.0, "04": 238.0}
+BAY_Z = (392.0, 854.0)            # maintenance opening spans panels 02 and 03 (GAP-02)
+BAY_HALF_W, BAY_DEPTH = 48.0, 30.0
+COUPLING = (104.0, 48.0, 86.0)    # X, Y (depth), Z
+COUPLING_Y = 174.0                # centre; spans 150..198; ports reach the footprint edge at 200
 PORT_X, PORT_Z, PORT_R = 30.0, 46.0, 14.0
 STUB_LENGTH = 90.0
 RAIL_OFFSET = (SHAFT_HALF - SHAFT_CHAMFER / 2.0) + 4.0 / 1.41421356
@@ -101,12 +101,22 @@ def build_main(lod: int) -> kit.Mesh:
     # Pale ceramic cladding on the plinth flanks and coupling tops: the Compact's civic ceramic over
     # the charcoal frame, so the base separates from charcoal ground at gameplay distance.
     for sx in (-1.0, 1.0):
-        m.box((sx * (PLINTH_HALF + 3.0), 0.0, 26.0), (6.0, 216.0, 30.0), ceramic, "plinth_cladding")
+        m.box((sx * (PLINTH_HALF + 3.0), 0.0, 26.0), (6.0, 240.0, 30.0), ceramic, "plinth_cladding")
     for sy in (-1.0, 1.0):
-        for x in (-92.0, 92.0):
-            m.box((x, sy * (PLINTH_HALF + 3.0), 26.0), (60.0, 6.0, 30.0), ceramic, "plinth_cladding")
+        for x in (-104.0, 104.0):
+            m.box((x, sy * (PLINTH_HALF + 3.0), 26.0), (64.0, 6.0, 30.0), ceramic, "plinth_cladding")
     for sx in (-1.0, 1.0):
-        m.box((sx * (STEP_HALF + 2.0), 0.0, 54.0), (4.0, 120.0, 8.0), ceramic, "plinth_cladding")
+        m.box((sx * (STEP_HALF + 2.0), 0.0, 54.0), (4.0, 132.0, 8.0), ceramic, "plinth_cladding")
+    # Team band: a raised stripe across each cladding plate and a band under the collar. Geometry is
+    # ceramic; ownership colour arrives through the texture's team mask (REL-ART-028 vertex/mask rule),
+    # so a Compact-versus-Compact match separates the two sides without a fourth material slot.
+    if hi:
+        for sx in (-1.0, 1.0):
+            m.box((sx * (PLINTH_HALF + 7.0), 0.0, 26.0), (2.0, 200.0, 8.0), ceramic, "team_band")
+        for sy in (-1.0, 1.0):
+            for x in (-104.0, 104.0):
+                m.box((x, sy * (PLINTH_HALF + 7.0), 26.0), (52.0, 2.0, 8.0), ceramic, "team_band")
+    m.prism(outline_octagon(SHAFT_HALF + 2.0, SHAFT_CHAMFER), COLLAR_Z[0] - 30.0, COLLAR_Z[0] - 18.0, ceramic, "team_band", cap_bottom=False, cap_top=False, skip_edges=(2,))
 
     # Ceramic shaft in four panel rows; the two middle rows open toward +X for the service bay.
     octagon = outline_octagon(SHAFT_HALF, SHAFT_CHAMFER)
@@ -132,12 +142,10 @@ def build_main(lod: int) -> kit.Mesh:
     for y in (-30.0, 0.0, 30.0):
         m.tube((bay_x0 + 12.0, y, BAY_Z[0] + 8.0), (bay_x0 + 12.0, y, BAY_Z[1] - 8.0), 8.0, sides, frame, "service_bay_conduits", caps=hi)
     m.box((bay_x0 + 12.0, 0.0, (BAY_Z[0] + BAY_Z[1]) / 2.0), (14.0, 96.0, 16.0), frame, "service_bay_conduits")
-    if hi:
-        m.box((bay_x0 + 10.0, -34.0, BAY_Z[0] + 40.0), (12.0, 20.0, 20.0), status, "service_bay_conduits")  # bay indicator
 
     # Exposed charcoal load frame: four corner rails on the chamfers.
     for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
-        m.box((sx * RAIL_OFFSET, sy * RAIL_OFFSET, (STEP_TOP + CAP_TOP) / 2.0), (14.0, 26.0, CAP_TOP - STEP_TOP), frame, f"frame_rail_{k + 1:02d}", yaw_deg=45.0 * sx * sy)
+        m.box((sx * RAIL_OFFSET, sy * RAIL_OFFSET, (STEP_TOP + SHAFT_TOP - 2.0) / 2.0), (14.0, 26.0, SHAFT_TOP - 2.0 - STEP_TOP), frame, f"frame_rail_{k + 1:02d}", yaw_deg=45.0 * sx * sy)
 
     # Collar assembly: one ring, eight cyan conductor segments, four gussets (contract: 1 collar assembly).
     outer = outline_octagon(COLLAR_OUT_HALF, COLLAR_OUT_CH)
@@ -159,18 +167,17 @@ def build_main(lod: int) -> kit.Mesh:
     # Cap: flat practical top, small service cap (no pointed crystal: package direction).
     m.prism(outline_octagon(CAP_HALF, CAP_CH), SHAFT_TOP, CAP_TOP, frame, "cap", cap_bottom=False)
     m.box((0.0, 0.0, CAP_TOP + SERVICE_CAP[2] / 2.0), SERVICE_CAP, ceramic, "cap")
-    if hi:
-        m.box((0.0, 0.0, CAP_TOP + SERVICE_CAP[2] + 3.0), (40.0, 8.0, 6.0), status, "cap")  # top status tell-tale
 
     # Base couplings (contract: 2) on the left (-Y) and right (+Y) plinth flanks with two ports each.
     for side, sign in (("left", -1.0), ("right", 1.0)):
         cy = sign * COUPLING_Y
         m.box((0.0, cy, COUPLING[2] / 2.0), COUPLING, frame, f"coupling_{side}", skip=("-Z",))
-        m.box((0.0, cy, COUPLING[2] + 2.0), (92.0, 40.0, 4.0), ceramic, f"coupling_{side}")     # ceramic top plate
+        if hi:
+            m.box((0.0, cy, COUPLING[2] + 2.0), (92.0, 40.0, 4.0), ceramic, f"coupling_{side}")     # ceramic top plate
         m.box((0.0, cy, COUPLING[2] + 5.5), (44.0, 10.0, 3.0), status, f"coupling_{side}")     # indicator strip
         for k, px in enumerate((-PORT_X, PORT_X)):
-            y_in = sign * (COUPLING_Y + COUPLING[1] / 2.0 - 2.0)
-            y_out = sign * (COUPLING_Y + COUPLING[1] / 2.0)
+            y_in = sign * (COUPLING_Y + COUPLING[1] / 2.0 - 6.0)
+            y_out = sign * (COUPLING_Y + COUPLING[1] / 2.0 + 2.0)   # 2 cm proud of the coupling face: no coincident caps
             m.tube((px, y_in, PORT_Z), (px, y_out, PORT_Z), PORT_R + 4.0, sides, frame, f"coupling_{side}_port_{k + 1:02d}", caps=True)
             m.sockets.append(kit.Socket(f"Conduit_{side.capitalize()}_{k + 1:02d}", (px, y_out, PORT_Z), 90.0 * sign,
                                         "physical conduit stub attachment; cosmetic span continues from the stub end"))
@@ -192,7 +199,7 @@ def build_main(lod: int) -> kit.Mesh:
     m.sockets.append(kit.Socket("Bay_Center", (SHAFT_HALF, 0.0, (BAY_Z[0] + BAY_Z[1]) / 2.0), 0.0, "maintenance / damage exposure effects"))
 
     # Simple collision for asset inspection only (runtime presentation disables collision).
-    m.collision.append(kit.CollisionBox("plinth", (0.0, 0.0, STEP_TOP / 2.0), (2 * PLINTH_HALF, 2 * PLINTH_HALF, STEP_TOP)))
+    m.collision.append(kit.CollisionBox("plinth", (0.0, 0.0, STEP_TOP / 2.0), (2 * PLINTH_HALF + 12.0, 2 * PLINTH_HALF + 12.0, STEP_TOP)))
     m.collision.append(kit.CollisionBox("mast", (0.0, 0.0, (STEP_TOP + CAP_TOP + SERVICE_CAP[2]) / 2.0), (2 * SHAFT_HALF + 12.0, 2 * SHAFT_HALF + 12.0, CAP_TOP + SERVICE_CAP[2] - STEP_TOP)))
     return m
 
@@ -211,6 +218,9 @@ def build_panel(lod: int) -> kit.Mesh:
                 m.tube((PANEL_T, sy * (PANEL_W / 2.0 - 12.0), sz * (PANEL_H / 2.0 - 12.0)),
                        (PANEL_T + 1.5, sy * (PANEL_W / 2.0 - 12.0), sz * (PANEL_H / 2.0 - 12.0)), 4.5, 8, frame, "panel_fasteners", caps=True)
         m.box((PANEL_T + 0.5, -PANEL_W / 2.0 + 30.0, PANEL_H / 2.0 - 26.0), (1.0, 36.0, 20.0), frame, "panel_label")
+        for poly in m.polygons:
+            if poly.component == "panel_label" and poly.normal[0] > 0.99:
+                poly.atlas_cells = 4  # numeral strip 01..04; the material instance selects the cell
     m.sockets.append(kit.Socket("Label", (PANEL_T, -PANEL_W / 2.0 + 30.0, PANEL_H / 2.0 - 26.0), 0.0, "numeral decal / non-color grid marking anchor"))
     del status
     return m
@@ -255,8 +265,9 @@ def assemble(lod: int, state: str) -> kit.Mesh:
                         component_prefix=f"panel_{number}_", include_sockets=False)
     for name, s in stub_sockets.items():
         if state == "maintenance" and name == "Conduit_Right_02":
-            # Unplugged stub resting on the ground in front of the coupling.
-            scene.merge(stub, translate=(70.0, 235.0, 12.0), yaw_deg=60.0, component_prefix="conduit_right_02_unplugged_", include_sockets=False)
+            # Unplugged conduit still hangs from its coupling port, drooping to the ground (GAP-01:
+            # the connector remains physically traceable to its coupling).
+            scene.merge(stub, translate=s.position, yaw_deg=s.yaw_deg, pitch_deg=-30.0, component_prefix="conduit_right_02_hanging_", include_sockets=False)
             continue
         scene.merge(stub, translate=s.position, yaw_deg=s.yaw_deg, component_prefix=name.lower() + "_", include_sockets=False)
     return scene
@@ -296,6 +307,23 @@ def main_cli() -> int:
         for builder in (build_main, build_panel, build_stub):
             mesh = builder(lod)
             meshes[(mesh.name, lod)] = mesh
+    # One unique UV0 atlas for the whole asset (main + parts, both LODs); UV1 stays the lightmap cells.
+    atlas = kit.pack_atlas([(mesh, lod) for (name, lod), mesh in sorted(meshes.items(), key=lambda kv: (kv[0][1], kv[0][0]))], size=1024)
+    bake_manifest_path = os.path.join(HERE, "bake-manifest.json")
+    bake_manifest_sha = kit.write_bake_manifest(bake_manifest_path, atlas, extras={
+        "production_asset_id": PRODUCTION_ID, "revision": REVISION,
+        "slot_families": {CERAMIC: "ceramic_civic", FRAME: "compact_metal", STATUS: "status_emissive"},
+        "decal_rules": {
+            "panel_label": "+X face chart is a 4-cell numeral strip: cells read 01, 02, 03, 04 left to right",
+            "panel_plate": "+X face: high-contrast non-colour grid markings (REL-BLD-015.MC.LINK.ASSET) and edge wear",
+            "collar_segment_*": "status mask R = segment index/8 encoded as band; emissive cyan",
+            "coupling_left|coupling_right (status slot)": "status mask G: indicator strips",
+            "conduit_pulse_strip": "status mask G with along-length gradient for the pulse",
+            "service_bay_conduits (status slot)": "status mask G",
+            "cap (status slot)": "status mask G",
+        }})
+    for (name, lod), mesh in sorted(meshes.items(), key=lambda kv: (kv[0][1], kv[0][0])):
+        if True:
             base = os.path.join(export_dir, f"{mesh.name}_LOD{lod}")
             # Collision nodes travel only in the LOD0 file: Interchange's custom-LOD import path would
             # merge UBX meshes into LOD1 geometry instead of treating them as collision.
@@ -369,6 +397,8 @@ def main_cli() -> int:
             "cap_top_z": CAP_TOP + SERVICE_CAP[2], "panel": [PANEL_T, PANEL_W, PANEL_H], "panel_centres_z": PANEL_Z, "service_bay_z": BAY_Z,
             "coupling": COUPLING, "coupling_centre_y": COUPLING_Y, "port_radius": PORT_R, "conduit_stub_length": STUB_LENGTH,
         },
+        "uv_atlas": {"path": "bake-manifest.json", "sha256": bake_manifest_sha, "size": atlas["size"], "density_px_per_cm": atlas["density_px_per_cm"],
+                     "charts": len(atlas["charts"]), "used_fraction": atlas["used_fraction"], "uv1": "per-polygon lightmap cells (unchanged)"},
         "material_slots": [CERAMIC, FRAME, STATUS],
         "material_slot_policy": "3 provisional slots (contract material_slots_provisional_max 3); status slot is a state-masked emissive under the 15% visible-area ceiling",
         "component_inventory": contract_inventory(main0),
