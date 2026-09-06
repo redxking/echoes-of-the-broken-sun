@@ -1,0 +1,157 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "tool": "ebs_texbake.py",
+  "tool_revision": "ebs-texbake-v1",
+  "tool_sha256": "70449e3335dcff2aa04314a5789350e724b537b218686372b63de0977da15be5",
+  "manifest": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/ArtSource/EBS-MER-BLD-002/bake-manifest.json",
+  "manifest_sha256": "39acc14972b79b8c2c90446ab9333add5755179afe75466f8445a186e60db325",
+  "production_asset_id": "EBS-MER-BLD-002",
+  "manifest_revision": "ebs-mer-bld-002-blockout-v3",
+  "kit_revision": "ebs-meshkit-v3",
+  "size": 1024,
+  "maps": {
+    "basecolor": {
+      "file": "T_EBS_MER_BLD_002_BaseColor.png",
+      "bytes": 401072,
+      "sha256": "90aa4d00fd8f034f41ca06025ac3387648cb2c643c082d2bd3a7df8f39183fec",
+      "channels": {
+        "R": {
+          "min": 0,
+          "mean": 132.846,
+          "max": 248
+        },
+        "G": {
+          "min": 0,
+          "mean": 135.615,
+          "max": 248
+        },
+        "B": {
+          "min": 0,
+          "mean": 136.674,
+          "max": 250
+        }
+      }
+    },
+    "normal": {
+      "file": "T_EBS_MER_BLD_002_Normal.png",
+      "bytes": 494958,
+      "sha256": "b84db5fd7a240cd9075bd04d30800b9d06ab1ce387d6fd4bda80fdff2adf8e7f",
+      "channels": {
+        "R": {
+          "min": 14,
+          "mean": 127.793,
+          "max": 239
+        },
+        "G": {
+          "min": 15,
+          "mean": 127.76,
+          "max": 239
+        },
+        "B": {
+          "min": 186,
+          "mean": 249.209,
+          "max": 255
+        }
+      }
+    },
+    "mre": {
+      "file": "T_EBS_MER_BLD_002_MRE.png",
+      "bytes": 336753,
+      "sha256": "69891b5e1237304eeb0a5665ea3112ec025c48cdeb5af01ab19bb71cb5d0fa61",
+      "channels": {
+        "R": {
+          "min": 0,
+          "mean": 104.479,
+          "max": 217
+        },
+        "G": {
+          "min": 77,
+          "mean": 155.427,
+          "max": 255
+        },
+        "B": {
+          "min": 0,
+          "mean": 3.978,
+          "max": 255
+        }
+      }
+    },
+    "statemask": {
+      "file": "T_EBS_MER_BLD_002_StateMask.png",
+      "bytes": 4949,
+      "sha256": "07a818c1f06a5fb0b3c7b1bc1e3b5defae8e31264c0798bffa946f499739e58b",
+      "channels": {
+        "R": {
+          "min": 0,
+          "mean": 1.761,
+          "max": 255
+        },
+        "G": {
+          "min": 0,
+          "mean": 0.65,
+          "max": 255
+        },
+        "B": {
+          "min": 0,
+          "mean": 3.187,
+          "max": 255
+        }
+      }
+    },
+    "debug": {
+      "file": "T_EBS_MER_BLD_002_AtlasDebug.png",
+      "bytes": 29658,
+      "sha256": "39b78dcb615be4f3ff1c4de806b93f567c580d8a791d11d056d8be1cf14836b9",
+      "channels": {
+        "R": {
+          "min": 24,
+          "mean": 80.214,
+          "max": 255
+        },
+        "G": {
+          "min": 24,
+          "mean": 82.556,
+          "max": 255
+        },
+        "B": {
+          "min": 28,
+          "mean": 83.65,
+          "max": 255
+        }
+      }
+    }
+  },
+  "coverage": {
+    "polygon_fraction": 0.495496,
+    "painted_fraction": 0.683048,
+    "polygon_pixels": 519565,
+    "gutter_pixels": 196663,
+    "manifest_used_fraction": 0.4601
+  },
+  "charts_total": 722,
+  "rule_counts": {
+    "bottom_wear": 342,
+    "collar_segment": 48,
+    "conduit_pulse": 6,
+    "coupling_indicator": 12,
+    "family:ceramic_civic": 147,
+    "family:compact_metal": 509,
+    "family:status_emissive": 66,
+    "panel_label_numerals": 1,
+    "panel_plate_edge_wear": 6,
+    "panel_plate_grid": 1,
+    "team_band": 43
+  },
+  "charts_unmatched": [],
+  "charts_skipped": [],
+  "elapsed_seconds": 15.9,
+  "bake_seconds": 15.9,
+  "conventions": {
+    "basecolor": "sRGB-encoded",
+    "normal": "tangent-space, DirectX/Unreal (+G = tilt toward +v_dir, image down); flat = (128,128,255)",
+    "mre": "R metallic, G roughness, B emissive mask (linear)",
+    "statemask": "R collar segment k/8, G pulse/indicator, B team mask (linear)",
+    "noise_space": "world cm projected on chart u_dir/v_dir, period 256 cm"
+  }
+}

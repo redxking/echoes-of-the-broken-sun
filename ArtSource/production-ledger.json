@@ -46,6 +46,12 @@
      "date": "2026-09-06",
      "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/gate-review-blockout-internal.json",
      "result": "Three lenses, two skeptics per finding; upheld findings dispositioned in revision v3 (see README 6.2); the mast-proportion finding was refuted because the blockout follows the contract's construction reference; slenderness versus the painted candidate recorded as an owner question."
+    },
+    {
+     "stage": "BLOCKOUT (texture bake, ebs-mer-bld-002-blockout-v3 atlas, ebs-texbake-v1)",
+     "date": "2026-09-06",
+     "evidence": "ArtSource/EBS-MER-BLD-002/textures/ (bake-report.json) and the package README §4.2/§6.3",
+     "result": "Five 1024^2 maps (BaseColor, Normal DirectX green-down, MRE, StateMask, AtlasDebug) baked from the v3 atlas by ebs_texbake.py, 722/722 charts painted, deterministic, independently verified against the bake manifest (no blocking or major defects; eight minor defects recorded for the ART_ALPHA bake). Not yet: Material instances, in-engine textured capture, 2048^2 stack, gate reviews, owner acceptance."
     }
    ],
    "gates": {
@@ -54,7 +60,7 @@
     "technical": "NOT_EVALUATED"
    },
    "owner_acceptance": "NOT_ACCEPTED",
-   "next": "Texture bake (1024^2 BaseColor/Normal/MRE/StateMask) from the v3 atlas, material-instance definitions against the existing master materials, then state presentation plan review; ART_ALPHA requires those plus owner direction on the slenderness question."
+   "next": "Material-instance definitions against the existing master materials and an in-engine textured capture (needs an exclusive editor run), state presentation plan review; ART_ALPHA requires those, the 2048^2 rebake with the recorded minor bake defects fixed, and owner direction on the slenderness question."
   },
   {
    "package_id": "EBS-PKG-MC-SURVEYOR",

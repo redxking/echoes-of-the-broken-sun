@@ -227,7 +227,24 @@ Checks performed:
 - Monochrome pass: connection state remains readable by luminance alone.
 
 What this evidence is not: no in-engine render, no crowded combat scene with units, no fog, no
-selection halo, no textures, no measured performance, no human recognition test, no owner review.
+selection halo, no textured render (the maps in §4.2 are baked and verified as files, not yet seen on
+the mesh in-engine), no measured performance, no human recognition test, no owner review.
+
+### 6.3 Texture bake verification (files, not in-engine)
+
+`textures/` holds the five 1024² maps of §4.2 with `bake-report.json` (722 charts painted, none unmatched
+or skipped, per-map SHA-256 and channel statistics; deterministic re-bake). An independent verification
+pass decoded the PNGs against the bake manifest and the recipe spec: every chart centroid carries its
+family's paint, channel packing and normal-map handedness are as specified, and no blocking or major
+defect was found. Minor defects recorded for the ART_ALPHA bake: gutter dilation measured from edge
+lines (4–5 px outside oblique corners, bound is 3 px); `polygon_fraction` in the report over-counts
+half-pixel edge texels; the four panel-plate rim charts bake ~55% darker than the plate face because
+bevel, recipe wear and edge wear stack on a 6 cm face; per-chart tone hashing steps the team band and
+plate faces by ±0.04; the conduit pulse gradient follows image u, so it runs the opposite way on the
+−Y/bottom strip faces; normal-map bevels are steeper than the recipe reference at 2.33 cm/texel; charts
+padded to the 4 px minimum sample world positions off the face; numeral glyphs are 8 px in a 9 px cell
+(legible, at the limit of 0.43 px/cm). The contract's 2048² stack is an ART_ALPHA deliverable; 1024² is
+the blockout-stage proxy at the same atlas.
 
 ### 6.2 Internal gate review (three lenses, adversarial refutation)
 
