@@ -1,0 +1,205 @@
+---
+title: EBS-MER-BLD-002 Power Link — production source
+author: Angelis Pseftis
+creator: Angelis Pseftis
+created: 2026-09-06
+package: EBS-PKG-MC-POWER-LINK
+production_asset_id: EBS-MER-BLD-002
+production_maturity: BLOCKOUT
+canon_status: CANDIDATE (delegated design selection; not owner acceptance)
+status: Isolated production source; no Unreal integration authorization
+---
+
+# EBS-MER-BLD-002 Power Link — production source
+
+This folder is the single authoritative source record for the Power Link production asset. It is
+edited in place; Git retains history. Everything here is bounded by the shared
+[agent contract](../../AGENTS.md), the [authority map](../../Docs/README.md), and the frozen
+preparation records under [Docs/VisualAssetPipeline](../../Docs/VisualAssetPipeline/README.md).
+Maturity for the production lane is recorded in [../production-ledger.json](../production-ledger.json);
+the frozen contract in `motion/gap-decisions.json` and the concept register are not modified.
+
+## 1. Source contract (what this asset is bound to)
+
+| Binding | Value | Identity |
+|---|---|---|
+| Package contract | `production_policy[EBS-PKG-MC-POWER-LINK]`, gaps GAP-01/02/03 | [gap-decisions.json](../../Docs/VisualAssetPipeline/motion/gap-decisions.json) |
+| Reserved production ID | `EBS-MER-BLD-002`, planned `SM_EBS_MER_BLD_002` under `/Game/Echoes/Production/MER/BLD/EBS_MER_BLD_002/` | contract `reserved_production_asset_id`, `planned_primary_asset_name`, `planned_unreal_folder` |
+| Concept inputs | `EBS-CON-MER-BLD-002` (original sheet, REWORK), `EBS-CON-MER-BLD-006` (annotated study, REWORK) | [concept-register.json](../../Docs/VisualAssetPipeline/concept-register.json) |
+| Selected candidate | `power-link-maintenance-complete.png` | sha256 `b3816b9e…83bf20` (generated image, `CANDIDATE_FOR_OWNER_REVIEW`; rights: project-generated under the owner's authorization, see its `generation-record.json`) |
+| Construction reference | `motion/construction/power-link.svg`, `component-geometry.json` | sha256 `c8abc04a…796bfc`, `fcec87e7…3875554c` (dimensionless topology only) |
+| Canon row | DevelopmentBible.md line 514, `SPEC-BLD-015.MC.LINK` | file sha256 `e237a4e1…3cfe8c` |
+| Book | paragraphs 135 and 169 (numbered ceramic skins, held conduit, load collar; relay collar click) | `book-source.docx` sha256 `994e7df5…17ef83` |
+| Gameplay record | `Content/Data/Source/buildings.json` `mc_power_link`: 2×2 cells, 450 HP, 500 cm sight, 100 ticks, logistics 6 | sha256 `aba1b64b…6ed26e` |
+| Requirements | `SPEC-STR-002`, `SPEC-BLD-015.MC.LINK`, `REL-BLD-015.MC.LINK.ASSET` (LOD0 ≤3,500 / LOD1 ≤1,200 tris, 1024² PBR, non-color grid markings, static, degradation below 30% HP), `REL-ART-028`, `REL-ART-004` (≤15% emissive area), `SPEC-VISD-003`, `SPEC-ART-001..004`, `SPEC-VISD-008`, `SPEC-CMB-009`/`REL-BLD-014` (destruction clearance, 200-tick cosmetic debris) | Requirements.md at worktree HEAD |
+| Unreal references | EBS-UE-001/002/003/007/008/011/012/014/015/016/029/033/039/040 | [unreal-references.json](../../Docs/VisualAssetPipeline/unreal-references.json) |
+
+Authority conflicts touching this package: none of the three recorded conflicts (Future Well,
+Resonant, Phase Anchor) involve the Power Link. The six prepared master amendments remain unapplied;
+`DESTRUCTION-CLEARANCE` and `MERIDIAN-BUDGETS` describe the future direction this source already
+respects (immediate authoritative clearance; 8,000/3,500 global ceiling with the tighter 3,500/1,200
+card applying here).
+
+## 2. Contextual brief (`SPEC-VISD-008`)
+
+**CONTEXT.** The Power Link is the Compact's supply node: it extends the powered build area, Matter
+drop-off coverage and Logistics along a chain of pylons from the Anchor (`SPEC-STR-002`, Bible
+"Power links and supply nodes make production, repair, sensors and long-range support reliable within
+the network"). It is maintained inheritance: a pylon that a crew who never met its builder can strip
+to numbered panels, loosen at the load collar and re-plug at the base (book ¶135). It belongs beside
+every Compact base in M01–M15 and skirmish; what must be absent is anything that reads as a weapon,
+a reactor, a trophy crystal or an unmaintainable monolith. No lore, capability or consequence beyond
+the master is introduced here; network radius, connection state and health remain simulation-owned.
+
+**DETAIL.** Large scale: a slim vertical column (about 3.9× its base width) on a low charcoal plinth,
+one conductor collar at roughly three-quarters height, two base couplings on the left and right flanks
+with paired conduits leaving the footprint. This silhouette is what reads at 3,800 uu / 45–60° tilt.
+Medium: four numbered ceramic access panels on the service face, four exposed corner rails, horizontal
+seams between panel rows, the foundation ring, pale ceramic cladding on the plinth flanks, the rear
+redundant conduit pair with clamps. Fine (close camera only): fastener bosses, numeral label plates,
+port collars, indicator strips, the internal conduit bundle behind panels 02/03. Material logic:
+`ceramic_civic` skins over a charcoal load frame (Bible "How they build"); wear belongs at panel
+edges, the collar and coupling ports where hands and loads have been.
+
+**ACTION.** Visible states: construction, operational-connected, operational-disconnected,
+interrupted/recovery, damaged (a collar segment dark, a conduit hanging, panels off), critical
+degradation (<30% HP), destruction (engineered collapse; authoritative occupancy clears immediately;
+cosmetic debris ≤200 ticks), restore. Motion: none of the primary mass moves; connection gain/loss
+drives collar and conduit pulse; panels and conduit stubs are separate parts so damage/maintenance
+can remove or hang them without deforming the mast. Sound: the Bible's thin electrical sustain only
+while connected, at `Collar_Center`; silence otherwise is intentional. Accessibility: connection
+state is carried by luminance (lit vs unlit collar segments, verified in the monochrome render) and
+by geometry (hanging conduit, missing panels), never by hue alone; reduced motion holds the pulse
+steady. Boundaries: the cosmetic conduit span, debris and effects never own collision, navigation,
+selection or network authority (GAP-03).
+
+**REVIEW.** Internal review of these fields and their traceability was performed against the sources
+in §1 before geometry was authored (this document, 2026-09-06). Open items are in §8.
+
+## 3. Scale basis
+
+| Item | Value | Basis |
+|---|---|---|
+| Footprint | 2×2 cells = **400 × 400 cm** | `buildings.json` cells; `TileWorldSize = 200.0f` in `Source/EchoesOfTheBrokenSun/Public/EchoesSimulationSubsystem.h`, `kPresentationTileWorldUnits = 200` |
+| Units / axes / pivot | centimeters; +X forward (service face), +Y right, +Z up; pivot at ground-contact centre | contract `import_policy` |
+| Height | **1,244 cm — PROVISIONAL BLOCKOUT ESTIMATE** | No authority states a height. The candidate's ~3.9:1 column-to-base proportion applied to a 320 cm plinth. ComponentDesignCatalog's "18-metre hexagonal pylon" is a subordinate proposal, not adopted. |
+| Noted discrepancy | `SPEC-SKM-011` says "64×64 tiles at 100 cm simulation scale" while presentation places tiles at 200 cm | The mesh follows the presentation tile constant the runtime uses to place structures; recorded, not resolved here. |
+
+## 4. Geometry (revision `ebs-mer-bld-002-blockout-v1`)
+
+Deterministic generator: [build_power_link.py](build_power_link.py) on [../tools/ebs_meshkit.py](../tools/ebs_meshkit.py)
+(Python 3 standard library; no DCC application exists on this workstation, so the generator is the
+editable native source). Exact dimensions, counts, hashes and bounds are in
+[build-manifest.json](build-manifest.json); regeneration under an unchanged revision is byte-identical
+(`--check`).
+
+| Contract component | Built | Where |
+|---|---|---|
+| 4 numbered panels (01 top → 04 bottom) | 4 | part mesh `SM_EBS_MER_BLD_002_Panel` at sockets `Panel_01..04` on the +X service face |
+| 1 collar assembly | 1 | octagonal ring at z 880–950 with 8 cyan conductor segments and 4 gussets |
+| 2 base couplings | 2 | `coupling_left` (−Y) and `coupling_right` (+Y), two ports each, ceramic top plate, indicator strip |
+| 4 conduits | 4 | part mesh `SM_EBS_MER_BLD_002_ConduitStub` at sockets `Conduit_Left_01/02`, `Conduit_Right_01/02`; 90 cm physical stubs, `Span_End` socket for the cosmetic span |
+| Maintenance opening (GAP-02) | yes | service bay behind panels 02/03 with an internal three-conduit bundle |
+| Canon extras | rear redundant conduit pair with clamps and junction; four exposed corner rails; foundation ring; plinth cladding | Bible "conduits run in redundant pairs on the outside of walls", `REL-ART-028` load frames |
+
+| Mesh | LOD0 tris | LOD1 tris | Slots |
+|---|---|---|---|
+| `SM_EBS_MER_BLD_002` (main) | 1,118 | 838 | ceramic / frame / status |
+| `SM_EBS_MER_BLD_002_Panel` (×4) | 136 | 12 | ceramic / frame |
+| `SM_EBS_MER_BLD_002_ConduitStub` (×4) | 84 | 76 | frame / status |
+| **Assembled** | **1,998 ≤ 3,500** | **1,190 ≤ 1,200** | 3 provisional slots |
+
+Material slots: `MI_EBS_MER_CeramicCivic` (existing `T_EchoesCeramicCivic` family),
+`MI_EBS_MER_CompactFrame` (charcoal machined metal), `MI_EBS_MER_StatusCyan` (state-masked emissive
+for collar segments, indicator strips, conduit pulse strips, bay indicator, cap tell-tale).
+UV0 is a world-scale planar projection (one tile = 256 cm, 4 texels/cm at 1024²); UV1 is a
+non-overlapping per-polygon cell layout reserved for lightmaps. Simple collision: two `UBX_` boxes
+(plinth, mast) for asset inspection only; the runtime presentation component disables collision.
+
+Sockets on the main mesh: `Panel_01..04`, `Conduit_Left_01/02` (yaw −90°), `Conduit_Right_01/02`
+(yaw +90°), `Collar_Center`, `Cap_Top`, `Bay_Center`. Socket names are the contract's selected
+adapter names; they become real Unreal sockets only at import.
+
+Export recipe: OBJ in the Unreal frame (renderer container); GLB in the glTF frame using the inverse
+of the installed 5.8.2 Interchange conversion `UE = (X_g, Z_g, Y_g)` (so `glTF = (X, Z, Y)/100`,
+metres), triangle winding re-derived per triangle from the stored outward normal, `SOCKET_<mesh>_<name>`
+and `UBX_<mesh>_NN` child nodes for Interchange. LOD1 is a separate GLB combined at import.
+
+## 5. States and required tracks (static structure; `REL-BLD-015.MC.LINK.ASSET` .ANIM_RIG = NOT APPLICABLE)
+
+| Track (contract) | Presentation plan | Authority read |
+|---|---|---|
+| construction | staged reveal: plinth → frame rails → shaft rows → collar → panels, driven by authoritative progress; construction frame is the charcoal frame slot | `SPEC-BLD-004` progress |
+| operational / connection_gain / connection_loss | collar segments, coupling strips and conduit pulse strips lit (connected) or unlit (disconnected) within one tick of the authoritative change | network connection state |
+| interrupted / recovery | reveal pauses without decay; resumes from current progress | construction pause state |
+| damage | below thresholds: a collar segment dark, one conduit stub hangs at its coupling socket, panels 02/03 removed exposing the bay | health bands |
+| destruction | authoritative removal and footprint clearance immediately; cosmetic collapse debris ≤200 ticks | `SPEC-CMB-009`, `REL-BLD-014` (amendment `DESTRUCTION-CLEARANCE` pending) |
+| restore | rebuild from current state; no one-shot replay; audio sustain only if connected | replay/load |
+
+None of these are implemented yet; they are the plan the part/socket split and the status slot were
+authored for. The candidate maintenance state is already representable (see renders).
+
+## 6. Review evidence (blockout stage)
+
+Evidence root: `/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/`
+(`receipt.json` inventories every file with SHA-256; `review/` holds the assembled OBJs;
+`scenes/` the renderer inputs; `renders/<state>/` the PNGs and `render-manifest.json`).
+
+Rendered with [../tools/ebs_render.py](../tools/ebs_render.py) (pure Python, Unreal camera
+conventions): orthographic front/right/rear/left/top with feature edges, and perspective views at the
+game's spring-arm settings (`EchoesRTSCameraPawn.cpp`: 3,800 uu, FOV 55°, pitch −48° default and −60°
+gameplay, yaw −45°), plus far zoom (7,600 uu), a reverse angle, a monochrome pass, a four-pylon crowd
+scene and the maintenance and disconnected states.
+
+Checks performed:
+
+- Component counts, panel order, bay span, socket pairing/orientation, budgets, footprint containment,
+  pivot, slot count, glTF axis rule, glTF winding, OBJ frame, deterministic bytes: 15 tests in
+  [test_power_link_build.py](test_power_link_build.py), all passing.
+- Emissive pixel share of the mesh area (status colour over non-background pixels): 0.17% default
+  tactical, 0.15% gameplay tactical, 0.11% far, 1.7% front orthographic — under the 15% ceiling with
+  wide margin (`renders/area_check/emissive-area.json`).
+- Visual inspection of every render by the author: silhouette, four panel rows, lit collar, couplings
+  and stubs read at both tactical pitches; the base separates from charcoal ground only after the
+  ceramic cladding was added (first pass failed that check and was corrected in the same revision).
+- Monochrome pass: connection state remains readable by luminance alone.
+
+What this evidence is not: no in-engine render, no crowded combat scene with units, no fog, no
+selection halo, no textures, no measured performance, no human recognition test, no owner review.
+
+## 7. Reproduction
+
+```sh
+cd "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/ArtSource/EBS-MER-BLD-002"
+python3 build_power_link.py --evidence-dir "<evidence root>/EBS-MER-BLD-002"
+python3 build_power_link.py --evidence-dir "<evidence root>/EBS-MER-BLD-002" --check
+python3 test_power_link_build.py
+python3 ../tools/ebs_render.py --scene "<evidence root>/EBS-MER-BLD-002/scenes/connected.json" --out "<evidence root>/EBS-MER-BLD-002/renders/connected"
+```
+
+## 8. Defects, decisions and remaining work
+
+Decisions made under the owner's delegation (routine implementation choices):
+
+1. Service face on +X (contract "+X forward"). The default RTS camera (yaw −45°) sees the −X and +Y
+   faces, so at default placement the numbered panels face away; the collar, couplings and conduits
+   carry the identity from every side. The integration task may spawn Power Links with yaw 180° or
+   rely on `SPEC-BLD-001` rotation. Recorded, not changed here.
+2. Height 1,244 cm follows the candidate proportion. A compact variant is not built; occlusion of units
+   behind the mast is a Gameplay Gate question to answer with in-engine crowd evidence.
+3. Panels and conduit stubs are separate part meshes (precedent: the M01 Surveyor/Bulwark articulation
+   parts in `Scripts/generate_art_assets.py`) so damage/maintenance states move geometry rather than
+   faking it with lights.
+4. The isolated source is a deterministic generator, not a DCC file, because no DCC application is
+   installed; the glTF export is the exchange format for Interchange.
+
+Open items:
+
+- LOD1 sits at 1,190 of 1,200 triangles; any LOD1 addition must remove something else.
+- Textures (1024² base colour / normal / packed MR plus the state and numeral mask), material
+  instances against the existing master materials, and the non-colour grid markings are the next
+  stage (ART_ALPHA prerequisites).
+- Unreal import and inspection (sockets, collision, LOD1 attach, bounds, slot names, reimport
+  behaviour) require an exclusive editor run; see the evidence root for the import receipt when it
+  exists.
+- Gameplay proxy integration, three-gate review, and owner acceptance remain outside this lane.

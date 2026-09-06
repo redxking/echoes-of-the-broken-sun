@@ -1,0 +1,66 @@
+{
+ "author": "Angelis Pseftis",
+ "creator": "Angelis Pseftis",
+ "schema_version": 1,
+ "scope": "Production-maturity ledger for the isolated asset-production lane (owner handoff 2026-09-06). Records executed stages and their evidence per reserved production ID. It does not change canon status, gameplay data, the frozen preparation records, or owner acceptance.",
+ "authority": {
+  "contracts": "Docs/VisualAssetPipeline/motion/gap-decisions.json#/production_policy (frozen; its validator forbids in-place maturity promotion)",
+  "register": "Docs/VisualAssetPipeline/concept-register.json (frozen snapshot bound by review-selections.json and reference-packages.json; concept maturity there stays NOT_STARTED until a coordinated documentation update re-binds those snapshots)",
+  "requirements": "Docs/Requirements.md (SPEC-STR-002, SPEC-BLD-015.MC.LINK, REL-BLD-015.MC.LINK.ASSET, REL-ART-028, SPEC-VISD-003, SPEC-VISD-008, SPEC-ART-001..004)",
+  "canon": "Docs/Archive/DevelopmentBible.md (Compact roster row, line 514)",
+  "maturity_vocabulary": "NOT_STARTED -> REFERENCE_READY -> BLOCKOUT -> GAMEPLAY_PROXY -> ART_ALPHA -> ART_BETA -> PRODUCTION -> UE_INTEGRATED -> VERIFIED",
+  "acceptance": "Only Angelis Pseftis records owner acceptance. Gate results below are internal QA."
+ },
+ "packages": [
+  {
+   "package_id": "EBS-PKG-MC-POWER-LINK",
+   "production_asset_id": "EBS-MER-BLD-002",
+   "subject": "Power Link",
+   "asset_name": "SM_EBS_MER_BLD_002",
+   "planned_unreal_folder": "/Game/Echoes/Production/MER/BLD/EBS_MER_BLD_002/",
+   "canon_status": "CANDIDATE (unchanged; delegated design selection is not owner acceptance)",
+   "production_maturity": "BLOCKOUT",
+   "source_root": "ArtSource/EBS-MER-BLD-002/",
+   "authoritative_document": "ArtSource/EBS-MER-BLD-002/README.md",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT",
+     "date": "2026-09-06",
+     "revision": "ebs-mer-bld-002-blockout-v1",
+     "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/",
+     "receipt": "receipt.json in that root (file inventory with SHA-256, source identity, environment, commands)",
+     "what_exists": "Deterministic editable source geometry (Python builder + mesh kit), glTF/OBJ exports for LOD0/LOD1 of the main mesh and two part meshes, sockets and simple collision boxes, review renders of front/side/rear/left/top and Unreal-camera tactical views for connected, disconnected, maintenance, LOD1 and crowd states, structural tests.",
+     "what_does_not_exist": "Textures, materials, Unreal import, gameplay-proxy integration, any gate pass, owner acceptance."
+    }
+   ],
+   "gates": {"art": "NOT_EVALUATED", "gameplay": "NOT_EVALUATED", "technical": "NOT_EVALUATED"},
+   "owner_acceptance": "NOT_ACCEPTED"
+  },
+  {"package_id": "EBS-PKG-MC-SURVEYOR", "production_asset_id": "EBS-MER-UNT-001", "subject": "Surveyor", "production_maturity": "NOT_STARTED", "next": "rig/animation pilot after the Power Link pilot"},
+  {"package_id": "EBS-PKG-EBS-FAM-FWL-001", "production_asset_id": "EBS-FWL-SYS-001", "subject": "Future Well family", "production_maturity": "NOT_STARTED", "next": "state-family pilot after the Surveyor pilot"},
+  {"package_id": "EBS-PKG-MC-LANCER", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-MC-RELAY-SKIFF", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-MC-BULWARK-TEAM", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-KA-TENDER", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-MC-ANCHOR", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-MC-ARRAY-FOUNDRY", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-MC-AEGIS-POST", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-KA-MEMORY-HEARTH", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-KA-WAYSTONE", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-KA-RIFTSTALKER", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-KA-CAIRNBACK", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-KA-RESONANT", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-KA-GROWTH-BASIN", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-KA-LISTENING-SPINE", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-HC-CONCORDANCE", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-HC-INTERVAL-LOOM", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-HC-CHORUS-LOOM", "production_maturity": "NOT_STARTED"},
+  {"package_id": "EBS-PKG-HC-PHASE-ANCHOR", "production_maturity": "NOT_STARTED"}
+ ],
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "review_renderer": "ArtSource/tools/ebs_render.py",
+  "evidence_receipt": "ArtSource/tools/make_evidence_receipt.py",
+  "dependencies": "Python 3 standard library only; no DCC application is installed on the workstation (Blender absent), which is why editable source is a deterministic generator rather than a native DCC file."
+ }
+}

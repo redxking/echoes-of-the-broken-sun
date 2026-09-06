@@ -1,0 +1,862 @@
+{
+ "acceptance": {
+  "art_gate": "NOT_EVALUATED",
+  "gameplay_gate": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical_gate": "NOT_EVALUATED"
+ },
+ "asset_name": "SM_EBS_MER_BLD_002",
+ "author": "Angelis Pseftis",
+ "budgets": {
+  "lod0_assembled_triangles": 1998,
+  "lod0_cap": 3500,
+  "lod0_within_cap": true,
+  "lod1_assembled_triangles": 1190,
+  "lod1_cap": 1200,
+  "lod1_within_cap": true
+ },
+ "component_inventory": {
+  "base_couplings": {
+   "built": 2,
+   "contract": 2
+  },
+  "collar_assembly": {
+   "built": 1,
+   "contract": 1,
+   "segments": 8
+  },
+  "conduits": {
+   "built": 4,
+   "contract": 4,
+   "evidence": "four Conduit_* sockets, one stub part mesh instanced four times; two ports per coupling"
+  },
+  "frame_rails": {
+   "built": 4
+  },
+  "numbered_panels": {
+   "built": 4,
+   "contract": 4,
+   "evidence": "four Panel_01..Panel_04 sockets on the main mesh, one panel part mesh instanced four times"
+  },
+  "rear_paired_conduits": {
+   "built": 2,
+   "canon": "conduits run in redundant pairs on the outside of walls"
+  }
+ },
+ "creator": "Angelis Pseftis",
+ "dimensions_cm_provisional": {
+  "cap_top_z": 1238.0,
+  "collar_outer_width": 236.0,
+  "collar_z": [
+   880.0,
+   950.0
+  ],
+  "conduit_stub_length": 90.0,
+  "coupling": [
+   104.0,
+   50.0,
+   86.0
+  ],
+  "coupling_centre_y": 175.0,
+  "foundation_ring": [
+   236.0,
+   236.0,
+   52.0
+  ],
+  "panel": [
+   6.0,
+   116.0,
+   210.0
+  ],
+  "panel_centres_z": {
+   "01": 1070.0,
+   "02": 745.0,
+   "03": 495.0,
+   "04": 235.0
+  },
+  "plinth": [
+   320.0,
+   320.0,
+   48.0
+  ],
+  "plinth_step_top_z": 60.0,
+  "port_radius": 14.0,
+  "service_bay_z": [
+   388.0,
+   852.0
+  ],
+  "shaft": [
+   150.0,
+   150.0,
+   1088.0
+  ],
+  "shaft_chamfer": 22.0
+ },
+ "footprint_check": {
+  "conduit_stub_reach_beyond_footprint_cm": 92.0,
+  "footprint_cm": [
+   400.0,
+   400.0
+  ],
+  "ground_contact_z_cm": 0.0,
+  "height_cm": 1244.0,
+  "main_mesh_within_footprint": true,
+  "main_mesh_xy_extent_cm": [
+   332.0,
+   400.0
+  ],
+  "note": "Only the cosmetic conduit stubs (and any later span component) leave the 2x2 footprint; they carry no collision, navigation or network authority (GAP-03)."
+ },
+ "front": "+X face carries the numbered panels and service bay; couplings on -Y (Left) and +Y (Right)",
+ "kit_revision": "ebs-meshkit-v1",
+ "material_slot_policy": "3 provisional slots (contract material_slots_provisional_max 3); status slot is a state-masked emissive under the 15% visible-area ceiling",
+ "material_slots": [
+  "MI_EBS_MER_CeramicCivic",
+  "MI_EBS_MER_CompactFrame",
+  "MI_EBS_MER_StatusCyan"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -166.0,
+     -200.0,
+     0.0
+    ],
+    [
+     166.0,
+     200.0,
+     1244.0
+    ]
+   ],
+   "by_component": {
+    "cap": 46,
+    "collar_assembly": 112,
+    "collar_segment_01": 12,
+    "collar_segment_02": 12,
+    "collar_segment_03": 12,
+    "collar_segment_04": 12,
+    "collar_segment_05": 12,
+    "collar_segment_06": 12,
+    "collar_segment_07": 12,
+    "collar_segment_08": 12,
+    "coupling_left": 34,
+    "coupling_left_port_01": 28,
+    "coupling_left_port_02": 28,
+    "coupling_right": 34,
+    "coupling_right_port_01": 28,
+    "coupling_right_port_02": 28,
+    "foundation_ring": 112,
+    "frame_rail_01": 12,
+    "frame_rail_02": 12,
+    "frame_rail_03": 12,
+    "frame_rail_04": 12,
+    "plinth": 22,
+    "plinth_cladding": 96,
+    "plinth_step": 22,
+    "rear_conduit_01": 52,
+    "rear_conduit_02": 52,
+    "rear_junction": 12,
+    "service_bay": 58,
+    "service_bay_conduits": 108,
+    "shaft_groove_01": 16,
+    "shaft_groove_02": 14,
+    "shaft_row_01": 22,
+    "shaft_row_02": 14,
+    "shaft_row_03": 14,
+    "shaft_row_04": 22
+   },
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 204,
+    "MI_EBS_MER_CompactFrame": 770,
+    "MI_EBS_MER_StatusCyan": 144
+   },
+   "collision_boxes": [
+    {
+     "center_cm": [
+      0.0,
+      0.0,
+      30.0
+     ],
+     "name": "plinth",
+     "size_cm": [
+      320.0,
+      320.0,
+      60.0
+     ]
+    },
+    {
+     "center_cm": [
+      0.0,
+      0.0,
+      649.0
+     ],
+     "name": "mast",
+     "size_cm": [
+      162.0,
+      162.0,
+      1178.0
+     ]
+    }
+   ],
+   "lod": 0,
+   "mesh": "SM_EBS_MER_BLD_002",
+   "path": "export/SM_EBS_MER_BLD_002_LOD0.glb",
+   "sha256": "fafe0ead90748c58b8e8bb7417d01b0341247f2877c525ffa7a624d0ab4296b1",
+   "sockets": [
+    {
+     "name": "Conduit_Left_01",
+     "position_cm": [
+      -30.0,
+      -200.0,
+      46.0
+     ],
+     "purpose": "physical conduit stub attachment; cosmetic span continues from the stub end",
+     "yaw_deg": -90.0
+    },
+    {
+     "name": "Conduit_Left_02",
+     "position_cm": [
+      30.0,
+      -200.0,
+      46.0
+     ],
+     "purpose": "physical conduit stub attachment; cosmetic span continues from the stub end",
+     "yaw_deg": -90.0
+    },
+    {
+     "name": "Conduit_Right_01",
+     "position_cm": [
+      -30.0,
+      200.0,
+      46.0
+     ],
+     "purpose": "physical conduit stub attachment; cosmetic span continues from the stub end",
+     "yaw_deg": 90.0
+    },
+    {
+     "name": "Conduit_Right_02",
+     "position_cm": [
+      30.0,
+      200.0,
+      46.0
+     ],
+     "purpose": "physical conduit stub attachment; cosmetic span continues from the stub end",
+     "yaw_deg": 90.0
+    },
+    {
+     "name": "Panel_01",
+     "position_cm": [
+      75.0,
+      0.0,
+      1070.0
+     ],
+     "purpose": "removable numbered ceramic access panel 01; plate extends +X",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Panel_02",
+     "position_cm": [
+      75.0,
+      0.0,
+      745.0
+     ],
+     "purpose": "removable numbered ceramic access panel 02; plate extends +X",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Panel_03",
+     "position_cm": [
+      75.0,
+      0.0,
+      495.0
+     ],
+     "purpose": "removable numbered ceramic access panel 03; plate extends +X",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Panel_04",
+     "position_cm": [
+      75.0,
+      0.0,
+      235.0
+     ],
+     "purpose": "removable numbered ceramic access panel 04; plate extends +X",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Collar_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      915.0
+     ],
+     "purpose": "connection state effects and the thin electrical sustain audio source",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Cap_Top",
+     "position_cm": [
+      0.0,
+      0.0,
+      1238.0
+     ],
+     "purpose": "damage smoke / critical degradation effects",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Bay_Center",
+     "position_cm": [
+      75.0,
+      0.0,
+      620.0
+     ],
+     "purpose": "maintenance / damage exposure effects",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 1118
+  },
+  {
+   "lod": 0,
+   "mesh": "SM_EBS_MER_BLD_002",
+   "path": "export/SM_EBS_MER_BLD_002_LOD0.obj",
+   "sha256": "e54841d1cc9f18471ace5738f6dc26259db9a68a69f2e7bb463256dff567afc6"
+  },
+  {
+   "bounds_cm": [
+    [
+     0.0,
+     -58.0,
+     -105.0
+    ],
+    [
+     7.5,
+     58.0,
+     105.0
+    ]
+   ],
+   "by_component": {
+    "panel_fasteners": 112,
+    "panel_label": 12,
+    "panel_plate": 12
+   },
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 12,
+    "MI_EBS_MER_CompactFrame": 124
+   },
+   "collision_boxes": [],
+   "lod": 0,
+   "mesh": "SM_EBS_MER_BLD_002_Panel",
+   "path": "export/SM_EBS_MER_BLD_002_Panel_LOD0.glb",
+   "sha256": "612bfcf8018eb58add3bc9ea766c077903055824fe8cbed1c74cef5cf2a1d364",
+   "sockets": [
+    {
+     "name": "Label",
+     "position_cm": [
+      6.0,
+      -28.0,
+      79.0
+     ],
+     "purpose": "numeral decal / non-color grid marking anchor",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 136
+  },
+  {
+   "lod": 0,
+   "mesh": "SM_EBS_MER_BLD_002_Panel",
+   "path": "export/SM_EBS_MER_BLD_002_Panel_LOD0.obj",
+   "sha256": "5e2bb7d0c9a14020bd6a471270492019658f8f4fee5afa7e50687300b6c98dfa"
+  },
+  {
+   "bounds_cm": [
+    [
+     0.0,
+     -17.0,
+     -17.0
+    ],
+    [
+     92.0,
+     17.0,
+     17.0
+    ]
+   ],
+   "by_component": {
+    "conduit_clamp_ring": 28,
+    "conduit_end_nut": 28,
+    "conduit_jacket": 16,
+    "conduit_pulse_strip": 12
+   },
+   "by_slot": {
+    "MI_EBS_MER_CompactFrame": 72,
+    "MI_EBS_MER_StatusCyan": 12
+   },
+   "collision_boxes": [],
+   "lod": 0,
+   "mesh": "SM_EBS_MER_BLD_002_ConduitStub",
+   "path": "export/SM_EBS_MER_BLD_002_ConduitStub_LOD0.glb",
+   "sha256": "680289b7b19cda56d1d37ae32cac0bb4319d8f526c202055f7510275e748ce60",
+   "sockets": [
+    {
+     "name": "Span_End",
+     "position_cm": [
+      92.0,
+      0.0,
+      0.0
+     ],
+     "purpose": "cosmetic span component start; carries no grid radius, collision or network authority",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 84
+  },
+  {
+   "lod": 0,
+   "mesh": "SM_EBS_MER_BLD_002_ConduitStub",
+   "path": "export/SM_EBS_MER_BLD_002_ConduitStub_LOD0.obj",
+   "sha256": "789b0d48eb25c3c0d383b15e441947df7fa611c6129d63ec4374c3ebb202ebf5"
+  },
+  {
+   "bounds_cm": [
+    [
+     -166.0,
+     -200.0,
+     0.0
+    ],
+    [
+     166.0,
+     200.0,
+     1238.0
+    ]
+   ],
+   "by_component": {
+    "cap": 34,
+    "collar_assembly": 112,
+    "collar_segment_01": 12,
+    "collar_segment_02": 12,
+    "collar_segment_03": 12,
+    "collar_segment_04": 12,
+    "collar_segment_05": 12,
+    "collar_segment_06": 12,
+    "collar_segment_07": 12,
+    "collar_segment_08": 12,
+    "coupling_left": 34,
+    "coupling_left_port_01": 20,
+    "coupling_left_port_02": 20,
+    "coupling_right": 34,
+    "coupling_right_port_01": 20,
+    "coupling_right_port_02": 20,
+    "foundation_ring": 64,
+    "frame_rail_01": 12,
+    "frame_rail_02": 12,
+    "frame_rail_03": 12,
+    "frame_rail_04": 12,
+    "plinth": 22,
+    "plinth_cladding": 96,
+    "plinth_step": 22,
+    "rear_conduit_01": 12,
+    "rear_conduit_02": 12,
+    "rear_junction": 12,
+    "service_bay": 58,
+    "service_bay_conduits": 48,
+    "shaft_groove_01": 16,
+    "shaft_groove_02": 14,
+    "shaft_row_01": 22,
+    "shaft_row_02": 14,
+    "shaft_row_03": 14,
+    "shaft_row_04": 22
+   },
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 204,
+    "MI_EBS_MER_CompactFrame": 562,
+    "MI_EBS_MER_StatusCyan": 120
+   },
+   "collision_boxes": [
+    {
+     "center_cm": [
+      0.0,
+      0.0,
+      30.0
+     ],
+     "name": "plinth",
+     "size_cm": [
+      320.0,
+      320.0,
+      60.0
+     ]
+    },
+    {
+     "center_cm": [
+      0.0,
+      0.0,
+      649.0
+     ],
+     "name": "mast",
+     "size_cm": [
+      162.0,
+      162.0,
+      1178.0
+     ]
+    }
+   ],
+   "lod": 1,
+   "mesh": "SM_EBS_MER_BLD_002",
+   "path": "export/SM_EBS_MER_BLD_002_LOD1.glb",
+   "sha256": "d413d37238809a71de4f21321cb65c8e70b5c835722d233805ec5824101bc337",
+   "sockets": [
+    {
+     "name": "Conduit_Left_01",
+     "position_cm": [
+      -30.0,
+      -200.0,
+      46.0
+     ],
+     "purpose": "physical conduit stub attachment; cosmetic span continues from the stub end",
+     "yaw_deg": -90.0
+    },
+    {
+     "name": "Conduit_Left_02",
+     "position_cm": [
+      30.0,
+      -200.0,
+      46.0
+     ],
+     "purpose": "physical conduit stub attachment; cosmetic span continues from the stub end",
+     "yaw_deg": -90.0
+    },
+    {
+     "name": "Conduit_Right_01",
+     "position_cm": [
+      -30.0,
+      200.0,
+      46.0
+     ],
+     "purpose": "physical conduit stub attachment; cosmetic span continues from the stub end",
+     "yaw_deg": 90.0
+    },
+    {
+     "name": "Conduit_Right_02",
+     "position_cm": [
+      30.0,
+      200.0,
+      46.0
+     ],
+     "purpose": "physical conduit stub attachment; cosmetic span continues from the stub end",
+     "yaw_deg": 90.0
+    },
+    {
+     "name": "Panel_01",
+     "position_cm": [
+      75.0,
+      0.0,
+      1070.0
+     ],
+     "purpose": "removable numbered ceramic access panel 01; plate extends +X",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Panel_02",
+     "position_cm": [
+      75.0,
+      0.0,
+      745.0
+     ],
+     "purpose": "removable numbered ceramic access panel 02; plate extends +X",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Panel_03",
+     "position_cm": [
+      75.0,
+      0.0,
+      495.0
+     ],
+     "purpose": "removable numbered ceramic access panel 03; plate extends +X",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Panel_04",
+     "position_cm": [
+      75.0,
+      0.0,
+      235.0
+     ],
+     "purpose": "removable numbered ceramic access panel 04; plate extends +X",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Collar_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      915.0
+     ],
+     "purpose": "connection state effects and the thin electrical sustain audio source",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Cap_Top",
+     "position_cm": [
+      0.0,
+      0.0,
+      1238.0
+     ],
+     "purpose": "damage smoke / critical degradation effects",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Bay_Center",
+     "position_cm": [
+      75.0,
+      0.0,
+      620.0
+     ],
+     "purpose": "maintenance / damage exposure effects",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 886
+  },
+  {
+   "lod": 1,
+   "mesh": "SM_EBS_MER_BLD_002",
+   "path": "export/SM_EBS_MER_BLD_002_LOD1.obj",
+   "sha256": "4c0c35a844300bba938cfbcf1f29c5ffad0f582ea77cb97142fd5320ecfe3116"
+  },
+  {
+   "bounds_cm": [
+    [
+     0.0,
+     -58.0,
+     -105.0
+    ],
+    [
+     6.0,
+     58.0,
+     105.0
+    ]
+   ],
+   "by_component": {
+    "panel_plate": 12
+   },
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 12
+   },
+   "collision_boxes": [],
+   "lod": 1,
+   "mesh": "SM_EBS_MER_BLD_002_Panel",
+   "path": "export/SM_EBS_MER_BLD_002_Panel_LOD1.glb",
+   "sha256": "fca8c5f1a29f102d98a6934fe53df93a15f052678ef23985142956757b931477",
+   "sockets": [
+    {
+     "name": "Label",
+     "position_cm": [
+      6.0,
+      -28.0,
+      79.0
+     ],
+     "purpose": "numeral decal / non-color grid marking anchor",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 12
+  },
+  {
+   "lod": 1,
+   "mesh": "SM_EBS_MER_BLD_002_Panel",
+   "path": "export/SM_EBS_MER_BLD_002_Panel_LOD1.obj",
+   "sha256": "1ed3de176176493d7c5aadfef9f9b3683e2f320aaf0e95b19c473a9084fd44df"
+  },
+  {
+   "bounds_cm": [
+    [
+     0.0,
+     -17.0,
+     -14.722431864335457
+    ],
+    [
+     92.0,
+     17.0,
+     15.0
+    ]
+   ],
+   "by_component": {
+    "conduit_clamp_ring": 20,
+    "conduit_end_nut": 20,
+    "conduit_jacket": 12,
+    "conduit_pulse_strip": 12
+   },
+   "by_slot": {
+    "MI_EBS_MER_CompactFrame": 52,
+    "MI_EBS_MER_StatusCyan": 12
+   },
+   "collision_boxes": [],
+   "lod": 1,
+   "mesh": "SM_EBS_MER_BLD_002_ConduitStub",
+   "path": "export/SM_EBS_MER_BLD_002_ConduitStub_LOD1.glb",
+   "sha256": "2eec896aa562227b28e4fde417b5f78f60cffb5470aa9845cca6f9c4917db98b",
+   "sockets": [
+    {
+     "name": "Span_End",
+     "position_cm": [
+      92.0,
+      0.0,
+      0.0
+     ],
+     "purpose": "cosmetic span component start; carries no grid radius, collision or network authority",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 64
+  },
+  {
+   "lod": 1,
+   "mesh": "SM_EBS_MER_BLD_002_ConduitStub",
+   "path": "export/SM_EBS_MER_BLD_002_ConduitStub_LOD1.obj",
+   "sha256": "1b56e674afb4519b04293568dbd1cfa2e9fc0abb915255d613e480aca3e32e70"
+  }
+ ],
+ "package_id": "EBS-PKG-MC-POWER-LINK",
+ "pivot": "ground-contact centre of the 2x2 footprint (contract import_policy.pivot)",
+ "planned_unreal_folder": "/Game/Echoes/Production/MER/BLD/EBS_MER_BLD_002/",
+ "production_asset_id": "EBS-MER-BLD-002",
+ "review_assemblies": [
+  {
+   "bounds_cm": [
+    [
+     -166.0,
+     -292.0,
+     0.0
+    ],
+    [
+     166.0,
+     292.0,
+     1244.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 252,
+    "MI_EBS_MER_CompactFrame": 1554,
+    "MI_EBS_MER_StatusCyan": 192
+   },
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/review/SM_EBS_MER_BLD_002_assembly_connected_LOD0.obj",
+   "sha256": "b9ebe33ac775750c2addabc9e9d2938a54098a0ab58064319c2b64c883620dad",
+   "state": "connected",
+   "triangles": 1998
+  },
+  {
+   "bounds_cm": [
+    [
+     -166.0,
+     -292.0,
+     -5.0
+    ],
+    [
+     545.0,
+     323.1743371481683,
+     1244.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 252,
+    "MI_EBS_MER_CompactFrame": 1554,
+    "MI_EBS_MER_StatusCyan": 192
+   },
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/review/SM_EBS_MER_BLD_002_assembly_maintenance_LOD0.obj",
+   "sha256": "6af1d29da0d56d55d052efdf7768f9b57a217c12f53873d83976f4898d361d2b",
+   "state": "maintenance",
+   "triangles": 1998
+  },
+  {
+   "bounds_cm": [
+    [
+     -166.0,
+     -292.0,
+     0.0
+    ],
+    [
+     166.0,
+     292.0,
+     1238.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 252,
+    "MI_EBS_MER_CompactFrame": 770,
+    "MI_EBS_MER_StatusCyan": 168
+   },
+   "lod": 1,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/review/SM_EBS_MER_BLD_002_assembly_connected_LOD1.obj",
+   "sha256": "9f97e714603b65d343c0483f2edc87ed5636de33295a1240fb3756029d049927",
+   "state": "connected",
+   "triangles": 1190
+  }
+ ],
+ "revision": "ebs-mer-bld-002-blockout-v1",
+ "scale_basis": {
+  "footprint_cells": [
+   2,
+   2
+  ],
+  "footprint_source": "Content/Data/Source/buildings.json id=mc_power_link footprint_cells [2,2]; SPEC-STR-002 / SPEC-BLD-015.MC.LINK 2x2 tiles",
+  "height_status": "PROVISIONAL BLOCKOUT ESTIMATE: no authoritative height exists; ComponentDesignCatalog's 18 m and the concept sheet proportions are proposals, not approved dimensions",
+  "noted_discrepancy": "Requirements SPEC-SKM-011 says '64x64 tiles at 100 cm simulation scale'; presentation places tiles at 200 cm. The mesh follows the presentation tile constant the runtime uses to place structures.",
+  "tile_source": "Source/EchoesOfTheBrokenSun/Public/EchoesSimulationSubsystem.h TileWorldSize = 200.0f; Public/EchoesGlassScarCompiledMapPack.h kPresentationTileWorldUnits = 200",
+  "tile_world_size_cm": 200.0
+ },
+ "source_bindings": {
+  "book": {
+   "paragraphs": [
+    135,
+    169
+   ],
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/book-source.docx",
+   "sha256": "994e7df5d37a6ef1532c65a7b742d71e81b4ea7752311f5e5acc2e04c817ef83"
+  },
+  "candidate_image": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/power-link-review/power-link-maintenance-complete.png",
+   "sha256": "b3816b9e6ec6f56629fc73c29f461187df4274b8f3514d637f9c9d48a883bf20"
+  },
+  "canon_row": {
+   "file_sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c",
+   "line": 514,
+   "path": "Docs/Archive/DevelopmentBible.md"
+  },
+  "component_geometry": {
+   "path": "Docs/VisualAssetPipeline/motion/construction/component-geometry.json",
+   "sha256": "fcec87e723886479c08cec0c653513be8960267110d7c8bc7e07a1cf3875554c"
+  },
+  "construction_reference": {
+   "path": "Docs/VisualAssetPipeline/motion/construction/power-link.svg",
+   "sha256": "c8abc04a65a0dee8d97f40c18ebd10ae8c2b203af7b2898afc9273796c1bbc7c"
+  },
+  "contract": {
+   "package_id": "EBS-PKG-MC-POWER-LINK",
+   "path": "Docs/VisualAssetPipeline/motion/gap-decisions.json"
+  },
+  "gameplay_record": {
+   "id": "mc_power_link",
+   "path": "Content/Data/Source/buildings.json",
+   "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+  }
+ },
+ "stage": "BLOCKOUT",
+ "stage_boundary": "Editable source geometry with review views; no textures, no Unreal import, no gate acceptance, no owner acceptance.",
+ "tools": {
+  "builder": "build_power_link.py",
+  "builder_sha256": "b8c24bcc23e0c1d84788877221100e0576c325787883665f8058e850642eaa88",
+  "meshkit": "../tools/ebs_meshkit.py",
+  "meshkit_sha256": "c1c8917f6f2892f54957aafc3ff2ea6203bebfddd327415defcf73d8cb9f50d3",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.7"
+ },
+ "units": {
+  "authored": "centimeters",
+  "axes": "authored +X forward, +Y right, +Z up; glTF export applies glTF=(X,Z,Y)",
+  "glb": "meters (glTF spec); Interchange expected to import at 1 m = 100 cm; verify at import"
+ }
+}
