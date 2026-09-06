@@ -274,3 +274,72 @@ reasons, game-authority references and unresolved conflicts. The resulting 34 ch
 judgments made under that delegation; they are not individual human approvals. Earlier owner choices,
 notes and history remain in `review-selections.json`. This review selects 5 Keep, 23 Rework and 6 Replace;
 Keep retains design identity for later development, not every painted detail or printed dimension.
+
+## Prepared reference packages and production backlog
+
+[reference-packages.json](reference-packages.json) is the retained, machine-readable preparation manifest.
+It consolidates the 34 reviewed concepts into 21 subjects and embeds each subject's source hashes,
+Keep/Rework/Replace decisions, book locators, exact creative-canon production rows, observed gameplay
+source records, required reference items, proposed integration fields and blocking dependencies.
+`BRIEF_PREPARED` is a work-package status only. All concepts remain `NOT_STARTED`; zero packages have
+passed `REFERENCE_READY`, and no production asset ID has been allocated.
+
+| Preparation order | Subject | Concrete next deliverable after applicable blockers are resolved |
+|---|---|---|
+| 1 | Lancer | Replacement sheet: narrow bipedal line-fire frame, low cowl, low rail-lance, rear recoil strut; front/side/rear/top and braced firing view. |
+| 2 | Relay Skiff | Replacement sheet: thin utility hull, dominant mast/dish and strapped archive cradle; reconcile noncombat novel wording with the game's secondary weapon. |
+| 3 | Future Well family | One state sheet based on a shared vitrified bowl/core; include irreversible Harvest endpoint, stable Preserve and a specific temporary Reshape feature. Resolve the Harvest color conflict. |
+| 4–5 | Surveyor and Bulwark Team | Supplemental views preserving retained identities; worker tool/cargo states and directional shield packed/deployed geometry. |
+| 6 | Tender | Replacement cultivator design: living humanoid strata, staff, sling and working forearms, preserving its identity as an ordinary Kharuun person. |
+| 7–10 | Meridian buildings | Consolidate paired studies around network root, serviceable pylon, fabrication sequence and supply-dependent defense. |
+| 11–17 | Kharuun headquarters, infrastructure and warforms | Grown material and function pass; show Waystone roots/carriage, mineral cover, sensor fins/nodules and accessible cultivation/molt spaces. |
+| 18–21 | Hollow Choir structures | Replace Concordance cathedral with paired glass panes; rework the looms and stable anchor to communicate maintained geometry and distinct roles. |
+
+This is a preparation priority, not a change to the active DeliveryPlan or a release priority. The
+manifest's `priority` field gives the exact order within the grouped rows. Alternative images do not
+produce duplicate building assets. All six Well references remain in one family package. A Replace input
+is retained as history and rejection context, never as target geometry to reproduce. Keep retains the
+useful identity; it does not adopt image annotations, unverified scale, or every decorative detail.
+
+The manifest separately lists all **128 pending visual-object reviews** and **nine text-only gaps**:
+Mara, Talar, Oruun, Neme, Cael, Threadkeeper, Intervalist, Lacuna Warden and Afterimage. These are not
+silently approved by the first board's completion. Character portraits and unit concepts require different
+briefs. Existing scene depictions do not fill missing character turnaround references.
+
+### Package gates and use
+
+Before producing supplemental or replacement art, resolve the package's applicable source-rights,
+visual-direction, scale and current-plan dependencies. Final design acceptance follows the resulting
+reference work; it is not required merely to retain this brief. Before 3D blockout, the reference package
+must contain accepted target views, exact source locators, dimensions, states and intended-use provenance.
+Integration and measured RTS/technical acceptance occur later through the existing pipeline.
+
+The current source records are observed implementation evidence, not a new balance or scale authority.
+Building footprints are retained in cells; unspecified unit body dimensions stay TBD. Do not convert
+attack ranges, sight distances, ability fields or concept-sheet human figures into mesh dimensions.
+The full canonical roster rows bind shape, role, motion and sound without inventing socket names or
+material budgets. Missing reference views remain requirements for future work, not generated deliverables.
+
+[prepare_packages.py](prepare_packages.py) reads retained decisions, originals and current authority
+without modifying any of them. It prints JSON only. It refuses changed review notes/choices, broken
+register identity and original-image drift. Validation also checks authority/input hashes and exact
+reproduction, detecting missing packages, altered priorities or unjustified state promotion.
+
+```sh
+python3 Docs/VisualAssetPipeline/prepare_packages.py validate --root /path/to/Project
+python3 Docs/VisualAssetPipeline/test_prepare_packages.py
+```
+
+To propose an updated manifest after explicitly reconciling changed inputs, run `prepare` instead of
+`validate` and inspect stdout before retaining it. Never overwrite the current manifest with an
+unreviewed scan. Review notes and their history stay in the existing review record; preparation consumes
+them and does not rewrite them. The retained validation result is
+[package-validation.json](package-validation.json), which establishes structural consistency only.
+
+The unmodified book attachment is retained at
+`../BuildArtifacts/Evidence/concept-discovery-20260906/book-source.docx` relative to the source Project
+checkout. Preparation verifies its SHA-256 and checks every cited paragraph against both the DOCX and
+retained excerpts. Missing or changed book bytes fail validation. This evidence copy is not a manuscript
+revision. It is outside Git: moving the workstream requires handing off this evidence file as well as the
+commits. The manifest contains relative source bindings, so identical repository and evidence bytes can
+validate from another workspace location.

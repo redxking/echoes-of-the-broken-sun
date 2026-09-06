@@ -1,0 +1,4278 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "schema_version": 1,
+  "status": "PREPARATION_ONLY",
+  "book_source": {
+    "path_from_project": "../BuildArtifacts/Evidence/concept-discovery-20260906/book-source.docx",
+    "sha256": "994e7df5d37a6ef1532c65a7b742d71e81b4ea7752311f5e5acc2e04c817ef83",
+    "cited_paragraphs_verified": true
+  },
+  "input_bindings": [
+    {
+      "path": "concept-register.json",
+      "sha256": "1dc394c09e6b4f7602fc89674f2762aa0b74654043f152d9296174a876a6fc58"
+    },
+    {
+      "path": "book-based-review.json",
+      "sha256": "f1c698167809d4bbc440fe8fae235cc5a95caee9293347ab04e73b7b36ec13a1"
+    },
+    {
+      "path": "review-selections.json",
+      "sha256": "a935b35ae52981c9b403338635b7488f82e5e78bd9a8ef2727e99db59e3b1325"
+    }
+  ],
+  "authority_bindings": [
+    {
+      "path": "Docs/Archive/DevelopmentBible.md",
+      "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+    },
+    {
+      "path": "Docs/Requirements.md",
+      "sha256": "467e263d65a4f33c07882631c7479401d75cce2447ae018859aa86a7d435100e"
+    },
+    {
+      "path": "Docs/ArtDirection.md",
+      "sha256": "82f4052be2952606bb2e8384d271839e61d130997dfb656118983154b70ba5f8"
+    },
+    {
+      "path": "Content/Data/Source/units.json",
+      "sha256": "a10e712ea4f6a001ff65e9d22360210c31ba72bcdb99eb558957a3bf282c1331"
+    },
+    {
+      "path": "Content/Data/Source/buildings.json",
+      "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+    },
+    {
+      "path": "Content/Data/Source/future_wells.json",
+      "sha256": "a80187648a96551dcd121b03bca2c6e31ad16e75570ef7f5b33204d18e5554e9"
+    }
+  ],
+  "review_revision": 43,
+  "counts": {
+    "reviewed_concepts": 34,
+    "packages": 21,
+    "pending_visual_reviews": 128,
+    "text_only_gaps": 9,
+    "reference_ready": 0,
+    "production_assets_allocated": 0
+  },
+  "blocking_decisions": [
+    {
+      "id": "PKG-GATE-VISUAL",
+      "resolution": "Record final visual design acceptance and exact source/derived-reference identity; delegated Keep/Rework/Replace is direction input."
+    },
+    {
+      "id": "PKG-GATE-RIGHTS",
+      "resolution": "Reconcile retained original method, inputs, terms and intended-use rights with AssetRegister; no presence-based clearance."
+    },
+    {
+      "id": "PKG-GATE-SCALE",
+      "resolution": "Resolve production dimensions and exact pixel crop. Runtime footprint snapshot is not mesh scale; reject printed concept heights."
+    },
+    {
+      "id": "PKG-GATE-VIEWS",
+      "resolution": "Supply necessary orthographic, underside, state, socket and material views as labeled derived references, retaining originals."
+    },
+    {
+      "id": "PKG-GATE-INTERFACES",
+      "resolution": "Bind approved sockets, state/event interfaces, collision/selection and construction exits to current runtime contracts in a later integration task."
+    },
+    {
+      "id": "PKG-GATE-BUDGET",
+      "resolution": "Adopt asset-specific material/texture/LOD budgets against target-platform tests; no numeric budget inferred from artwork."
+    },
+    {
+      "id": "PKG-GATE-PLAN",
+      "resolution": "Confirm art-production package in the current plan and source ownership before geometry or artwork production; integration remains separately scoped."
+    },
+    {
+      "id": "PKG-CONFLICT-SKIFF",
+      "resolution": "Book p139 says Relay Skiff could not fight; expanded Bible allows a small secondary weapon. No weapon removal authorized."
+    },
+    {
+      "id": "PKG-CONFLICT-WELL",
+      "resolution": "Book pp244-247 and expanded Bible use amber Harvest buildup and final collapse; REL-ART-014 specifies a cyan vertical geyser. Retain collapse semantics; color/effect reconciliation required before production."
+    }
+  ],
+  "packages": [
+    {
+      "package_id": "EBS-PKG-MC-LANCER",
+      "subject": "Lancer",
+      "domain": "MER",
+      "object_type": "UNT",
+      "priority": 1,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REPLACEMENT_CONCEPT",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-MER-UNT-002",
+          "decision": "REPLACE",
+          "use": "RETAINED_HISTORY_ONLY",
+          "source": {
+            "source_id": "EBS-SRC-427e60cd27bd78e9",
+            "source_repository_path": "site/assets/concepts/meridian-units.png",
+            "source_filename": "meridian-units.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/meridian-units.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+            "locator": "top-right",
+            "bbox_normalized": [
+              0.5,
+              0,
+              1,
+              0.5
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc"
+          },
+          "direction": "Replace this upright armored hero silhouette. Retain pale ceramic, charcoal underframe and cyan rail technology in a new narrow two-legged line-fire frame: low cowl, lance held low, exposed thin flanks and a visible rear-leg recoil strut. The book explicitly describes frames and bracing; it does not call for a human infantry redesign. Preserve the owner replacement choice.",
+          "book_paragraphs": [
+            178,
+            181,
+            1966,
+            3078
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 510,
+          "text": "| **Lancer** (`SPEC-UNIT-002`) | A two-legged line-fire frame, slightly taller than the Surveyor and narrow, with a long forward rail-lance carried at hip height, a recoil strut braced to the rear leg, and a low armored cowl. Ceramic plate over charcoal, cyan band along the lance. | The lance axis and the braced stance say *sustained ranged fire, forward-facing*. Flanks are visibly thin. | Halts, plants the strut, aims, fires with recoil returning through the mount, recovers. Never fires while moving. Muzzle is a clean cyan-white line; impact is a small engineered flash. Sound: a sharp, dry crack with a short metallic ring. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "mc_lancer",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/units.json",
+            "sha256": "a10e712ea4f6a001ff65e9d22360210c31ba72bcdb99eb558957a3bf282c1331"
+          },
+          "record": {
+            "id": "mc_lancer",
+            "display_name": "Lancer",
+            "faction": "meridian_compact",
+            "role": "ranged_line",
+            "cost": {
+              "matter": 85,
+              "dawn": 20
+            },
+            "max_health": 145,
+            "move_speed_cm_s": 320,
+            "sight_cm": 1100,
+            "population_cost": 2,
+            "production_ticks": 100,
+            "attack": {
+              "damage": 18,
+              "range_cm": 650,
+              "cooldown_ticks": 30
+            }
+          }
+        },
+        "footprint_cells": "TBD",
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Locomotion/turn/stop poses, work or weapon anticipation/action/recovery, interruption and carried equipment states"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-MC-RELAY-SKIFF",
+      "subject": "Relay Skiff",
+      "domain": "MER",
+      "object_type": "UNT",
+      "priority": 2,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REPLACEMENT_CONCEPT",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-MER-UNT-004",
+          "decision": "REPLACE",
+          "use": "RETAINED_HISTORY_ONLY",
+          "source": {
+            "source_id": "EBS-SRC-427e60cd27bd78e9",
+            "source_repository_path": "site/assets/concepts/meridian-units.png",
+            "source_filename": "meridian-units.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/meridian-units.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+            "locator": "bottom-right",
+            "bbox_normalized": [
+              0.5,
+              0.5,
+              1,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc"
+          },
+          "direction": "Replace the fighter-like pointed canopy and ornamental ring assembly with a thin-hulled utility skimmer, dominant mast/dish and an exposed strapped archive cradle. Retain the maintained ceramic equipment language. The book says it could not fight; game canon gives a small secondary weapon. Flag that conflict and retain game capability pending reconciliation. Preserve the owner replacement choice.",
+          "book_paragraphs": [
+            139,
+            169,
+            1941
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 512,
+          "text": "| **Relay Skiff** (`SPEC-UNIT-004`) | A light, fast, low-slung skimmer with a tall relay mast, a dish, and a small forward weapon that is clearly secondary. In Mission 01 it carries an **archive cradle**: a sealed pale-ceramic cassette rack lashed to its deck with dark straps. | Mast and dish say *sees and connects*; the archive rack says *carrying something that matters*. Never reads as a hero body. | Glides with a slight nose-down lean; the mast lights cyan when relaying temporary logistics. The archive rack never changes unless an authoritative event binds it. Sound: a light turbine whine and a soft relay chirp. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "mc_relay_skiff",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/units.json",
+            "sha256": "a10e712ea4f6a001ff65e9d22360210c31ba72bcdb99eb558957a3bf282c1331"
+          },
+          "record": {
+            "id": "mc_relay_skiff",
+            "display_name": "Relay Skiff",
+            "faction": "meridian_compact",
+            "role": "scout_support",
+            "cost": {
+              "matter": 70,
+              "dawn": 20
+            },
+            "max_health": 75,
+            "move_speed_cm_s": 500,
+            "sight_cm": 1500,
+            "population_cost": 1,
+            "production_ticks": 80,
+            "attack": {
+              "damage": 6,
+              "range_cm": 400,
+              "cooldown_ticks": 24
+            },
+            "supply_extension": {
+              "connection_radius_cm": 700,
+              "capacity_bonus": 4,
+              "duration_ticks": 400,
+              "cooldown_ticks": 800
+            }
+          }
+        },
+        "footprint_cells": "TBD",
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Locomotion/turn/stop poses, work or weapon anticipation/action/recovery, interruption and carried equipment states"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN",
+        "PKG-CONFLICT-SKIFF"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-EBS-FAM-FWL-001",
+      "subject": "Future Well",
+      "domain": "FWL",
+      "object_type": "SYS",
+      "priority": 3,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-FWL-SYS-001",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-f95912742d42bd75",
+            "source_repository_path": "site/assets/concepts/future-well-states.png",
+            "source_filename": "future-well-states.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/future-well-states.png",
+            "source_commit": "fe66120b95794785d68cc993b9d361885cf0b755",
+            "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+            "locator": "top-left",
+            "bbox_normalized": [
+              0,
+              0,
+              0.5,
+              0.5
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90"
+          },
+          "direction": "Retain courtyard-scale bowl and central spire as the family base. Rework the ceremonial stone machinery into vitrified charcoal glass with quiet fracture seams and doubled outline/shadows. Lower the gold glow and floating spectacle so Dormant reads as held potential. Existing rings are a design proposal, not textually established engineering.",
+          "book_paragraphs": [
+            191,
+            196
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-FWL-SYS-002",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-f95912742d42bd75",
+            "source_repository_path": "site/assets/concepts/future-well-states.png",
+            "source_filename": "future-well-states.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/future-well-states.png",
+            "source_commit": "fe66120b95794785d68cc993b9d361885cf0b755",
+            "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+            "locator": "top-right",
+            "bbox_normalized": [
+              0.5,
+              0,
+              1,
+              0.5
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90"
+          },
+          "direction": "Retain the collapse direction, but make this a transition reference rather than an enduring geyser state: telegraph climbs the spire, then spire folds into bowl, light cuts off and a dark cracked spent site remains. Book/Bible amber conflicts with REL-ART-014 cyan geyser; color reconciliation remains open and no requirement is changed.",
+          "book_paragraphs": [
+            244,
+            245,
+            246,
+            247
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-FWL-SYS-003",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-f95912742d42bd75",
+            "source_repository_path": "site/assets/concepts/future-well-states.png",
+            "source_filename": "future-well-states.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/future-well-states.png",
+            "source_commit": "fe66120b95794785d68cc993b9d361885cf0b755",
+            "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+            "locator": "bottom-left",
+            "bbox_normalized": [
+              0,
+              0.5,
+              0.5,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90"
+          },
+          "direction": "Retain intact core and custody ring. Reduce the spraying fragments and active energy column: the novel says the spire steadies into one outline and a slow ring holds around the bowl. Show ongoing custody and continued cost through restrained motion, not a more powerful Harvest.",
+          "book_paragraphs": [
+            2510,
+            2511
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-FWL-SYS-004",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-f95912742d42bd75",
+            "source_repository_path": "site/assets/concepts/future-well-states.png",
+            "source_filename": "future-well-states.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/future-well-states.png",
+            "source_commit": "fe66120b95794785d68cc993b9d361885cf0b755",
+            "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+            "locator": "bottom-right",
+            "bbox_normalized": [
+              0.5,
+              0.5,
+              1,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90"
+          },
+          "direction": "Retain magenta transformation identity and the shared bowl/spire. Make the effect point to an actual temporary crossing or other authorized terrain feature, with readable duration and expiry. Orbiting rings alone do not communicate Reshape’s spatial consequence. The prose supports temporary manifested ground, not this exact machine. Chapter 24 explicitly says this novel’s basin has no realized Reshape precedent; the new state design therefore requires the game’s authored reference, not a claimed book scene.",
+          "book_paragraphs": [
+            198,
+            2499,
+            3630,
+            3328
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-FWL-SYS-005",
+          "decision": "REPLACE",
+          "use": "RETAINED_HISTORY_ONLY",
+          "source": {
+            "source_id": "EBS-SRC-262ecb70ca9cb970",
+            "source_repository_path": "site/assets/concepts/echoes-future-well-landmark.jpg",
+            "source_filename": "echoes-future-well-landmark.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-future-well-landmark.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "262ecb70ca9cb970bd6feba4cba1546c2f1b2d31297b3d476eafa2d94f205c78",
+            "locator": "central luminous spiral and radial cracked ground",
+            "bbox_normalized": [
+              0.25,
+              0,
+              0.71,
+              0.92
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "262ecb70ca9cb970bd6feba4cba1546c2f1b2d31297b3d476eafa2d94f205c78"
+          },
+          "direction": "Replace the giant luminous tornado as the Future Well production reference. It obscures the bowl/core, turns sustained custody into spectacle and fails to explain permanent exhaustion or temporary terrain. Preserve the image in visual history; it must not define the state family.",
+          "book_paragraphs": [
+            191,
+            246,
+            247,
+            2511
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-FWL-SYS-007",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-04ec9daa608ee6d5",
+            "source_repository_path": "site/assets/concepts/target-render-vertical-slice.jpg",
+            "source_filename": "target-render-vertical-slice.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/target-render-vertical-slice.jpg",
+            "source_commit": "04be980b725a4c72b4f054dd114b71a024752aba",
+            "source_sha256": "04ec9daa608ee6d5f15268b8fa7aa412d7eafe132dac5811681daa2ce105e62f",
+            "locator": "central rings and upright shard",
+            "bbox_normalized": [
+              0.37,
+              0.29,
+              0.63,
+              0.68
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "04ec9daa608ee6d5f15268b8fa7aa412d7eafe132dac5811681daa2ce105e62f"
+          },
+          "direction": "Retain the central landmark’s relationship to the route and opposing forces as composition reference. Rework the polished gold plinth and floating collectible appearance into a vitrified bowl with embedded core identity. This choice applies to the Well region only; it does not approve the surrounding skiff, units, sky or map geometry.",
+          "book_paragraphs": [
+            191,
+            196
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 619,
+          "text": "| **Dormant** | Unlit charcoal | Bowl and spire dark; micro-fracture barely visible; two shadows. | A low hum keyed to place. | A held breath. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        },
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 621,
+          "text": "| **Harvest** | Broken-sun amber | 180-tick public telegraph: amber climbs the spire in bands; at commit the spire collapses into the bowl, the bowl goes dark and cracked, the ground's branch-specific feature is removed or damaged. Permanent. | Rising harmonic to a hard, final drop. | Windfall and permanent loss. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        },
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 622,
+          "text": "| **Preserve** | Cyan-held | The spire steadies into a single outline; a slow cyan custody ring turns at the bowl's rim while controlled; 1,400 cm intelligence radius shown as a faint band. | Steady tone; a soft cadence chime every 300 ticks. | Slow custody; valuable only if held. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        },
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 623,
+          "text": "| **Reshape** | Magenta-fracture | 180-tick telegraph: magenta traces run from the spire along the ground to the authored feature, which then *manifests* (a bridge restored, a route opened, cover raised) for 1,800 ticks; the feature's edges carry an afterimage; a pre-expiry warning brightens then dims; on expiry the feature fades and units displace along authored fallback points. | Phase-shifting tone; a distinct warning cue before expiry. | Temporary impossible terrain both sides can anticipate. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": null,
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/future_wells.json",
+            "sha256": "a80187648a96551dcd121b03bca2c6e31ad16e75570ef7f5b33204d18e5554e9"
+          },
+          "record": {
+            "schema_version": 1,
+            "rules": {
+              "capture_radius_cm": 420,
+              "capture_ticks": 300,
+              "harvest": {
+                "immediate_dawn": 500,
+                "permanent_state": "collapsed",
+                "telegraph_ticks": 180
+              },
+              "preserve": {
+                "dawn_per_interval": 15,
+                "interval_ticks": 300,
+                "vision_radius_cm": 1400
+              },
+              "reshape": {
+                "dawn_cost": 120,
+                "manifest_duration_ticks": 1800,
+                "telegraph_ticks": 180
+              }
+            }
+          }
+        },
+        "footprint_cells": "TBD",
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "One common bowl/core with Dormant, Harvest transition and exhausted endpoint, Preserve and Reshape",
+        "Reshape links to a particular authorized terrain feature and its expiry; no freeform geometry change",
+        "Resolve Harvest color before supplemental effect design"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": "Rework one bowl-and-core-spire family. Dormant: quiet fractured glass and doubled outline. Harvest: visible commitment followed by irreversible collapse and a dark spent site. Preserve: stabilized core and slow custody ring. Reshape: temporary authored terrain with expiry cues. Reject the giant tornado as the family definition. Resolve the amber-versus-cyan Harvest conflict before production; no game rule or canon status changes.",
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN",
+        "PKG-CONFLICT-WELL"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-MC-SURVEYOR",
+      "subject": "Surveyor",
+      "domain": "MER",
+      "object_type": "UNT",
+      "priority": 4,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_COMPLETE_REFERENCE_VIEWS",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-MER-UNT-001",
+          "decision": "KEEP",
+          "use": "DESIGN_IDENTITY",
+          "source": {
+            "source_id": "EBS-SRC-427e60cd27bd78e9",
+            "source_repository_path": "site/assets/concepts/meridian-units.png",
+            "source_filename": "meridian-units.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/meridian-units.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+            "locator": "top-left",
+            "bbox_normalized": [
+              0,
+              0,
+              0.5,
+              0.5
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc"
+          },
+          "direction": "Retain the compact worker frame, paired working arms and visible cargo. The drill/gripper and repaired ceramic shoulder match the story. Simplify the decorative mast panel and make loaded/unloaded cargo readable during later production; this remains a worker, not an armed robot.",
+          "book_paragraphs": [
+            143,
+            1536,
+            1607
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 509,
+          "text": "| **Surveyor** (`SPEC-UNIT-001`) | A compact bipedal maintenance exoframe about as tall as a person and half again as wide at the shoulder: pale ceramic torso shell over a charcoal frame, two articulated tool arms (rotary drill on one, gripper/welder on the other), a small optical mast, and a rear cargo cradle holding cyan-white Matter canisters. Cyan status band across the chest. | Tools and cargo say *worker*; nothing on it says weapon. Its whole body language is service reach. | Walks with planted support and a short settle on stop. Drill spins only during actual gathering and stops on travel or cancel. Build pose extends both arms to the footprint. Repair (when authorized) shows the welder arm only. Sounds: ceramic-on-stone footfalls, a dry rotary drill, a soft cargo latch on delivery. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "mc_surveyor",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/units.json",
+            "sha256": "a10e712ea4f6a001ff65e9d22360210c31ba72bcdb99eb558957a3bf282c1331"
+          },
+          "record": {
+            "id": "mc_surveyor",
+            "display_name": "Surveyor",
+            "faction": "meridian_compact",
+            "role": "worker",
+            "cost": {
+              "matter": 50,
+              "dawn": 0
+            },
+            "max_health": 90,
+            "move_speed_cm_s": 360,
+            "sight_cm": 900,
+            "population_cost": 1,
+            "production_ticks": 60,
+            "work_rate": 10,
+            "cargo_capacity": 10
+          }
+        },
+        "footprint_cells": "TBD",
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Locomotion/turn/stop poses, work or weapon anticipation/action/recovery, interruption and carried equipment states"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-MC-BULWARK-TEAM",
+      "subject": "Bulwark Team",
+      "domain": "MER",
+      "object_type": "UNT",
+      "priority": 5,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_COMPLETE_REFERENCE_VIEWS",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-MER-UNT-003",
+          "decision": "KEEP",
+          "use": "DESIGN_IDENTITY",
+          "source": {
+            "source_id": "EBS-SRC-427e60cd27bd78e9",
+            "source_repository_path": "site/assets/concepts/meridian-units.png",
+            "source_filename": "meridian-units.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/meridian-units.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+            "locator": "bottom-left",
+            "bbox_normalized": [
+              0,
+              0.5,
+              0.5,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc"
+          },
+          "direction": "Retain the broad two-operator shield chassis and articulated barrier wings. The book supports the slow heavy screen and unfolding shield face. Production must show one directional front, vulnerable rear and a packed state; the luminous panels cannot imply all-round invulnerability.",
+          "book_paragraphs": [
+            178,
+            187,
+            1967
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 511,
+          "text": "| **Bulwark Team** (`SPEC-UNIT-003`) | A wide, low, two-operator chassis with a central emitter and six framed barrier cells on hinged wings. Packed, the wings tuck along the chassis and it reads as a heavy crawler; deployed, the wings unfold into a single directional shield face taller than the operators. | Shield facing and deployed footprint are unmistakable; the exposed rear says *flank me*. | Setup unfolds the wings at the hinges (anticipation, contact, settle); deployed movement is a slow drag; packing reverses. Impacts show on the face as brief cyan ripples. Sound: hydraulic hinge engagement, a low field hum while deployed, a clank on pack. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "mc_bulwark_team",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/units.json",
+            "sha256": "a10e712ea4f6a001ff65e9d22360210c31ba72bcdb99eb558957a3bf282c1331"
+          },
+          "record": {
+            "id": "mc_bulwark_team",
+            "display_name": "Bulwark Team",
+            "faction": "meridian_compact",
+            "role": "heavy_screen",
+            "cost": {
+              "matter": 130,
+              "dawn": 25
+            },
+            "max_health": 260,
+            "move_speed_cm_s": 230,
+            "sight_cm": 850,
+            "population_cost": 3,
+            "production_ticks": 140,
+            "attack": {
+              "damage": 10,
+              "range_cm": 300,
+              "cooldown_ticks": 24
+            },
+            "deployment": {
+              "cover_depth_cm": 350,
+              "cover_half_width_cm": 250,
+              "damage_reduction_percent": 40,
+              "move_speed_percent": 35
+            }
+          }
+        },
+        "footprint_cells": "TBD",
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Locomotion/turn/stop poses, work or weapon anticipation/action/recovery, interruption and carried equipment states"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-KA-TENDER",
+      "subject": "Tender",
+      "domain": "KHA",
+      "object_type": "UNT",
+      "priority": 6,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REPLACEMENT_CONCEPT",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-KHA-UNT-001",
+          "decision": "REPLACE",
+          "use": "RETAINED_HISTORY_ONLY",
+          "source": {
+            "source_id": "EBS-SRC-88f1a44ffa34739d",
+            "source_repository_path": "site/assets/concepts/kharuun-units.png",
+            "source_filename": "kharuun-units.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/kharuun-units.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+            "locator": "top-left",
+            "bbox_normalized": [
+              0,
+              0,
+              0.5,
+              0.5
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a"
+          },
+          "direction": "Replace the spider-like machine with hose manipulators. The story shows an ordinary cultivator using a staff, carrying a sling, and working with broad forearms; expanded game canon identifies a stocky humanoid Kharuun. Design living strata, amber wrist nodules, staff and carried Matter. Avoid turning an ordinary person into a generic insect worker.",
+          "book_paragraphs": [
+            447,
+            455,
+            1061,
+            2627
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 551,
+          "text": "| **Tender** (`SPEC-UNIT-005`) | A stocky Kharuun cultivator carrying a resonance staff and a woven mineral-fiber sling of carried matter across the back; forearms thickened with working strata; amber nodules at the wrists glow while growing. | Carried matter and the staff say *cultivator*, not soldier. | Gathering is a kneeling press of the staff into strata; growing a structure is a slow circling walk that leaves the organism's first ring. Sounds: stone resonance, a soft crumble on gather, a low sustained tone while growing. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "ka_tender",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/units.json",
+            "sha256": "a10e712ea4f6a001ff65e9d22360210c31ba72bcdb99eb558957a3bf282c1331"
+          },
+          "record": {
+            "id": "ka_tender",
+            "display_name": "Tender",
+            "faction": "kharuun_assemblies",
+            "role": "worker",
+            "cost": {
+              "matter": 50,
+              "dawn": 0
+            },
+            "max_health": 100,
+            "move_speed_cm_s": 390,
+            "sight_cm": 920,
+            "population_cost": 1,
+            "production_ticks": 60,
+            "work_rate": 9,
+            "cargo_capacity": 10
+          }
+        },
+        "footprint_cells": "TBD",
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Locomotion/turn/stop poses, work or weapon anticipation/action/recovery, interruption and carried equipment states"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-MC-ANCHOR",
+      "subject": "Anchor",
+      "domain": "MER",
+      "object_type": "BLD",
+      "priority": 7,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-MER-BLD-001",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-5b64820bbd2bbc28",
+            "source_repository_path": "site/assets/concepts/meridian-structures.png",
+            "source_filename": "meridian-structures.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/meridian-structures.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+            "locator": "top-left",
+            "bbox_normalized": [
+              0,
+              0,
+              0.5,
+              0.5
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e"
+          },
+          "direction": "Retain radial network-root organization and delivery approaches, but reduce the monumental reactor-spire emphasis. Make a field station with serviceable rails, redundant conduits, work entrances and a modest command/sensor core. The book establishes function and maintenance, not this ornate exact massing.",
+          "book_paragraphs": [
+            136,
+            172,
+            173
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-MER-BLD-005",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-b6396728d4fd2a49",
+            "source_repository_path": "site/assets/concepts/echoes-meridian-structures.jpg",
+            "source_filename": "echoes-meridian-structures.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-meridian-structures.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+            "locator": "top-left",
+            "bbox_normalized": [
+              0,
+              0,
+              0.5,
+              0.5
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5"
+          },
+          "direction": "Use the repairable civic shell, ramp and status bands as the stronger architectural direction; lower the bunker-like dome, expose useful load paths and separate worker intake from exit. Combine its service clarity with the original study’s network-root organization. Do not adopt printed scale or doorway proportions as approved dimensions.",
+          "book_paragraphs": [
+            136,
+            172,
+            173
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 513,
+          "text": "| **Anchor** (`SPEC-BLD-015.MC.ANCHOR`) | The Compact headquarters: a squat, wide ceramic drum on a charcoal plinth with a tall central mast, three visible worker bays at ground level, a Matter intake chute, and thick conduit roots running out to the network. Cyan bands ring the drum. | Root of the network, worker source, Matter drop-off. The bays and chute make production and delivery legible. | Working: bands lit, mast steady. Damaged: a band dark, panel plates visibly cracked. Destroyed: engineered collapse, drum sags on the plinth. Sound: a deep steady transformer tone, a chute clatter on delivery. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "mc_anchor",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/buildings.json",
+            "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+          },
+          "record": {
+            "id": "mc_anchor",
+            "display_name": "Anchor",
+            "faction": "meridian_compact",
+            "role": "headquarters_dropoff",
+            "cost": {
+              "matter": 0,
+              "dawn": 0
+            },
+            "max_health": 1400,
+            "sight_cm": 800,
+            "construction_ticks": 400,
+            "logistics_capacity": 12,
+            "footprint_cells": [
+              5,
+              5
+            ]
+          }
+        },
+        "footprint_cells": [
+          5,
+          5
+        ],
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Operational/offline states, delivery/exit paths, production/research or rooted/mobile variants where canon requires"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-MC-POWER-LINK",
+      "subject": "Power Link",
+      "domain": "MER",
+      "object_type": "BLD",
+      "priority": 8,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-MER-BLD-002",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-5b64820bbd2bbc28",
+            "source_repository_path": "site/assets/concepts/meridian-structures.png",
+            "source_filename": "meridian-structures.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/meridian-structures.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+            "locator": "top-right",
+            "bbox_normalized": [
+              0.5,
+              0,
+              1,
+              0.5
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e"
+          },
+          "direction": "Retain the vertical pylon and physical connection points. Slim its oversized reactor base, remove exposed trophy-crystal emphasis, and show removable numbered ceramic panels, load collar and accessible conduit couplings. It should read as maintained distribution equipment.",
+          "book_paragraphs": [
+            135,
+            169
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-MER-BLD-006",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-b6396728d4fd2a49",
+            "source_repository_path": "site/assets/concepts/echoes-meridian-structures.jpg",
+            "source_filename": "echoes-meridian-structures.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-meridian-structures.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+            "locator": "top-right",
+            "bbox_normalized": [
+              0.5,
+              0,
+              1,
+              0.5
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5"
+          },
+          "direction": "Retain the slender ceramic pylon: closer to the book than the original oversized reactor. Replace airborne lightning webs with physically legible conduits and restrained status illumination; show the numbered panels and service collar the maintenance crew can remove.",
+          "book_paragraphs": [
+            135
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 514,
+          "text": "| **Power Link** (`SPEC-BLD-015.MC.LINK`) | A slim ceramic pylon with a charcoal base, a ring of cyan conductor collars, and paired conduits that visibly leave the base and run toward its neighbors. | A pylon with cables, not a turret. Connection hardware is the whole message. | Connected: collars lit, conduits faintly pulsing along their length. Disconnected: collars dark, no pulse. Damaged: a collar dark, a conduit hanging. Sound: a thin electrical sustain only while connected. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "mc_power_link",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/buildings.json",
+            "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+          },
+          "record": {
+            "id": "mc_power_link",
+            "display_name": "Power Link",
+            "faction": "meridian_compact",
+            "role": "supply_node",
+            "cost": {
+              "matter": 90,
+              "dawn": 10
+            },
+            "max_health": 450,
+            "sight_cm": 500,
+            "construction_ticks": 100,
+            "logistics_capacity": 6,
+            "footprint_cells": [
+              2,
+              2
+            ]
+          }
+        },
+        "footprint_cells": [
+          2,
+          2
+        ],
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Operational/offline states, delivery/exit paths, production/research or rooted/mobile variants where canon requires"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-MC-ARRAY-FOUNDRY",
+      "subject": "Array Foundry",
+      "domain": "MER",
+      "object_type": "BLD",
+      "priority": 9,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-MER-BLD-003",
+          "decision": "KEEP",
+          "use": "DESIGN_IDENTITY",
+          "source": {
+            "source_id": "EBS-SRC-5b64820bbd2bbc28",
+            "source_repository_path": "site/assets/concepts/meridian-structures.png",
+            "source_filename": "meridian-structures.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/meridian-structures.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+            "locator": "bottom-left",
+            "bbox_normalized": [
+              0,
+              0.5,
+              0.5,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e"
+          },
+          "direction": "Retain the long open fabrication hall, structural rails and visible work-to-output sequence. This follows the story’s repairable frame economy and the Bible’s explicit Array Foundry brief; the novel does not establish this exact building design. Production still needs intelligible intake/output and research gantry states.",
+          "book_paragraphs": [
+            143,
+            1536,
+            1551
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-MER-BLD-007",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-b6396728d4fd2a49",
+            "source_repository_path": "site/assets/concepts/echoes-meridian-structures.jpg",
+            "source_filename": "echoes-meridian-structures.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-meridian-structures.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+            "locator": "bottom-left",
+            "bbox_normalized": [
+              0,
+              0.5,
+              0.5,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5"
+          },
+          "direction": "Retain overhead gantries, service access and visible fabrication work. Reorganize the stacked workshop into the Bible’s long intake/work/output hall, with a separate readable roof research gantry. Reduce sparks and tiny machinery that conceal the principal unit-production path. Exact architecture is a game-canon design judgment, not a novel quotation.",
+          "book_paragraphs": [
+            143,
+            1551
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 515,
+          "text": "| **Array Foundry** (`SPEC-BLD-015.MC.FOUNDRY`) | A long rectangular hall with an intake ramp at one end, an open fabrication bay in the middle where frames are visibly assembled on a rail, an output door at the far end, and a research gantry with instruments on the roof. | Intake, work, output, and research each have their own place, so the player reads what it is doing from where the activity is. | Producing: the rail carries a half-built frame toward the door. Researching: the roof gantry lights and the rail stops. Interrupted: gantry dims, no refund animation. Sound: rhythmic fabrication clank; a rising tone during research. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "mc_array_foundry",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/buildings.json",
+            "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+          },
+          "record": {
+            "id": "mc_array_foundry",
+            "display_name": "Array Foundry",
+            "faction": "meridian_compact",
+            "role": "production",
+            "cost": {
+              "matter": 180,
+              "dawn": 30
+            },
+            "max_health": 760,
+            "sight_cm": 500,
+            "construction_ticks": 160,
+            "logistics_capacity": 0,
+            "footprint_cells": [
+              4,
+              4
+            ]
+          }
+        },
+        "footprint_cells": [
+          4,
+          4
+        ],
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Operational/offline states, delivery/exit paths, production/research or rooted/mobile variants where canon requires"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-MC-AEGIS-POST",
+      "subject": "Aegis Post",
+      "domain": "MER",
+      "object_type": "BLD",
+      "priority": 10,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-MER-BLD-004",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-5b64820bbd2bbc28",
+            "source_repository_path": "site/assets/concepts/meridian-structures.png",
+            "source_filename": "meridian-structures.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/meridian-structures.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+            "locator": "bottom-right",
+            "bbox_normalized": [
+              0.5,
+              0.5,
+              1,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e"
+          },
+          "direction": "Retain the readable rotating gun and obvious power connection. Rework the large single ornamental barrel and circular pedestal to the Bible’s three-legged ceramic mount and twin-emitter head. Supply/offline status must be visible. The novel establishes a fixed powered emplacement, not emitter count.",
+          "book_paragraphs": [
+            2515
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-MER-BLD-008",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-b6396728d4fd2a49",
+            "source_repository_path": "site/assets/concepts/echoes-meridian-structures.jpg",
+            "source_filename": "echoes-meridian-structures.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-meridian-structures.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+            "locator": "bottom-right",
+            "bbox_normalized": [
+              0.5,
+              0.5,
+              1,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5"
+          },
+          "direction": "Retain twin emitters and a readable turret head. Replace the massive bunker and decorative shield bubble with the canonical three-legged mount and heavy supply coupling. No new shielding mechanic follows from this painting. Make loss of power obvious.",
+          "book_paragraphs": [
+            2515
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 516,
+          "text": "| **Aegis Post** (`SPEC-BLD-015.MC.AEGIS`) | A three-legged ceramic mount with a rotating twin-emitter head, a heavy power coupling on the base, and a cyan band that circles the head only while supplied. | Weapon direction and the power coupling say *defense that needs the network*. | Powered: head tracks, band lit. Offline: head droops, band dark, no smoke or sound implying life. Fires clean cyan-white bolts. Sound: a charged snap; silence when unpowered. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "mc_aegis_post",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/buildings.json",
+            "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+          },
+          "record": {
+            "id": "mc_aegis_post",
+            "display_name": "Aegis Post",
+            "faction": "meridian_compact",
+            "role": "defense",
+            "cost": {
+              "matter": 130,
+              "dawn": 30
+            },
+            "max_health": 520,
+            "sight_cm": 700,
+            "construction_ticks": 120,
+            "logistics_capacity": 0,
+            "footprint_cells": [
+              2,
+              2
+            ],
+            "powered_defense": {
+              "connection_radius_cm": 800,
+              "damage": 28,
+              "range_cm": 900,
+              "cooldown_ticks": 20
+            }
+          }
+        },
+        "footprint_cells": [
+          2,
+          2
+        ],
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Operational/offline states, delivery/exit paths, production/research or rooted/mobile variants where canon requires"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-KA-MEMORY-HEARTH",
+      "subject": "Memory Hearth",
+      "domain": "KHA",
+      "object_type": "BLD",
+      "priority": 11,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_COMPLETE_REFERENCE_VIEWS",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-KHA-BLD-001",
+          "decision": "REPLACE",
+          "use": "RETAINED_HISTORY_ONLY",
+          "source": {
+            "source_id": "EBS-SRC-6b8bed5fc02ef996",
+            "source_repository_path": "site/assets/concepts/kharuun-structures.png",
+            "source_filename": "kharuun-structures.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/kharuun-structures.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+            "locator": "top-left",
+            "bbox_normalized": [
+              0,
+              0,
+              0.5,
+              0.5
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9"
+          },
+          "direction": "Replace this armored shrine-like headquarters as the production direction. Retain warm communal center only. Prefer the annotated grown-dome study: inhabited hollows, intake cleft, banded strata and adaptation crown. The novel supports cultivated, maintained material; the specific Memory Hearth form comes from the Bible, not a named book scene.",
+          "book_paragraphs": [
+            447,
+            455,
+            2626,
+            566
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-KHA-BLD-005",
+          "decision": "KEEP",
+          "use": "DESIGN_IDENTITY",
+          "source": {
+            "source_id": "EBS-SRC-42600ed96eef7e30",
+            "source_repository_path": "site/assets/concepts/echoes-kharuun-structures.jpg",
+            "source_filename": "echoes-kharuun-structures.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-kharuun-structures.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+            "locator": "left large dome",
+            "bbox_normalized": [
+              0,
+              0.12,
+              0.4,
+              0.96
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e"
+          },
+          "direction": "Retain the grown dome, inhabited worker hollows and layered communal interior as the Memory Hearth direction. These align with the Bible’s explicit headquarters brief and the novel’s maintained mineral-organic culture. The printed 145 m scale is rejected as production guidance; volcanic brightness and scale are not approved by keeping the silhouette.",
+          "book_paragraphs": [
+            447,
+            455,
+            2626,
+            566
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 555,
+          "text": "| **Memory Hearth** (`SPEC-BLD-016`) | The Kharuun headquarters: a wide grown dome of banded strata with a warm amber glow from within, several arched worker hollows at the base, a matter-intake cleft, and a crown of rooted adaptation spires. | Hollows and cleft make growth and delivery legible; the crown says *adaptation root*. | Working: interior glow breathes slowly. Damaged: a spire dark, strata cracked. Destroyed: ceramic collapse inward. Sounds: a deep communal hum far below music tempo; cleft settle on delivery. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "ka_memory_hearth",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/buildings.json",
+            "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+          },
+          "record": {
+            "id": "ka_memory_hearth",
+            "display_name": "Memory Hearth",
+            "faction": "kharuun_assemblies",
+            "role": "headquarters_dropoff",
+            "cost": {
+              "matter": 0,
+              "dawn": 0
+            },
+            "max_health": 1300,
+            "sight_cm": 800,
+            "construction_ticks": 400,
+            "logistics_capacity": 12,
+            "footprint_cells": [
+              5,
+              5
+            ]
+          }
+        },
+        "footprint_cells": [
+          5,
+          5
+        ],
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Operational/offline states, delivery/exit paths, production/research or rooted/mobile variants where canon requires"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-KA-WAYSTONE",
+      "subject": "Waystone",
+      "domain": "KHA",
+      "object_type": "BLD",
+      "priority": 12,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-KHA-BLD-002",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-6b8bed5fc02ef996",
+            "source_repository_path": "site/assets/concepts/kharuun-structures.png",
+            "source_filename": "kharuun-structures.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/kharuun-structures.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+            "locator": "top-right",
+            "bbox_normalized": [
+              0.5,
+              0,
+              1,
+              0.5
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9"
+          },
+          "direction": "Retain the monolith that can migrate. Replace insect-robot legs and polished armor with a grown carriage, retracting mineral root ring, worn docking hollows and dark layered strata. Show both rooted and mobile states; it is infrastructure, not a combat creature.",
+          "book_paragraphs": [
+            446,
+            447,
+            454,
+            1695
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-KHA-BLD-006",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-42600ed96eef7e30",
+            "source_repository_path": "site/assets/concepts/echoes-kharuun-structures.jpg",
+            "source_filename": "echoes-kharuun-structures.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-kharuun-structures.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+            "locator": "center-left tall monolith",
+            "bbox_normalized": [
+              0.39,
+              0.12,
+              0.59,
+              0.96
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e"
+          },
+          "direction": "Retain banded monolith, amber nodules and visible roots. Add the grown carriage and root-retraction sequence essential to the story. Reject the sheet’s resource-node label and 80 m annotation as authority: this is mobile logistical infrastructure, not a static mineral deposit.",
+          "book_paragraphs": [
+            446,
+            447,
+            454,
+            1695
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 556,
+          "text": "| **Waystone** (`SPEC-BLD-016`) | A tall faceted monolith of dark strata with amber seams that, rooted, sinks a visible ring of root-strata into the ground; uprooted, it lifts on a grown carriage and moves slowly. | Rooted or moving is visible from the roots alone. | Rooting: preparation, contact, settling, release. Sounds: a grinding root-set, a low tone while rooted. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "ka_waystone",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/buildings.json",
+            "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+          },
+          "record": {
+            "id": "ka_waystone",
+            "display_name": "Waystone",
+            "faction": "kharuun_assemblies",
+            "role": "mobile_supply_node",
+            "cost": {
+              "matter": 80,
+              "dawn": 20
+            },
+            "max_health": 390,
+            "sight_cm": 500,
+            "construction_ticks": 100,
+            "logistics_capacity": 5,
+            "footprint_cells": [
+              2,
+              2
+            ],
+            "migration": {
+              "move_speed_cm_s": 120,
+              "uproot_ticks": 40,
+              "root_ticks": 60,
+              "mobile_damage_taken_percent": 125
+            }
+          }
+        },
+        "footprint_cells": [
+          2,
+          2
+        ],
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Operational/offline states, delivery/exit paths, production/research or rooted/mobile variants where canon requires"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-KA-RIFTSTALKER",
+      "subject": "Riftstalker",
+      "domain": "KHA",
+      "object_type": "UNT",
+      "priority": 13,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-KHA-UNT-002",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-88f1a44ffa34739d",
+            "source_repository_path": "site/assets/concepts/kharuun-units.png",
+            "source_filename": "kharuun-units.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/kharuun-units.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+            "locator": "top-right",
+            "bbox_normalized": [
+              0.5,
+              0,
+              1,
+              0.5
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a"
+          },
+          "direction": "Retain the low, lean, long-legged moving skirmisher. Rework the smooth cream shell, conspicuous purple crystals and manufactured-looking cannon into grown charcoal strata, amber seams and a shoulder shard-caster whose attachment can split with damage. Do not infer exact limb count from the prose.",
+          "book_paragraphs": [
+            181,
+            1060,
+            2474,
+            2475
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 552,
+          "text": "| **Riftstalker** (`SPEC-UNIT-006`) | A lean, long-limbed warform with a low forward posture, a faceted carapace in charcoal with amber seams, and a shoulder-mounted shard-caster that fires while it moves. | The forward lean and light frame say *skirmisher that keeps moving*; it visibly lacks the mass for a frontal fight. | Fires on the move with a short sidestep after each shot. Molt at a Growth Basin shows a visible carapace or striker change. Sounds: a ceramic hiss on fire, sharp shard impacts. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "ka_riftstalker",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/units.json",
+            "sha256": "a10e712ea4f6a001ff65e9d22360210c31ba72bcdb99eb558957a3bf282c1331"
+          },
+          "record": {
+            "id": "ka_riftstalker",
+            "display_name": "Riftstalker",
+            "faction": "kharuun_assemblies",
+            "role": "mobile_skirmisher",
+            "cost": {
+              "matter": 75,
+              "dawn": 30
+            },
+            "max_health": 125,
+            "move_speed_cm_s": 410,
+            "sight_cm": 1050,
+            "population_cost": 2,
+            "production_ticks": 100,
+            "attack": {
+              "damage": 14,
+              "range_cm": 500,
+              "cooldown_ticks": 22
+            }
+          }
+        },
+        "footprint_cells": "TBD",
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Locomotion/turn/stop poses, work or weapon anticipation/action/recovery, interruption and carried equipment states"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-KA-CAIRNBACK",
+      "subject": "Cairnback",
+      "domain": "KHA",
+      "object_type": "UNT",
+      "priority": 14,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_COMPLETE_REFERENCE_VIEWS",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-KHA-UNT-003",
+          "decision": "KEEP",
+          "use": "DESIGN_IDENTITY",
+          "source": {
+            "source_id": "EBS-SRC-88f1a44ffa34739d",
+            "source_repository_path": "site/assets/concepts/kharuun-units.png",
+            "source_filename": "kharuun-units.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/kharuun-units.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+            "locator": "bottom-left",
+            "bbox_normalized": [
+              0,
+              0.5,
+              0.5,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a"
+          },
+          "direction": "Retain the broad, low layered back and protected head as the assault-screen identity. The book supports grown mineral cover and bulk that must turn carefully in a narrow passage. Later production must show strata heaving into cover, mineral fracture and warm material detail; avoid mechanical joints or a giant ornamental gem becoming its defining feature.",
+          "book_paragraphs": [
+            496,
+            1066,
+            2467,
+            2516
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 553,
+          "text": "| **Cairnback** (`SPEC-UNIT-007`) | A broad, low assault warform whose back is a slab of layered heat-holding strata like a vaultback's; thick forelimbs; head low and protected. | The strata back says *absorbs fire, becomes cover*. | Creating mineral cover is a heave that leaves a grown barrier behind it. Damage chips strata; destruction is a ceramic slump. Sounds: heavy stone footfalls, a grinding heave, a low ceramic resonance on loss. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "ka_cairnback",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/units.json",
+            "sha256": "a10e712ea4f6a001ff65e9d22360210c31ba72bcdb99eb558957a3bf282c1331"
+          },
+          "record": {
+            "id": "ka_cairnback",
+            "display_name": "Cairnback",
+            "faction": "kharuun_assemblies",
+            "role": "assault_screen",
+            "cost": {
+              "matter": 120,
+              "dawn": 30
+            },
+            "max_health": 245,
+            "move_speed_cm_s": 270,
+            "sight_cm": 800,
+            "population_cost": 3,
+            "production_ticks": 140,
+            "attack": {
+              "damage": 16,
+              "range_cm": 200,
+              "cooldown_ticks": 28
+            },
+            "mineral_cover": {
+              "cast_range_cm": 450,
+              "duration_ticks": 300,
+              "cooldown_ticks": 600,
+              "dawn_cost": 15,
+              "max_health": 180,
+              "half_extent_cm": 75
+            }
+          }
+        },
+        "footprint_cells": "TBD",
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Locomotion/turn/stop poses, work or weapon anticipation/action/recovery, interruption and carried equipment states"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-KA-RESONANT",
+      "subject": "Resonant",
+      "domain": "KHA",
+      "object_type": "UNT",
+      "priority": 15,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-KHA-UNT-004",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-88f1a44ffa34739d",
+            "source_repository_path": "site/assets/concepts/kharuun-units.png",
+            "source_filename": "kharuun-units.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/kharuun-units.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+            "locator": "bottom-right",
+            "bbox_normalized": [
+              0.5,
+              0.5,
+              1,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a"
+          },
+          "direction": "Retain the tall delicate scout silhouette. Replace the prominent purple jewel and cable-like appendages with translucent amber sensor fins along head/spine and grounded mineral-organic anatomy. The story describes repaired and inclined fins; sensing should be visible as listening, not a spell or weapon.",
+          "book_paragraphs": [
+            1689,
+            2436,
+            2468
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 554,
+          "text": "| **Resonant** (`SPEC-UNIT-008`) | A tall, thin scout with sensor-fins of translucent amber along the spine and head, and a delicate frame. | Fins and delicacy say *listens, does not fight*. | Detecting shows the fins brightening in sequence. Sounds: a faint rising resonance; almost silent movement. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "ka_resonant",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/units.json",
+            "sha256": "a10e712ea4f6a001ff65e9d22360210c31ba72bcdb99eb558957a3bf282c1331"
+          },
+          "record": {
+            "id": "ka_resonant",
+            "display_name": "Resonant",
+            "faction": "kharuun_assemblies",
+            "role": "scout_counter_scout",
+            "cost": {
+              "matter": 80,
+              "dawn": 25
+            },
+            "max_health": 85,
+            "move_speed_cm_s": 470,
+            "sight_cm": 1550,
+            "population_cost": 1,
+            "production_ticks": 80,
+            "attack": {
+              "damage": 8,
+              "range_cm": 380,
+              "cooldown_ticks": 20
+            },
+            "vibration_detection": {
+              "radius_cm": 2200,
+              "signature_linger_ticks": 40,
+              "contact_resolution_cm": 200
+            }
+          }
+        },
+        "footprint_cells": "TBD",
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Locomotion/turn/stop poses, work or weapon anticipation/action/recovery, interruption and carried equipment states"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-KA-GROWTH-BASIN",
+      "subject": "Growth Basin",
+      "domain": "KHA",
+      "object_type": "BLD",
+      "priority": 16,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-KHA-BLD-003",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-6b8bed5fc02ef996",
+            "source_repository_path": "site/assets/concepts/kharuun-structures.png",
+            "source_filename": "kharuun-structures.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/kharuun-structures.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+            "locator": "bottom-left",
+            "bbox_normalized": [
+              0,
+              0.5,
+              0.5,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9"
+          },
+          "direction": "Retain the bowl and surrounding niches. Lower the fortress-like ribs, expose a shallow amber matrix pool and make molt niches accessible to warforms and cultivators. Grown texture and use should dominate ornament. The specific basin and niche form is from game canon; the book does not supply a named Growth Basin description.",
+          "book_paragraphs": [
+            447,
+            2626
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-KHA-BLD-007",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-42600ed96eef7e30",
+            "source_repository_path": "site/assets/concepts/echoes-kharuun-structures.jpg",
+            "source_filename": "echoes-kharuun-structures.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-kharuun-structures.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+            "locator": "center-right basin",
+            "bbox_normalized": [
+              0.56,
+              0.42,
+              0.85,
+              0.96
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e"
+          },
+          "direction": "Retain terraced mineral bowl, pool and emergence access. Replace rainbow/geothermal-resort coloring with restrained amber matrix light and make the molt niches unmistakable. Scale and production footprint come from game requirements, not the scene’s human figures. The novel informs material culture; the Bible supplies this asset’s role.",
+          "book_paragraphs": [
+            447,
+            2626
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 557,
+          "text": "| **Growth Basin** (`SPEC-BLD-016`) | A shallow bowl of grown strata with an amber-lit matrix pool at its center, ringed by visible molt niches. | The pool says *grows warforms*; niches say *adaptation choices*. | Growing shows the pool brightening; a molting warform stands in a niche and visibly changes. Sounds: liquid mineral resonance; a crack-and-settle on molt completion. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "ka_growth_basin",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/buildings.json",
+            "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+          },
+          "record": {
+            "id": "ka_growth_basin",
+            "display_name": "Growth Basin",
+            "faction": "kharuun_assemblies",
+            "role": "production",
+            "cost": {
+              "matter": 165,
+              "dawn": 35
+            },
+            "max_health": 700,
+            "sight_cm": 500,
+            "construction_ticks": 160,
+            "logistics_capacity": 0,
+            "footprint_cells": [
+              4,
+              4
+            ],
+            "adaptation": {
+              "site_radius_cm": 600,
+              "molt_ticks": 80,
+              "dawn_cost": 25,
+              "molt_damage_taken_percent": 150,
+              "carapace_health_percent": 135,
+              "carapace_move_speed_percent": 80,
+              "striker_damage_percent": 125,
+              "striker_cooldown_percent": 85
+            }
+          }
+        },
+        "footprint_cells": [
+          4,
+          4
+        ],
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Operational/offline states, delivery/exit paths, production/research or rooted/mobile variants where canon requires"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-KA-LISTENING-SPINE",
+      "subject": "Listening Spine",
+      "domain": "KHA",
+      "object_type": "BLD",
+      "priority": 17,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-KHA-BLD-004",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-6b8bed5fc02ef996",
+            "source_repository_path": "site/assets/concepts/kharuun-structures.png",
+            "source_filename": "kharuun-structures.png",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/kharuun-structures.png",
+            "source_commit": "f9ba5179f89bc0d107ff763c7f27aaf3b2551b71",
+            "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+            "locator": "bottom-right",
+            "bbox_normalized": [
+              0.5,
+              0.5,
+              1,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9"
+          },
+          "direction": "Retain the single tall listening rib, but soften the assembled antenna impression into a rooted curve of banded strata with amber nodules spaced along it. The book explicitly describes this growth sequence. Show sensor sequence and rooted socket; no weapon styling.",
+          "book_paragraphs": [
+            1083,
+            1084,
+            1721
+          ],
+          "canon_status": "CANDIDATE"
+        },
+        {
+          "concept_id": "EBS-CON-KHA-BLD-008",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-42600ed96eef7e30",
+            "source_repository_path": "site/assets/concepts/echoes-kharuun-structures.jpg",
+            "source_filename": "echoes-kharuun-structures.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-kharuun-structures.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+            "locator": "right needle",
+            "bbox_normalized": [
+              0.82,
+              0.12,
+              1,
+              0.96
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e"
+          },
+          "direction": "Retain the slender rooted curve. Replace the near-invisible whisker-only identity with clearly spaced amber sensor nodules and a stronger rib silhouette at RTS distance. Discard the printed 110 m height. The book supplies the banded growth and nodules, not a skyscraper scale.",
+          "book_paragraphs": [
+            1084,
+            1721
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 558,
+          "text": "| **Listening Spine** (`SPEC-BLD-016`) | A single tall rib of strata with amber sensor nodules climbing it, set into a rooted socket. | A spine, not a weapon. | Detecting shows nodules lighting in sequence toward the source direction. Sounds: a slow pulse that quickens with movement signatures. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "ka_listening_spine",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/buildings.json",
+            "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+          },
+          "record": {
+            "id": "ka_listening_spine",
+            "display_name": "Listening Spine",
+            "faction": "kharuun_assemblies",
+            "role": "detection",
+            "cost": {
+              "matter": 115,
+              "dawn": 25
+            },
+            "max_health": 440,
+            "sight_cm": 900,
+            "construction_ticks": 120,
+            "logistics_capacity": 0,
+            "footprint_cells": [
+              2,
+              2
+            ],
+            "vibration_detection": {
+              "radius_cm": 2600,
+              "signature_linger_ticks": 40,
+              "contact_resolution_cm": 200
+            }
+          }
+        },
+        "footprint_cells": [
+          2,
+          2
+        ],
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Operational/offline states, delivery/exit paths, production/research or rooted/mobile variants where canon requires"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-HC-CONCORDANCE",
+      "subject": "Concordance",
+      "domain": "HOL",
+      "object_type": "BLD",
+      "priority": 18,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REPLACEMENT_CONCEPT",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-HOL-BLD-001",
+          "decision": "REPLACE",
+          "use": "RETAINED_HISTORY_ONLY",
+          "source": {
+            "source_id": "EBS-SRC-bebd1d65a82c0127",
+            "source_repository_path": "site/assets/concepts/echoes-choir-structures.jpg",
+            "source_filename": "echoes-choir-structures.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-choir-structures.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+            "locator": "left large structure",
+            "bbox_normalized": [
+              0,
+              0.12,
+              0.48,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5"
+          },
+          "direction": "Replace the glowing armored cathedral with an open ring of paired, offset charcoal-glass panes surrounding a held tone. Provide one true intake gap and worker passages. The book explicitly describes paired panes and the true gap; solid ribbed armor and a blazing magical core obscure both function and maintained possibility.",
+          "book_paragraphs": [
+            2434,
+            2435,
+            3037
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 601,
+          "text": "| **Concordance** (`SPEC-BLD-017.HC.CONCORDANCE`) | The Choir headquarters: a ring of tall glass panes standing in offset pairs around a central held tone, with worker emergence between panes and a Matter intake at the ring's one true gap. | The ring and the gap make emergence and delivery legible; the offset panes say *Choir*. | Working: panes hold a steady edge glow; the coherence ledger is readable from it. Damaged: a pane goes dark and its partner loses its offset. Destroyed: the ring collapses into register and goes out. Sounds: the deepest held tone on the field, with interference beating as activity. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "hc_concordance",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/buildings.json",
+            "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+          },
+          "record": {
+            "id": "hc_concordance",
+            "display_name": "Concordance",
+            "faction": "hollow_choir",
+            "role": "headquarters_dropoff",
+            "cost": {
+              "matter": 0,
+              "dawn": 0
+            },
+            "max_health": 1250,
+            "sight_cm": 900,
+            "construction_ticks": 400,
+            "logistics_capacity": 12,
+            "footprint_cells": [
+              5,
+              5
+            ]
+          }
+        },
+        "footprint_cells": [
+          5,
+          5
+        ],
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Operational/offline states, delivery/exit paths, production/research or rooted/mobile variants where canon requires"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-HC-INTERVAL-LOOM",
+      "subject": "Interval Loom",
+      "domain": "HOL",
+      "object_type": "BLD",
+      "priority": 19,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-HOL-BLD-002",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-bebd1d65a82c0127",
+            "source_repository_path": "site/assets/concepts/echoes-choir-structures.jpg",
+            "source_filename": "echoes-choir-structures.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-choir-structures.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+            "locator": "upper-right structure",
+            "bbox_normalized": [
+              0.54,
+              0.13,
+              1,
+              0.57
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5"
+          },
+          "direction": "Retain crossed spans and conflicting shadows. Reduce the solid portal-machine casing, add the small drop-pane beneath and make the structure connective rather than a large gateway/production facility. The sheet’s label conflicts with the game roster. Exact Interval Loom form comes from the Bible; prose supplies conditional geometry and upkeep.",
+          "book_paragraphs": [
+            1909,
+            2434,
+            3041
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 602,
+          "text": "| **Interval Loom** (`SPEC-BLD-017.HC.INTERVAL`) | A small frame of two crossed luminous spans with a Matter drop-pane beneath; the spans cast two shadows. | Small, connective, a drop-off with a rent ticker. | Upkeep tick shows as a brief brightening then dimming. Insolvency shows the spans losing luminance before the structure fails. Sounds: a soft interval chime on each charge. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "hc_interval_loom",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/buildings.json",
+            "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+          },
+          "record": {
+            "id": "hc_interval_loom",
+            "display_name": "Interval Loom",
+            "faction": "hollow_choir",
+            "role": "supply_node",
+            "cost": {
+              "matter": 85,
+              "dawn": 25
+            },
+            "max_health": 400,
+            "sight_cm": 600,
+            "construction_ticks": 110,
+            "logistics_capacity": 6,
+            "footprint_cells": [
+              2,
+              2
+            ]
+          }
+        },
+        "footprint_cells": [
+          2,
+          2
+        ],
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Operational/offline states, delivery/exit paths, production/research or rooted/mobile variants where canon requires"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-HC-CHORUS-LOOM",
+      "subject": "Chorus Loom",
+      "domain": "HOL",
+      "object_type": "BLD",
+      "priority": 20,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-HOL-BLD-003",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-bebd1d65a82c0127",
+            "source_repository_path": "site/assets/concepts/echoes-choir-structures.jpg",
+            "source_filename": "echoes-choir-structures.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-choir-structures.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+            "locator": "lower-middle structure",
+            "bbox_normalized": [
+              0.44,
+              0.55,
+              0.77,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5"
+          },
+          "direction": "Retain the visible weaving space and parallel threads. Replace armored cradle rails with two charcoal-glass pylons and maintained luminous filaments; distinguish the research pane from unit formation. Avoid constant lightning. The novel supports costly weaving/learning; exact pylon geometry is game canon.",
+          "book_paragraphs": [
+            3037,
+            3041,
+            3047
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 603,
+          "text": "| **Chorus Loom** (`SPEC-BLD-017.HC.CHORUS`) | A wider loom of many parallel luminous threads between two glass pylons, with a visible weaving space where units form and a research pane above. | Threads and the weaving space say *production*; the pane says *research*. | Producing: threads draw a silhouette that fills in. Researching: the pane brightens and the threads still. Sounds: layered tones that resolve in more than one direction before committing. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "hc_chorus_loom",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/buildings.json",
+            "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+          },
+          "record": {
+            "id": "hc_chorus_loom",
+            "display_name": "Chorus Loom",
+            "faction": "hollow_choir",
+            "role": "production",
+            "cost": {
+              "matter": 175,
+              "dawn": 40
+            },
+            "max_health": 680,
+            "sight_cm": 550,
+            "construction_ticks": 170,
+            "logistics_capacity": 0,
+            "footprint_cells": [
+              4,
+              4
+            ]
+          }
+        },
+        "footprint_cells": [
+          4,
+          4
+        ],
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Operational/offline states, delivery/exit paths, production/research or rooted/mobile variants where canon requires"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    },
+    {
+      "package_id": "EBS-PKG-HC-PHASE-ANCHOR",
+      "subject": "Phase Anchor",
+      "domain": "HOL",
+      "object_type": "BLD",
+      "priority": 21,
+      "priority_basis": "Preparation sequencing judgment: M01 role/state defects first, then faction infrastructure; does not reorder active DeliveryPlan",
+      "status": "BRIEF_PREPARED",
+      "reference_ready": false,
+      "production_asset_id": null,
+      "production_maturity": "NOT_STARTED",
+      "next_action": "RESOLVE_BLOCKERS_THEN_CREATE_REWORK_REFERENCE",
+      "concept_inputs": [
+        {
+          "concept_id": "EBS-CON-HOL-BLD-004",
+          "decision": "REWORK",
+          "use": "REWORK_INPUT",
+          "source": {
+            "source_id": "EBS-SRC-bebd1d65a82c0127",
+            "source_repository_path": "site/assets/concepts/echoes-choir-structures.jpg",
+            "source_filename": "echoes-choir-structures.jpg",
+            "source_url": "https://redxking.github.io/echoes-of-the-broken-sun/assets/concepts/echoes-choir-structures.jpg",
+            "source_commit": "dd4f9ab967039af9c61962335658bd49407e32e3",
+            "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+            "locator": "lower-right structure",
+            "bbox_normalized": [
+              0.76,
+              0.56,
+              1,
+              1
+            ],
+            "locator_precision": "Approximate visual region; original pixels and textual locator control, not a production cutout",
+            "source_file_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5"
+          },
+          "direction": "Retain the single slender glass-spire direction. Remove root-like magical tendrils and excessive bloom; show a perfectly registered silhouette and restrained field ring. The book explicitly describes a luminous-lattice spire in exact register and its steady field easing nearby upkeep. Stable alignment must distinguish it from offset Choir neighbors.",
+          "book_paragraphs": [
+            3105,
+            3112
+          ],
+          "canon_status": "CANDIDATE"
+        }
+      ],
+      "canon_production_brief": [
+        {
+          "path": "Docs/Archive/DevelopmentBible.md",
+          "line": 604,
+          "text": "| **Phase Anchor** (`SPEC-BLD-017.HC.ANCHOR`) | A single tall glass spire whose afterimage is exactly in register — the only Choir structure with no offset — projecting a faint magenta field ring at its 700 cm coverage. | Perfect register says *stability*; the ring says *aura*. | Field active: ring steady, structures inside show reduced upkeep. Field lost: the ring collapses and neighbors flicker once. Sounds: a pure sustained tone with the interference beating removed. |",
+          "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+        }
+      ],
+      "gameplay_contract": {
+        "status": "OBSERVED_SOURCE_NOT_ACCEPTANCE",
+        "entity_id": "hc_phase_anchor",
+        "evidence": {
+          "source": {
+            "path": "Content/Data/Source/buildings.json",
+            "sha256": "aba1b64b20bb7c533aa7f7487839b12fe38133b96636d3b2e67e83c5ae6ed26e"
+          },
+          "record": {
+            "id": "hc_phase_anchor",
+            "display_name": "Phase Anchor",
+            "faction": "hollow_choir",
+            "role": "coherence",
+            "cost": {
+              "matter": 120,
+              "dawn": 35
+            },
+            "max_health": 480,
+            "sight_cm": 800,
+            "construction_ticks": 130,
+            "logistics_capacity": 0,
+            "footprint_cells": [
+              2,
+              2
+            ]
+          }
+        },
+        "footprint_cells": [
+          2,
+          2
+        ],
+        "production_dimensions_cm": "TBD"
+      },
+      "reference_items_required": [
+        "Front, side, rear and top views at a shared confirmed scale",
+        "Exact source pixel region retaining complete silhouette",
+        "Material zones: ceramic/metal or grown strata or charcoal glass as applicable; no invented PBR numbers",
+        "Damaged/destruction sequence and construction/creation sequence",
+        "Selection and faction/team ownership treatment at tactical camera",
+        "Socket/event map with named purposes; actual engine socket names TBD",
+        "Operational/offline states, delivery/exit paths, production/research or rooted/mobile variants where canon requires"
+      ],
+      "silhouette_brief": "Use cited canonical form/function and individual input directions below; exclude retained-history-only source geometry from target constraints.",
+      "material_and_motion_brief": "The cited canon row specifies silhouette/materials, readable function and motion/sound; retain it intact rather than paraphrasing new mechanics.",
+      "family_direction": null,
+      "unreal_handoff": {
+        "destination": "TBD in authorized integration task",
+        "asset_name": "TBD after production ID allocation",
+        "units": "centimeters after confirmed scale",
+        "pivot_orientation": "TBD per registered import convention",
+        "nanite": "OFF in current ArtDirection baseline; no change proposed",
+        "lod": "Authored LOD0/LOD1 per REL-ART-005; per-asset limits TBD",
+        "collision_navigation": "Cosmetic art must not alter authoritative footprint, navigation or selection behavior",
+        "material_texture_budget": "TBD"
+      },
+      "blocking_dependencies": [
+        "PKG-GATE-VISUAL",
+        "PKG-GATE-RIGHTS",
+        "PKG-GATE-SCALE",
+        "PKG-GATE-VIEWS",
+        "PKG-GATE-INTERFACES",
+        "PKG-GATE-BUDGET",
+        "PKG-GATE-PLAN"
+      ],
+      "acceptance": {
+        "art": "Concept fidelity, faction form, role silhouette, material and state coherence; exact revisions reviewed",
+        "gameplay": "Representative RTS camera, crowded/occluded views, ownership/selection, function, damage/construction/state; applicable human recognition evidence",
+        "technical": "Naming/path/scale/pivot, collision/LOD/material/texture/rig, source rights and target-platform packaged performance",
+        "status": "NOT_EVALUATED"
+      }
+    }
+  ],
+  "pending_visual_reviews": [
+    {
+      "concept_id": "EBS-CON-MER-PRP-001",
+      "name": "Surveyor manipulator tools",
+      "domain": "MER",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-PRP-002",
+      "name": "Lancer crystalline rifle",
+      "domain": "MER",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-PRP-003",
+      "name": "Bulwark segmented shield",
+      "domain": "MER",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-PRP-004",
+      "name": "Relay Skiff antenna halo",
+      "domain": "MER",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-PRP-001",
+      "name": "Tender tool tendrils",
+      "domain": "KHA",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-PRP-002",
+      "name": "Riftstalker ranged organ",
+      "domain": "KHA",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-PRP-003",
+      "name": "Cairnback layered carapace",
+      "domain": "KHA",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-PRP-004",
+      "name": "Resonant vibration feelers",
+      "domain": "KHA",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-GLS-ENV-001",
+      "name": "Glass Scar overview",
+      "domain": "GLS",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-GLS-ENV-002",
+      "name": "Ash Cut",
+      "domain": "GLS",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-GLS-ENV-003",
+      "name": "Buried Causeway",
+      "domain": "GLS",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-GLS-ENV-004",
+      "name": "Folded Verge",
+      "domain": "GLS",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-001",
+      "name": "Ark-city census chamber",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-002",
+      "name": "Census floor void",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-001",
+      "name": "Fluted structural buttress",
+      "domain": "WRL",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-002",
+      "name": "Civic terminal kiosk",
+      "domain": "WRL",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-003",
+      "name": "Portable floor barricade",
+      "domain": "WRL",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-003",
+      "name": "Solar Fall Dais scene",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-004",
+      "name": "Obsidian dais platform",
+      "domain": "WRL",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-005",
+      "name": "Dais central crystalline assembly",
+      "domain": "WRL",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-004",
+      "name": "Broken Sun — dais study",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-005",
+      "name": "Shivergrass basin landscape",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-006",
+      "name": "Shivergrass ground cover",
+      "domain": "WRL",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-UNT-001",
+      "name": "Vaultback megafauna",
+      "domain": "WRL",
+      "type": "UNT",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-007",
+      "name": "Resonance marker stones",
+      "domain": "WRL",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-006",
+      "name": "Basalt terrace formation",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-007",
+      "name": "Unburied Road cavern",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-008",
+      "name": "Ancient transit span",
+      "domain": "WRL",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-009",
+      "name": "Cyan Matter crystal formation",
+      "domain": "WRL",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-010",
+      "name": "Amber geode clusters",
+      "domain": "WRL",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-008",
+      "name": "Stalactite and geode ceiling",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-VFX-001",
+      "name": "Incandescent fissure fall",
+      "domain": "WRL",
+      "type": "VFX",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-009",
+      "name": "Soryn continental cartography",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-ENV-001",
+      "name": "Kharuun mountain region",
+      "domain": "KHA",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-010",
+      "name": "Shivergrass Steppes region",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-ENV-001",
+      "name": "Ark-city region",
+      "domain": "MER",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-GLS-ENV-005",
+      "name": "Glass Scar region",
+      "domain": "GLS",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-011",
+      "name": "Lume Reach region",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-012",
+      "name": "Crownfall and Broken Sun map symbol",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-001",
+      "name": "Continental route network",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-013",
+      "name": "Soryn hero landscape",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-014",
+      "name": "Broken Sun — hero backdrop",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-GLS-ENV-006",
+      "name": "Fractured basin and branching paths",
+      "domain": "GLS",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-015",
+      "name": "Distant city silhouette",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-011",
+      "name": "Magenta crystal outcrops",
+      "domain": "WRL",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-CHR-CHR-001",
+      "name": "Unidentified travelling figures",
+      "domain": "CHR",
+      "type": "CHR",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-FWL-SYS-006",
+      "name": "Central luminous landmark",
+      "domain": "FWL",
+      "type": "SYS",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-GLS-ENV-007",
+      "name": "Glass Scar composed target",
+      "domain": "GLS",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-ENV-016",
+      "name": "Broken Sun — composed target",
+      "domain": "WRL",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-GLS-ENV-008",
+      "name": "Raised causeway and crossing",
+      "domain": "GLS",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-WRL-PRP-012",
+      "name": "Matter deposits — composed target",
+      "domain": "WRL",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-UNT-005",
+      "name": "Lancer — composed target variant",
+      "domain": "MER",
+      "type": "UNT",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-UNT-006",
+      "name": "Bulwark Team — composed target variant",
+      "domain": "MER",
+      "type": "UNT",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-UNT-007",
+      "name": "Relay Skiff — composed target variant",
+      "domain": "MER",
+      "type": "UNT",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-UNT-005",
+      "name": "Cairnback — composed target variant",
+      "domain": "KHA",
+      "type": "UNT",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-UNT-006",
+      "name": "Riftstalker — composed target variant",
+      "domain": "KHA",
+      "type": "UNT",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-UNT-007",
+      "name": "Resonant — composed target variant",
+      "domain": "KHA",
+      "type": "UNT",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-002",
+      "name": "Campaign operations screen",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-003",
+      "name": "Soryn holographic campaign globe",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-004",
+      "name": "Campaign progression ledger",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-005",
+      "name": "Mission dossier and threat telemetry",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-006",
+      "name": "Modern contextual HUD",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-007",
+      "name": "Contour minimap",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-008",
+      "name": "Resource telemetry",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-009",
+      "name": "Contextual command arc",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-010",
+      "name": "Selection ring treatment",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-011",
+      "name": "Traditional console comparison",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-012",
+      "name": "Traditional minimap block",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-013",
+      "name": "Traditional selected-unit card",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-014",
+      "name": "Traditional ability grid",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-015",
+      "name": "Command bridge main menu",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-016",
+      "name": "Diegetic menu action list",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-017",
+      "name": "Traditional left-stack menu comparison",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-018",
+      "name": "Profile and currency panel",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-019",
+      "name": "Faction selection war room",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-020",
+      "name": "Meridian faction card",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-021",
+      "name": "Kharuun faction card",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-022",
+      "name": "Choir faction card",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-023",
+      "name": "Planetary hologram",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-024",
+      "name": "Pause field ledger",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-025",
+      "name": "Mission objective checklist",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-026",
+      "name": "Resource collection ledger",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-027",
+      "name": "Pause action stack",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-028",
+      "name": "Post-match debrief",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-029",
+      "name": "Commander portrait card",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-030",
+      "name": "Unit performance card",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-031",
+      "name": "Resource and unit telemetry charts",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-032",
+      "name": "Protocol outcome chart",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-033",
+      "name": "Match timeline and replay actions",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-034",
+      "name": "Settings and accessibility terminal",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-035",
+      "name": "High contrast preview",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-036",
+      "name": "Accessibility toggles and scale controls",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-037",
+      "name": "Loudness calibration interface",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-CHR-CHR-002",
+      "name": "Mara Vey — bridge portrayal",
+      "domain": "CHR",
+      "type": "CHR",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-CHR-CHR-003",
+      "name": "Unidentified commander — traditional menu",
+      "domain": "CHR",
+      "type": "CHR",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-CHR-CHR-004",
+      "name": "Unidentified commander — debrief portrait",
+      "domain": "CHR",
+      "type": "CHR",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-PRP-005",
+      "name": "Bridge holographic war table",
+      "domain": "MER",
+      "type": "PRP",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-ENV-002",
+      "name": "Bridge observation architecture",
+      "domain": "MER",
+      "type": "ENV",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-VEH-001",
+      "name": "Unidentified heavy mech — HUD study",
+      "domain": "MER",
+      "type": "VEH",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-UNT-008",
+      "name": "Unidentified armored figure — Meridian faction card",
+      "domain": "MER",
+      "type": "UNT",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-UNT-008",
+      "name": "Unidentified mineral warform — Kharuun faction card",
+      "domain": "KHA",
+      "type": "UNT",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-HOL-UNT-001",
+      "name": "Unidentified phase figure — Choir faction card",
+      "domain": "HOL",
+      "type": "UNT",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-VFX-001",
+      "name": "Meridian perimeter shield deployment",
+      "domain": "MER",
+      "type": "VFX",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-UNT-009",
+      "name": "Kharuun mineral warforms at well",
+      "domain": "KHA",
+      "type": "UNT",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-HOL-UNT-002",
+      "name": "Choir phase figures at well",
+      "domain": "HOL",
+      "type": "UNT",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-VFX-002",
+      "name": "Rail beam and ionized trail",
+      "domain": "MER",
+      "type": "VFX",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-VFX-003",
+      "name": "Hexagonal shield impact",
+      "domain": "MER",
+      "type": "VFX",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-VFX-004",
+      "name": "Projectile tracers",
+      "domain": "MER",
+      "type": "VFX",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-VFX-001",
+      "name": "Magma blast",
+      "domain": "KHA",
+      "type": "VFX",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-VFX-002",
+      "name": "Razor shard impact",
+      "domain": "KHA",
+      "type": "VFX",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-VFX-003",
+      "name": "Amber seismic shockwave",
+      "domain": "KHA",
+      "type": "VFX",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-HOL-VFX-001",
+      "name": "Probability fracture beam",
+      "domain": "HOL",
+      "type": "VFX",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-HOL-VFX-002",
+      "name": "Phase phantom afterimages",
+      "domain": "HOL",
+      "type": "VFX",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-HOL-VFX-003",
+      "name": "Violet spatial rift",
+      "domain": "HOL",
+      "type": "VFX",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-UI-001",
+      "name": "Mara tactical crest",
+      "domain": "MER",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-KHA-UI-001",
+      "name": "Oruun seven-stone crest",
+      "domain": "KHA",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-038",
+      "name": "Talar archive convoy crest",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-MER-UI-002",
+      "name": "Cael civic governance crest",
+      "domain": "MER",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-HOL-UI-001",
+      "name": "Neme phase crest",
+      "domain": "HOL",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-039",
+      "name": "Tactical radar presentation",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-040",
+      "name": "Chasm radar terrain grammar",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-041",
+      "name": "Plain radar terrain grammar",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-042",
+      "name": "City radar terrain grammar",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-043",
+      "name": "Cavern radar terrain grammar",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-044",
+      "name": "Ridge radar terrain grammar",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-045",
+      "name": "Dais radar terrain grammar",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-046",
+      "name": "Radar faction deployment symbols",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    },
+    {
+      "concept_id": "EBS-CON-UIX-UI-047",
+      "name": "Radar Future Well glyph",
+      "domain": "UIX",
+      "type": "UI",
+      "next_action": "VISUAL_DIRECTION_REVIEW",
+      "production_maturity": "NOT_STARTED"
+    }
+  ],
+  "missing_concept_backlog": [
+    {
+      "spec_id": "EBS-SPC-CHR-001",
+      "name": "Mara Vey",
+      "next_action": "MISSING_CONCEPT_BRIEF",
+      "source_specification": {
+        "spec_id": "EBS-SPC-CHR-001",
+        "name": "Mara Vey",
+        "source": "Docs/Archive/AssetRegister.md:437",
+        "requirement": "SPEC-CANON-009",
+        "visual_source_status": "No dedicated raster portrait/orthographic sheet discovered; crest does not substitute",
+        "canon_status": "CANDIDATE",
+        "production_maturity": "NOT_STARTED",
+        "source_repository_path": "Docs/Archive/AssetRegister.md",
+        "source_file_sha256": "583b9c415ac639ad8f8a3e5683ee80c4707339429721a75feb790c6e4c26fdac"
+      },
+      "status": "NOT_STARTED"
+    },
+    {
+      "spec_id": "EBS-SPC-CHR-002",
+      "name": "Talar Venn",
+      "next_action": "MISSING_CONCEPT_BRIEF",
+      "source_specification": {
+        "spec_id": "EBS-SPC-CHR-002",
+        "name": "Talar Venn",
+        "source": "Docs/Archive/AssetRegister.md:437",
+        "requirement": "SPEC-CANON-010",
+        "visual_source_status": "No dedicated raster portrait/orthographic sheet discovered; crest does not substitute",
+        "canon_status": "CANDIDATE",
+        "production_maturity": "NOT_STARTED",
+        "source_repository_path": "Docs/Archive/AssetRegister.md",
+        "source_file_sha256": "583b9c415ac639ad8f8a3e5683ee80c4707339429721a75feb790c6e4c26fdac"
+      },
+      "status": "NOT_STARTED"
+    },
+    {
+      "spec_id": "EBS-SPC-CHR-003",
+      "name": "Oruun-of-Seven-Stones",
+      "next_action": "MISSING_CONCEPT_BRIEF",
+      "source_specification": {
+        "spec_id": "EBS-SPC-CHR-003",
+        "name": "Oruun-of-Seven-Stones",
+        "source": "Docs/Archive/AssetRegister.md:437",
+        "requirement": "SPEC-CANON-011",
+        "visual_source_status": "No dedicated raster portrait/orthographic sheet discovered; crest does not substitute",
+        "canon_status": "CANDIDATE",
+        "production_maturity": "NOT_STARTED",
+        "source_repository_path": "Docs/Archive/AssetRegister.md",
+        "source_file_sha256": "583b9c415ac639ad8f8a3e5683ee80c4707339429721a75feb790c6e4c26fdac"
+      },
+      "status": "NOT_STARTED"
+    },
+    {
+      "spec_id": "EBS-SPC-CHR-004",
+      "name": "Neme",
+      "next_action": "MISSING_CONCEPT_BRIEF",
+      "source_specification": {
+        "spec_id": "EBS-SPC-CHR-004",
+        "name": "Neme",
+        "source": "Docs/Archive/AssetRegister.md:437",
+        "requirement": "SPEC-CANON-012",
+        "visual_source_status": "No dedicated raster portrait/orthographic sheet discovered; crest does not substitute",
+        "canon_status": "CANDIDATE",
+        "production_maturity": "NOT_STARTED",
+        "source_repository_path": "Docs/Archive/AssetRegister.md",
+        "source_file_sha256": "583b9c415ac639ad8f8a3e5683ee80c4707339429721a75feb790c6e4c26fdac"
+      },
+      "status": "NOT_STARTED"
+    },
+    {
+      "spec_id": "EBS-SPC-CHR-005",
+      "name": "Cael Rhyse",
+      "next_action": "MISSING_CONCEPT_BRIEF",
+      "source_specification": {
+        "spec_id": "EBS-SPC-CHR-005",
+        "name": "Cael Rhyse",
+        "source": "Docs/Archive/AssetRegister.md:437",
+        "requirement": "SPEC-CANON-013",
+        "visual_source_status": "No dedicated raster portrait/orthographic sheet discovered; crest does not substitute",
+        "canon_status": "CANDIDATE",
+        "production_maturity": "NOT_STARTED",
+        "source_repository_path": "Docs/Archive/AssetRegister.md",
+        "source_file_sha256": "583b9c415ac639ad8f8a3e5683ee80c4707339429721a75feb790c6e4c26fdac"
+      },
+      "status": "NOT_STARTED"
+    },
+    {
+      "spec_id": "EBS-SPC-HOL-001",
+      "name": "Threadkeeper",
+      "next_action": "MISSING_CONCEPT_BRIEF",
+      "source_specification": {
+        "spec_id": "EBS-SPC-HOL-001",
+        "name": "Threadkeeper",
+        "source": "Docs/Archive/AssetRegister.md:438",
+        "entity_id": "hc_threadkeeper",
+        "visual_source_status": "Text-only design specification; no dedicated unit image sheet discovered",
+        "canon_status": "CANDIDATE",
+        "production_maturity": "NOT_STARTED",
+        "source_repository_path": "Docs/Archive/AssetRegister.md",
+        "source_file_sha256": "583b9c415ac639ad8f8a3e5683ee80c4707339429721a75feb790c6e4c26fdac"
+      },
+      "status": "NOT_STARTED"
+    },
+    {
+      "spec_id": "EBS-SPC-HOL-002",
+      "name": "Intervalist",
+      "next_action": "MISSING_CONCEPT_BRIEF",
+      "source_specification": {
+        "spec_id": "EBS-SPC-HOL-002",
+        "name": "Intervalist",
+        "source": "Docs/Archive/AssetRegister.md:438",
+        "entity_id": "hc_intervalist",
+        "visual_source_status": "Text-only design specification; no dedicated unit image sheet discovered",
+        "canon_status": "CANDIDATE",
+        "production_maturity": "NOT_STARTED",
+        "source_repository_path": "Docs/Archive/AssetRegister.md",
+        "source_file_sha256": "583b9c415ac639ad8f8a3e5683ee80c4707339429721a75feb790c6e4c26fdac"
+      },
+      "status": "NOT_STARTED"
+    },
+    {
+      "spec_id": "EBS-SPC-HOL-003",
+      "name": "Lacuna Warden",
+      "next_action": "MISSING_CONCEPT_BRIEF",
+      "source_specification": {
+        "spec_id": "EBS-SPC-HOL-003",
+        "name": "Lacuna Warden",
+        "source": "Docs/Archive/AssetRegister.md:438",
+        "entity_id": "hc_lacuna_warden",
+        "visual_source_status": "Text-only design specification; no dedicated unit image sheet discovered",
+        "canon_status": "CANDIDATE",
+        "production_maturity": "NOT_STARTED",
+        "source_repository_path": "Docs/Archive/AssetRegister.md",
+        "source_file_sha256": "583b9c415ac639ad8f8a3e5683ee80c4707339429721a75feb790c6e4c26fdac"
+      },
+      "status": "NOT_STARTED"
+    },
+    {
+      "spec_id": "EBS-SPC-HOL-004",
+      "name": "Afterimage",
+      "next_action": "MISSING_CONCEPT_BRIEF",
+      "source_specification": {
+        "spec_id": "EBS-SPC-HOL-004",
+        "name": "Afterimage",
+        "source": "Docs/Archive/AssetRegister.md:438",
+        "entity_id": "hc_afterimage",
+        "visual_source_status": "Text-only design specification; no dedicated unit image sheet discovered",
+        "canon_status": "CANDIDATE",
+        "production_maturity": "NOT_STARTED",
+        "source_repository_path": "Docs/Archive/AssetRegister.md",
+        "source_file_sha256": "583b9c415ac639ad8f8a3e5683ee80c4707339429721a75feb790c6e4c26fdac"
+      },
+      "status": "NOT_STARTED"
+    }
+  ],
+  "boundary": "No new art, crops, geometry, production IDs, canon approval, maturity advancement or Unreal changes. Reference briefs are preparation; stage exit checks remain open."
+}

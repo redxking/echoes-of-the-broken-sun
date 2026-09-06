@@ -8,7 +8,9 @@
     "path": "/tmp/codex-remote-attachments/01a0772f-7d98-7cd2-8d56-2254d585cf17/2BB48137-4F38-414F-ADAB-EF82650C803A/1-Echoes_of_the_Broken_Sun_eBook_source.docx",
     "sha256": "994e7df5d37a6ef1532c65a7b742d71e81b4ea7752311f5e5acc2e04c817ef83",
     "locator_method": "One-based document-order w:p elements in word/document.xml; paragraph references are not page numbers.",
-    "paragraph_count": 3654
+    "paragraph_count": 3654,
+    "retained_path_from_project": "../BuildArtifacts/Evidence/concept-discovery-20260906/book-source.docx",
+    "retention": "Unmodified evidence copy of owner attachment; not a revised or competing manuscript."
   },
   "created_utc": "2026-09-06T17:47:16.388923+00:00",
   "baseline_review_revision": 8,
