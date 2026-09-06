@@ -351,3 +351,5 @@ The [motion handoff](motion/README.md) consolidates the 21 generated candidate r
 ## Unreal technical sources
 
 [UnrealReferences.md](UnrealReferences.md) is the maintained Epic documentation and installed-engine reference library for future model, animation, material, VFX, audio and validation work. It maps references to all 21 production packages and records version and evidence limits.
+
+[ClaudeProductionHandoff.md](ClaudeProductionHandoff.md) is the owner handoff prompt for beginning isolated asset production from these contracts. It does not authorize shared-game integration.
