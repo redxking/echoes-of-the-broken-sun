@@ -67,7 +67,14 @@ Budgets: LOD0 542 baseline and 602 in the heaviest molt state, LOD1 346, against
 6,000 / 2,600. Amber is 3.1% of surface area against the `REL-ART-029` ceiling of 15%.
 
 **It fires without changing its gait.** A test compares every leg track between `move` and
-`fire_on_the_move` and requires them identical, so the caster can never end up fighting the walk.
+`fire_on_the_move` and requires them identical, so the caster can never end up fighting the walk. That
+is a **regression check only**. It does not prove runtime behaviour, and simultaneous locomotion and
+firing still has to be verified through turns, stops, targeting changes and animation transitions
+(owner ruling 2026-09-07).
+
+**Triangle counts far under the ceiling are headroom, not sufficiency.** Being inside the budget says
+nothing about whether the silhouette, joints and carapace carry enough detail; that is judged against
+the concept at gameplay distance and has not been judged yet (owner ruling 2026-09-07).
 
 ## 5. States
 
@@ -124,15 +131,26 @@ for s in baseline carapace_molt striker_molt lod1 pose_move_025 pose_move_050 \
    returned its own search bound as an answer. Both produced folds that pushed the feet down. The
    working version poses the actual mesh and measures it, and a test asserts a folded leg supports a
    deeper settle than a straight one.
-4. **The death pose leaves one leg raised, and I kept it anyway.** A thigh 45 / shin 25 fold reads
-   better, with the legs collapsing under the body, but its interpolated frames sink 3.6 cm through the
-   floor. Ground contact wins over silhouette at blockout. The raised-leg read is an open item, not a
-   finished pose.
+4. **The death pose leaves one leg raised: an OPEN BLOCKOUT DEFECT, not accepted animation.** A thigh
+   45 / shin 25 fold reads better, with the legs collapsing under the body, but its interpolated frames
+   sink 3.6 cm through the floor. Ground contact wins over the preferred fold at blockout. Owner ruling
+   2026-09-07: acceptable as an open defect, and **both** are to be resolved later through a supported
+   collapse pose rather than by choosing between them. `acceptance.animation` is `NOT_ACCEPTED`.
 5. **The ground test carries a 0.05 cm tolerance.** The deepest sampled frame of the collapse sits
    0.18 mm below zero and does not move with any margin I apply, so it is numeric rather than a real
    penetration. The tolerance is stated in the test rather than hidden by rounding.
-6. Open: textures (2048² packed PBR with micro-noise normals), the death pose's raised leg, a
-   side-by-side against the Cairnback once that package exists, in-engine capture, gate reviews,
-   incorporation of the provisional card into the authoritative requirements, owner acceptance.
+6. **The anatomy correction is history, not competing guidance.** The superseded biped description is
+   kept on the card and in the manifest only so the change is traceable, explicitly marked as
+   superseded, and carries its source references: the candidate's SKIRMISHER and MOVING FIRE views, the
+   generation record, and the registered concept crop. The quadruped plan is the sole anatomy.
+7. **Monochrome separation from the Cairnback is a requirement, and its baseline exists.** Both are
+   Kharuun quadrupeds and must be distinguishable in monochrome at tactical distance, where colour and
+   emissive count for nothing. This package now renders a monochrome tactical pass and a monochrome
+   side pass as the baseline for that comparison. The Cairnback build must establish its contrasting
+   silhouette — broader, heavier mass and a different stance and gait — **before** it is detailed.
+8. Open: textures (2048² packed PBR with micro-noise normals), the collapse pose, verification of
+   locomotion and firing together, a detail judgement against the concept at gameplay distance, the
+   monochrome comparison against the Cairnback, in-engine capture, gate reviews, incorporation of the
+   provisional card into the authoritative requirements, owner acceptance.
 
 No OWNER-QUESTIONs are open for this package.

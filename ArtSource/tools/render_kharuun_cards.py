@@ -94,6 +94,14 @@ def render(data: dict) -> str:
         out += ["", f"**.ANIM_RIG.** {m['rig']}"]
         if m.get("articulated_requirement"):
             out += ["", f"**.ARTICULATION.** {m['articulated_requirement']}"]
+        if m.get("anatomy_correction"):
+            a = m["anatomy_correction"]
+            out += ["", f"**.ANATOMY_CORRECTION ({a['date']}).** {a['superseded']} {a['status']}",
+                    "", "Source references:", ""]
+            out += _bullets(a["source_references"])
+            out += ["", f"Owner: {a['confirmed_by_owner']}"]
+        if m.get("acceptance"):
+            out += ["", f"**.ACCEPTANCE.** {m['acceptance']}"]
         if m.get("clips"):
             out += ["", "**.CLIPS.** " + ", ".join(f"`{x}`" for x in m["clips"]) + "."]
         out += ["", f"**.ROOT_MOTION.** {m['root_motion']}", "",

@@ -1,13 +1,20 @@
 {
  "acceptance": {
+  "animation": "NOT_ACCEPTED \u2014 the collapse pose is an open blockout defect (see open_defects), and simultaneous locomotion and firing is unverified (see verification_pending)",
   "art": "NOT_EVALUATED",
   "gameplay": "NOT_EVALUATED",
   "owner": "NOT_ACCEPTED",
-  "technical": "PENDING \u2014 built against the provisional card; final technical acceptance waits on that card being incorporated into the authoritative requirements and its checks passing"
+  "technical": "PENDING \u2014 built against the provisional card; final technical acceptance waits on that card being incorporated into the authoritative requirements, its checks passing, and the open defects and pending verifications above being closed"
  },
  "anatomy_correction": {
   "resolution": "The CARD was corrected to a 22-bone quadruped plan, not the model bent to fit it. A test asserts the skeleton contains no bone named neck or head and that four legs exist.",
-  "what": "The provisional card first described a biped with a long neck and 24 bones.",
+  "source_references": [
+   "BuildArtifacts/Evidence/concept-discovery-20260906/riftstalker-review/riftstalker-candidate.png (SKIRMISHER and MOVING FIRE views)",
+   "BuildArtifacts/Evidence/concept-discovery-20260906/riftstalker-review/generation-record.json",
+   "BuildArtifacts/Evidence/asset-production-20260906T221157Z/concept-crops/all/EBS-PKG-KA-RIFTSTALKER/EBS-CON-KHA-UNT-002.png"
+  ],
+  "status": "SUPERSEDED AND NOT GUIDANCE. Retained as history so the change is traceable; the quadruped plan is the sole anatomy for this asset (owner ruling 2026-09-07).",
+  "what": "An earlier draft of the provisional card described a biped with a long neck and 24 bones.",
   "why_wrong": "Written before the candidate was traced. Its SKIRMISHER and MOVING FIRE views both show FOUR legs and no neck."
  },
  "asset_name": "SK_EBS_KHA_UNT_002",
@@ -294,6 +301,13 @@
  "material_slots": [
   "MI_EBS_KHA_Strata",
   "MI_EBS_KHA_Amber"
+ ],
+ "open_defects": [
+  {
+   "detail": "Ground contact was prioritised over the preferred thigh 45 / shin 25 fold, whose interpolated frames sink 3.6 cm through the floor. Both are to be resolved later through a supported collapse pose rather than by choosing between them.",
+   "item": "death pose leaves one leg raised",
+   "status": "OPEN BLOCKOUT DEFECT, not final animation acceptance (owner ruling 2026-09-07)"
+  }
  ],
  "outputs": [
   {
@@ -843,5 +857,19 @@
   "length": "centimetres",
   "nanite": false,
   "pivot": "ground-contact centre between the feet"
- }
+ },
+ "verification_pending": [
+  {
+   "detail": "The identical leg tracks between move and fire_on_the_move are a REGRESSION CHECK ONLY and do not prove runtime behaviour. Verification through turns, stops, targeting changes and animation transitions is required and has not been done (owner ruling 2026-09-07).",
+   "item": "simultaneous locomotion and firing"
+  },
+  {
+   "detail": "Sitting far below the triangle ceiling is HEADROOM, not sufficiency. Detail must be judged against the concept at gameplay distance (owner ruling 2026-09-07).",
+   "item": "silhouette, joint and carapace detail"
+  },
+  {
+   "detail": "The two share a quadruped anatomy and must be distinguishable in monochrome at tactical distance. A monochrome tactical render is produced here as the baseline for that comparison; the comparison itself waits on the Cairnback package.",
+   "item": "monochrome separation from the Cairnback"
+  }
+ ]
 }

@@ -526,10 +526,34 @@ def manifest(exported: dict) -> dict:
         "material_slot_policy": ("Two slots: faceted charcoal carapace plate for shells, prow, legs and caster housing, and amber "
                                  "for the carapace seams, the prow seam and the caster slot, which are the only emissive."),
         "anatomy_correction": {
-            "what": "The provisional card first described a biped with a long neck and 24 bones.",
+            "what": "An earlier draft of the provisional card described a biped with a long neck and 24 bones.",
             "why_wrong": "Written before the candidate was traced. Its SKIRMISHER and MOVING FIRE views both show FOUR legs and no neck.",
+            "status": ("SUPERSEDED AND NOT GUIDANCE. Retained as history so the change is traceable; the quadruped plan is the "
+                       "sole anatomy for this asset (owner ruling 2026-09-07)."),
+            "source_references": [
+                "BuildArtifacts/Evidence/concept-discovery-20260906/riftstalker-review/riftstalker-candidate.png (SKIRMISHER and MOVING FIRE views)",
+                "BuildArtifacts/Evidence/concept-discovery-20260906/riftstalker-review/generation-record.json",
+                "BuildArtifacts/Evidence/asset-production-20260906T221157Z/concept-crops/all/EBS-PKG-KA-RIFTSTALKER/EBS-CON-KHA-UNT-002.png"],
             "resolution": ("The CARD was corrected to a 22-bone quadruped plan, not the model bent to fit it. A test asserts the "
                            "skeleton contains no bone named neck or head and that four legs exist.")},
+        "open_defects": [
+            {"item": "death pose leaves one leg raised",
+             "status": "OPEN BLOCKOUT DEFECT, not final animation acceptance (owner ruling 2026-09-07)",
+             "detail": ("Ground contact was prioritised over the preferred thigh 45 / shin 25 fold, whose interpolated frames "
+                        "sink 3.6 cm through the floor. Both are to be resolved later through a supported collapse pose rather "
+                        "than by choosing between them.")}],
+        "verification_pending": [
+            {"item": "simultaneous locomotion and firing",
+             "detail": ("The identical leg tracks between move and fire_on_the_move are a REGRESSION CHECK ONLY and do not "
+                        "prove runtime behaviour. Verification through turns, stops, targeting changes and animation "
+                        "transitions is required and has not been done (owner ruling 2026-09-07).")},
+            {"item": "silhouette, joint and carapace detail",
+             "detail": ("Sitting far below the triangle ceiling is HEADROOM, not sufficiency. Detail must be judged against the "
+                        "concept at gameplay distance (owner ruling 2026-09-07).")},
+            {"item": "monochrome separation from the Cairnback",
+             "detail": ("The two share a quadruped anatomy and must be distinguishable in monochrome at tactical distance. A "
+                        "monochrome tactical render is produced here as the baseline for that comparison; the comparison "
+                        "itself waits on the Cairnback package.")}],
         "provisional_contract": {
             "card": f"{CARD} in ArtSource/kharuun-asset-cards.json (rendered to kharuun-asset-cards.md)",
             "status": ("PROVISIONAL. Authored in this worktree under the owner ruling of 2026-09-07; NOT incorporated into "
@@ -565,8 +589,11 @@ def manifest(exported: dict) -> dict:
         "tools": {"mesh_kit": "ArtSource/tools/ebs_meshkit.py", "skeletal_kit": "ArtSource/tools/ebs_skelkit.py",
                   "renderer": "ArtSource/tools/ebs_render.py"},
         "acceptance": {"art": "NOT_EVALUATED", "gameplay": "NOT_EVALUATED",
+                       "animation": ("NOT_ACCEPTED — the collapse pose is an open blockout defect (see open_defects), and "
+                                     "simultaneous locomotion and firing is unverified (see verification_pending)"),
                        "technical": ("PENDING — built against the provisional card; final technical acceptance waits on that card "
-                                     "being incorporated into the authoritative requirements and its checks passing"),
+                                     "being incorporated into the authoritative requirements, its checks passing, and the open "
+                                     "defects and pending verifications above being closed"),
                        "owner": "NOT_ACCEPTED"},
         "source_bindings": {"candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/riftstalker-review/riftstalker-candidate.png",
                             "concepts": ["EBS-CON-KHA-UNT-002"],
@@ -591,7 +618,13 @@ def write_scenes(evidence_dir: str) -> list:
              {"name": "top", "type": "ortho", "from": "+Z", "image_up": "+X", "edges": True, "margin": 1.2, "target": [0, 0, 0]}]
     views = [{"name": "three_quarter", "type": "persp", "pitch_deg": -14, "yaw_deg": 140, "arm_cm": 620, "fov_deg": 52, "target": [0, 0, 110]},
              {"name": "shoulder_detail", "type": "persp", "pitch_deg": -18, "yaw_deg": 155, "arm_cm": 300, "fov_deg": 48, "target": [40, 0, 165]},
-             {"name": "tactical_gameplay", "type": "persp", "pitch_deg": -60, "yaw_deg": -45, "arm_cm": 1400, "fov_deg": 55, "target": [0, 0, 0]}]
+             {"name": "tactical_gameplay", "type": "persp", "pitch_deg": -60, "yaw_deg": -45, "arm_cm": 1400, "fov_deg": 55, "target": [0, 0, 0]},
+             # the monochrome pass is the baseline for the Cairnback silhouette comparison: colour and
+             # emissive must not be what separates two quadrupeds at tactical distance
+             {"name": "tactical_monochrome", "type": "persp", "pitch_deg": -60, "yaw_deg": -45, "arm_cm": 1400,
+              "fov_deg": 55, "target": [0, 0, 0], "grayscale": True},
+             {"name": "side_monochrome", "type": "ortho", "from": "+Y", "edges": False, "margin": 1.12,
+              "target": [0, 0, 100], "grayscale": True}]
     written = []
 
     def dump(name, meshes, vs):
