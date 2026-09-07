@@ -170,11 +170,11 @@
    "components": [
     "A shallow bowl of grown strata, circular in plan",
     "An amber-lit matrix pool at the centre, 0.75 of the bowl diameter as traced",
-    "A ring of open curved molt niches around the rim, each large enough to hold a warform and each individually readable",
-    "A per-niche amber floor that lights only while that niche is occupied \u2014 the occupancy tell"
+    "SIX open curved molt alcoves cut into a continuous outer ring, each large enough to hold a warform and each individually readable. Six is this asset's VISUAL COMPONENT COUNT, confirmed by the owner on 2026-09-07 following the concept. It is NOT a concurrent-molt capacity and implies no gameplay slots.",
+    "A per-niche amber floor and back-wall lip that light only while that alcove is in use \u2014 the occupancy tell"
    ],
    "motion": {
-    "rig": "Own rig, not shared: a static bowl with per-niche articulation. Provisional plan is root plus one bone per niche, each carrying canon's crack-and-settle at molt completion. It is NOT the Hearth's plan and NOT the Waystone's carriage plan. (Corrected 2026-09-07: this card first said the niche closes around a molting warform. The candidate's MOLT NICHE panel shows an OPEN curved alcove with the warform standing in it, and canon describes only a crack-and-settle on completion, so the closure was my invention and the card was corrected rather than the model bent to fit it.)",
+    "rig": "Own rig, not shared: a static bowl with per-alcove articulation. Root plus one bone per alcove, each carrying canon's crack-and-settle at molt completion. It is NOT the Hearth's plan and NOT the Waystone's carriage plan. The alcoves are OPEN \u2014 no hood or lid is required (owner ruling 2026-09-07: the open-alcove, crack-and-settle treatment is the selected direction).",
     "clips": [
      "idle",
      "growing (the pool brightens)",
@@ -193,14 +193,15 @@
    "states": {
     "idle": "the pool holds a low steady glow and every niche floor is dark",
     "growing": "the pool brightens; this is the pool's emissive, a material parameter, not geometry",
-    "molting": "the occupied niches' floors are lit and the rest stay dark",
+    "molting": "the alcoves in use have their floor and back-wall lip lit; the rest stay dark. Which alcoves are lit follows authoritative adaptation activity.",
     "damaged": "the bowl cracked and the pool dimmed",
     "destroyed": "the bowl broken and the pool dark"
    },
    "readability": [
-    "The pool must say 'grows warforms' and the niches must say 'adaptation choices' at gameplay distance; LOD1 shall preserve both.",
-    "Niche occupancy must be readable per niche, because the 80-tick molt at 150% damage taken is the opponent's window. With open alcoves the tell is the lit niche floor, not a closure.",
-    "The number of niches shall match the authoritative adaptation contract. NOTE 2026-09-07: no such number exists \u2014 buildings.json ka_growth_basin.adaptation carries a site radius, molt ticks, cost and stat deltas but no niche or concurrent-molt count. The build uses the count read off the candidate and raises it as an OWNER-QUESTION."
+    "The pool must say 'grows warforms' and the alcoves must say 'adaptation choices' at gameplay distance; LOD1 shall preserve both.",
+    "SIX open alcoves, following the concept. This is a visual component count only.",
+    "Occupancy lighting shall reflect AUTHORITATIVE ADAPTATION ACTIVITY. It must not imply six independently available gameplay slots, and no six-unit limit, reservation, queue or other adaptation rule follows from this card. The number of lit alcoves is a presentation of what the runtime reports, never a promise about capacity.",
+    "Maximum-zoom readability of the occupancy tell is OPEN until verified. The lit floor and back-wall lip are legible in the tactical camera but subtle at full zoom-out; this is not yet closed."
    ]
   },
   {

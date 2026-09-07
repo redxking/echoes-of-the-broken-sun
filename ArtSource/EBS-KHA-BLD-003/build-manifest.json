@@ -3,7 +3,13 @@
   "art": "NOT_EVALUATED",
   "gameplay": "NOT_EVALUATED",
   "owner": "NOT_ACCEPTED",
-  "technical": "PENDING \u2014 built against the provisional card; final technical acceptance waits on that card being incorporated into the authoritative requirements and its checks passing, and on the niche count gap being resolved"
+  "technical": "PENDING \u2014 built against the provisional card; final technical acceptance waits on that card being incorporated into the authoritative requirements and its checks passing, and on maximum-zoom occupancy readability being verified"
+ },
+ "alcove_count": {
+  "history": "Raised as OWNER-QUESTION A because ka_growth_basin.adaptation carries no concurrent-molt capacity; resolved 2026-09-07",
+  "meaning": "Six is this asset's VISUAL COMPONENT COUNT. It is NOT a concurrent-molt capacity and does not imply six independently available gameplay slots. The card's earlier requirement that the count match a gameplay capacity was unsupported and has been removed. No six-unit limit, reservation, queue or other adaptation rule follows from this asset, and no gameplay data was changed.",
+  "status": "CONFIRMED by the owner on 2026-09-07, following the concept",
+  "value": 6
  },
  "asset_name": "SK_EBS_KHA_BLD_003",
  "author": "Angelis Pseftis",
@@ -234,12 +240,14 @@
   "MI_EBS_KHA_Amber"
  ],
  "occupancy_tell": {
+  "authority": "The lit set shall reflect AUTHORITATIVE ADAPTATION ACTIVITY. It is a presentation of what the runtime reports and never a promise about capacity; lighting two alcoves in the review assembly is illustrative, not a claim that two may molt at once.",
   "idle_lit": [],
-  "mechanism": "the per-niche floor moves into the amber slot",
+  "mechanism": "the per-alcove floor and back-wall lip move into the amber slot",
   "molting_lit": [
    1,
    4
-  ]
+  ],
+  "open": "Maximum-zoom readability is NOT yet verified. The tell is legible in the tactical camera and subtle at full zoom-out (owner ruling 2026-09-07: keep it open until verified)."
  },
  "outputs": [
   {
@@ -737,10 +745,5 @@
   "length": "centimetres",
   "nanite": false,
   "pivot": "bowl ground-contact centre"
- },
- "unresolved_contract_gap": {
-  "detail": "The card requires the niche count to match the authoritative adaptation contract. No such number exists: buildings.json ka_growth_basin.adaptation carries site_radius_cm, molt_ticks, dawn_cost and the stat deltas, and nothing that states how many warforms may molt at once. This build uses SIX, counted off the candidate's GROWING view. That is a reading of a concept image, NOT a gameplay claim.",
-  "field": "niche count",
-  "raised_as": "README section 8, OWNER-QUESTION A"
  }
 }

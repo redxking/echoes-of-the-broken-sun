@@ -58,7 +58,8 @@ BOWL_R = RIM_OUT
 RIM_COURSES = 3
 RIM_Z = 52.0                           # the inner rim: a shallow bowl, per canon
 POOL_Z = 14.0                          # the pool surface, slightly below the rim lip
-NICHE_COUNT = 6                        # counted off the candidate; no authoritative count exists
+NICHE_COUNT = 6                        # owner ruling 2026-09-07: six physical alcoves, following the concept.
+                                       # This is the VISUAL COMPONENT COUNT, not a concurrent-molt capacity.
 NICHE_YAWS = tuple(360.0 * i / NICHE_COUNT for i in range(NICHE_COUNT))
 NICHE_HALF_DEG = 15.0                  # angular half-width of a niche alcove
 NICHE_WALL_Z = 112.0                   # the outer curved wall: taller than the rim, as drawn
@@ -67,7 +68,9 @@ NICHE_FLOOR_R = (NICHE_IN + NICHE_OUT) / 2.0
 NICHE_PLINTH_Z = 16.0                  # the niche sits on a plinth bound to root, so the settle at molt
                                        # completion never drives the alcove below ground
 STATES = ("idle", "growing", "molting", "damaged", "destroyed")
-MOLTING_NICHES = (1, 4)                # which niches are occupied in the review's molting assembly
+MOLTING_NICHES = (1, 4)                # ILLUSTRATIVE only: the two alcoves lit in the review's molting assembly,
+                                       # chosen to show the per-alcove tell. At runtime the lit set follows
+                                       # authoritative adaptation activity and implies no gameplay slots.
 
 BONES = [("root", None, (0.0, 0.0, 0.0), "bowl ground-contact centre; the basin never moves")]
 for _i, _yaw in enumerate(NICHE_YAWS, start=1):
@@ -448,13 +451,14 @@ def manifest(exported: dict) -> dict:
                        "Docs/Requirements.md and not an existing authoritative per-asset requirement."),
             "bounds": {"lod0_triangles": 8000, "lod1_triangles": 3500,
                        "basis": "the faction default, no tighter contract applies"}},
-        "unresolved_contract_gap": {
-            "field": "niche count",
-            "detail": ("The card requires the niche count to match the authoritative adaptation contract. No such number exists: "
-                       "buildings.json ka_growth_basin.adaptation carries site_radius_cm, molt_ticks, dawn_cost and the stat "
-                       "deltas, and nothing that states how many warforms may molt at once. This build uses SIX, counted off the "
-                       "candidate's GROWING view. That is a reading of a concept image, NOT a gameplay claim."),
-            "raised_as": "README section 8, OWNER-QUESTION A"},
+        "alcove_count": {
+            "value": NICHE_COUNT,
+            "status": "CONFIRMED by the owner on 2026-09-07, following the concept",
+            "meaning": ("Six is this asset's VISUAL COMPONENT COUNT. It is NOT a concurrent-molt capacity and does not imply six "
+                        "independently available gameplay slots. The card's earlier requirement that the count match a gameplay "
+                        "capacity was unsupported and has been removed. No six-unit limit, reservation, queue or other adaptation "
+                        "rule follows from this asset, and no gameplay data was changed."),
+            "history": "Raised as OWNER-QUESTION A because ka_growth_basin.adaptation carries no concurrent-molt capacity; resolved 2026-09-07"},
         "budgets": {"lod0_triangles": m0.triangle_count(), "lod1_triangles": m1.triangle_count(),
                     "molting_state_triangles": molting.triangle_count(),
                     "lod0_cap": 8000, "lod1_cap": 3500, "cap_source": f"{CARD} (PROVISIONAL)",
@@ -478,7 +482,12 @@ def manifest(exported: dict) -> dict:
             ("molting", f"the occupied niches' floors are lit and the rest stay dark (review assembly lights niches {list(MOLTING_NICHES)})"),
             ("damaged", "the bowl cracked and the pool moved out of the amber slot"),
             ("destroyed", "the bowl broken, the pool dark, and a rubble ring where the rim came down"))},
-        "occupancy_tell": {"mechanism": "the per-niche floor moves into the amber slot",
+        "occupancy_tell": {"mechanism": "the per-alcove floor and back-wall lip move into the amber slot",
+                           "authority": ("The lit set shall reflect AUTHORITATIVE ADAPTATION ACTIVITY. It is a presentation of what "
+                                         "the runtime reports and never a promise about capacity; lighting two alcoves in the "
+                                         "review assembly is illustrative, not a claim that two may molt at once."),
+                           "open": ("Maximum-zoom readability is NOT yet verified. The tell is legible in the tactical camera and "
+                                    "subtle at full zoom-out (owner ruling 2026-09-07: keep it open until verified)."),
                            "idle_lit": lit_niches(m0), "molting_lit": lit_niches(molting)},
         "bind_counts": counts,
         "outputs": exported["outputs"], "review_assemblies": exported["review"],
@@ -486,8 +495,8 @@ def manifest(exported: dict) -> dict:
                   "renderer": "ArtSource/tools/ebs_render.py"},
         "acceptance": {"art": "NOT_EVALUATED", "gameplay": "NOT_EVALUATED",
                        "technical": ("PENDING — built against the provisional card; final technical acceptance waits on that card "
-                                     "being incorporated into the authoritative requirements and its checks passing, and on the "
-                                     "niche count gap being resolved"),
+                                     "being incorporated into the authoritative requirements and its checks passing, and on "
+                                     "maximum-zoom occupancy readability being verified"),
                        "owner": "NOT_ACCEPTED"},
         "source_bindings": {"candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/growth-basin-review/growth-basin-candidate.png",
                             "canon": "DevelopmentBible.md SPEC-BLD-016 Growth Basin row",

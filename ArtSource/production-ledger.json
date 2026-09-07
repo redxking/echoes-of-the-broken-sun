@@ -510,9 +510,13 @@
      "result": "Shallow circular bowl, 760 cm across and 128 tall, with an amber matrix pool at 0.75 of the basin as traced, inside a continuous coursed outer ring with six alcoves cut into it. The niches are OPEN \u2014 the card's first draft said they close, which the candidate contradicts, so the card was corrected. Occupancy reads per niche as a lit floor plus a lit lip on the alcove's low back wall, because the floor alone is hidden by the ring spurs at gameplay distance. Rig: root plus one bone per niche, each carrying canon's crack-and-settle. Five clips; growing moves nothing because that state is the pool's emissive. LOD0 1,162 idle / 1,250 molting / LOD1 784 against the provisional card's 8,000 / 3,500; amber 11.2% against REL-ART-029's 15% ceiling. 19 tests, 6 comparison sheets. Import clean: 0 errors, 0 warnings, 7 bones, 9 sockets exact, all 5 clips."
     }
    ],
-   "next": "An owner ruling on the niche count, then textures, a stronger occupancy read, in-engine capture, gate reviews, incorporation of the provisional card into the authoritative requirements, owner acceptance.",
-   "open_owner_questions": [
-    "A - nothing states how many molt niches this building has; ka_growth_basin.adaptation carries no concurrent-molt capacity. Six were counted off the candidate (README section 8.1)."
+   "next": "Verify maximum-zoom occupancy readability, then textures, in-engine capture, gate reviews, incorporation of the provisional card into the authoritative requirements, owner acceptance.",
+   "open_owner_questions": [],
+   "resolved_owner_questions": [
+    "A - alcove count: CONFIRMED six, recorded as the visual component count and not a concurrent-molt capacity; no gameplay data changed (owner, 2026-09-07)."
+   ],
+   "open_items": [
+    "Maximum-zoom occupancy readability, held OPEN by owner direction until verified."
    ]
   }
  ],
@@ -637,6 +641,30 @@
     "cards": "ArtSource/kharuun-asset-cards.json, rendered by ArtSource/tools/render_kharuun_cards.py to kharuun-asset-cards.md",
     "count": 8,
     "boundary": "The cards live in this isolated worktree. Docs/Requirements.md section 18.2 is UNCHANGED and still carries Meridian cards only. Incorporating them into the authoritative requirements is not this worktree's authority."
+   }
+  },
+  {
+   "date": "2026-09-07",
+   "source": "Owner message answering EBS-KHA-BLD-003 OWNER-QUESTION A",
+   "status": "Production direction. Not owner acceptance of the asset, and no gameplay data was changed.",
+   "rulings": [
+    {
+     "subject": "EBS-KHA-BLD-003 Growth Basin - alcove count",
+     "ruling": "Confirmed: SIX physical molt alcoves, following the concept. Six is recorded as the Growth Basin's VISUAL COMPONENT COUNT, not its concurrent-molt capacity. The card is corrected to require six open alcoves and the unsupported requirement that their count match gameplay capacity is removed. No six-unit limit, reservations, queues or other adaptation rules are to be added to gameplay data."
+    },
+    {
+     "subject": "EBS-KHA-BLD-003 Growth Basin - occupancy lighting",
+     "ruling": "Occupancy lighting shall reflect authoritative adaptation activity and must NOT imply six independently available gameplay slots. Maximum-zoom readability of the tell stays OPEN until verified."
+    },
+    {
+     "subject": "EBS-KHA-BLD-003 Growth Basin - alcove treatment",
+     "ruling": "The open-alcove, crack-and-settle treatment is the selected direction. No hood or lid is required."
+    }
+   ],
+   "implementation": {
+    "card": "REL-BLD-016.KA.BASIN.ASSET corrected in ArtSource/kharuun-asset-cards.json and re-rendered",
+    "asset": "build_basin.py records six as the visual component count; the manifest's occupancy_tell carries the authority and open-readability statements; a test lights arbitrary subsets from none to all six, proving the asset encodes no slot list",
+    "gameplay_data": "UNCHANGED. Content/Data/Source/ is untouched by this package; git reports it clean."
    }
   }
  ]

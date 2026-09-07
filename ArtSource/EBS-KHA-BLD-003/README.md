@@ -64,7 +64,7 @@ Sound (canon): liquid mineral resonance, and a crack-and-settle on completion �
 Generator: [build_basin.py](build_basin.py). One skinned mesh `SK_EBS_KHA_BLD_003`. Slots:
 `MI_EBS_KHA_Strata`, `MI_EBS_KHA_Amber`. Rig, from the card: `root` plus one bone per niche, six in
 all. Sockets (9): `Target_Anchor_Center`, `Rally_Default`, `Pool_Center` and `Molt_Niche_01`–`06`, each
-on its own niche bone. Clips: `idle`, `growing`, `molt_start`, `molt_complete`, `restore`. Budgets:
+on its own alcove bone. Six alcoves is the owner-confirmed visual component count, not a capacity. Clips: `idle`, `growing`, `molt_start`, `molt_complete`, `restore`. Budgets:
 LOD0 1,162 idle and 1,250 molting, LOD1 784, against the card's 8,000 / 3,500. Amber is 11.2% of
 surface area against the `REL-ART-029` ceiling of 15%, and the pool is most of it, which the card allows
 because canon makes the pool the asset's identity.
@@ -80,7 +80,7 @@ bone now carries the settle instead. A test asserts no state contains a hood, sh
 |---|---|---|
 | idle | the pool holds a low glow; every niche dark | |
 | growing | the pool brightens — this is the pool's emissive, a material parameter, not geometry | canon |
-| molting | the occupied niches' floors and wall lips light; the rest stay dark | the 80-tick molt window |
+| molting | the alcoves in use light their floor and back-wall lip; the rest stay dark. The lit set follows authoritative adaptation activity | the 80-tick molt window |
 | damaged | the bowl cracked and the pool out of the amber slot | |
 | destroyed | the bowl broken, the pool dark, a rubble ring where the rim came down | |
 
@@ -115,19 +115,26 @@ for s in idle growing molting damaged destroyed lod1 pose_molt_start_100 \
 
 ## 8. Decisions and open items
 
-1. **Nothing states how many niches this building has.** The provisional card requires the niche count
-   to match the authoritative adaptation contract. There is no such number: `ka_growth_basin.adaptation`
-   carries `site_radius_cm`, `molt_ticks`, `dawn_cost` and the stat deltas, and nothing about how many
-   warforms may molt at once. Six niches are **counted off the candidate's GROWING view** and used
-   here. That is a reading of a concept image, not a gameplay claim, and the manifest records it as an
-   unresolved contract gap. **OWNER-QUESTION A.**
+1. **Six alcoves, confirmed, and it is a visual count.** I raised the count as an open question because
+   `ka_growth_basin.adaptation` carries `site_radius_cm`, `molt_ticks`, `dawn_cost` and the stat deltas
+   and nothing about how many warforms may molt at once. Owner ruling 2026-09-07: **six physical
+   alcoves, following the concept, recorded as the asset's visual component count and not its
+   concurrent-molt capacity.** The card's requirement that the count match a gameplay capacity was
+   unsupported and has been removed from it. No six-unit limit, reservation, queue or other adaptation
+   rule follows from this asset, and **no gameplay data was changed** — `Content/Data/Source/` is
+   untouched by this package.
 2. **The niches are open alcoves; I corrected my own card, not the model.** Recorded in §4 and on the
-   card itself.
-3. **The occupancy tell needed a second surface.** With open alcoves the only tell is the lit niche
-   floor, and the floor sits down inside the pocket where the ring spurs hide it at gameplay distance.
-   An occupied niche now also lights the lip of its low back wall, which reads over the ring from the
-   tactical camera. It is legible but subtle at maximum zoom-out; texture and a brighter emissive
-   should carry it further, and that is recorded rather than assumed.
+   card itself. Owner ruling 2026-09-07 confirms the open-alcove, crack-and-settle treatment as the
+   selected direction: no hood or lid is required.
+3. **The occupancy tell needed a second surface, and it presents activity, not capacity.** With open
+   alcoves the only tell is the lit alcove floor, and the floor sits down inside the pocket where the
+   ring spurs hide it at gameplay distance. An occupied alcove now also lights the lip of its low back
+   wall, which reads over the ring from the tactical camera. Per the owner's ruling of 2026-09-07 the
+   lit set **shall reflect authoritative adaptation activity and must not imply six independently
+   available gameplay slots**; lighting two alcoves in the review assembly is illustrative only. A test
+   lights arbitrary subsets from none to all six, so nothing in the asset encodes a slot list.
+   **Maximum-zoom readability stays OPEN until verified** — the tell is legible in the tactical camera
+   and subtle at full zoom-out, and the owner directed it be held open rather than closed on assertion.
 4. **The outer ring is continuous stone with alcoves cut into it.** A first pass built the niche walls
    as free-standing curved slabs outside the rim, which read as debris rather than architecture, and
    also pushed the asset 53 cm outside its footprint. The ring is now solid between the alcoves, and
@@ -141,7 +148,11 @@ for s in idle growing molting damaged destroyed lod1 pose_molt_start_100 \
    capture, gate reviews, incorporation of the provisional card into the authoritative requirements,
    owner acceptance.
 
-> **OWNER-QUESTION A — the niche count has no authoritative source.** The card says the count shall
-> match the adaptation contract, and that contract does not carry one. I built six, counted off the
-> candidate. Confirm six, give a number, or direct that a concurrent-molt capacity be added to
-> `ka_growth_basin.adaptation` — which is a gameplay data change and outside this worktree's authority.
+> **OWNER-QUESTION A — RESOLVED 2026-09-07.** Asked: confirm six alcoves, give a number, or direct that
+> a concurrent-molt capacity be added to the gameplay data. Owner ruling: six physical alcoves following
+> the concept, recorded as the **visual component count, not the concurrent-molt capacity**. The
+> unsupported requirement to match gameplay capacity is removed from the card. No adaptation rules were
+> added to gameplay data. Occupancy lighting must reflect authoritative adaptation activity and must not
+> imply six available slots. Maximum-zoom readability stays open until verified.
+
+One item remains open by direction, not by omission: maximum-zoom occupancy readability (§8.3).

@@ -142,7 +142,10 @@ class BasinBlockout(unittest.TestCase):
                 data = json.load(handle)
             self.assertIn("REL-BLD-016.KA.BASIN.ASSET", data["provisional_contract"]["card"])
             self.assertIn("PENDING", data["acceptance"]["technical"])
-            self.assertIn("niche count", data["unresolved_contract_gap"]["field"])
+            self.assertEqual(data["alcove_count"]["value"], 6)
+            self.assertIn("CONFIRMED", data["alcove_count"]["status"])
+            self.assertIn("NOT a concurrent-molt capacity", data["alcove_count"]["meaning"])
+            self.assertIn("AUTHORITATIVE ADAPTATION ACTIVITY", data["occupancy_tell"]["authority"])
             for row in data.get("outputs", []):
                 if str(row.get("path", "")).endswith(".glb") and "triangles" in row:
                     if int(row["lod"]) == 0:
@@ -161,6 +164,20 @@ class BasinBlockout(unittest.TestCase):
         self.assertEqual(len({c for c in comps if c.endswith("_wall")}), gb.NICHE_COUNT)
         self.assertEqual(len({c for c in comps if c.startswith("niche_") and c.endswith("_floor")}),
                          gb.NICHE_COUNT)
+
+    def test_six_alcoves_is_a_visual_count_not_a_capacity(self):
+        # owner ruling 2026-09-07: six physical alcoves, recorded as the visual component count. The
+        # asset must not encode a capacity — the lit set is whatever authoritative activity reports.
+        self.assertEqual(gb.NICHE_COUNT, 6)
+        self.assertEqual(self.inv["molt_niches"]["contract"], 6)
+        # lighting an arbitrary subset must work, so nothing here can be reading a fixed slot list
+        for subset in ((), (2,), (1, 3, 5), tuple(range(1, 7))):
+            original = gb.MOLTING_NICHES
+            try:
+                gb.MOLTING_NICHES = subset
+                self.assertEqual(gb.lit_niches(gb.assemble(0, "molting")[0]), sorted(subset))
+            finally:
+                gb.MOLTING_NICHES = original
 
     def test_states_are_declared(self):
         self.assertEqual(tuple(gb.STATES), ("idle", "growing", "molting", "damaged", "destroyed"))
