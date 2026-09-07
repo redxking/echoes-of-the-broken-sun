@@ -1,0 +1,452 @@
+{
+ "acceptance": {
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "BLOCKED \u2014 no Kharuun asset card exists to evaluate against (OWNER-QUESTION A)"
+ },
+ "asset_name": "SM_EBS_KHA_BLD_001",
+ "author": "Angelis Pseftis",
+ "budgets": {
+  "amber_area_fraction_lod0": 0.1049,
+  "amber_cap": 0.15,
+  "amber_measure": "surface area, as REL-ART-029 states",
+  "amber_within_cap": true,
+  "cap_scope": "Owner ruling 2026-09-07: ceilings apply to the complete asset including articulated components",
+  "cap_source": "PROVISIONAL, mine; no Kharuun asset card exists (see provisional_contract)",
+  "lod0_cap": 8000,
+  "lod0_triangles": 1554,
+  "lod0_within_cap": true,
+  "lod1_cap": 3500,
+  "lod1_triangles": 634,
+  "lod1_within_cap": true
+ },
+ "component_inventory": {
+  "adaptation_crown": {
+   "built": 7,
+   "contract": 7,
+   "veins": 7
+  },
+  "banded_shell": {
+   "built": 8,
+   "contract": "8 stacked strata bands, faceted"
+  },
+  "growth_seams": {
+   "built": 7,
+   "contract": "amber seams between the bands"
+  },
+  "intake_cleft": {
+   "contract": "one cleft, wider and lower than an arch",
+   "hood": true,
+   "lip": true,
+   "raw_matter": 3,
+   "recess": true
+  },
+  "sockets": {
+   "built": [
+    "Adaptation_Crown",
+    "Matter_Dropoff",
+    "Rally_Default",
+    "Target_Anchor_Center",
+    "Unit_Emergence"
+   ],
+   "contract": [
+    "Adaptation_Crown",
+    "Matter_Dropoff",
+    "Rally_Default",
+    "Target_Anchor_Center",
+    "Unit_Emergence"
+   ]
+  },
+  "states": {
+   "built": [
+    "working",
+    "damaged",
+    "destroyed"
+   ],
+   "contract": [
+    "working",
+    "damaged",
+    "destroyed"
+   ]
+  },
+  "worker_hollows": {
+   "arch_heads": 5,
+   "contract": 5,
+   "interiors": 5,
+   "jambs": 10,
+   "lintels": 5,
+   "thresholds": 5
+  }
+ },
+ "concept_measurements": {
+  "base_width_cm": 880.0,
+  "bounds_cm": [
+   [
+    -488.67,
+    -440.69,
+    0.0
+   ],
+   [
+    440.69,
+    495.6,
+    607.0
+   ]
+  ],
+  "breadth_greater_than_shell_height": true,
+  "everything_inside_the_footprint": true,
+  "footprint_cm": 1000.0,
+  "footprint_tiles": [
+   5,
+   5
+  ],
+  "height_cm": 607.0,
+  "max_extent_cm": 495.6,
+  "shell_height_over_base_width": 0.4398,
+  "spire_spread_over_base_width": 0.5577,
+  "spires_over_total_height": 0.3624,
+  "total_height_over_base_width": 0.6898
+ },
+ "creator": "Angelis Pseftis",
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Faceted banded mineral-ceramic for the shell, spires and cleft lining; a tended-surface slot for the thresholds and the cleft apron; amber for the interior glow, the growth seams and the spire veins, which is the only emissive. REL-ART-029 forbids organic smoothing, so every band is a straight-sided prism rather than a subdivided dome.",
+ "material_slots": [
+  "MI_EBS_KHA_Strata",
+  "MI_EBS_KHA_Fibre",
+  "MI_EBS_KHA_Amber"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -488.66860875270345,
+     -440.69144458880345,
+     0.0
+    ],
+    [
+     440.69144458880345,
+     495.60257598603516,
+     607.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Amber": 816,
+    "MI_EBS_KHA_Fibre": 72,
+    "MI_EBS_KHA_Strata": 666
+   },
+   "collision_boxes": [
+    {
+     "center_cm": [
+      0.0,
+      0.0,
+      96.75
+     ],
+     "name": "shell_lower",
+     "size_cm": [
+      827.2,
+      827.2,
+      193.5
+     ]
+    },
+    {
+     "center_cm": [
+      0.0,
+      0.0,
+      278.64
+     ],
+     "name": "shell_upper",
+     "size_cm": [
+      457.6,
+      457.6,
+      170.28
+     ]
+    }
+   ],
+   "kind": "static",
+   "lod": 0,
+   "mesh": "SM_EBS_KHA_BLD_001",
+   "path": "export/SM_EBS_KHA_BLD_001_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Fibre",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "f04a0ea616368687561c7d9a33abc92d78508a64c402f9b18f2398769af19739",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      212.85
+     ],
+     "purpose": "targeting and selection anchor inside the shell",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Unit_Emergence",
+     "position_cm": [
+      -488.67,
+      0.0,
+      6.0
+     ],
+     "purpose": "Tenders emerge from the centre worker hollow",
+     "yaw_deg": 180.0
+    },
+    {
+     "name": "Rally_Default",
+     "position_cm": [
+      -560.0,
+      0.0,
+      0.0
+     ],
+     "purpose": "default emergence rally point, clear of the thresholds",
+     "yaw_deg": 180.0
+    },
+    {
+     "name": "Matter_Dropoff",
+     "position_cm": [
+      -55.94,
+      532.26,
+      10.0
+     ],
+     "purpose": "the intake cleft mouth: where workers deliver matter",
+     "yaw_deg": 96.0
+    },
+    {
+     "name": "Adaptation_Crown",
+     "position_cm": [
+      0.0,
+      0.0,
+      587.0
+     ],
+     "purpose": "the adaptation-root effect anchor at the tallest spire",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 1554
+  },
+  {
+   "kind": "OBJ",
+   "lod": 0,
+   "mesh": "SM_EBS_KHA_BLD_001",
+   "path": "export/SM_EBS_KHA_BLD_001_LOD0.obj",
+   "sha256": "dbc970be21b01569a93ab59944076445a6ad83b8b6598e08e5ec7dbdfc0394eb"
+  },
+  {
+   "bounds_cm": [
+    [
+     -488.66860875270345,
+     -439.19144458880345,
+     0.0
+    ],
+    [
+     439.19144458880345,
+     495.60257598603516,
+     607.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Amber": 60,
+    "MI_EBS_KHA_Fibre": 72,
+    "MI_EBS_KHA_Strata": 502
+   },
+   "collision_boxes": [
+    {
+     "center_cm": [
+      0.0,
+      0.0,
+      96.75
+     ],
+     "name": "shell_lower",
+     "size_cm": [
+      827.2,
+      827.2,
+      193.5
+     ]
+    },
+    {
+     "center_cm": [
+      0.0,
+      0.0,
+      278.64
+     ],
+     "name": "shell_upper",
+     "size_cm": [
+      457.6,
+      457.6,
+      170.28
+     ]
+    }
+   ],
+   "kind": "static",
+   "lod": 1,
+   "mesh": "SM_EBS_KHA_BLD_001",
+   "path": "export/SM_EBS_KHA_BLD_001_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Fibre",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "037fc8fceeeabf6ab62c4347047d47ca91e886d382f49f3e1f601a1d816fdb78",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      212.85
+     ],
+     "purpose": "targeting and selection anchor inside the shell",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Unit_Emergence",
+     "position_cm": [
+      -488.67,
+      0.0,
+      6.0
+     ],
+     "purpose": "Tenders emerge from the centre worker hollow",
+     "yaw_deg": 180.0
+    },
+    {
+     "name": "Rally_Default",
+     "position_cm": [
+      -560.0,
+      0.0,
+      0.0
+     ],
+     "purpose": "default emergence rally point, clear of the thresholds",
+     "yaw_deg": 180.0
+    },
+    {
+     "name": "Matter_Dropoff",
+     "position_cm": [
+      -55.94,
+      532.26,
+      10.0
+     ],
+     "purpose": "the intake cleft mouth: where workers deliver matter",
+     "yaw_deg": 96.0
+    },
+    {
+     "name": "Adaptation_Crown",
+     "position_cm": [
+      0.0,
+      0.0,
+      587.0
+     ],
+     "purpose": "the adaptation-root effect anchor at the tallest spire",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 634
+  },
+  {
+   "kind": "OBJ",
+   "lod": 1,
+   "mesh": "SM_EBS_KHA_BLD_001",
+   "path": "export/SM_EBS_KHA_BLD_001_LOD1.obj",
+   "sha256": "74bb137981626de1378eeaf3f0cc4db89eb558d239e9fe07108249cf88f0db79"
+  }
+ ],
+ "package_id": "EBS-PKG-KA-MEMORY-HEARTH",
+ "pending_requirements": [
+  {
+   "detail": "Canon gives the Hearth a slow interior glow breath and a cleft settle on delivery, neither of which is geometric articulation, so this blockout is a static mesh. Per the owner's Anchor ruling of 2026-09-07 a static primary structure is acceptable for a blockout but does not close the pipeline's articulated-component requirement. Do not mark this asset compliant until the requirement is implemented or explicitly amended.",
+   "requirement": "Articulated components for a structure of this role",
+   "status": "PENDING, not waived"
+  }
+ ],
+ "planned_unreal_folder": "/Game/Echoes/Production/KHA/BLD/EBS_KHA_BLD_001/",
+ "production_asset_id": "EBS-KHA-BLD-001",
+ "provisional_contract": {
+  "binding_requirements": [
+   "REL-ART-029 (faceted basalt, zero organic smoothing, 2048^2 PBR, amber <= 15.0% surface area)",
+   "REL-BLD-016.KA.HEARTH (1,300 health, 800 cm sight, +12 logistics, 5x5 footprint, produces Tenders)"
+  ],
+  "provisional_bounds": {
+   "basis": "the largest structure budget already in use in this pipeline",
+   "lod0_triangles": 8000,
+   "lod1_triangles": 3500
+  },
+  "status": "NO KHARUUN ASSET CARD EXISTS. Docs/Requirements.md section 18.2 carries Meridian cards only, so there is no REL-BLD-016.KA.HEARTH.ASSET to govern this asset. The triangle ceilings below are MINE and provisional, pending an owner ruling (README section 8, OWNER-QUESTION A). They are not an authoritative card."
+ },
+ "review": {
+  "scenes": [
+   "scenes/working.json",
+   "scenes/damaged.json",
+   "scenes/destroyed.json",
+   "scenes/lod1.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "height_cm": 607.0,
+   "max_extent_cm": 495.6,
+   "name": "working",
+   "path": "review/SM_EBS_KHA_BLD_001_working_LOD0.obj",
+   "sha256": "c12837ab37860431700e6792f8184e97a21ad3eae004ca5067bde2f3a214745e",
+   "triangles": 1554
+  },
+  {
+   "height_cm": 607.0,
+   "max_extent_cm": 495.6,
+   "name": "damaged",
+   "path": "review/SM_EBS_KHA_BLD_001_damaged_LOD0.obj",
+   "sha256": "01449fb449747466db6fac1dcd9f776a27ca215193dbe4cf0283d4be5e6854b4",
+   "triangles": 1590
+  },
+  {
+   "height_cm": 182.02,
+   "max_extent_cm": 439.19,
+   "name": "destroyed",
+   "path": "review/SM_EBS_KHA_BLD_001_destroyed_LOD0.obj",
+   "sha256": "b05cc41a17425c2434dc4de737bb235fd7b737447d8fd18ca1f9960586217996",
+   "triangles": 308
+  },
+  {
+   "name": "working_lod1",
+   "path": "review/SM_EBS_KHA_BLD_001_working_LOD1.obj",
+   "sha256": "ecfdead53f87ce69cfe2812a48087d06aba8939c156e72779ec4360cfc355657",
+   "triangles": 634
+  }
+ ],
+ "revision": "ebs-kha-bld-001-concept-v1",
+ "scale_basis": {
+  "canon": "SPEC-BLD-016.KA.HEARTH (Bible line 555): a wide grown dome of banded strata with arched worker hollows, a matter-intake cleft and a crown of rooted adaptation spires",
+  "footprint_cm": 1000.0,
+  "footprint_tiles": [
+   5,
+   5
+  ],
+  "source": "Content/Data/Source/buildings.json ka_memory_hearth.footprint_cells"
+ },
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/memory-hearth-review/memory-hearth-candidate.png",
+  "canon": "DevelopmentBible.md line 555 (SPEC-BLD-016.KA.HEARTH)",
+  "concepts": [
+   "EBS-CON-KHA-BLD-005 (KEEP, design identity)",
+   "EBS-CON-KHA-BLD-001 (REPLACE, retained history only)"
+  ],
+  "gameplay": "Content/Data/Source/buildings.json ka_memory_hearth"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "states": {
+  "damaged": "one spire's vein dark and a fracture stepping down the front flank; everything else unchanged",
+  "destroyed": "ceramic collapse inward: the upper bands fall and settle, hollows, cleft and spires gone, a rubble ring remains",
+  "working": "the shell whole, five lit hollows, seven spires with lit veins, amber growth seams between the bands"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py"
+ },
+ "units": {
+  "axes": "+X forward, +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "dome ground-contact centre"
+ }
+}

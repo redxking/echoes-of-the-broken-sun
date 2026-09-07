@@ -437,6 +437,31 @@
    "resolved_owner_questions": [
     "A - card pillbox wording: CONFIRMED the three-legged mount with twin emitters; the pillbox wording is to be retired by a coordinated card amendment, which has not happened yet (owner, 2026-09-07)."
    ]
+  },
+  {
+   "package_id": "EBS-PKG-KA-MEMORY-HEARTH",
+   "production_asset_id": "EBS-KHA-BLD-001",
+   "subject": "Memory Hearth",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-kha-bld-001-concept-v1",
+   "asset_name": "SM_EBS_KHA_BLD_001",
+   "planned_unreal_folder": "/Game/Echoes/Production/KHA/BLD/EBS_KHA_BLD_001/",
+   "canon_status": "CANDIDATE (EBS-CON-KHA-BLD-005 KEEP as design identity; EBS-CON-KHA-BLD-001 REPLACE, retained history only); not owner acceptance",
+   "source_root": "ArtSource/EBS-KHA-BLD-001/",
+   "authoritative_document": "ArtSource/EBS-KHA-BLD-001/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-KHA-BLD-001/concept-fidelity.md",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-kha-bld-001-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-BLD-001/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Wide grown dome of eight faceted strata bands, five arched worker hollows with tended thresholds on the front arc, a low wide matter-intake cleft on the right flank with delivered matter at its mouth, and a crown of seven tapered rooted spires. Built to a silhouette trace of the candidate's main WORKING view: shell height 0.44 of the 880 cm base width, total height 0.69, spire spread 0.55. Three states per canon (working, damaged, destroyed). LOD0 1,554 / LOD1 634 against PROVISIONAL ceilings of 8,000 / 3,500; amber 10.5% of surface area against REL-ART-029's 15%. 18 tests, 6 comparison sheets. Import run 2 clean: 0 errors, 1,554/634 at 3 sections, 5 sockets exact, 2 UBX boxes, Nanite off. Run 1 caught my own bug of writing collision into the LOD1 file (recorded in pipeline_findings)."
+    }
+   ],
+   "next": "An owner ruling on the Kharuun provisional contract, then textures (2048 packed PBR with micro-noise normals), a stronger damage read, in-engine capture, gate reviews, owner acceptance.",
+   "open_owner_questions": [
+    "A - no Kharuun asset card exists anywhere in Requirements section 18.2, so the triangle ceilings are mine and provisional; the same gap blocks every remaining Kharuun package (README section 8.1)."
+   ]
   }
  ],
  "tools": {
@@ -462,6 +487,13 @@
    "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/skeletal-clip-duration-probe/probe-record.json",
    "encoded_in": "ArtSource/tools/ebs_skelkit.py (ebs-skelkit-v2): write_skinned_glb refuses unaligned clips; frame_aligned_duration()/retime_clip() snap them",
    "cost_before_it_was_found": "one clip lost in each of EBS-MER-UNT-002, -003 (two) and -004"
+  },
+  {
+   "date": "2026-09-07",
+   "finding": "A LOD1 source file carrying collision meshes silently inflates the imported LOD1 triangle count",
+   "detail": "StaticMeshEditorSubsystem.import_lod does not honour UBX_ collision naming the way the primary Interchange import does. A LOD1 glTF that includes the UBX boxes imports them as ordinary render geometry inside the LOD1 sections. On EBS-KHA-BLD-001 that added 24 phantom triangles (634 exported, 658 imported) and the import still reported success apart from the triangle-count check.",
+   "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-BLD-001/import/ (run1 mismatched at 658, run2 clean at 634)",
+   "resolution": "Write collision into the LOD0 file only: write_glb(..., include_collision=(lod == 0)). Every other generator in this pipeline already did; the Hearth generator did not, so this was my bug, not an engine defect. The import job's lod1_triangles_match check is what caught it."
   }
  ],
  "owner_rulings": [
