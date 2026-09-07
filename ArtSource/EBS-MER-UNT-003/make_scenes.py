@@ -4,11 +4,24 @@
 Author: Angelis Pseftis.
 Usage: python3 make_scenes.py --evidence-dir <root>/EBS-MER-UNT-003 [--render] [--dry-run]
 
-Four review assemblies are rendered: the shipped `deployed` and `packed` meshes, plus two baked
-material states of the SAME geometry - `packed_field_dark` (the field and the pane rims re-slotted
-to charcoal: the runtime's packed state, nothing removed) and `deployed_glass_cutaway` (the field
-polygons cut, a stand-in for translucency so the operators read through the pane as the reference
-draws them). Every fidelity check is judged on a shipped mesh; the two states are supporting tiles.
+Five review assemblies are rendered. The two SHIPPED states, each drawn under the visibility
+contract of the owner ruling of 2026-09-07:
+  * `deployed` - the main skinned mesh WITH the barrier pane assembly (authoritative state DEPLOYED);
+  * `packed`   - the main skinned mesh with the assembly HIDDEN: six open cell frames flanking the
+                 chassis and no field slab anywhere in the mesh.
+Then three non-shipped review variants, none of which certifies a check. They are rendered here
+uncaptioned; make_sheets.py burns the caption into a copy before tiling, so every tile of theirs that
+reaches a sheet says NOT SHIPPED in its own pixels (renders/labelled/, README section 6):
+  * `deployed_glass_cutaway` - TRANSLUCENCY STAND-IN: the field slabs AND the opaque back plates are
+    cut, so the chassis and the two operators read through the pane as the reference draws them
+    through the glass (this renderer has no translucency). ~~concept-v4 cut the field alone, which
+    left the back plates in place and showed no operator at all~~ - struck 2026-09-07;
+  * `deployed_frames_only`   - SEPARATION CONTROL: the deployed pose with the assembly hidden, so the
+    six frames the third sub-object fills can be seen on their own;
+  * `packed_panes_shown`     - INTEGRATION FAILURE CONTROL: the packed pose with the assembly still
+    drawn, i.e. what concept-v3 shipped and what the runtime must not do.
+The `packed_field_dark` material-state assembly is GONE: the packed read is geometry now, so no
+field-off variant stands in for a shipped state.
 
 Orthographic front/right/rear/left/top at authored scale with a 180 cm reference figure, the
 project's RTS tactical framing (the view blocks are copied verbatim from
@@ -69,7 +82,7 @@ CONCEPT_VIEWS = [
 ]
 
 POSES = ["pose_idle_packed_000", "pose_move_packed_025", "pose_deploy_015", "pose_deploy_055", "pose_deploy_082",
-         "pose_idle_deployed_050", "pose_drag_deployed_025", "pose_pack_055", "pose_damage_020",
+         "pose_deploy_100", "pose_idle_deployed_050", "pose_drag_deployed_025", "pose_pack_055", "pose_damage_020",
          "pose_death_100", "pose_cancel_000", "pose_restore_000"]
 
 
@@ -86,7 +99,7 @@ def scene(meshes: list, views: list, figure: bool = True) -> dict:
 
 def plan(evidence_dir: str) -> list:
     scenes = []
-    for state in ("deployed", "packed", "deployed_glass_cutaway", "packed_field_dark"):
+    for state in ("deployed", "packed", "deployed_glass_cutaway", "deployed_frames_only", "packed_panes_shown"):
         obj = f"../review/{ASSET}_{state}_LOD0.obj"
         scenes.append((state, scene([{"obj": obj}], ORTHO_VIEWS)))
         scenes.append((f"{state}_tactical", scene([{"obj": obj}], TACTICAL_VIEWS + CONCEPT_VIEWS)))

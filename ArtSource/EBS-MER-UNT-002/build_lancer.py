@@ -50,10 +50,18 @@ Package contract: Docs/VisualAssetPipeline/reference-packages.json, package EBS-
   review decision EBS-CON-MER-UNT-002 = REPLACE (Docs/VisualAssetPipeline/review-selections.json).
 Canon row: Docs/Archive/DevelopmentBible.md line 510 (SPEC-UNIT-002).
 Requirement card: REL-ART-005.MC.LANCER: LOD0 <= 8,000 tris, LOD1 ceiling printed "3,3500" (a typo;
-  REL-ART-028 states the roster rule verbatim at <= 3,500, which is what is used), 2048^2 PBR stack,
-  team colour by a VERTEX mask that this package cannot author (README section 8.3, OWNER-QUESTION 3),
-  emissive <= 15% of the surface, 18-bone kinematic rig, sub-object separation for Turret_Y and
-  Barrel_X, sockets Muzzle_Flash_01 / Target_Anchor_Center / Left_Tread_Vector.
+  the owner ruling of 2026-09-07 CONFIRMS 3,500 citing REL-ART-028, which states the roster rule
+  verbatim), 2048^2 PBR stack, team colour by a VERTEX mask that this package cannot author
+  (README section 8.3, OWNER-QUESTION 3), emissive <= 15% of the surface, 18-bone kinematic rig,
+  sub-object separation for Turret_Y and Barrel_X, card sockets Muzzle_Flash_01 /
+  Target_Anchor_Center / Left_Tread_Vector.
+
+concept-v4 (2026-09-07) implements the owner ruling on the socket set (README section 8.8):
+  Rear_Recoil_Strut_Anchor is added at the recoil strut's UPPER anchor - the end that transmits recoil
+  into the frame - and Left_Tread_Vector becomes a TEMPORARY COMPATIBILITY ALIAS at exactly that
+  transform, to be dropped once the adapter migration is tested. Left-foot ground contact is a
+  different function and no longer rides on the alias: Foot_Contact_L and Foot_Contact_R carry it at
+  the two sole contact centres. The frame stays two-legged; no geometry changed.
 
 Rig (18 bones, identity rest orientation, heads in the braced rest stance):
   root, body, spine, cowl, r_pod, l_pod, lance_yaw (card Turret_Y), lance_barrel (card Barrel_X),
@@ -91,9 +99,10 @@ PRODUCTION_ID = "EBS-MER-UNT-002"
 ASSET = "SK_EBS_MER_UNT_002"
 YOKE_ASSET = "SM_EBS_MER_UNT_002_LanceYoke"
 BARREL_ASSET = "SM_EBS_MER_UNT_002_LanceBarrel"
-REVISION = "ebs-mer-unt-002-concept-v3"
+REVISION = "ebs-mer-unt-002-concept-v4"
 PLANNED_FOLDER = "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_002/"
-LOD0_CAP, LOD1_CAP = 8000, 3500           # LOD1 cap bounded from the card's "3,3500" typo (OWNER-QUESTION)
+LOD0_CAP, LOD1_CAP = 8000, 3500           # LOD1 = 3,500 CONFIRMED by the owner ruling 2026-09-07 citing
+                                          # REL-ART-028; the card's printed "3,3500" is a typo (README 8.5)
 EMISSIVE_CAP = 0.15
 PRESENTATION_SCALE = 1.60                 # EntityType::Soldier readability scale (runtime, not authored)
 
@@ -497,7 +506,22 @@ BINDING = {
     "l_thigh_": "l_thigh", "l_shin_": "l_shin", "l_foot_": "l_foot", "l_toe_": "l_toe",
     "strut_upper_": "strut_upper", "strut_slide_": "strut_slide",
 }
-SOCKETS_ON_BONES = {"Muzzle_Flash_01": "lance_barrel", "Target_Anchor_Center": "body", "Left_Tread_Vector": "l_foot"}
+# Owner ruling 2026-09-07: "Our recorded Lancer decision specifies Rear_Recoil_Strut_Anchor, with
+# Left_Tread_Vector retained temporarily as a compatibility alias. Left-foot ground contact is a
+# different function; it should have a separately named foot-contact socket if needed."
+# Rear_Recoil_Strut_Anchor and its alias sit on strut_upper, whose head IS the strut's body anchor, so
+# both are at the joint's own rotation centre and hold that point in every clip.
+SOCKETS_ON_BONES = {"Muzzle_Flash_01": "lance_barrel", "Target_Anchor_Center": "body",
+                    "Rear_Recoil_Strut_Anchor": "strut_upper", "Left_Tread_Vector": "strut_upper",
+                    "Foot_Contact_L": "l_foot", "Foot_Contact_R": "r_foot"}
+STRUT_ANCHOR_PURPOSE = ("rear-leg recoil strut anchor: the UPPER end, where the strut bolts to the tail beam and "
+                        "transmits recoil into the frame (the lower end delivers it to the ground through the "
+                        "trailing foot). At strut_upper's head, i.e. the joint's rotation centre, so it holds the "
+                        "anchor point through the per-clip strut solve")
+ALIAS_PURPOSE = ("TEMPORARY COMPATIBILITY ALIAS of Rear_Recoil_Strut_Anchor (owner ruling 2026-09-07): identical "
+                 "bone, position and rotation; to be dropped once the adapter migration is tested. This frame is "
+                 "two-legged and has no tread. It is NOT a ground-contact socket - left-foot ground contact is a "
+                 "different function and is carried by Foot_Contact_L")
 
 
 def assemble(lod: int):
@@ -523,9 +547,16 @@ def assemble(lod: int):
         m.merge(part_toe(lod), translate=p[f"{side}_toe"], component_prefix=f"{side}_toe_")
     m.merge(part_strut_upper(lod), translate=STRUT_TOP, pitch_deg=STRUT_PITCH, yaw_deg=STRUT_YAW, component_prefix="strut_upper_")
     m.merge(part_strut_slide(lod), translate=STRUT_JOINT, pitch_deg=STRUT_PITCH, yaw_deg=STRUT_YAW, component_prefix="strut_slide_")
-    m.sockets.append(kit.Socket("Left_Tread_Vector", (p["l_ankle"][0] + (FOOT_FWD - FOOT_BACK) / 2.0, p["l_ankle"][1], 0.0), 0.0,
-                                "card socket name; this frame walks on legs, so it is placed at the LEFT (trailing) foot's "
-                                "ground contact and the naming conflict is recorded in README section 8"))
+    # owner ruling 2026-09-07: the strut anchor socket, its temporary alias at the SAME transform, and
+    # separately named foot-contact sockets for the different (ground-contact) function.
+    m.sockets.append(kit.Socket("Rear_Recoil_Strut_Anchor", STRUT_TOP, 0.0, STRUT_ANCHOR_PURPOSE))
+    m.sockets.append(kit.Socket("Left_Tread_Vector", STRUT_TOP, 0.0, ALIAS_PURPOSE))
+    for side, sign in (("l", -1.0), ("r", 1.0)):
+        sole = (p[f"{side}_ankle"][0] + (FOOT_FWD - FOOT_BACK) / 2.0, p[f"{side}_ankle"][1], 0.0)
+        m.sockets.append(kit.Socket(f"Foot_Contact_{side.upper()}", sole, 0.0,
+                                    f"{'LEFT (trailing)' if sign < 0 else 'RIGHT (leading)'} sole ground-contact centre "
+                                    "(heel-to-toe midpoint of the block foot, on z = 0): footfall effects, dust and "
+                                    "planted-sole reference. Separate from the recoil-strut anchor by owner ruling 2026-09-07"))
     counts = skel.bind_polygons(m, "root", BINDING)
     return m, s, counts, dict(SOCKETS_ON_BONES)
 
@@ -1095,6 +1126,35 @@ def concept_measurements(m: kit.Mesh) -> dict:
     }
 
 
+def whole_unit_triangles(outputs) -> dict:
+    """Triangles for the WHOLE unit, not per asset.
+
+    The two standalone sub-object parts are alternates, not additions: the lance yoke and barrel are
+    already skinned into the skeletal mesh on the ``lance_yaw`` / ``lance_barrel`` bones, so an
+    integration that instantiates SK plus both SMs draws that geometry twice. Both figures are recorded
+    so a reviewer can check either route against REL-ART-028 without re-deriving the sum.
+    """
+    tri = {}
+    for o in outputs:
+        if not isinstance(o, dict) or "triangles" not in o:
+            continue
+        if o.get("kind", "").startswith("static rest pose"):
+            continue                                     # the rest-pose twin of the skinned mesh
+        tri[(o["mesh"], int(o["lod"]))] = int(o["triangles"])
+    out = {}
+    for lod in (0, 1):
+        sk_only = tri[(ASSET, lod)]
+        subs = sum(v for (mesh, l), v in tri.items() if l == lod and mesh != ASSET)
+        out[f"lod{lod}_skeletal_only"] = sk_only
+        out[f"lod{lod}_with_both_sub_objects"] = sk_only + subs
+    out["note"] = ("The standalone SM_..._LanceYoke and SM_..._LanceBarrel parts duplicate the lance "
+                   "geometry already skinned into SK_EBS_MER_UNT_002 (bones lance_yaw and lance_barrel, "
+                   "96 + 244 tris at LOD0, 56 + 168 at LOD1). They are ALTERNATES for a static sub-object "
+                   "integration route, not additions to the skeletal mesh; instantiating all three "
+                   "double-counts the lance. Both routes are inside REL-ART-028's 8,000 / 3,500.")
+    return out
+
+
 def contract_inventory(m: kit.Mesh, s: skel.Skeleton, clips) -> dict:
     comps = set(m.components())
     return {
@@ -1112,13 +1172,26 @@ def contract_inventory(m: kit.Mesh, s: skel.Skeleton, clips) -> dict:
         "sensor_cowl": {"contract": 1, "built": 1 if "cowl_cowl_lower" in comps else 0, "visor": 1 if "cowl_cowl_visor" in comps else 0},
         "exposed_flank_struts": {"contract": 4, "built": _boxes(m, "body_flank_strut_rear") + _boxes(m, "body_flank_strut_front")},
         "recoil_strut": {"contract": 1, "built": 1 if "strut_upper_strut_rod" in comps else 0,
-                         "slide_section": 1 if "strut_slide_strut_piston" in comps else 0},
+                         "slide_section": 1 if "strut_slide_strut_piston" in comps else 0,
+                         "source_record_name": "recoil_brace",
+                         "name_note": "Docs/VisualAssetPipeline/motion/gap-decisions.json names this component 'recoil_brace' (count 1); the canon row SPEC-UNIT-002, the requirement card and this package call it the recoil strut, and the owner ruling of 2026-09-07 names its socket Rear_Recoil_Strut_Anchor. Same single component, two names for it in the records; the ruling's spelling wins here and the difference is recorded rather than silently reconciled (README section 8.3)."},
         "ceramic_skirt": {"contract": 0, "built": 0, "note": "concept item 5: the flanks stay open charcoal frame"},
         "bones": {"contract": 18, "built": len(s.bones), "names": [b.name for b in s.bones]},
-        "sockets": {"contract": ["Muzzle_Flash_01", "Target_Anchor_Center", "Left_Tread_Vector"], "built": sorted(sk.name for sk in m.sockets)},
+        "sockets": {"card_contract": ["Muzzle_Flash_01", "Target_Anchor_Center", "Left_Tread_Vector"],
+                    "contract": sorted(SOCKETS_ON_BONES),
+                    "built": sorted(sk.name for sk in m.sockets),
+                    "alias": {"Left_Tread_Vector": "Rear_Recoil_Strut_Anchor",
+                              "status": "TEMPORARY COMPATIBILITY ALIAS, to be dropped once the adapter migration is tested"},
+                    "ruling": "owner ruling 2026-09-07: Rear_Recoil_Strut_Anchor is the named socket; Left_Tread_Vector is retained temporarily as a compatibility alias at the same transform; left-foot ground contact is a different function and is carried by Foot_Contact_L / Foot_Contact_R"},
         "sub_objects": {"contract": ["Turret_Y", "Barrel_X"], "built": {"Turret_Y": "lance_yaw", "Barrel_X": "lance_barrel"}},
         "tracks": {"contract": ["idle", "move", "turn", "stop", "fire", "damage", "death", "cancel", "restore"],
-                   "built": [c.name for c in clips]},
+                   "built": [c.name for c in clips],
+                   "source_contract": {
+                       "record": "Docs/VisualAssetPipeline/motion/gap-decisions.json -> production_policy[EBS-PKG-MC-LANCER].required_track_inventory",
+                       "tracks": ["idle", "move", "turn", "stop", "damage", "death", "cancel", "restore",
+                                  "attack_anticipation", "attack_execution", "attack_recovery"],
+                       "deviation": "The frozen record asks for eleven tracks, splitting the attack into attack_anticipation / attack_execution / attack_recovery. This package builds ONE 2.2 s clip named 'fire' that contains all three phases as keyed sections (halt 0.00-0.35 s, plant 0.35-0.75 s, aim 0.75-0.95 s = anticipation; shot at 1.00 s = execution; recover 1.00-1.45 s and settle to 2.20 s = recovery), because the canon row SPEC-UNIT-002 describes one continuous halt-plant-aim-fire-recover action and splitting it into three AnimSequences would put the plant and the recovery blend under runtime control this blockout cannot specify. The three separately named clips are therefore STILL OWED, not delivered: an integration that expects attack_anticipation / attack_execution / attack_recovery by name will not find them. Recorded as a deviation in README section 8.3; the split is an ART_ALPHA / integration decision.",
+                       "status": "DEVIATION_RECORDED - three named attack clips still owed"}},
     }
 
 
@@ -1256,11 +1329,13 @@ def build_manifest(outputs, review, meshes, skeleton, clips) -> dict:
     return {
         "author": AUTHOR, "creator": AUTHOR, "production_asset_id": PRODUCTION_ID, "package_id": PACKAGE_ID, "asset_name": ASSET,
         "parts": [ASSET, YOKE_ASSET, BARREL_ASSET],
-        "revision": REVISION, "kit_revision": kit.KIT_REVISION, "skel_revision": skel.SKEL_REVISION, "stage": "BLOCKOUT (concept-v1)",
+        "revision": REVISION, "kit_revision": kit.KIT_REVISION, "skel_revision": skel.SKEL_REVISION, "stage": f"BLOCKOUT (concept-{REVISION.rsplit('-', 1)[-1]})",
         "stage_boundary": "Concept-matched braced rest geometry, an 18-bone rig and keyframed clip data; skinned export on the verified skeletal kit; no textures, no Unreal import, no gate or owner acceptance.",
         "planned_unreal_folder": PLANNED_FOLDER,
         "units": {"authored": "centimeters at unit scale 1.0", "axes": "+X forward (lance axis), +Y right, +Z up",
-                  "pivot": "ground-contact centre between the braced feet (root)", "nanite": False,
+                  "pivot": "rig origin (root) on the ground plane at z = 0 on the centreline. The brace is asymmetric fore-and-aft, so the origin is not exactly on the sole-contact midpoint: it sits 2.0 cm ahead of the midpoint of Foot_Contact_L (x -66) and Foot_Contact_R (x +62), and 6.0 cm ahead of the ankle midpoint (x -70 / +58). Asserted by test_rest_stance_is_grounded_and_forward_facing",
+                  "pivot_offset_cm": {"ahead_of_sole_contact_midpoint_x": 2.0, "ahead_of_ankle_midpoint_x": 6.0},
+                  "nanite": False,
                   "runtime_presentation_scale": PRESENTATION_SCALE,
                   "presentation_scale_source": "EchoesEntityView.cpp:1809-1812 EntityType::Soldier (mc_lancer maps to Soldier in EchoesContentSubsystem.cpp:309-310); not part of the asset"},
         "scale_basis": {
@@ -1268,7 +1343,7 @@ def build_manifest(outputs, review, meshes, skeleton, clips) -> dict:
             "canon": "SPEC-UNIT-002 (Bible line 510): a two-legged line-fire frame, slightly taller than the Surveyor and narrow",
             "surveyor_height_cm": 176.0, "taller_than_surveyor": measurements["H_pod_top_cm"] > 176.0,
             "height_cm": measurements["H_pod_top_cm"], "overall_height_with_antennas_cm": measurements["overall_height_cm"],
-            "status": "CONCEPT-MEASURED BLOCKOUT (concept-v1)",
+            "status": f"CONCEPT-MEASURED BLOCKOUT (concept-{REVISION.rsplit('-', 1)[-1]})",
             "footprint_note": "SPEC-UNIT-002 Logistics Footprint 2 is the population cost (units.json population_cost 2). The simulation collision footprint of a unit is a 25 cm square (kFixedScale/8 half extent on a 100 cm tile, EchoesContentSubsystem.cpp:363). The visual envelope overhangs it heavily because the lance is 1.05 H long; recorded as a deviation in README section 8.",
         },
         "concept_measurements": measurements,
@@ -1280,25 +1355,37 @@ def build_manifest(outputs, review, meshes, skeleton, clips) -> dict:
                    "bones": sorted(c.tracks), "purpose": c.purpose} for c in clips],
         "budgets": {"lod0_triangles": lod0, "lod1_triangles": lod1, "lod0_cap": LOD0_CAP, "lod1_cap": LOD1_CAP,
                     "lod0_within_cap": lod0 <= LOD0_CAP, "lod1_within_cap": lod1 <= LOD1_CAP,
-                    "lod1_cap_note": "REL-ART-005.MC.LANCER prints the LOD1 ceiling as \"3,3500\" (an evident typo). REL-ART-028 (Docs/Requirements.md:2376) states the rule for the whole Meridian roster: \"a maximum LOD0 cap of <=8,000 triangles, transitioning smoothly down to <=3,500 triangles\", so 3,500 is the roster rule, not a guess; the card typo is recorded for correction (README section 8.5), not raised as an owner decision",
+                    "lod1_cap_note": "CONFIRMED 3,500. Owner ruling 2026-09-07: \"Confirm 3,500 triangles for Lancer LOD1. '3,3500' is malformed. Both REL-ART-028 and our recorded production decision specify 8,000 LOD0 / 3,500 LOD1.\" REL-ART-028 (Docs/Requirements.md:2377 in this worktree; :2379 in Project/Docs/Requirements.md) states the roster rule verbatim: \"a maximum LOD0 cap of <=8,000 triangles, transitioning smoothly down to <=3,500 triangles\". REL-ART-005.MC.LANCER prints the ceiling as \"3,3500\", a Requirements.md typo recorded for correction (README section 8.5). The open question is ANSWERED; no geometry changed for it - the built LOD1 is far under the bound",
+                    "whole_unit_triangles": whole_unit_triangles(outputs),
                     "emissive_area_fraction_lod0": measurements["emissive_area_fraction"], "emissive_cap": EMISSIVE_CAP,
                     "emissive_within_cap": measurements["emissive_area_fraction"] <= EMISSIVE_CAP},
         "material_slots": [FRAME, CERAMIC],
         "material_slot_policy": "2 export slots; the cyan lance channel, visor, pod strips and status strips plus the brass trim are texture channels of the ceramic slot. The review OBJ keeps a third pseudo slot so the renders show the cyan and the emissive share can be measured as a geometry proxy.",
         "team_colour_mask": {
-            "card_rule": "REL-ART-005.MC.LANCER .MAT_RULE (Docs/Requirements.md:2384): \"Albedo channel masked by TeamColor vertex data.\"",
-            "roster_rule": "REL-ART-028 (Docs/Requirements.md:2376): \"Team color accent mapping uses exclusive vertex ID masks.\"",
+            "card_rule": "REL-ART-005.MC.LANCER .MAT_RULE (Docs/Requirements.md:2385): \"Albedo channel masked by TeamColor vertex data.\"",
+            "roster_rule": "REL-ART-028 (Docs/Requirements.md:2377): \"Team color accent mapping uses exclusive vertex ID masks.\"",
             "built": "NOT AUTHORED. The exported primitives carry POSITION, NORMAL, TEXCOORD_0, TEXCOORD_1, JOINTS_0 and WEIGHTS_0 only; TEXCOORD_1 is the mesh kit's per-polygon lightmap grid (ebs_meshkit.py:359-377), not a mask. There is no COLOR_0 and no vertex-ID channel.",
-            "why": "The verified skeletal kit (ArtSource/tools/ebs_skelkit.py, whose SKELETAL_ENCODING is verified against UE 5.8.2) writes no vertex-colour accessor and the shared tools are read-only for this package, so the mask cannot be authored here without changing a verified tool. Recorded as a deviation (README section 8.3) and raised as OWNER-QUESTION 4; it is roster-wide, not Lancer-only (EBS-MER-UNT-001 exports the same attribute set).",
+            "why": "The verified skeletal kit (ArtSource/tools/ebs_skelkit.py, whose SKELETAL_ENCODING is verified against UE 5.8.2) writes no vertex-colour accessor and the shared tools are read-only for this package, so the mask cannot be authored here without changing a verified tool. Recorded as a deviation (README section 8.3) and raised as OWNER-QUESTION 3; it is roster-wide, not Lancer-only (EBS-MER-UNT-001 exports the same attribute set).",
             "status": "DEVIATION_RECORDED"},
         "component_inventory": contract_inventory(m0, skeleton, clips),
         "triangles_by_bone_lod0": counts0,
-        "sockets": [{"name": s.name, "bone": sockets_on_bones[s.name], "position_cm": s.position, "purpose": s.purpose} for s in m0.sockets],
+        "sockets": [{"name": s.name, "bone": sockets_on_bones[s.name], "position_cm": s.position, "yaw_deg": s.yaw_deg, "purpose": s.purpose} for s in m0.sockets],
+        "socket_policy": {
+            "ruling": "Owner ruling 2026-09-07: \"Correct the socket interpretation. Our recorded Lancer decision specifies Rear_Recoil_Strut_Anchor, with Left_Tread_Vector retained temporarily as a compatibility alias. Left-foot ground contact is a different function; it should have a separately named foot-contact socket if needed. Preserve the two-legged concept.\"",
+            "card_names": ["Muzzle_Flash_01", "Target_Anchor_Center", "Left_Tread_Vector"],
+            "anchor_end": "UPPER. The strut runs from the tail beam at (-46, -20, 112) down and back to (-80, -34, 30) over the trailing heel. Recoil enters the frame at the upper end (the strut_anchor clevis on the tail beam) and is delivered to the ground at the lower end through the trailing foot, so the socket is at the upper end.",
+            "alias": {"name": "Left_Tread_Vector", "aliases": "Rear_Recoil_Strut_Anchor",
+                      "status": "TEMPORARY COMPATIBILITY ALIAS - drop once the adapter migration is tested",
+                      "same_transform": True},
+            "foot_contact": {"names": ["Foot_Contact_L", "Foot_Contact_R"],
+                             "function": "sole ground contact (footfall effects, dust, planted-sole reference) - a DIFFERENT function from the recoil anchor, and no longer carried by the alias",
+                             "placement": "heel-to-toe midpoint of each block foot on z = 0"},
+            "two_legged": "preserved: no tread geometry, no change to the braced stance (component inventory unchanged from concept-v3)"},
         "outputs": outputs, "review": review,
         "tools": {"builder_sha256": builder_sha, "python": platform.python_version(), "platform": platform.platform()},
         "source_bindings": {
             "fidelity_target": {"path": "ArtSource/EBS-MER-UNT-002/concept-fidelity.md",
-                                "amended": "concept-v1: brace span, pod separation and the thigh/shin split corrected on the LEFT SIDE panel pixels; antennas added"},
+                                "amended": "concept-v1: brace span, pod separation and the thigh/shin split corrected on the LEFT SIDE panel pixels; antennas added. concept-v2: fore-aft placement of the upper assembly, per-section lance depth and cyan continuity, ceramic on outer faces only, the strut as a per-clip constraint. concept-v4: the socket list rewritten to the owner ruling of 2026-09-07 (Rear_Recoil_Strut_Anchor, Left_Tread_Vector as a temporary alias, Foot_Contact_L/R) and the LOD1 ceiling recorded as CONFIRMED. concept-v4 record pass 2026-09-07: the REAR-panel cross-check for the strut anchor withdrawn (it was scaled from the central cowl block, not the pod caps; re-scaled it reads 119.4 cm and disagrees with the LEFT SIDE panel by 5.5 cm), and the eleven-track gap-decisions.json inventory recorded against the built nine"},
             "selected_candidate": {"path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/lancer-review/lancer-candidate.png",
                                    "status": "SELECTED CANDIDATE - the production direction"},
             "derived_turnaround": {"path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/lancer-review/lancer-derived-turnaround.png",

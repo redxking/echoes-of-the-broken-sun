@@ -6,7 +6,7 @@ created: 2026-09-07
 package: EBS-PKG-MC-LANCER
 production_asset_id: EBS-MER-UNT-002
 production_maturity: BLOCKOUT
-revision: ebs-mer-unt-002-concept-v3
+revision: ebs-mer-unt-002-concept-v4
 canon_status: CANDIDATE (REPLACE direction under delegation; not owner acceptance)
 status: Isolated production source; no Unreal integration authorization
 ---
@@ -29,11 +29,12 @@ production worktree; bounded by the shared [agent contract](../../AGENTS.md), th
 | Selected candidate | `…/Evidence/concept-discovery-20260906/lancer-review/lancer-candidate.png` (main braced view, braced side view, tactical silhouette) — **the production direction**. Owner feedback recorded in the Relay Skiff generation record: "Love that continue to the next" (positive on the candidate; not production acceptance) |
 | Derived reference | `…/lancer-review/lancer-derived-turnaround.png` (front / left side / rear / top plus the hip-mount and leg-attachment inset). Its FRONT and REAR panels are **quarter views** — the lance leaves the centreline in both — so only the LEFT SIDE panel was used for measurement (§8.2) |
 | Superseded concept | `EBS-CON-MER-UNT-002` (`meridian-units.png` top-right `[0.5, 0, 1, 0.5]`, sha256 `427e60cd27bd78e9…`), decision REPLACE. Retained history only; **not** a modelling target. Crop kept at `…/concept-crops/all/EBS-PKG-MC-LANCER/EBS-CON-MER-UNT-002.png` |
-| Fidelity target | [concept-fidelity.md](concept-fidelity.md) — AUTHORITATIVE. Seven of its lines are corrected or added against the pixels across `concept-v1` and `concept-v2`, all marked in that file (§8.2, §8.7) |
+| Fidelity target | [concept-fidelity.md](concept-fidelity.md) — AUTHORITATIVE. Seven of its lines are corrected or added against the pixels across `concept-v1` and `concept-v2`, all marked in that file (§8.2, §8.7); its rig section and its budget line are rewritten to the owner ruling in `concept-v4` (§8.8) |
 | Canon row | DevelopmentBible.md line 510 (`SPEC-UNIT-002`): "A two-legged line-fire frame, slightly taller than the Surveyor and narrow, with a long forward rail-lance carried at hip height, a recoil strut braced to the rear leg, and a low armored cowl. Ceramic plate over charcoal, cyan band along the lance… Halts, plants the strut, aims, fires with recoil returning through the mount, recovers. Never fires while moving." |
 | Book | ¶178, ¶181, ¶1966, ¶3078 (frames and bracing; the book does not call for a human infantry redesign) |
 | Gameplay record | `SPEC-UNIT-002` / `units.json` `mc_lancer`: 145 HP, 320 cm/s, 1,100 cm sight, population cost 2, 18 damage at 650 cm range, 30-tick cooldown, role `ranged_line`. `EchoesContentSubsystem.cpp:309-310` maps it to `EntityType::Soldier` → runtime `PresentationScale` 1.60 (`EchoesEntityView.cpp:1809-1812`) |
-| Requirement card | `REL-ART-005.MC.LANCER` (Requirements.md:2382): LOD0 ≤ 8,000 tris, LOD1 ceiling printed "3,3500", 2048² PBR stack, ceramic micro-noise detail normal, team colour by mask, emissive ≤ 15% with an un-bloomed amber/cyan blend, **18-bone** rig, **sub-object separation for `Turret_Y` and `Barrel_X`**, sockets `Muzzle_Flash_01` / `Target_Anchor_Center` / `Left_Tread_Vector`; `SPEC-MOV-010` runtime-owned facing; `REL-ART-009` code-driven motion synchronized to authoritative velocity |
+| Requirement card | `REL-ART-005.MC.LANCER` (Requirements.md:2382): LOD0 ≤ 8,000 tris, **LOD1 ≤ 3,500 (CONFIRMED, owner ruling 2026-09-07 citing `REL-ART-028`; the card's printed "3,3500" is a Requirements.md typo — §8.5)**, 2048² PBR stack, ceramic micro-noise detail normal, team colour by mask, emissive ≤ 15% with an un-bloomed amber/cyan blend, **18-bone** rig, **sub-object separation for `Turret_Y` and `Barrel_X`**, card socket names `Muzzle_Flash_01` / `Target_Anchor_Center` / `Left_Tread_Vector`; `SPEC-MOV-010` runtime-owned facing; `REL-ART-009` code-driven motion synchronized to authoritative velocity |
+| Owner ruling | **2026-09-07**, two answers, implemented verbatim in `concept-v4` (§8.8): the LOD1 ceiling is **3,500** ("`3,3500` is malformed"), and the socket set is **`Rear_Recoil_Strut_Anchor`** with **`Left_Tread_Vector` retained temporarily as a compatibility alias**, left-foot ground contact carried by a separately named foot-contact socket, and the **two-legged concept preserved** |
 | Existing envelope | No Lancer visual placeholder and no code-driven Lancer rig exist in the runtime (unlike the Surveyor's M01 parts), so this package has no compatibility-part constraint. The simulation collision envelope of any unit is a 25 cm square (`Rules.footprintHalfExtentRaw = kFixedScale / 8`, `EchoesContentSubsystem.cpp:363`, on a 100 cm tile) |
 
 ## 2. Contextual brief (`SPEC-VISD-008`)
@@ -87,9 +88,9 @@ disagreed with the manifest it names as its source, and they are corrected in `c
 | Recoil strut | (−46, −20, 112) → (−63.7, −27.3, 69.4) → (−80, −34, 30); **89.9** cm long, Ø 6.8 cm (slim: < half the leg width), slide joint at 52% of its length, landing **10.5** cm from the trailing ankle over the heel, and **solved from the trailing leg in every clip** (§8.7) | concept-fidelity.md item 6 |
 | Draw scale | ×1.60 at runtime (`PresentationScale`, `EntityType::Soldier`): 320 cm tall, 454 cm long, muzzle 311 cm ahead of the pivot | `EchoesEntityView.cpp:1809-1812`; **not part of the asset** |
 | Footprint | `SPEC-UNIT-002` "Logistics Footprint 2" is the **population cost** (`units.json` `population_cost: 2`). The **simulation collision footprint** is a 25 cm square. The **visual envelope** (283.5 cm long, 454 cm at ×1.6) overhangs it far more than the Surveyor does; recorded as a deviation in §8.3 | `Requirements.md:682`, `EchoesContentSubsystem.cpp:361-363` |
-| Units / axes / pivot | cm; +X forward (the lance axis), +Y right, +Z up; root at the ground-contact centre between the braced feet; **Nanite OFF** | contract `import_policy`; card |
+| Units / axes / pivot | cm; +X forward (the lance axis), +Y right, +Z up; **root on the ground plane (z = 0) on the centreline** — the brace is asymmetric fore-and-aft, so the origin sits **2.0 cm ahead of the sole-contact midpoint** (`Foot_Contact_L` x −66, `Foot_Contact_R` x +62) and 6.0 cm ahead of the ankle midpoint (−70 / +58); **Nanite OFF** | contract `import_policy`; card; `build-manifest.json` → `units.pivot_offset_cm`, asserted by `test_rest_stance_is_grounded_and_forward_facing` |
 
-## 4. Geometry and rig (revision `ebs-mer-unt-002-concept-v2`)
+## 4. Geometry and rig (revision `ebs-mer-unt-002-concept-v4`)
 
 Generator: [build_lancer.py](build_lancer.py) on the mesh kit and the skeletal kit
 ([../tools/ebs_skelkit.py](../tools/ebs_skelkit.py)). The rest stance **is** the concept's braced firing
@@ -113,12 +114,21 @@ angles — are the constants.
 | 8 palette | two export slots — `MI_EBS_MER_UnitFrame` (charcoal) and `MI_EBS_MER_UnitCeramic` (pale). Cyan is a review-only pseudo slot folded into the ceramic slot on export; brass trim and plate seams are texture channels. Ceramic-bright share of the silhouette: front 0.265, **rear 0.107** (concept 0.204 / 0.116). The card’s **team-colour vertex mask is NOT authored** — deviation in §8.3, OWNER-QUESTION 3 |
 | 18 bones | `root, body, spine, cowl, r_pod, l_pod, lance_yaw, lance_barrel, r_thigh, r_shin, r_foot, r_toe, l_thigh, l_shin, l_foot, l_toe, strut_upper, strut_slide` — identity rest orientation, hinge pitch about +Y at each joint |
 | Card sub-objects | `Turret_Y` → `lance_yaw` (yaw ring at (30, 0, 132)); `Barrel_X` → `lance_barrel` (trunnion at (44, 0, 132)). Both are also exported as separate static parts (`SM_EBS_MER_UNT_002_LanceYoke`, `SM_EBS_MER_UNT_002_LanceBarrel`, LOD0/LOD1, GLB + OBJ) authored around their own pivots |
-| Sockets | `Muzzle_Flash_01` (`lance_barrel`, (194, 0, 132)); `Target_Anchor_Center` (`body`, (−4, 0, 138)); `Left_Tread_Vector` (`l_foot`, (−66, −35, 0)) — **naming conflict recorded in §8.1** |
+| Sockets (owner ruling 2026-09-07, §8.8) | six, all yaw 0: `Muzzle_Flash_01` (`lance_barrel`, (194, 0, 132)); `Target_Anchor_Center` (`body`, (−4, 0, 138)); **`Rear_Recoil_Strut_Anchor`** (`strut_upper`, (−46, −20, 112)) at the strut's UPPER anchor — the end bolted to the tail beam, where the recoil load passes between the strut and the frame (§8.1, measured); **`Left_Tread_Vector`** (`strut_upper`, (−46, −20, 112)) — **TEMPORARY COMPATIBILITY ALIAS** of that socket at the identical transform, to be dropped when the adapter migration is tested; **`Foot_Contact_L`** (`l_foot`, (−66, −35, 0)) and **`Foot_Contact_R`** (`r_foot`, (62, 35, 0)) at the two sole contact centres — the ground-contact function, which no longer rides on the alias |
 | Upper-assembly placement | spine origin (−42, 0, 148 + solved lift): the deck, both pods and the cowl are carried back over the hips so the 0.80–1.00 H band centroid lands at −28.4 cm against the concept’s −30.4 / −30.2 (§8.7) |
+
+Budgets, whole unit: the standalone `SM_…_LanceYoke` and `SM_…_LanceBarrel` parts **duplicate the lance
+geometry that is already skinned into `SK_EBS_MER_UNT_002`** on the `lance_yaw` and `lance_barrel` bones
+(96 + 244 tris at LOD0, 56 + 168 at LOD1), so they are **alternates** for a static sub-object integration
+route, **not additions**: an integration that instantiates the skeletal mesh *and* both static parts draws
+the lance twice. The whole unit is therefore **1,972 / 1,136** on the skeletal route and **2,312 / 1,360**
+if all three parts are placed together — both inside `REL-ART-028`'s 8,000 / 3,500. Recorded in
+`build-manifest.json` → `budgets.whole_unit_triangles` and asserted by
+`test_whole_unit_triangle_sum_is_recorded`.
 
 Budgets: LOD0 **1,972** ≤ 8,000; LOD1 **1,136** ≤ 3,500 (the card's LOD1 ceiling is printed "3,3500", an
 evident typo; **`REL-ART-028` states the roster rule verbatim** — "≤8,000 triangles, transitioning smoothly
-down to ≤3,500 triangles" (`Docs/Requirements.md:2376`) — so 3,500 is the rule, not a guess, and the card
+down to ≤3,500 triangles" (`Docs/Requirements.md:2377`) — so 3,500 is the rule, not a guess, and the card
 typo is recorded for correction rather than raised as an owner decision, §8.5). Emissive share of the
 surface (cyan pseudo slot as a geometry proxy) **6.1%** ≤ 15%. Nanite OFF. Large headroom is deliberately left for the ART_ALPHA
 plating pass; the blockout spends triangles on the readable elements only. Triangles by bone, the rest
@@ -138,22 +148,23 @@ the frame along the ground.
 
 | Track | Duration | Keys | Intent |
 |---|---|---|---|
-| idle | 2.4 s loop | 70 | braced firing stance breathing: a 1° settle on the hips, the cowl scanning ±2.5°, the lance held level on the centreline |
-| move | 0.6 s loop | 350 | walk cycle authored for 320 cm/s **at authored scale** (two 96 cm strides per cycle): the frame **leaves the brace** into a travel gait, ankles sweeping ±48 cm about the hip line with a 14 cm swing lift, a ≤ 1.6 cm bob and an 8° toe roll-off before toe-off; the recoil strut is **stowed** (piston drawn 38 cm home) because the trailing leg swings forward past its anchor; the lance is carried level and locked, and the clip carries **no recoil translation at all**. **The unit draws at ×1.60, so at play rate 1.0 the soles travel 512 cm/s in world against a 320 cm/s actor — the integration task must set play rate 0.625** (`integration_play_rate` in the manifest, §8.3) |
-| turn | 0.6 s loop | 60 | stationary shuffle inside the brace (alternate 5 cm foot lift, 4° body yaw countered on the lance yaw) while the runtime sweeps heading (`SPEC-MOV-010`) |
-| stop | 0.4 s | 132 | settle out of travel into the brace: the feet spread fore-and-aft, the trailing knee rolls into the kickstand and the strut retracts |
-| fire | 2.2 s | 675 | **halt** (travel stance, lance 3° nose-up, strut stowed) → **plant** at 0.35 s (into the brace; the strut swings down onto the trailing ankle and the piston runs out 38 cm) → **aim** at 0.75–0.95 s (yaw to 0, lance level on the target line) → **shot** at 1.00 s (the lance translates −26 cm **along its own +X axis**, the frame rocks 2.5° back, and the strut slide works: the body rock plus a 6.5 cm stroke) → **recover** by 1.45 s → back to the brace at 2.2 s. Stationary throughout: the canon line "never fires while moving" is a state rule, and the geometry of this clip cannot be played while `move` is |
-| damage | 0.35 s | 168 | flinch on authoritative damage: the frame rocks 6° back on the brace, the lance lifts 4° and the cowl snaps 3°; no displacement, both soles stay planted (≤ 1.5 cm), and the strut absorbs the rock through its slide because it is solved from the (stationary) trailing ankle |
-| death | 1.4 s | 435 | engineered collapse: the braced legs fold (thigh +70 / shin −135 / foot +65), the frame drops and pitches 20° forward, the lance goes nose-down with its muzzle 10.6 cm above the ground, and the strut stays bolted to the folding trailing ankle; the whole frame ends **below** its standing height (193.9 cm against 213.1) and the final pose is held (cosmetic debris ≤ 200 ticks). The fold is deeper and the pitch shallower than `concept-v1` because, with the mass carried aft, a 26° nose-down pitch levered the pods **up** to 211.6 cm (§8.7) |
-| cancel | 0.4 s | 126 | order cancelled mid-aim: the lance returns from an 8° yaw / 3° elevation to the carry angle, the strut slide retracts and the frame relaxes back onto the brace |
-| restore | single frame | 17 | identity key on the seventeen non-root bones for reconstruction from saved state; never replays a one-shot |
+| idle | 2.4 s loop (72 frames) | 70 | braced firing stance breathing: a 1° settle on the hips, the cowl scanning ±2.5°, the lance held level on the centreline |
+| move | 0.6 s loop (18 frames) | 350 | walk cycle authored for 320 cm/s **at authored scale** (two 96 cm strides per cycle): the frame **leaves the brace** into a travel gait, ankles sweeping ±48 cm about the hip line with a 14 cm swing lift, a ≤ 1.6 cm bob and an 8° toe roll-off before toe-off; the recoil strut is **stowed** (piston drawn 38 cm home) because the trailing leg swings forward past its anchor; the lance is carried level and locked, and the clip carries **no recoil translation at all**. **The unit draws at ×1.60, so at play rate 1.0 the soles travel 512 cm/s in world against a 320 cm/s actor — the integration task must set play rate 0.625** (`integration_play_rate` in the manifest, §8.3) |
+| turn | 0.6 s loop (18 frames) | 60 | stationary shuffle inside the brace (alternate 5 cm foot lift, 4° body yaw countered on the lance yaw) while the runtime sweeps heading (`SPEC-MOV-010`) |
+| stop | 0.4 s (12 frames) | 132 | settle out of travel into the brace: the feet spread fore-and-aft, the trailing knee rolls into the kickstand and the strut retracts |
+| fire | 2.2 s (66 frames) | 675 | **halt** (travel stance, lance 3° nose-up, strut stowed) → **plant** at 0.35 s (into the brace; the strut swings down onto the trailing ankle and the piston runs out 38 cm) → **aim** at 0.75–0.95 s (yaw to 0, lance level on the target line) → **shot** at 1.00 s (the lance translates −26 cm **along its own +X axis**, the frame rocks 2.5° back, and the strut slide works: the body rock plus a 6.5 cm stroke) → **recover** by 1.45 s → back to the brace at 2.2 s. Stationary throughout: the canon line "never fires while moving" is a state rule, and the geometry of this clip cannot be played while `move` is |
+| damage | 0.366667 s (11 frames) | 168 | flinch on authoritative damage: the frame rocks 6° back on the brace, the lance lifts 4° and the cowl snaps 3°; no displacement, both soles stay planted (≤ 1.5 cm), and the strut absorbs the rock through its slide because it is solved from the (stationary) trailing ankle |
+| death | 1.4 s (42 frames) | 435 | engineered collapse: the braced legs fold (thigh +70 / shin −135 / foot +65), the frame drops and pitches 20° forward, the lance goes nose-down with its muzzle 10.6 cm above the ground, and the strut stays bolted to the folding trailing ankle; the whole frame ends **below** its standing height (193.9 cm against 213.1) and the final pose is held (cosmetic debris ≤ 200 ticks). The fold is deeper and the pitch shallower than `concept-v1` because, with the mass carried aft, a 26° nose-down pitch levered the pods **up** to 211.6 cm (§8.7) |
+| cancel | 0.4 s (12 frames) | 126 | order cancelled mid-aim: the lance returns from an 8° yaw / 3° elevation to the carry angle, the strut slide retracts and the frame relaxes back onto the brace |
+| restore | single frame (0 frames) | 17 | identity key on the seventeen non-root bones for reconstruction from saved state; never replays a one-shot |
 
 `build_lancer.py` writes the skinned GLBs with these clips (`SK_EBS_MER_UNT_002_LOD0/1.glb`: one skin, 18
-joints, 9 animations, the three sockets as child nodes of their joints) on the verified skeletal-kit
+joints, 9 animations, the six sockets as child nodes of their joints — two of them, the strut anchor and its
+alias, on `strut_upper`) on the verified skeletal-kit
 encodings. [pose_review.py](pose_review.py) samples the clips at the seventeen review times, bakes posed
 review OBJs and writes their render scenes; the fire samples are named for the canon phases.
 
-## 6. Review evidence (concept-v2 blockout stage)
+## 6. Review evidence (concept-v4 blockout stage)
 
 Evidence root:
 `/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-002/`
@@ -167,6 +178,10 @@ a Surveyor scale scene (`renders/scale_vs_surveyor/`); a context scene with four
 the Power Link (`renders/context/`); and seventeen posed stills (`renders/pose_<label>/`: right, front,
 top and near-tactical, plus ×1.6 gameplay framing for `move_stance`, `fire_plant`, `fire_aim`, `fire_shot`
 and `death_hold`).
+
+All 27 scenes were re-rendered for `concept-v4` and all 13 sheets rebuilt: the 98 scene PNGs came back
+byte-identical (the ruling changed sockets, not geometry), and two of the sheets changed because they were
+**stale from `concept-v3`** — see §8.8.
 
 Comparison sheets (`renders/concept-compare/`, concept panel cropped into the first cell; exact commands
 in [make_sheets.py](make_sheets.py) and §7):
@@ -196,10 +211,11 @@ Fidelity checks (concept-fidelity.md), decided on the sheets above by looking at
 | Top view: the lance runs down the centreline and projects well past the leading foot | **MET** | `turnaround_top_vs_top.png` cell 2 / `rest/top.png`: the lance is exactly on y = 0 with the cyan channel visible either side of the rails, and it clears the leading toe by 110 cm — over half the whole silhouette length lies ahead of the frame, as in the concept's TOP panel |
 | Rear view: recoil strut and open frame; no rear armour, and no pale plate facing aft | **MET (`concept-v2`; PARTLY REFUTED in `concept-v1`)** | `turnaround_rear_vs_rear.png` cell 2 / `rest/rear.png`: nothing closes the back of the frame — the hip beam, tail beam, core and flank struts read as separate members and the strut crosses the trailing thigh as a distinct diagonal; cell 4 (`fire_shot/right.png`) shows the slide section extended on the shot. The **ceramic now forms outer faces only**: ceramic-bright share of the silhouette (lum > 0.55 × background, the orange reference figure excluded) front 0.265 / **rear 0.107**, against the concept panels' 0.204 / **0.116**. `concept-v1` measured 0.372 / 0.323 by the same method, i.e. three times the concept's rear ceramic (§8.7) |
 | Tactical framing: reads as sustained ranged fire, forward-facing, and not as a hero body | **MET** | `candidate_silhouette_vs_tactical.png` cells 2–3 and `context_and_scale.png`: at the near tactical framing the mono silhouette is a low braced wedge with one long horizontal line through it; the frame is 283.5 cm long against 213 cm tall, so the read is a weapon carried by a frame, not a torso with arms. In the context scene four Lancers at ×1.6 keep their lance lines separate at 300–400 cm spacing beside the Power Link and a Surveyor |
+| Sockets (owner ruling 2026-09-07): the strut anchor at the frame-side end, the alias on the same transform, the foot contacts at the soles | **MET (`concept-v4`)** | `rest/left.png` and `candidate_side_vs_right.png` cell 4: the strut reads as one slim diagonal leaving the body's lower rear and landing over the trailing heel, so it has exactly two ends and only the upper one touches the frame. Measured on the concept pixels: the rod enters the body silhouette at z = 113.9 cm (0.57 H) on the turnaround LEFT SIDE panel and z ≈ 112 cm on the REAR panel; `Rear_Recoil_Strut_Anchor` is built at z = 112.0 cm (0.56 H), inside the `strut_anchor` clevis and on the `tail_beam`. `Left_Tread_Vector` is bit-identical to it; `Foot_Contact_L/R` sit on z = 0 inside each block foot, 50+ cm away (§8.1) |
 | Canon: slightly taller than the Surveyor and narrow | **MET** | `scale_vs_surveyor/front.png` and `right.png`: 200 cm at the pod tops against the Surveyor's 176 cm mast cap (+13.6%), and 97 cm across against the Surveyor's 214.5 cm arm span |
 | Palette: nothing on it reads as a hero body; cyan only on the lance channel, visor and small strips | **PARTIAL** | `rest/*.png`: geometry and slot assignment are correct (6.1% cyan by area, pale ceramic only on the pod shells and top caps, the cowl above its charcoal closure, the deck plate, the limb outer-face plates and the toe plates), but this is a **blockout with flat review colours**. Brass edge trim, plate seams and the ceramic micro-noise normal are texture channels that do not exist yet, so the "pale ceramic over charcoal" read cannot be judged finally until the 2048² stack is authored (§8.6). The card's **team-colour vertex mask is not authored at all** and cannot be from this package — deviation in §8.3, OWNER-QUESTION 3 |
 
-Checks: **27 structural tests** in [test_lancer_build.py](test_lancer_build.py) (contract inventory
+Checks: **38 structural tests** in [test_lancer_build.py](test_lancer_build.py) (contract inventory
 including every concept part; the corrected proportion bands for the brace, the lance, the head and pods,
 and the legs; **the fore-aft placement of the upper assembly against the two concept side panels**; **the
 lance's per-section depth against the concept's own shaft and collar**; **the cyan channel reading as one
@@ -207,14 +223,26 @@ stroke, with every collar and the muzzle head clear of the channel band**; **the
 faces, not the rear**; the strut's slimness, run and clearance from the trailing shin, **plus its
 attachment to the trailing ankle in every sampled frame of every clip and the exactness of the aim solve
 at the rest pose**; **the walk speed recorded against the ×1.60 draw scale**; the 18-bone hierarchy and
-sides; every polygon bound; socket names, bones and positions with the tread-name conflict asserted in
-the socket purpose; the card sub-objects and their pivots; budgets, emissive share and the two export
-slots; clip inventory with no root track and an identity restore key; the fire clip's recoil along the
+sides; every polygon bound; **the six socket names, bones and positions with the alias contract asserted in
+the socket purpose**; the card sub-objects and their pivots; budgets, emissive share and the two export
+slots; clip inventory with no root track and an identity restore key; **every clip's duration asserted to
+be a whole 30 fps frame with its exact frame count, and the §5 clip table's printed durations and key
+counts bound to the built clips**; **the frozen `gap-decisions.json` eleven-track inventory recorded
+against the built nine, with the three attack clips asserted to be owed rather than delivered**; **the
+whole-unit triangle sum with and without the duplicated sub-object parts**; **the root's fore-aft offset
+from the sole-contact midpoint**; the fire clip's recoil along the
 lance axis and the strut slide along the strut axis, the level aim and the pulled-back muzzle on the
 shot; the move clip leaving the brace and carrying no recoil; the death lance nose-down without breaking
 the ground; no vertex below −1 cm in any clip sampled at **10 ms**; planted soles within ±1.5 cm through
 every hold pose and through the whole braced section of the fire clip; determinism of both the static and
-skinned exports), all passing. `--check` reports `ok` with no drift over **60 artefacts** — the 14
+skinned exports), all passing. Seven of the thirty-eight are the `concept-v4` socket contract (§8.8): the
+six socket names, bones and positions; the strut anchor at the **upper** end (on the `strut_upper` head,
+inside the `strut_anchor` clevis and on the `tail_beam`); `Left_Tread_Vector` asserted to be an alias at
+the **identical** transform and marked as one in its purpose; the foot-contact sockets asserted to be at
+the soles (z = 0, inside each footprint, on the mesh's lowest surface) and **not** at the strut; the
+anchor socket asserted to hold the clevis in every frame of every clip while the strut solve swings the
+rod; **no tread, track, roller, wheel or bogie component in either LOD**; and the confirmed LOD1 bound
+with its record wording. `--check` reports `ok` with no drift over **60 artefacts** — the 14
 exports, the 2 rest review OBJs, the **17 posed review OBJs** and the **27 render scenes** (§7). Author's
 inspection of every sheet.
 
@@ -232,8 +260,21 @@ for s in "$R/EBS-MER-UNT-002/scenes/"*.json; do python3 ../tools/ebs_render.py -
 python3 make_sheets.py --evidence-root "$R"          # runs the thirteen ebs_sheet.py commands, in this order
 python3 build_lancer.py --evidence-dir "$R/EBS-MER-UNT-002" --check    # read-only: rebuilds into a temp dir and compares hashes
 python3 test_lancer_build.py
-python3 ../tools/make_evidence_receipt.py --evidence-dir "$R/EBS-MER-UNT-002" --package EBS-MER-UNT-002 --manifest build-manifest.json --stage "BLOCKOUT (concept-v2)" --command ... --note ...   # exact strings in receipt.json
+python3 ../tools/ebs_make_import_job.py --manifest build-manifest.json --evidence-dir "$R/EBS-MER-UNT-002" \
+    --destination /Game/Echoes/Production/MER/UNT/EBS_MER_UNT_002 \
+    --out "$R/EBS-MER-UNT-002/import/import-job-ebs-mer-unt-002-concept-v4.json"   # the in-engine expectation for the coordinator's serial import
+python3 ../tools/make_evidence_receipt.py --evidence-dir "$R/EBS-MER-UNT-002" --package EBS-MER-UNT-002 --manifest build-manifest.json --stage "BLOCKOUT (concept-v4: owner ruling of 2026-09-07 implemented)" --command ... --note ...   # exact strings in receipt.json
 ```
+
+**The import job.** This package never runs `UnrealEditor-Cmd` — the coordinator runs the imports
+serially afterwards — but it does ship the machine-readable expectation that run is checked against.
+`import/import-job-ebs-mer-unt-002-concept-v4.json` is derived from `build-manifest.json`, so it carries
+`revision: ebs-mer-unt-002-concept-v4`, the **six** sockets
+(`Foot_Contact_L`, `Foot_Contact_R`, `Left_Tread_Vector`, `Muzzle_Flash_01`, `Rear_Recoil_Strut_Anchor`,
+`Target_Anchor_Center`), the eighteen bones, `lod0_triangles: 1972` and every clip's frame-aligned
+duration. `ue_import_inspect_skeletal.py` passes `expected` through to its report untouched, so running
+the older `concept-v3` job — whose socket list is the pre-ruling three — would produce a report whose
+expectation block silently contradicts the asset. Use the `concept-v4` job.
 
 `make_sheets.py --dry-run --evidence-root "$R"` prints the thirteen `ebs_sheet.py` command lines
 verbatim (tile order, `--cols`, `--cell` and the normalized `--crop` of each concept panel), so the sheet
@@ -252,15 +293,81 @@ from the scenes and the command lines above, and every render directory carries 
 
 ## 8. Decisions, deviations and open items
 
-### 8.1 Socket naming conflict (`Left_Tread_Vector`)
+### 8.1 The socket set (`Rear_Recoil_Strut_Anchor`, its alias, and the foot contacts)
 
+**Owner ruling, 2026-09-07 — the decision:**
+
+> "Correct the socket interpretation. Our recorded Lancer decision specifies `Rear_Recoil_Strut_Anchor`,
+> with `Left_Tread_Vector` retained temporarily as a compatibility alias. Left-foot ground contact is a
+> different function; it should have a separately named foot-contact socket if needed. Preserve the
+> two-legged concept."
+
+~~**Superseded, `concept-v1`–`concept-v3` (struck 2026-09-07 by the ruling above; kept for the record):**
 The card names a socket `Left_Tread_Vector`, but this frame walks on legs — the concept has no treads and
 the canon row calls it "a two-legged line-fire frame". The socket is kept **at the card's exact name** and
 placed at the LEFT (trailing) foot's ground contact, (−66, −35, 0). The conflict is recorded here rather
 than resolved by renaming, exactly as `EBS-MER-UNT-001` does for the Surveyor card's "rotates mechanical
 treads" wording (its §8.1); the socket's `purpose` string carries the same note into the imported asset,
-and a test asserts it. **Rule cited:** `REL-ART-005.MC.LANCER` .ANIM_RIG socket list is a naming contract;
-the Bible line 510 silhouette is the visual authority. Renaming needs an owner or gate decision.
+and a test asserts it. Renaming needs an owner or gate decision.~~ That reading was wrong on the ruling's
+own terms: it put the card name on the foot, which silently merged two different functions — the recoil
+anchor and left-foot ground contact — onto one socket.
+
+**Built in `concept-v4`:**
+
+| Socket | Bone | Position (cm) | Function |
+|---|---|---|---|
+| `Muzzle_Flash_01` | `lance_barrel` | (194, 0, 132) | rail-lance muzzle face; the canon cyan-white line effect origin |
+| `Target_Anchor_Center` | `body` | (−4, 0, 138) | body centre; damage acknowledgement, selection, health reference |
+| **`Rear_Recoil_Strut_Anchor`** | `strut_upper` | **(−46, −20, 112)** | the recoil strut's **frame-side (upper) anchor** — see the measurement below |
+| **`Left_Tread_Vector`** | `strut_upper` | **(−46, −20, 112)** | **TEMPORARY COMPATIBILITY ALIAS** of the row above, identical bone / position / rotation; drop it when the adapter migration is tested. Marked as an alias in its `purpose` string, so the note travels into the imported asset |
+| **`Foot_Contact_L`** | `l_foot` | (−66, −35, 0) | LEFT (trailing) sole ground-contact centre |
+| **`Foot_Contact_R`** | `r_foot` | (62, 35, 0) | RIGHT (leading) sole ground-contact centre |
+
+**Which end of the strut, and why — measured.** The concept's strut is one slim diagonal member with two
+ends: an upper end bolted to the lower rear of the body, and a lower end landing on the trailing ankle.
+Only the upper end touches the frame, so it is the end across which the recoil load passes between the
+strut and the frame; the lower end passes that load to the ground through the trailing foot. The socket is
+therefore at the **upper** end. Measured on the pixels:
+
+- **Turnaround LEFT SIDE panel** (segmented at 0.545 cm/px, ground on the sole line, H = 200 cm at the pod
+  top — the same scaling that reproduces this record's own 1.065 H antenna figure): the slim rod is a
+  separable 10–11 px run (≈ 5.5–6 cm, against the built Ø 6.8 cm) from source row y = 295 downward; at
+  y = 292 it is no longer separable from the body mass. The rod therefore enters the frame at
+  y ≈ 293 → **z = 113.9 cm = 0.57 H**. Built anchor: **z = 112.0 cm = 0.56 H**, 1.9 cm (0.010 H) below the
+  reading.
+- **Turnaround REAR panel — a quarter view, and it does NOT corroborate the side panel.**
+  ~~(0.509 cm/px by the same method): the strut's upper clevis reads at y ≈ 721 → **z ≈ 112 cm**,
+  cross-checking the side panel.~~ *(struck 2026-09-07: the 0.509 figure was derived from the wrong
+  landmark and the agreement with the built 112.0 cm was an artefact of that error.)* Re-measured
+  row by row on the same file: the pale **pod top caps** first appear at source row **y = 571** (the
+  row where two new outer runs open at x 423–427 and 542–549 beside the central block; confirmed at
+  6× zoom of x 390–620, y 530–650), and the silhouette's last firm row is **y = 943** (rows
+  944–946 are the soft contact shadow). That is **200 / (943 − 571) = 0.538 cm/px**, not 0.509 —
+  0.509 is exactly 200 / (941 − 548), i.e. scaled from the top of the **central sensor-cowl block**
+  at y = 548, which stands 23 px above the pod caps in this view. At the corrected scale the strut's
+  upper clevis (its boss spans y ≈ 709–729, its pin at y ≈ 723) reads
+  **z = (943 − 721) × 0.538 = 119.4 cm = 0.60 H** — **7.4 cm above the built 112.0 cm and 5.5 cm
+  above the LEFT SIDE panel's 113.9 cm**. The panel also fails the record's own antenna calibration by a
+  comparable margin: the antenna tips at y = 537 read (943 − 537) × 0.538 = **218 cm = 1.09 H** against
+  the LEFT SIDE panel's 1.065 H (213.1 cm) — 5 cm, a 2.4% over-read, which is the size of the
+  perspective error a quarter view carries. This is what §8.3 says about this panel — FRONT and
+  REAR are quarter views and nothing orthographic can be measured from them — so the REAR reading is
+  recorded here as a **quarter-view reading that disagrees by ≈ 7 cm**, not as a cross-check. The
+  socket's z comes from the **LEFT SIDE panel alone**.
+- The **other** end lands over the trailing heel at z = 30 cm (0.15 H), beside an ankle at 0.135 H — the
+  ground end, 82 cm below the anchor.
+
+**Why `strut_upper` and not `body`.** `strut_upper`'s head *is* the anchor, so a socket there sits at that
+joint's own rotation centre: it holds the anchor point exactly while the per-clip strut solve (§8.7 fix 2)
+swings the rod and runs the piston. `test_strut_anchor_socket_holds_the_anchor_through_every_clip` asserts
+it stays within 0.5 cm of the `strut_anchor` clevis centroid at 50 ms across all nine clips, and that the
+alias is bit-identical to it. Riding the strut bone also makes the alias's "same transform" exact rather
+than approximate. Socket rotations are still checked on the imported asset, not on the stills (§8.4).
+
+**Two-legged concept preserved.** No tread geometry was added and the braced stance is untouched: the
+component inventory, every triangle count and every review OBJ are byte-identical to `concept-v3`
+(§8.8). `test_two_legged_concept_is_preserved` asserts no component in either LOD carries a
+tread/track/roller/wheel/bogie name.
 
 ### 8.2 Corrections to the fidelity target (measured, marked in `concept-fidelity.md`)
 
@@ -299,14 +406,40 @@ whole-assembly figure, and the concept's own sections are 0.095 H of shaft and 0
   the centreline and the legs read as a left-right splay rather than a fore-and-aft brace. Nothing
   orthographic can be measured from them, so they were used only for the across-Y read and the built
   front/rear views deliberately do **not** reproduce their apparent leg spread. The candidate and the
-  LEFT SIDE / TOP panels win (owner ruling: the selected concept is the direction).
+  LEFT SIDE / TOP panels win (owner ruling: the selected concept is the direction). The one z figure
+  §8.1 takes off the REAR panel is labelled there as a quarter-view reading that **disagrees** with
+  the LEFT SIDE panel by ≈ 7 cm; it is recorded, not used.
+- **The clip inventory is nine tracks, not the frozen record's eleven; three named attack clips are
+  still owed.** `Docs/VisualAssetPipeline/motion/gap-decisions.json` —
+  `production_policy[EBS-PKG-MC-LANCER].required_track_inventory`, the same record the owner ruling
+  cites as authority for the socket name, the LOD caps and the legacy alias — asks for **eleven**
+  tracks: idle, move, turn, stop, damage, death, cancel, restore and
+  **`attack_anticipation` / `attack_execution` / `attack_recovery`**. This package builds **nine**,
+  with one 2.2 s `fire` clip carrying all three attack phases as keyed sections (halt 0.00–0.35 s,
+  plant 0.35–0.75 s and aim 0.75–0.95 s = anticipation; the shot at 1.00 s = execution; recover to
+  1.45 s and settle to 2.20 s = recovery). Rule that forced it: the canon row `SPEC-UNIT-002`
+  describes **one** continuous "halts, plants the strut, aims, fires… recovers" action whose plant and
+  recovery blends are runtime-owned, and a blockout cannot specify those blend boundaries. **This is a
+  substitution, not a delivery:** an integration that looks up `attack_anticipation`,
+  `attack_execution` or `attack_recovery` by name will not find them, and the three-way split is owed
+  at ART_ALPHA / integration. Recorded in `build-manifest.json` →
+  `component_inventory.tracks.source_contract` with the eleven-name list, so the two records no longer
+  disagree silently. The manifest's own `tracks.contract` is the **built** nine and is what
+  `test_clip_inventory_matches_contract` checks; the eleven-name list is checked separately by
+  `test_track_contract_records_the_frozen_record`.
+- **The same record names the component `recoil_brace`; this package calls it the recoil strut.**
+  `gap-decisions.json` `component_inventory.recoil_brace: 1`; the canon row, the requirement card and
+  the owner ruling's socket name (`Rear_Recoil_Strut_Anchor`) all say *strut*. One component, two
+  spellings in the records. The ruling's spelling wins here and the difference is recorded in
+  `build-manifest.json` → `component_inventory.recoil_strut.source_record_name` rather than silently
+  reconciled; renaming the frozen record is outside this package's write scope.
 - **Brass edge trim, plate seams, bolts and the ceramic micro-noise normal are texture, not geometry.**
   Rule: `REL-ART-005.MC.LANCER` .TEX_MAPS (a 2048² Albedo / Normal / packed Roughness-Metallic / Emissive
   Mask stack) plus the two-slot family convention; the LOD0 budget is not the binding constraint here
   (1,972 of 8,000 used). **This bullet does not cover the team colour** — see the next one.
 - **The card's team-colour vertex mask is NOT authored, and this package cannot author it.**
-  `REL-ART-005.MC.LANCER` .MAT_RULE (`Docs/Requirements.md:2384`) says "Albedo channel masked by
-  **TeamColor vertex data**", and `REL-ART-028` (`:2376`) says "Team color accent mapping uses **exclusive
+  `REL-ART-005.MC.LANCER` .MAT_RULE (`Docs/Requirements.md:2385`) says "Albedo channel masked by
+  **TeamColor vertex data**", and `REL-ART-028` (`:2377`) says "Team color accent mapping uses **exclusive
   vertex ID masks**". That is a vertex-attribute decision, not a texture-stage one. Measured on the
   exports: `SK_EBS_MER_UNT_002_LOD0.glb` and `_LOD1.glb` primitives carry
   `['JOINTS_0','NORMAL','POSITION','TEXCOORD_0','TEXCOORD_1','WEIGHTS_0']` — no `COLOR_0` and no vertex-ID
@@ -378,14 +511,28 @@ whole-assembly figure, and the concept's own sections are 0.095 H of shaft and 0
 
 ### 8.5 OWNER-QUESTION items (for the coordinator to batch — not addressed to the owner here)
 
-**Not an owner question (withdrawn in `concept-v2`): the LOD1 ceiling typo.**
-`REL-ART-005.MC.LANCER` .MESH_PROP prints the LOD1 polycount ceiling as "≤3,3500 tris", but
-`REL-ART-028` (`Docs/Requirements.md:2376`) already states the rule for the entire Meridian roster
-verbatim — "a maximum LOD0 cap of ≤8,000 triangles, transitioning smoothly down to **≤3,500 triangles** at
-distance/zoom thresholds" — which is exactly the bound the generator uses (`LOD1_CAP = 3500`). Nothing is
-being chosen here, so `concept-v1`'s OWNER-QUESTION 1 is withdrawn and recorded instead as a
-**Requirements.md typo to correct** in the card, with `REL-ART-028` as the governing rule. The built LOD1
-is 1,136.
+**ANSWERED (owner ruling, 2026-09-07) — the LOD1 ceiling.** `concept-v1` raised the card's "3,3500" as
+OWNER-QUESTION 1; `concept-v2` withdrew it to a Requirements.md typo. The owner has now settled it:
+
+> "Confirm 3,500 triangles for Lancer LOD1. '3,3500' is malformed. Both `REL-ART-028` and our recorded
+> production decision specify 8,000 LOD0 / 3,500 LOD1."
+
+So **LOD1 ≤ 3,500 is the confirmed bound**, on `REL-ART-028` (`Docs/Requirements.md:2377`: "a maximum LOD0
+cap of ≤8,000 triangles, transitioning smoothly down to **≤3,500 triangles** at distance/zoom thresholds")
+and the owner ruling together. `REL-ART-005.MC.LANCER` .MESH_PROP's printed "≤3,3500 tris" stands as a
+**Requirements.md typo to correct in the card** — a documentation fix outside this package's write scope.
+Nothing in the geometry changed for this: the generator already used `LOD1_CAP = 3500` and the built LOD1
+is **1,136** (32% of the bound), LOD0 **1,972** of 8,000. The confirmed wording is carried in
+`build-manifest.json` → `budgets.lod1_cap_note`, in the receipt notes, in `concept-fidelity.md` and in
+`test_lod1_ceiling_is_the_confirmed_bound`.
+
+*Line numbers, corrected 2026-09-07:* every `REL-ART-028` citation in this package printed
+`Docs/Requirements.md:2376` — off by one; 2376 is the `### §18.1` heading. `REL-ART-028` is at **2377**
+in this worktree's copy and at **2379** in `Project/Docs/Requirements.md` (the two files differ), and
+`REL-ART-005.MC.LANCER` .MAT_RULE is at **2385**, not 2384 (2384 is `.TEX_MAPS`). All citations in this
+README, in `build_lancer.py` and in the manifest now use the worktree copy's numbering, which is what the
+relative paths in this record resolve to. The requirement **IDs** are the stable reference; the line
+numbers are a convenience that the two copies do not share.
 
 > **OWNER-QUESTION 1 — visual overhang vs simulation footprint.** The lance puts the muzzle 311 cm ahead
 > of the unit's pivot at the runtime ×1.6 draw scale, against a 25 cm collision square and a 100 cm tile.
@@ -393,9 +540,31 @@ is 1,136.
 > keep the concept's lance length (with the readability cases in §8.3 handled at integration), or whether
 > the Lancer should draw at a lower `PresentationScale` than the other Soldiers.
 
-> **OWNER-QUESTION 2 — `Left_Tread_Vector` on a legged frame.** §8.1. Requested: keep the card name on the
-> left foot (current build), or amend the card to a legged name (e.g. `Left_Foot_Vector`) so the imported
-> socket reads honestly.
+**OWNER-QUESTION 2 — `Left_Tread_Vector` on a legged frame. ANSWERED (owner ruling, 2026-09-07).**
+Asked in `concept-v1`–`concept-v3`: keep the card name on the left foot, or amend the card to a legged
+name. The answer was neither:
+
+> "Correct the socket interpretation. Our recorded Lancer decision specifies `Rear_Recoil_Strut_Anchor`,
+> with `Left_Tread_Vector` retained temporarily as a compatibility alias. Left-foot ground contact is a
+> different function; it should have a separately named foot-contact socket if needed. Preserve the
+> two-legged concept."
+
+Implemented verbatim in `concept-v4`: §8.1 has the six-socket table, the measured choice of the strut's
+**upper** anchor end, and the alias contract; §8.8 has the change record. The item is closed **as a
+question** — the owner has answered it and this package has implemented the answer.
+
+**One coordinator action remains, and it is outside this package's write scope:**
+[`ArtSource/production-ledger.json`](../production-ledger.json) still carries the question as open and
+the package as it stood before the ruling. Its `EBS-PKG-MC-LANCER` entry records
+`"current_revision": "ebs-mer-unt-002-concept-v3"`; a `next` field reading *"Owner ruling on the card's
+printed LOD1 ceiling typo and the `Left_Tread_Vector` name on a legged frame; …"*; a stage receipt whose
+socket list is the pre-ruling three (`Muzzle_Flash_01`, `Target_Anchor_Center`, `Left_Tread_Vector`) and
+whose import line reads *"3 sockets"*; and triangle counts of **1,828 / 968**, which were already wrong
+for `concept-v3` (`import/import-report-ebs-mer-unt-002-concept-v3.json` records `lod0_triangles` 1972,
+and the `concept-v3` manifest 1,972 / 1,136). The ledger is the roster's production-lane record and this
+package may not write it, so the update — revision to `ebs-mer-unt-002-concept-v4`, the six-socket list,
+the corrected 1,972 / 1,136, and a `next` field with the ruling struck off — is handed to the coordinator
+here and repeated in §8.8 and in the receipt notes.
 
 > **OWNER-QUESTION 3 — team-colour vertex mask (roster-wide).** §8.3. `REL-ART-005.MC.LANCER` .MAT_RULE
 > requires "Albedo channel masked by TeamColor **vertex data**" and `REL-ART-028` "exclusive **vertex ID**
@@ -408,9 +577,21 @@ is 1,136.
 
 ### 8.6 Open
 
-Re-run nothing here: **no import has been run for this package** — the coordinator runs the Unreal
-imports serially after this task, so there is no `import/` evidence yet and the skeletal report, socket
-rotations, material-slot names and AnimSequence end poses are all unverified in engine. Also open:
+**Corrected in `concept-v4` (2026-09-07):** the `concept-v3` amendment below states that `damage` was
+retimed "0.35 s → 0.4 s (12 frames)". That is wrong and was never what was built: 0.35 s is 10.5 frames at
+30 fps, so the next whole frame is **11**, and the built clip is **0.366667 s** (`build-manifest.json` →
+`clips[damage].duration_s`; every other clip is a whole frame too — idle 72, move 18, turn 18, stop 12,
+fire 66, death 42, cancel 12, restore 0). The amendment text is corrected in place below.
+
+Re-run nothing here: **no import has been run for `concept-v4`** — the coordinator runs the Unreal
+imports serially after this task, so the `import/` evidence in this directory is still the `concept-v3`
+run (`import-report-ebs-mer-unt-002-concept-v3.json`, 0 errors, 18 AnimSequences, the pre-ruling three
+sockets, plus the two `UnrealEditor-Cmd` logs and `heavy-run-receipt.json`). ~~there is no `import/`
+evidence yet~~ *(struck 2026-09-07: that clause was false — the directory holds two full import runs, and
+§8.8 and the receipt already said so.)* What is unverified in engine is the **`concept-v4` socket set**
+(the report must come back with six sockets, two of them on `strut_upper`) together with socket
+rotations, material-slot names and AnimSequence end poses. The machine-readable expectation for that run
+is `import/import-job-ebs-mer-unt-002-concept-v4.json` (§7). Also open:
 textures (2048² per the card) and therefore the final palette read (§6 PARTIAL); emissive-share
 measurement on the textured asset (the 6.1% figure is a geometry proxy); in-engine playback capture; the
 seven `PKG-GATE-*` blocking dependencies on the package; gate reviews; owner acceptance. Known minor
@@ -516,6 +697,127 @@ The `death` clip was re-authored as a consequence of fix 1: with the mass carrie
 not a collapse. The legs now fold deeper (70 / −135 / 65 against 45 / −92 / 47) and the frame pitches 20°,
 so the hips drop instead: the muzzle still lands 10.6 cm above the ground and the frame ends at 193.9 cm.
 
+### 8.8 `concept-v4` — the owner ruling of 2026-09-07, implemented (2026-09-07)
+
+Two owner answers, implemented verbatim. The revision is bumped to `ebs-mer-unt-002-concept-v4`; every
+export is rewritten, the manifest and `--check` are regenerated, every scene is re-rendered and every sheet
+rebuilt, and each change carries a test that fails on the `concept-v3` contract.
+
+**1. LOD1 ceiling — CONFIRMED at 3,500.** §8.5 has the quoted ruling. No geometry changed for it; the built
+LOD1 is 1,136. The open question is marked ANSWERED here, in §8.5, in `concept-fidelity.md`, in
+`build-manifest.json` → `budgets.lod1_cap_note` and in the receipt notes.
+
+**2. The socket set — corrected.** §8.1 has the quoted ruling, the six-socket table, the measured choice of
+the strut's frame-side (upper) anchor end and the reason `strut_upper` carries it. In short:
+
+| | `concept-v3` | `concept-v4` |
+|---|---|---|
+| strut anchor | *(none)* | **`Rear_Recoil_Strut_Anchor`**, `strut_upper`, (−46, −20, 112) |
+| `Left_Tread_Vector` | `l_foot`, (−66, −35, 0) — the left sole, carrying ground contact under the card's tread name | **temporary compatibility alias**, `strut_upper`, (−46, −20, 112), identical transform, marked as an alias in its purpose string |
+| left-foot ground contact | rode on `Left_Tread_Vector` | **`Foot_Contact_L`**, `l_foot`, (−66, −35, 0) — the same point, its own name and its own function |
+| right-foot ground contact | *(none)* | **`Foot_Contact_R`**, `r_foot`, (62, 35, 0) |
+
+The two foot-contact sockets are at the heel-to-toe midpoint of each block foot on z = 0 — the mesh's
+lowest surface, inside the sole and toe footprint in both x and y (asserted). The alias is not a
+ground-contact socket any more and a test asserts it is more than 50 cm from either sole.
+
+**Preserved: the two-legged concept.** No tread geometry, no stance change. Measured: the LOD0 and LOD1
+triangle counts (1,972 / 1,136), the per-bone split, every component name and **both rest review OBJs plus
+all seventeen posed review OBJs are byte-identical to `concept-v3`**, and all **98 scene render PNGs
+re-rendered byte-for-byte identical**. Only the ten exports that embed the revision string changed (`SK_*_LOD0/1.glb`,
+`_static.glb`, `.obj`, and the four sub-object GLBs); the four sub-object OBJs, whose headers carry no
+revision, are unchanged too.
+
+**Found while re-running the evidence — two stale pose sheets.** `renders/concept-compare/pose_sheet_right.png`
+and `pose_sheet_tactical_near.png` on disk still carried the **`concept-v2` damage cell**: `concept-v3`
+retimed the `damage` clip, re-baked `review/pose_damage.obj` and re-rendered `renders/pose_damage/`, but
+those two sheets were not rebuilt, so they disagreed with the renders they cite. Every other sheet was
+current (the eleven that do not include the damage still). Proven, not guessed: rebuilding the `concept-v2`
+damage still (the same clip with its key times scaled back to a 0.35 s duration, sampled at 0.10 s) and
+substituting only that one cell reproduces the two stale files' exact sha256 —
+`21232475ee73970091a5024a0da669248f7a74e230dc34c06638daecd2d773f3` and
+`8796c52c732158c22640b72c214029bf1438930795856e9df261171c41a5a58c`. Both sheets are rebuilt here and now
+match `renders/pose_damage/`. A third record error surfaced with it and is corrected in §8.6: the
+`concept-v3` amendment's "`damage` 0.35 s → 0.4 s (12 frames)" should read **0.366667 s (11 frames)**.
+
+**Not changed by this ruling.** OWNER-QUESTION 1 (visual overhang vs simulation footprint) and
+OWNER-QUESTION 3 (the roster-wide team-colour vertex mask) are untouched and stay open (§8.5). No import
+has been run for `concept-v4`; the coordinator runs imports serially afterwards, so the `import/` evidence
+in this directory is still the `concept-v3` run and the new socket nodes are unverified in engine — the
+skeletal report will need to show six sockets, two of them on `strut_upper`. The expectation for that run
+now ships as `import/import-job-ebs-mer-unt-002-concept-v4.json` (§7); the `concept-v3` job in the same
+directory is superseded and must not be used, because its `expected.sockets` is the pre-ruling three.
+
+**Handoff — what this package cannot write.** Two records outside this package's write scope still carry
+the pre-ruling state and are named here so they are not discovered later:
+
+| Record | What it still says | What it needs |
+|---|---|---|
+| [`ArtSource/production-ledger.json`](../production-ledger.json) | `current_revision: ebs-mer-unt-002-concept-v3`; a `next` field asking for the very ruling that has now been given ("Owner ruling on the card's printed LOD1 ceiling typo and the `Left_Tread_Vector` name on a legged frame"); a stage receipt listing the pre-ruling three sockets and "Import: … 3 sockets"; triangle counts **1,828 / 968**, which were already stale for `concept-v3` (the `concept-v3` import report records `lod0_triangles` 1972) | revision → `ebs-mer-unt-002-concept-v4`; the six-socket list with the alias marked; **1,972 / 1,136**; `next` with the ruling struck off and the remaining items (textures, emissive measurement, in-engine playback, gates) kept |
+| `Docs/Requirements.md` — `REL-ART-005.MC.LANCER` .MESH_PROP (line 2383 in this worktree) and .ANIM_RIG | LOD1 ceiling printed "≤3,3500 tris"; the socket list is the card's three names, `Left_Tread_Vector` among them | the typo corrected to **≤3,500** per the ruling, and — when the adapter migration is tested — `Left_Tread_Vector` replaced by `Rear_Recoil_Strut_Anchor` |
+
+Neither is a geometry change and neither belongs to an asset package; both are coordinator actions.
+
+### 8.9 `concept-v4` record corrections (2026-09-07, second pass)
+
+Two independent verifiers attacked the `concept-v4` implementation. **No geometry defect survived** — the
+socket set, the strut anchor end, the stance and every triangle count stand — so the revision is **not**
+bumped: every export is byte-identical to the first `concept-v4` build (`--check` re-verified, 60
+artefacts), the 98 scene renders are untouched and the thirteen sheets are unchanged. What changed is the
+**record**, and one missing deliverable. Each item is struck through and dated where it stood, never
+deleted.
+
+1. **The REAR-panel cross-check in §8.1 was derived from the wrong landmark.** The record scaled that
+   panel at 0.509 cm/px, which is 200 / (941 − 548) — measured from the top of the **central sensor-cowl
+   block**, not from the pod caps the method names. Re-measured (pod caps first appear at y = 571, last
+   firm silhouette row y = 943) the scale is **0.538 cm/px** and the clevis reads **119.4 cm (0.60 H)**,
+   **7.4 cm above** the built 112.0 cm and 5.5 cm above the LEFT SIDE panel — it never corroborated
+   anything. The panel also over-reads its own antenna calibration by 2.4% (1.09 H against 1.065 H),
+   which is exactly what §8.3 says about a quarter view. §8.1 now records it as a **disagreeing
+   quarter-view reading**. The socket's z still comes from the LEFT SIDE panel alone, and the geometry
+   did not move.
+2. **§8.5 claimed nothing was outstanding for the coordinator.** `ArtSource/production-ledger.json` still
+   records the answered question in its `next` field, `current_revision: ebs-mer-unt-002-concept-v3`, the
+   pre-ruling three-socket stage receipt and stale 1,828 / 968 counts. The ledger is outside this
+   package's write scope, so it is now named as the one remaining coordinator action in §8.5, in the
+   §8.8 handoff table and in the receipt notes.
+3. **No `concept-v4` import job existed.** The newest job in `import/` was the `concept-v3` one, whose
+   `expected.sockets` is the pre-ruling three with `Left_Tread_Vector` at the left sole — so the ruling's
+   own deliverable had no machine-readable in-engine expectation. `import-job-ebs-mer-unt-002-concept-v4.json`
+   is generated here from the manifest (§7) and inventoried in the receipt.
+4. **§8.6 said there was no `import/` evidence at all.** False: the directory holds two full import runs
+   (1.2 MB of `concept-v3` report, three `UnrealEditor-Cmd` logs and a heavy-run receipt), and §8.8 and
+   the receipt already said so. The clause is struck and rewritten to what is actually open — the
+   `concept-v4` socket set is unimported.
+5. **The §5 clip table still printed `damage` as 0.35 s** — the exact 10.5-frame value the `concept-v3`
+   amendment exists to eliminate — while the built clip is 0.366667 s (11 frames), as §8.6 and the
+   amendment both already said. Corrected, and every row now prints its frame count. The table is bound
+   to the generator by `test_readme_clip_table_matches_the_built_clips`, and frame alignment itself is
+   asserted by `test_clip_durations_are_whole_frames`; before this pass **no test in this package
+   asserted either**, despite the amendment claiming they did.
+6. **The clip inventory disagreed with the record the ruling leans on.** `gap-decisions.json`
+   `required_track_inventory` lists **eleven** tracks with `attack_anticipation` / `attack_execution` /
+   `attack_recovery`; this package builds nine with one `fire` clip. That substitution — and the fact
+   that the three named clips are **still owed** — is now a deviation in §8.3 and a
+   `component_inventory.tracks.source_contract` block in the manifest, asserted by
+   `test_track_contract_records_the_frozen_record`. The same record's `recoil_brace` spelling against
+   this package's `recoil_strut` is recorded beside it.
+7. **`REL-ART-028` was cited one line short in six places** (`Docs/Requirements.md:2376` is the §18.1
+   heading; the requirement is at **2377** here and 2379 in `Project/`), and `.MAT_RULE` at 2384 instead
+   of **2385** (2384 is `.TEX_MAPS`). Fixed in the generator, the manifest, the receipt and the three
+   README sites, with the two-copy offset recorded in §8.5 so the next reader does not re-derive it.
+8. **The whole-unit triangle sum was nowhere on record**, and the two standalone lance parts duplicate
+   geometry already skinned into the SK. Added as `budgets.whole_unit_triangles`
+   (1,972 / 1,136 skeletal-only; 2,312 / 1,360 with both sub-objects) with the alternates-not-additions
+   sentence in §4.
+9. **The pivot was described as the ground-contact centre between the braced feet**, but the brace is
+   asymmetric and the root sits 2.0 cm ahead of the sole-contact midpoint (6.0 cm ahead of the ankle
+   midpoint). Restated precisely in §3 and in `units.pivot`, with `units.pivot_offset_cm` recorded and
+   the offset now bounded by `test_rest_stance_is_grounded_and_forward_facing`.
+
+Tests: **38** (34 before this pass), all passing. `--check` still reports
+`{"check": "ok", "compared": {"outputs": 14, "review": 2, "posed_review": 17, "scenes": 27}}`.
+
 ## Concept-v3 amendment — clip durations on the 30 fps frame grid (2026-09-07)
 
 The concept-v2 exports imported into the sandbox project with **`damage`** missing: the Interchange
@@ -529,7 +831,16 @@ concept-v3 therefore snaps every authored duration up to the next whole frame an
 with it, so the pose at any normalized time — and every posed review still — is unchanged. The rule is
 now enforced in the shared kit: `ebs_skelkit.write_skinned_glb` refuses to write an unaligned clip
 (`ANIMATION_FPS`, `frame_aligned_duration()`, `retime_clip()`, `SKELETAL_ENCODING['clip_duration']`,
-kit revision `ebs-skelkit-v2`), and this package's tests assert that every clip is frame-aligned.
+kit revision `ebs-skelkit-v2`), and — since 2026-09-07 — **this package's own tests assert it too**:
+`test_clip_durations_are_whole_frames` checks `skel.is_frame_aligned()` and the exact expected frame
+count of every clip (72 / 18 / 18 / 12 / 66 / 11 / 42 / 12 / 0) and
+`test_readme_clip_table_matches_the_built_clips` binds the §5 table's printed durations and key counts to
+the manifest, so neither the retime nor a printed figure can drift unnoticed. ~~and this package's tests
+assert that every clip is frame-aligned~~ *(struck 2026-09-07: when that sentence was written no test
+here asserted it — the property held only because `build_clips()` self-retimes and the shared kit refuses
+an unaligned clip. It is asserted now.)*
 
-Retimed here: `damage` 0.35 s → 0.4 s (12 frames). The import of the concept-v3 exports reports 0 errors with every clip present
+Retimed here: `damage` 0.35 s → **0.366667 s (11 frames)** ~~0.4 s (12 frames)~~ *(figure corrected in
+`concept-v4`, 2026-09-07: 0.35 s is 10.5 frames, so the next whole frame is 11, not 12; the built duration
+has always been 0.366667 s — §8.6)*. The import of the concept-v3 exports reports 0 errors with every clip present
 (`import/import-report-ebs-mer-unt-002-concept-v3.json`, run 2 of `import/heavy-run-receipt.json`).

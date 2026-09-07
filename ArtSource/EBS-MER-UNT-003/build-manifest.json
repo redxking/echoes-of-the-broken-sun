@@ -8,29 +8,71 @@
  "asset_name": "SK_EBS_MER_UNT_003",
  "author": "Angelis Pseftis",
  "budgets": {
+  "key_note": "lod0_triangles/lod1_triangles are the MAIN SKINNED MESH, because that is the number the isolated-import inspector compares against the imported SK_EBS_MER_UNT_003 (ebs_make_import_job.py reads this key). The budget the owner ruling bounds is whole_unit_lod0_triangles / whole_unit_lod1_triangles = main mesh + barrier pane assembly, and lod0_within_cap / lod1_within_cap report THAT against both ceilings. Full detail in split.",
   "lod0_cap": 8200,
-  "lod0_triangles": 3618,
+  "lod0_cap_rel_art_028": 8000,
+  "lod0_triangles": 2898,
   "lod0_within_cap": true,
   "lod1_cap": 3600,
-  "lod1_over_lod0": 0.51,
-  "lod1_triangles": 1846,
+  "lod1_cap_rel_art_028": 3500,
+  "lod1_over_lod0": 0.411,
+  "lod1_triangles": 1126,
   "lod1_within_cap": true,
   "per_part": {
    "SK_EBS_MER_UNT_003": {
-    "lod0": 3618,
-    "lod1": 1846
+    "lod0": 2898,
+    "lod1": 1126
+   },
+   "SK_EBS_MER_UNT_003_Barrier_Panes": {
+    "lod0": 720,
+    "lod1": 360
    },
    "SM_EBS_MER_UNT_003_Left_Shield_Panel": {
-    "lod0": 856,
-    "lod1": 600
+    "lod0": 496,
+    "lod1": 240
    },
    "SM_EBS_MER_UNT_003_Right_Shield_Panel": {
-    "lod0": 856,
-    "lod1": 600
+    "lod0": 496,
+    "lod1": 240
    }
   },
   "shield_field_area_fraction_lod0": 0.07029,
-  "status_cyan_area_fraction_lod0": 0.01906
+  "split": {
+   "lod0": {
+    "all_exports_summed": 4610,
+    "all_exports_within_card_cap": true,
+    "all_exports_within_rel_art_028": true,
+    "barrier_panes": 720,
+    "card_cap": 8200,
+    "left_shield_panel": 496,
+    "lod": 0,
+    "main_mesh": 2898,
+    "rel_art_028_cap": 8000,
+    "right_shield_panel": 496,
+    "whole_unit_drawn": 3618,
+    "whole_unit_within_card_cap": true,
+    "whole_unit_within_rel_art_028": true
+   },
+   "lod1": {
+    "all_exports_summed": 1966,
+    "all_exports_within_card_cap": true,
+    "all_exports_within_rel_art_028": true,
+    "barrier_panes": 360,
+    "card_cap": 3600,
+    "left_shield_panel": 240,
+    "lod": 1,
+    "main_mesh": 1126,
+    "rel_art_028_cap": 3500,
+    "right_shield_panel": 240,
+    "whole_unit_drawn": 1486,
+    "whole_unit_within_card_cap": true,
+    "whole_unit_within_rel_art_028": true
+   }
+  },
+  "split_note": "Owner ruling 2026-09-07: the whole-unit budget does not grow. Whole unit drawn = main skinned mesh + barrier pane assembly. At LOD0 that is 3,618 - exactly the triangle count concept-v3's single mesh carried, because the split moved geometry between objects and created none. At LOD1 it FELL from 1,846 to 1,486 in concept-v5, which authors a real reduction for the pane assembly (720 -> 360; concept-v4 shipped an LOD1 identical to its LOD0, a review finding). The two wing sub-objects are re-pivoted static re-exports of geometry already inside the main mesh and lost their pane geometry with it, so the literal sum of all four exports FELL as well.",
+  "status_cyan_area_fraction_lod0": 0.01906,
+  "whole_unit_lod0_triangles": 3618,
+  "whole_unit_lod1_triangles": 1486
  },
  "clips": [
   {
@@ -176,6 +218,98 @@
    "ticks": 12.0
   }
  ],
+ "component_contract": {
+  "frame_components": [
+   "frame",
+   "hinge_01",
+   "hinge_02",
+   "corner_01",
+   "corner_02",
+   "corner_03",
+   "corner_04"
+  ],
+  "objects": [
+   {
+    "carries": [
+     "chassis and open rear bay",
+     "two operator stations",
+     "four block legs",
+     "central emitter",
+     "two hinged barrier wings (arms, webs, struts)",
+     "the SIX STRUCTURAL CELL FRAMES: chamfered charcoal ring, hinge barrels, corner castings"
+    ],
+    "class": "skinned mesh (18-bone rig, 10 clips)",
+    "component_count": 178,
+    "name": "SK_EBS_MER_UNT_003",
+    "note": "physically present in BOTH states; three cell frames per side, centred when deployed",
+    "role": "main mesh",
+    "triangles": 2898,
+    "visible_in_states": [
+     "PACKED",
+     "DEPLOYING",
+     "DEPLOYED",
+     "PACKING"
+    ]
+   },
+   {
+    "carries": [
+     "six translucent field slabs",
+     "six cyan pane rims",
+     "six opaque charcoal back plates"
+    ],
+    "class": "skinned mesh (same 18-bone rig, same 10 clips, follower)",
+    "component_count": 18,
+    "name": "SK_EBS_MER_UNT_003_Barrier_Panes",
+    "note": "each pane bound to the SAME cell_01..cell_06 bone as its frame, pivot at the shared root; hidden while PACKED, DEPLOYING and PACKING, so the folded cages read open",
+    "role": "third sub-object - the removable barrier pane assembly",
+    "triangles": 720,
+    "visible_in_states": [
+     "DEPLOYED"
+    ]
+   },
+   {
+    "carries": [
+     "left wing arm, web and struts",
+     "cell frames 01, 02, 03"
+    ],
+    "class": "static mesh, pivot at the left wing-root hinge",
+    "component_count": 26,
+    "name": "SM_EBS_MER_UNT_003_Left_Shield_Panel",
+    "note": "a re-pivoted re-export of geometry already inside the main mesh; carries NO pane geometry",
+    "role": "card sub-object separation (physical transformation), cells 01-03",
+    "triangles": 496,
+    "visible_in_states": [
+     "PACKED",
+     "DEPLOYING",
+     "DEPLOYED",
+     "PACKING"
+    ]
+   },
+   {
+    "carries": [
+     "right wing arm, web and struts",
+     "cell frames 04, 05, 06"
+    ],
+    "class": "static mesh, pivot at the right wing-root hinge",
+    "component_count": 26,
+    "name": "SM_EBS_MER_UNT_003_Right_Shield_Panel",
+    "note": "a re-pivoted re-export of geometry already inside the main mesh; carries NO pane geometry",
+    "role": "card sub-object separation (physical transformation), cells 04-06",
+    "triangles": 496,
+    "visible_in_states": [
+     "PACKED",
+     "DEPLOYING",
+     "DEPLOYED",
+     "PACKING"
+    ]
+   }
+  ],
+  "pane_components": [
+   "edge",
+   "field",
+   "backplate"
+  ]
+ },
  "component_inventory": {
   "barrier_cells": {
    "built": 6,
@@ -183,10 +317,12 @@
    "cyan_edge_lines": 6,
    "fields": 6,
    "opaque_back_plates": 6,
+   "pane_geometry_in_main_mesh": 0,
    "per_wing": [
     3,
     3
-   ]
+   ],
+   "structural_frames_in_main_mesh": 6
   },
   "barrier_wings": {
    "built": 2,
@@ -262,11 +398,13 @@
   "sub_objects": {
    "built": [
     "SM_EBS_MER_UNT_003_Left_Shield_Panel",
-    "SM_EBS_MER_UNT_003_Right_Shield_Panel"
+    "SM_EBS_MER_UNT_003_Right_Shield_Panel",
+    "SK_EBS_MER_UNT_003_Barrier_Panes"
    ],
    "contract": [
     "Left_Shield_Panel",
-    "Right_Shield_Panel"
+    "Right_Shield_Panel",
+    "Barrier_Panes (owner ruling 2026-09-07)"
    ]
   },
   "tracks": {
@@ -479,6 +617,100 @@
   },
   "operator_top_over_W": 0.695,
   "operator_top_z_cm": 347.5,
+  "pane_coverage": {
+   "cells": [
+    {
+     "cell": "cell_01",
+     "covered_by_its_own_pane": 252,
+     "fully_covered": true,
+     "opening_samples": 252,
+     "seen_through_the_open_frame": [
+      "(open sky)"
+     ],
+     "uncovered_samples_show": []
+    },
+    {
+     "cell": "cell_02",
+     "covered_by_its_own_pane": 252,
+     "fully_covered": true,
+     "opening_samples": 252,
+     "seen_through_the_open_frame": [
+      "(open sky)",
+      "chassis_conduit_l",
+      "chassis_deck_kerb",
+      "chassis_flank_l",
+      "chassis_frame",
+      "chassis_prow_buttress"
+     ],
+     "uncovered_samples_show": []
+    },
+    {
+     "cell": "cell_03",
+     "covered_by_its_own_pane": 252,
+     "fully_covered": true,
+     "opening_samples": 252,
+     "seen_through_the_open_frame": [
+      "(open sky)",
+      "chassis_deck_spine",
+      "chassis_frame",
+      "chassis_prow_block",
+      "chassis_prow_lower",
+      "chassis_prow_rail"
+     ],
+     "uncovered_samples_show": []
+    },
+    {
+     "cell": "cell_04",
+     "covered_by_its_own_pane": 252,
+     "fully_covered": true,
+     "opening_samples": 252,
+     "seen_through_the_open_frame": [
+      "(open sky)",
+      "chassis_deck_spine",
+      "chassis_frame",
+      "chassis_prow_block",
+      "chassis_prow_lower",
+      "chassis_prow_rail"
+     ],
+     "uncovered_samples_show": []
+    },
+    {
+     "cell": "cell_05",
+     "covered_by_its_own_pane": 252,
+     "fully_covered": true,
+     "opening_samples": 252,
+     "seen_through_the_open_frame": [
+      "(open sky)",
+      "chassis_conduit_r",
+      "chassis_deck",
+      "chassis_deck_kerb",
+      "chassis_flank_r",
+      "chassis_frame"
+     ],
+     "uncovered_samples_show": []
+    },
+    {
+     "cell": "cell_06",
+     "covered_by_its_own_pane": 252,
+     "fully_covered": true,
+     "opening_samples": 252,
+     "seen_through_the_open_frame": [
+      "(open sky)"
+     ],
+     "uncovered_samples_show": []
+    }
+   ],
+   "covered_by_the_assembly": 1512,
+   "every_frame_covered_when_deployed": true,
+   "every_frame_open_when_the_assembly_is_hidden": true,
+   "grid_per_cell": [
+    10,
+    26
+   ],
+   "lod": 0,
+   "method": "For each cell, sample the frame's inner opening and ask what a +X camera sees, twice: on the frames-only main mesh (what shows through the empty cage) and on the shipped deployed assembly (which must be that cell's own pane). Samples where the cell's own corner casting or ring is frontmost are not part of the opening and are excluded.",
+   "opening_samples": 1512
+  },
   "px_per_cm_on_reference": 0.60606,
   "rear_open": {
    "chassis_rear_face_polygons": 0,
@@ -625,6 +857,7 @@
   "shield_field_area_fraction": 0.07029,
   "stance_width_cm": 339.0,
   "status_cyan_area_fraction": 0.01906,
+  "status_cyan_area_fraction_main_mesh_only": 0.00827,
   "wall_bottom_over_W": 0.2266,
   "wall_height_cm": 280.0,
   "wall_height_over_W": 0.56,
@@ -688,6 +921,7 @@
   "deploy@0.15": -0.001,
   "deploy@0.55": -0.0,
   "deploy@0.82": -0.0,
+  "deploy@1.00": 0.0,
   "drag_deployed@0.25": 0.082,
   "idle_deployed@0.50": 0.0,
   "idle_packed@0.00": 0.0,
@@ -702,7 +936,7 @@
   "roughness_floor": 0.85,
   "texture_stack": "2048x2048 PBR"
  },
- "material_slot_policy": "4 slots. FRAME: charcoal machined frame, hubs, hinges, treads AND the six opaque cell back plates that stop the field and the pane rims ever reading from behind the unit. CERAMIC: pale plates. SHIELD FIELD: the six cell field slabs only. STATUS CYAN (full list, no omissions): two operator visors, the emitter lens, the six cell pane rims, the chassis bay core and the two flank conduit lines - the bay core and the conduits are the reference's own machined-conduit glow and are 26.7 percent of the cyan area. The six pane rims must light and darken WITH the field material, not with the status channel (README section 8 deviation 15). The card sets no slot ceiling; brass edge trim, scuff noise and the team mask are texture channels of the ceramic slot.",
+ "material_slot_policy": "4 slots, shared by both skinned objects. MAIN MESH uses three: FRAME (charcoal machined frame, hubs, hinges, treads and the six structural cell frames), CERAMIC (pale plates) and STATUS CYAN (two operator visors, the emitter lens, the chassis bay core, the two flank conduit lines). BARRIER PANE ASSEMBLY uses three: SHIELD FIELD (the six field slabs only), STATUS CYAN (the six pane rims) and FRAME (the six opaque back plates that stop the field and the rims ever reading from behind the unit). The six pane rims must still light and darken WITH the field material rather than with the status channel while the barrier is knocked down (README section 8 deviation 15) - but the PACKED case that used to depend on that is now geometry: the whole assembly, rims included, is hidden. The card sets no slot ceiling; brass edge trim, scuff noise and the team mask are texture channels of the ceramic slot.",
  "material_slots": [
   "MI_EBS_MER_UnitFrame",
   "MI_EBS_MER_UnitCeramic",
@@ -724,12 +958,12 @@
     ]
    ],
    "by_bone": {
-    "cell_01": 256,
-    "cell_02": 256,
-    "cell_03": 256,
-    "cell_04": 256,
-    "cell_05": 256,
-    "cell_06": 256,
+    "cell_01": 136,
+    "cell_02": 136,
+    "cell_03": 136,
+    "cell_04": 136,
+    "cell_05": 136,
+    "cell_06": 136,
     "chassis": 730,
     "emitter": 96,
     "leg_fl": 196,
@@ -742,10 +976,9 @@
     "wing_root_r": 88
    },
    "by_slot": {
-    "MI_EBS_MER_ShieldField": 168,
-    "MI_EBS_MER_StatusCyan": 472,
+    "MI_EBS_MER_StatusCyan": 88,
     "MI_EBS_MER_UnitCeramic": 676,
-    "MI_EBS_MER_UnitFrame": 2302
+    "MI_EBS_MER_UnitFrame": 2134
    },
    "clips": [
     "idle_packed",
@@ -763,7 +996,7 @@
    "lod": 0,
    "mesh": "SK_EBS_MER_UNT_003",
    "path": "export/SK_EBS_MER_UNT_003_LOD0.glb",
-   "sha256": "ad3b2ee200d716d87b1b67b56105a9331df856f6e212c48b3f86a7d25b31ffeb",
+   "sha256": "df8a152ae704ad589fe349ada0149e2822de0533e7a418fc635a03acfe5d2726",
    "sockets": [
     {
      "bone": "chassis",
@@ -847,7 +1080,7 @@
      ]
     }
    ],
-   "triangles": 3618
+   "triangles": 2898
   },
   {
    "collision_boxes": [
@@ -882,15 +1115,15 @@
    "lod": 0,
    "mesh": "SK_EBS_MER_UNT_003",
    "path": "export/SK_EBS_MER_UNT_003_LOD0_static.glb",
-   "sha256": "52c1c47f4333d0791030dd6c89e0f4d9ad93cc8a2a3b9b3c7681eccb2f17c6aa",
-   "triangles": 3618
+   "sha256": "8f9395ee9440382ba9626739d01b45afd780244298ebce1c39a269d5a650e52e",
+   "triangles": 2898
   },
   {
    "kind": "deployed rest OBJ",
    "lod": 0,
    "mesh": "SK_EBS_MER_UNT_003",
    "path": "export/SK_EBS_MER_UNT_003_LOD0.obj",
-   "sha256": "8b0dcc688878b0e1b8a500d3be8c6b8bcf88b13714248be53b2fe9ab1acee16b"
+   "sha256": "a99828b93edd71595ccfc1d06d70e62dfc831377ee4093d3e09bfae17c1472eb"
   },
   {
    "bounds_cm": [
@@ -914,15 +1147,15 @@
     -118.0,
     250.0
    ],
-   "sha256": "7caad316c51e59967255e1b7f8cf4f1ff052e1954fe00c28474db549902a498f",
-   "triangles": 856
+   "sha256": "0534b4cccd96083ec80a9c66bfd4aa443a93c93b8b8ed4b03b5eb7db87ea62fb",
+   "triangles": 496
   },
   {
    "kind": "sub-object OBJ",
    "lod": 0,
    "mesh": "SM_EBS_MER_UNT_003_Left_Shield_Panel",
    "path": "export/SM_EBS_MER_UNT_003_Left_Shield_Panel_LOD0.obj",
-   "sha256": "1adc05720b15edf674b55c2fc7272dee14e9718069429ddee12af3e1e8716f94"
+   "sha256": "db0fd12d6b8b730d1713d08833324faafac89071dd338331fc0da8266124b28b"
   },
   {
    "bounds_cm": [
@@ -946,15 +1179,140 @@
     118.0,
     250.0
    ],
-   "sha256": "963575e4a2fea05de37dfbf8a88c4f155993c0c42190033c74a58996ff4bd6b3",
-   "triangles": 856
+   "sha256": "9b39694e1bdaf8830964754082e452f491930fd7db3cdc6b79640ad176a19700",
+   "triangles": 496
   },
   {
    "kind": "sub-object OBJ",
    "lod": 0,
    "mesh": "SM_EBS_MER_UNT_003_Right_Shield_Panel",
    "path": "export/SM_EBS_MER_UNT_003_Right_Shield_Panel_LOD0.obj",
-   "sha256": "71fd51765c01c680d401e0cb25820b2b21317ea4fed97ea3f67e746b396e40d8"
+   "sha256": "3cdf4df3ff1906aec90a01c1e6283094eeca4da14e6622141bfead1f63d6b129"
+  },
+  {
+   "bounds_cm": [
+    [
+     165.0,
+     -239.33333333333331,
+     123.30000000000001
+    ],
+    [
+     189.0,
+     239.33333333333331,
+     383.3
+    ]
+   ],
+   "by_bone": {
+    "cell_01": 120,
+    "cell_02": 120,
+    "cell_03": 120,
+    "cell_04": 120,
+    "cell_05": 120,
+    "cell_06": 120
+   },
+   "by_slot": {
+    "MI_EBS_MER_ShieldField": 168,
+    "MI_EBS_MER_StatusCyan": 384,
+    "MI_EBS_MER_UnitFrame": 168
+   },
+   "clips": [
+    "idle_packed",
+    "move_packed",
+    "deploy",
+    "idle_deployed",
+    "drag_deployed",
+    "pack",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "kind": "sub-object: barrier pane assembly (skinned follower, owner ruling 2026-09-07)",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_003_Barrier_Panes",
+   "path": "export/SK_EBS_MER_UNT_003_Barrier_Panes_LOD0.glb",
+   "pivot_world_cm": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "sha256": "a5f332ee96ce865fa55bed1d25912cf27740b2fa1a6a48fb1080a00afdbfeeec",
+   "sockets": [
+    {
+     "bone": "shield_anchor",
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      189.0,
+      0.0,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_01",
+     "name": "Cell_01",
+     "position_cm": [
+      175.0,
+      -167.33333333333331,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_02",
+     "name": "Cell_02",
+     "position_cm": [
+      175.0,
+      -84.0,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_03",
+     "name": "Cell_03",
+     "position_cm": [
+      175.0,
+      -0.6666666666666643,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_04",
+     "name": "Cell_04",
+     "position_cm": [
+      175.0,
+      0.6666666666666643,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_05",
+     "name": "Cell_05",
+     "position_cm": [
+      175.0,
+      84.0,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_06",
+     "name": "Cell_06",
+     "position_cm": [
+      175.0,
+      167.33333333333331,
+      253.3
+     ]
+    }
+   ],
+   "triangles": 720,
+   "visible_in_states": [
+    "DEPLOYED"
+   ]
+  },
+  {
+   "kind": "sub-object OBJ: barrier pane assembly",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_003_Barrier_Panes",
+   "path": "export/SK_EBS_MER_UNT_003_Barrier_Panes_LOD0.obj",
+   "sha256": "cf6fa364611d8f0d0463e21ad3e21053727c6329b0d3ecf2e01ea0af756741a0"
   },
   {
    "bounds_cm": [
@@ -970,12 +1328,12 @@
     ]
    ],
    "by_bone": {
-    "cell_01": 196,
-    "cell_02": 196,
-    "cell_03": 196,
-    "cell_04": 196,
-    "cell_05": 196,
-    "cell_06": 196,
+    "cell_01": 76,
+    "cell_02": 76,
+    "cell_03": 76,
+    "cell_04": 76,
+    "cell_05": 76,
+    "cell_06": 76,
     "chassis": 178,
     "emitter": 36,
     "leg_fl": 72,
@@ -988,10 +1346,9 @@
     "wing_root_r": 12
    },
    "by_slot": {
-    "MI_EBS_MER_ShieldField": 168,
-    "MI_EBS_MER_StatusCyan": 456,
+    "MI_EBS_MER_StatusCyan": 72,
     "MI_EBS_MER_UnitCeramic": 252,
-    "MI_EBS_MER_UnitFrame": 970
+    "MI_EBS_MER_UnitFrame": 802
    },
    "clips": [
     "idle_packed",
@@ -1009,7 +1366,7 @@
    "lod": 1,
    "mesh": "SK_EBS_MER_UNT_003",
    "path": "export/SK_EBS_MER_UNT_003_LOD1.glb",
-   "sha256": "9a25f53dd22791ef7bd232fba63d9359a99a13d20c71f7c784bf48c2e575cd1e",
+   "sha256": "39849625fcf82b4ece01e642826c653015c6b55715def0b50412224b615352fd",
    "sockets": [
     {
      "bone": "chassis",
@@ -1093,7 +1450,7 @@
      ]
     }
    ],
-   "triangles": 1846
+   "triangles": 1126
   },
   {
    "collision_boxes": [],
@@ -1101,15 +1458,15 @@
    "lod": 1,
    "mesh": "SK_EBS_MER_UNT_003",
    "path": "export/SK_EBS_MER_UNT_003_LOD1_static.glb",
-   "sha256": "e05e3cb26473940c42a0bcb91c026c8a3922e865ed5f29b807b053acc8f9d8da",
-   "triangles": 1846
+   "sha256": "b49d5d33992bbb930488a343459eabd76d5ff0dfa4b50fd8bc9dfd4d7feb2a18",
+   "triangles": 1126
   },
   {
    "kind": "deployed rest OBJ",
    "lod": 1,
    "mesh": "SK_EBS_MER_UNT_003",
    "path": "export/SK_EBS_MER_UNT_003_LOD1.obj",
-   "sha256": "a123585c50615e2a042ff324ba74061875fffaae06cbcb435a9c4b4025fb629c"
+   "sha256": "46697ba8b995e0b8ddc57bfbd1f5c3b9b9eacf05f7b5449224dbc553b4d49762"
   },
   {
    "bounds_cm": [
@@ -1133,15 +1490,15 @@
     -118.0,
     250.0
    ],
-   "sha256": "058df11e1bbf222a526762bad6b3ecbe7b8fdf971c195735348839952a29b78a",
-   "triangles": 600
+   "sha256": "ad58efd6db91e3b5d8a72a5d26514f1ef50fc428374d861596f37e9eeea2c7be",
+   "triangles": 240
   },
   {
    "kind": "sub-object OBJ",
    "lod": 1,
    "mesh": "SM_EBS_MER_UNT_003_Left_Shield_Panel",
    "path": "export/SM_EBS_MER_UNT_003_Left_Shield_Panel_LOD1.obj",
-   "sha256": "e4b2b458b67a1c533aec18b3c8bb9c7a4f6cbbf092a4c663fa3c049ecad99ac2"
+   "sha256": "9a6ba62091a367d5efa34d2e951d99af7766bc4bcf12ba5c98e9019f0a0de2ab"
   },
   {
    "bounds_cm": [
@@ -1165,17 +1522,149 @@
     118.0,
     250.0
    ],
-   "sha256": "6f6aab0178cb4bbcb4a5338bf3c4e5b9d40b8a10ee3bd675627d0bcae454b03f",
-   "triangles": 600
+   "sha256": "737963272db41139d72f111f96172f873add4e70098ad14bc99d6f09fb38a980",
+   "triangles": 240
   },
   {
    "kind": "sub-object OBJ",
    "lod": 1,
    "mesh": "SM_EBS_MER_UNT_003_Right_Shield_Panel",
    "path": "export/SM_EBS_MER_UNT_003_Right_Shield_Panel_LOD1.obj",
-   "sha256": "30c26eb3a94318f23f53351d5a1b8b45994de32cf540a7b83257359c41d2b616"
+   "sha256": "7d6cc8c3c343f09a3d11602cd7e811b66c09b906f89391efec5e725285976076"
+  },
+  {
+   "bounds_cm": [
+    [
+     165.0,
+     -239.33333333333331,
+     123.30000000000001
+    ],
+    [
+     189.0,
+     239.33333333333331,
+     383.3
+    ]
+   ],
+   "by_bone": {
+    "cell_01": 60,
+    "cell_02": 60,
+    "cell_03": 60,
+    "cell_04": 60,
+    "cell_05": 60,
+    "cell_06": 60
+   },
+   "by_slot": {
+    "MI_EBS_MER_ShieldField": 132,
+    "MI_EBS_MER_StatusCyan": 96,
+    "MI_EBS_MER_UnitFrame": 132
+   },
+   "clips": [
+    "idle_packed",
+    "move_packed",
+    "deploy",
+    "idle_deployed",
+    "drag_deployed",
+    "pack",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "kind": "sub-object: barrier pane assembly (skinned follower, owner ruling 2026-09-07)",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_003_Barrier_Panes",
+   "path": "export/SK_EBS_MER_UNT_003_Barrier_Panes_LOD1.glb",
+   "pivot_world_cm": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "sha256": "517d2221a9269765e8f5a2ca32af33a1c44b75c73286d024e4de15e037e33586",
+   "sockets": [
+    {
+     "bone": "shield_anchor",
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      189.0,
+      0.0,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_01",
+     "name": "Cell_01",
+     "position_cm": [
+      175.0,
+      -167.33333333333331,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_02",
+     "name": "Cell_02",
+     "position_cm": [
+      175.0,
+      -84.0,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_03",
+     "name": "Cell_03",
+     "position_cm": [
+      175.0,
+      -0.6666666666666643,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_04",
+     "name": "Cell_04",
+     "position_cm": [
+      175.0,
+      0.6666666666666643,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_05",
+     "name": "Cell_05",
+     "position_cm": [
+      175.0,
+      84.0,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_06",
+     "name": "Cell_06",
+     "position_cm": [
+      175.0,
+      167.33333333333331,
+      253.3
+     ]
+    }
+   ],
+   "triangles": 360,
+   "visible_in_states": [
+    "DEPLOYED"
+   ]
+  },
+  {
+   "kind": "sub-object OBJ: barrier pane assembly",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_003_Barrier_Panes",
+   "path": "export/SK_EBS_MER_UNT_003_Barrier_Panes_LOD1.obj",
+   "sha256": "227ce2d2d5304a3422ecf995870b5b5c48b124e6d320a060140f3f865ebf6ce3"
   }
  ],
+ "owner_ruling": {
+  "date": "2026-09-07",
+  "entry_boundary_verbatim": "Clarifies production direction. The owner states these answers did not edit the cards or the runtime in that turn, and they are not evidence of completed integration.",
+  "note": "The two strings above are the ledger's, character for character, and a test re-reads the ledger to prove it. The boundary is a SEPARATE field of the ledger entry, not part of the ruling sentence. concept-v4 printed a rewritten, imperative-mood restatement of the ruling under the label 'the owner's words, verbatim', folded a reworded boundary inside the quotation marks, and attributed to the owner an asset name and a naming licence that appear nowhere in the ledger; all of that is STRUCK in concept-v5 (README section 8.5). Any paraphrase in this package is labelled as one and sits beside the verbatim text.",
+  "ruling_verbatim": "Third, separately controlled barrier sub-object. Chassis, hinged wings and six structural frames stay physically present, three panes from each side, centred when deployed. The field slabs and the removable pane assembly are separated so they disappear while packed. The component contract is updated explicitly. Visibility follows authoritative deployment state including cancellation and save restoration. The added component does not increase the whole-unit triangle budget.",
+  "source": "ArtSource/production-ledger.json -> owner_rulings[0].rulings[2].ruling (2026-09-07)"
+ },
  "package_id": "EBS-PKG-MC-BULWARK-TEAM",
  "packed_state": {
   "cells_clear_of_legs": true,
@@ -1221,8 +1710,205 @@
   "packed_cell_inner_face_y_cm": 155.12,
   "packed_cell_slab_thickness_cm": 249.75,
   "packed_cell_top_z_cm": 313.3,
-  "packed_flank_field_note": "The barrier field slab cannot be removed from the packed pose by geometry: the rig is rotation and translation only (ebs_skelkit.Keyframe has no scale track), so a rigid 62 x 260 cm pane is present in every pose, and the packed fold turns each pane's FRONT face outboard, i.e. the flank camera looks straight down the pane normal. The packed read therefore depends on the field material being OFF while packed - the state baked into the packed_field_dark review assembly. README section 8 records the deviation.",
+  "packed_field_polygons_in_shipped_mesh": 0,
+  "packed_flank_field_note": "Owner ruling 2026-09-07 (option b of OWNER-QUESTION F): the field slabs and the rest of the removable pane assembly are a third sub-object, so the PACKED shipped mesh contains no pane geometry at all and the six folded cages are open by GEOMETRY, not by a material state. Measured on the shipped packed mesh: 0.0 percent barrier field on both flanks. The packed_flank_visibility_panes_shown block is the integration FAILURE CONTROL - the same pose with the assembly still drawn, which is what concept-v3 shipped and what the runtime must not do.",
   "packed_flank_visibility": {
+   "+Y": {
+    "by_slot": {
+     "MI_EBS_MER_ShieldField": 0,
+     "MI_EBS_MER_StatusCyan": 166,
+     "MI_EBS_MER_UnitCeramic": 7614,
+     "MI_EBS_MER_UnitFrame": 20521
+    },
+    "field_fraction": 0.0,
+    "frontmost_components": [
+     "cell_04_corner_01",
+     "cell_04_corner_02",
+     "cell_04_corner_03",
+     "cell_04_corner_04",
+     "cell_04_frame",
+     "cell_04_hinge_01",
+     "cell_04_hinge_02",
+     "cell_05_corner_01",
+     "cell_05_corner_02",
+     "cell_05_corner_03",
+     "cell_05_corner_04",
+     "cell_05_frame",
+     "cell_05_hinge_01",
+     "cell_05_hinge_02",
+     "cell_06_corner_01",
+     "cell_06_corner_02",
+     "cell_06_corner_03",
+     "cell_06_corner_04",
+     "cell_06_frame",
+     "cell_06_hinge_01",
+     "cell_06_hinge_02",
+     "chassis_belly",
+     "chassis_conduit_r",
+     "chassis_deck",
+     "chassis_deck_kerb",
+     "chassis_deck_rear",
+     "chassis_flank_low_r",
+     "chassis_flank_r",
+     "chassis_flank_rear_r",
+     "chassis_frame",
+     "chassis_prow_block",
+     "chassis_prow_buttress",
+     "chassis_prow_corner",
+     "chassis_prow_lower",
+     "chassis_prow_rail",
+     "chassis_prow_vent",
+     "chassis_rail_mid_r",
+     "chassis_rail_top_r",
+     "chassis_rib_r",
+     "chassis_rib_rear_r",
+     "chassis_strake_r_01",
+     "chassis_strake_r_03",
+     "emitter_housing",
+     "emitter_lens",
+     "emitter_stalk",
+     "leg_fr_boot",
+     "leg_fr_foot",
+     "leg_fr_mount",
+     "leg_fr_thigh",
+     "leg_fr_thigh_conduit",
+     "leg_fr_thigh_rail",
+     "leg_fr_tread_01",
+     "leg_fr_tread_02",
+     "leg_fr_tread_03",
+     "leg_rr_boot",
+     "leg_rr_foot",
+     "leg_rr_mount",
+     "leg_rr_thigh",
+     "leg_rr_thigh_conduit",
+     "leg_rr_thigh_rail",
+     "leg_rr_tread_01",
+     "leg_rr_tread_02",
+     "leg_rr_tread_03",
+     "op_r_arch",
+     "op_r_arch_leg",
+     "op_r_cowl",
+     "op_r_shoulder",
+     "op_r_visor",
+     "wing_r_arm",
+     "wing_r_arm_web",
+     "wing_r_hinge_barrel",
+     "wing_r_strut",
+     "wing_r_strut_cap"
+    ],
+    "grid": [
+     200,
+     199
+    ],
+    "samples": 28301,
+    "slot_fraction": {
+     "MI_EBS_MER_ShieldField": 0.0,
+     "MI_EBS_MER_StatusCyan": 0.00587,
+     "MI_EBS_MER_UnitCeramic": 0.26904,
+     "MI_EBS_MER_UnitFrame": 0.7251
+    },
+    "status_fraction": 0.00587,
+    "view_from": "+Y"
+   },
+   "-Y": {
+    "by_slot": {
+     "MI_EBS_MER_ShieldField": 0,
+     "MI_EBS_MER_StatusCyan": 166,
+     "MI_EBS_MER_UnitCeramic": 7614,
+     "MI_EBS_MER_UnitFrame": 20521
+    },
+    "field_fraction": 0.0,
+    "frontmost_components": [
+     "cell_01_corner_01",
+     "cell_01_corner_02",
+     "cell_01_corner_03",
+     "cell_01_corner_04",
+     "cell_01_frame",
+     "cell_01_hinge_01",
+     "cell_01_hinge_02",
+     "cell_02_corner_01",
+     "cell_02_corner_02",
+     "cell_02_corner_03",
+     "cell_02_corner_04",
+     "cell_02_frame",
+     "cell_02_hinge_01",
+     "cell_02_hinge_02",
+     "cell_03_corner_01",
+     "cell_03_corner_02",
+     "cell_03_corner_03",
+     "cell_03_corner_04",
+     "cell_03_frame",
+     "cell_03_hinge_01",
+     "cell_03_hinge_02",
+     "chassis_belly",
+     "chassis_conduit_l",
+     "chassis_deck",
+     "chassis_deck_kerb",
+     "chassis_deck_rear",
+     "chassis_flank_l",
+     "chassis_flank_low_l",
+     "chassis_flank_rear_l",
+     "chassis_frame",
+     "chassis_prow_block",
+     "chassis_prow_buttress",
+     "chassis_prow_corner",
+     "chassis_prow_lower",
+     "chassis_prow_rail",
+     "chassis_prow_vent",
+     "chassis_rail_mid_l",
+     "chassis_rail_top_l",
+     "chassis_rib_l",
+     "chassis_rib_rear_l",
+     "chassis_strake_l_01",
+     "chassis_strake_l_03",
+     "emitter_housing",
+     "emitter_lens",
+     "emitter_stalk",
+     "leg_fl_boot",
+     "leg_fl_foot",
+     "leg_fl_mount",
+     "leg_fl_thigh",
+     "leg_fl_thigh_conduit",
+     "leg_fl_thigh_rail",
+     "leg_fl_tread_01",
+     "leg_fl_tread_02",
+     "leg_fl_tread_03",
+     "leg_rl_boot",
+     "leg_rl_foot",
+     "leg_rl_mount",
+     "leg_rl_thigh",
+     "leg_rl_thigh_conduit",
+     "leg_rl_thigh_rail",
+     "leg_rl_tread_01",
+     "leg_rl_tread_02",
+     "leg_rl_tread_03",
+     "op_l_arch",
+     "op_l_arch_leg",
+     "op_l_cowl",
+     "op_l_shoulder",
+     "op_l_visor",
+     "wing_l_arm",
+     "wing_l_arm_web",
+     "wing_l_hinge_barrel",
+     "wing_l_strut",
+     "wing_l_strut_cap"
+    ],
+    "grid": [
+     200,
+     199
+    ],
+    "samples": 28301,
+    "slot_fraction": {
+     "MI_EBS_MER_ShieldField": 0.0,
+     "MI_EBS_MER_StatusCyan": 0.00587,
+     "MI_EBS_MER_UnitCeramic": 0.26904,
+     "MI_EBS_MER_UnitFrame": 0.7251
+    },
+    "status_fraction": 0.00587,
+    "view_from": "-Y"
+   }
+  },
+  "packed_flank_visibility_panes_shown": {
    "+Y": {
     "by_slot": {
      "MI_EBS_MER_ShieldField": 13759,
@@ -1375,6 +2061,7 @@
   "packed_height_z_cm": 347.5,
   "packed_length_x_cm": 350.0,
   "packed_narrower_than_deployed_wall": true,
+  "packed_pane_components_in_shipped_mesh": [],
   "packed_rear_visibility": {
    "by_slot": {
     "MI_EBS_MER_ShieldField": 0,
@@ -1384,7 +2071,6 @@
    },
    "field_fraction": 0.0,
    "frontmost_components": [
-    "cell_01_backplate",
     "cell_01_corner_01",
     "cell_01_corner_02",
     "cell_01_corner_03",
@@ -1392,7 +2078,6 @@
     "cell_01_frame",
     "cell_01_hinge_01",
     "cell_01_hinge_02",
-    "cell_02_backplate",
     "cell_02_corner_01",
     "cell_02_corner_02",
     "cell_02_corner_03",
@@ -1400,19 +2085,16 @@
     "cell_02_frame",
     "cell_02_hinge_01",
     "cell_02_hinge_02",
-    "cell_03_backplate",
     "cell_03_corner_01",
     "cell_03_corner_02",
     "cell_03_corner_04",
     "cell_03_frame",
     "cell_03_hinge_01",
-    "cell_04_backplate",
     "cell_04_corner_01",
     "cell_04_corner_02",
     "cell_04_corner_03",
     "cell_04_frame",
     "cell_04_hinge_01",
-    "cell_05_backplate",
     "cell_05_corner_01",
     "cell_05_corner_02",
     "cell_05_corner_03",
@@ -1420,7 +2102,6 @@
     "cell_05_frame",
     "cell_05_hinge_01",
     "cell_05_hinge_02",
-    "cell_06_backplate",
     "cell_06_corner_01",
     "cell_06_corner_02",
     "cell_06_corner_03",
@@ -1529,7 +2210,8 @@
  "parts": [
   "SK_EBS_MER_UNT_003",
   "SM_EBS_MER_UNT_003_Left_Shield_Panel",
-  "SM_EBS_MER_UNT_003_Right_Shield_Panel"
+  "SM_EBS_MER_UNT_003_Right_Shield_Panel",
+  "SK_EBS_MER_UNT_003_Barrier_Panes"
  ],
  "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_003/",
  "production_asset_id": "EBS-MER-UNT-003",
@@ -1549,7 +2231,7 @@
    ],
    "lod": 0,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_deployed_LOD0.obj",
-   "sha256": "0c4ce73c76873d17873212b79fa3b26daa52a3fe2acec64cf438219daa82284f",
+   "sha256": "cb0bc657a9053cf53ede2d9aae06bae87e8ff00f6ef1916411d8b06c7036c119",
    "state": "deployed",
    "triangles": 3618
   },
@@ -1568,9 +2250,9 @@
    ],
    "lod": 0,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_packed_LOD0.obj",
-   "sha256": "f35c82d60ae5cd4c10a20de22e99a918a782e52521007426afcb815bde51a7c3",
+   "sha256": "9defd3734cb1841bd2d7733ba2dff65452c80e6e5a5c148d165ed79996d2312b",
    "state": "packed",
-   "triangles": 3618
+   "triangles": 2898
   },
   {
    "bounds_cm": [
@@ -1587,9 +2269,28 @@
    ],
    "lod": 0,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_deployed_glass_cutaway_LOD0.obj",
-   "sha256": "9ebc735c59a654c5ca5cddeb72a05aa0e93236a7a787b059d33053102fe9b8a7",
+   "sha256": "4d851949d01a992da93d3cba35913a11868bc1946b1b3355480190bc6e883ad0",
    "state": "deployed_glass_cutaway",
-   "triangles": 3450
+   "triangles": 3282
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -249.33333333333331,
+     0.0
+    ],
+    [
+     200.0,
+     249.33333333333331,
+     396.3
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_deployed_frames_only_LOD0.obj",
+   "sha256": "81d515bba9fb66383ad03d64bc565fa890ac5fc3ec5be62b4a297937ca03df5c",
+   "state": "deployed_frames_only",
+   "triangles": 2898
   },
   {
    "bounds_cm": [
@@ -1605,9 +2306,9 @@
     ]
    ],
    "lod": 0,
-   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_packed_field_dark_LOD0.obj",
-   "sha256": "7c60145e0bef964b0741438c8166c57d8074ac4148edbc34726fbf467387d547",
-   "state": "packed_field_dark",
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_packed_panes_shown_LOD0.obj",
+   "sha256": "22169044db95d939da6d6607ed8eedc41fb6087da6221b2ef21395fb0f3c889d",
+   "state": "packed_panes_shown",
    "triangles": 3618
   },
   {
@@ -1625,9 +2326,9 @@
    ],
    "lod": 1,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_deployed_LOD1.obj",
-   "sha256": "839dd6364238a571145350aab3453a3ad241bbb028d8d1b9ad4469067ffc6da2",
+   "sha256": "2cf3ee2a78a4329a8c206c89dc1b79f50ea96bf297c3e49c94098ed3086de32b",
    "state": "deployed",
-   "triangles": 1846
+   "triangles": 1486
   },
   {
    "bounds_cm": [
@@ -1644,9 +2345,9 @@
    ],
    "lod": 1,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_packed_LOD1.obj",
-   "sha256": "a918108cc30dc0a75809d69599497504fd23b930fe30785c63f1e2a63f739a3f",
+   "sha256": "9f1d8747c4f9a554a837e635a69672c2fa527df4c9937dddffe47caec9353d07",
    "state": "packed",
-   "triangles": 1846
+   "triangles": 1126
   },
   {
    "bounds_cm": [
@@ -1664,8 +2365,9 @@
    "clip": "idle_packed",
    "fraction": 0.0,
    "lod": 0,
+   "pane_assembly_visible": false,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_idle_packed_000.obj",
-   "sha256": "73e29841706417332021582c826f865daf6d56ad19f42c90cbc461615e2cc919",
+   "sha256": "cedc2ce5015f4b33ca59e03ba8b01915e08e9d279d1ee1bfa28556e67b9c828a",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
@@ -1740,7 +2442,7 @@
      ]
     }
    ],
-   "triangles": 3618
+   "triangles": 2898
   },
   {
    "bounds_cm": [
@@ -1758,8 +2460,9 @@
    "clip": "move_packed",
    "fraction": 0.25,
    "lod": 0,
+   "pane_assembly_visible": false,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_move_packed_025.obj",
-   "sha256": "d6fa4f71dbf5f7b745006998c4ffd4707344ad1bef8141aca05159aa25f97393",
+   "sha256": "5f4eef5d110f824f6dccfd8bededee08942487259ba32a4968703dc80d572767",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
@@ -1834,7 +2537,7 @@
      ]
     }
    ],
-   "triangles": 3618
+   "triangles": 2898
   },
   {
    "bounds_cm": [
@@ -1852,8 +2555,9 @@
    "clip": "deploy",
    "fraction": 0.15,
    "lod": 0,
+   "pane_assembly_visible": false,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_deploy_015.obj",
-   "sha256": "4f43cd3d903019018629cb9e7e8de273d49135f30470088fe98ae30d3b8650c3",
+   "sha256": "7d9ac090155bbb5ffc5fc162a7a42ecf261bd47c8903c90811ac79d6a285c159",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
@@ -1928,7 +2632,7 @@
      ]
     }
    ],
-   "triangles": 3618
+   "triangles": 2898
   },
   {
    "bounds_cm": [
@@ -1946,8 +2650,9 @@
    "clip": "deploy",
    "fraction": 0.55,
    "lod": 0,
+   "pane_assembly_visible": false,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_deploy_055.obj",
-   "sha256": "ae69f8d6fa9615c0318f6509f0ecce59abdfb631360eb6f70183cbcc1364dfc1",
+   "sha256": "dfc20fe593e46dde069286d28023c3b8fecb9d0ff30404c1031980953399124b",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
@@ -2022,7 +2727,7 @@
      ]
     }
    ],
-   "triangles": 3618
+   "triangles": 2898
   },
   {
    "bounds_cm": [
@@ -2040,8 +2745,9 @@
    "clip": "deploy",
    "fraction": 0.82,
    "lod": 0,
+   "pane_assembly_visible": false,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_deploy_082.obj",
-   "sha256": "aa3805f267d4448964bf441f66c6b4dd62adbfd9ecdb895c4fe2fd799a3c95b6",
+   "sha256": "10603f9477e37f219dbd38c44bc22123c1805248d7940a916cfeb7442974b8ee",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
@@ -2116,6 +2822,101 @@
      ]
     }
    ],
+   "triangles": 2898
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -249.33333333333331,
+     0.0
+    ],
+    [
+     200.0,
+     249.33333333333331,
+     396.3
+    ]
+   ],
+   "clip": "deploy",
+   "fraction": 1.0,
+   "lod": 0,
+   "pane_assembly_visible": true,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_deploy_100.obj",
+   "sha256": "f8c14d803b6597670c47e651dc19042adf1caef5ef409e6ea0144554950b8f7a",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      200.0
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      198.0,
+      0.0,
+      114.0
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      189.0,
+      0.0,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      175.0,
+      -167.33,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      175.0,
+      -84.0,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      175.0,
+      -0.67,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      175.0,
+      0.67,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      175.0,
+      84.0,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      175.0,
+      167.33,
+      253.3
+     ]
+    }
+   ],
    "triangles": 3618
   },
   {
@@ -2134,8 +2935,9 @@
    "clip": "idle_deployed",
    "fraction": 0.5,
    "lod": 0,
+   "pane_assembly_visible": true,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_idle_deployed_050.obj",
-   "sha256": "db0e149e0128ae1fce6549564f010d487ad35713a9d4589ddd07a9803759daf2",
+   "sha256": "b45d409d073c0333d643388efd059d7bc64004609e17f7eb71820e17f0b75e00",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
@@ -2228,8 +3030,9 @@
    "clip": "drag_deployed",
    "fraction": 0.25,
    "lod": 0,
+   "pane_assembly_visible": true,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_drag_deployed_025.obj",
-   "sha256": "cf15d15ca2cc6b144734ffeee3b650a9e27375d4c1738da1b6b923da5f2b8cde",
+   "sha256": "58179c2d81abf8afb24789249caa3c8aebf8246f4c36027b4c26553ed000254d",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
@@ -2322,8 +3125,9 @@
    "clip": "pack",
    "fraction": 0.55,
    "lod": 0,
+   "pane_assembly_visible": false,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_pack_055.obj",
-   "sha256": "7f461b0ef46c911f9ce35c261aff049e88e0e8d13068e2fda2eec001f7373fcd",
+   "sha256": "31fc0c62fe008fdd2534da7d2c48ea47c022d32cac75d4c8e047c10a14abe9d2",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
@@ -2398,7 +3202,7 @@
      ]
     }
    ],
-   "triangles": 3618
+   "triangles": 2898
   },
   {
    "bounds_cm": [
@@ -2416,8 +3220,9 @@
    "clip": "damage",
    "fraction": 0.2,
    "lod": 0,
+   "pane_assembly_visible": true,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_damage_020.obj",
-   "sha256": "49f15cd6335d0ac6c038a7a67f94c64ef15bec5993c880f13f317f434e000344",
+   "sha256": "c6dc943fd89266d1a6efbb6113986e96c250f8106a86404a35592458359e7b15",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
@@ -2510,8 +3315,9 @@
    "clip": "death",
    "fraction": 1.0,
    "lod": 0,
+   "pane_assembly_visible": true,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_death_100.obj",
-   "sha256": "e52bfb489d1e332da77259ed089b3b4c5a0e55e80bc4cc81771a6c1a12dd5dad",
+   "sha256": "81d5646e4844b01577dba4412b4a25d184d75b002fdfc78e59e5936f6fc33f0c",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
@@ -2604,8 +3410,9 @@
    "clip": "cancel",
    "fraction": 0.0,
    "lod": 0,
+   "pane_assembly_visible": false,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_cancel_000.obj",
-   "sha256": "df395fdc11edcaa1988a29e47b06750b077e62eeac15efb1011a739dc2e9f73e",
+   "sha256": "33d18efc3e6d37834b189dca088157f50ccec96fb0f2abdeb0b415624d779bf8",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
@@ -2680,7 +3487,7 @@
      ]
     }
    ],
-   "triangles": 3618
+   "triangles": 2898
   },
   {
    "bounds_cm": [
@@ -2698,8 +3505,9 @@
    "clip": "restore",
    "fraction": 0.0,
    "lod": 0,
+   "pane_assembly_visible": true,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_restore_000.obj",
-   "sha256": "6c25fc3074c0d72817b29cf606e4badfb93bdfe5d05bae3e884b224ca048cba5",
+   "sha256": "e056b90ee64e944f87f7867fca60a548de62b886d2ee072568cf5172fcab3a0d",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
@@ -2777,7 +3585,154 @@
    "triangles": 3618
   }
  ],
- "revision": "ebs-mer-unt-003-concept-v3",
+ "review_variants": {
+  "deployed_frames_only": {
+   "role": "SEPARATION CONTROL: the deployed pose with the assembly hidden"
+  },
+  "deployed_glass_cutaway": {
+   "keeps": [
+    "the six structural frames",
+    "the six cyan pane rims",
+    "chassis, operators, legs, wings"
+   ],
+   "measured": {
+    "blocked_by_a_back_plate": 0,
+    "cells": [
+     {
+      "blocked_by_a_back_plate": 0,
+      "cell": "cell_01",
+      "read_through": 190,
+      "samples": 198
+     },
+     {
+      "blocked_by_a_back_plate": 0,
+      "cell": "cell_02",
+      "read_through": 190,
+      "samples": 198
+     },
+     {
+      "blocked_by_a_back_plate": 0,
+      "cell": "cell_03",
+      "read_through": 190,
+      "samples": 198
+     },
+     {
+      "blocked_by_a_back_plate": 0,
+      "cell": "cell_04",
+      "read_through": 190,
+      "samples": 198
+     },
+     {
+      "blocked_by_a_back_plate": 0,
+      "cell": "cell_05",
+      "read_through": 190,
+      "samples": 198
+     },
+     {
+      "blocked_by_a_back_plate": 0,
+      "cell": "cell_06",
+      "read_through": 190,
+      "samples": 198
+     }
+    ],
+    "concept_v4_result": {
+     "blocked_by_a_back_plate": 1140,
+     "note": "the field alone was cut; the opaque back plates stayed, so the tile showed an unlit field-off barrier and no operator at all",
+     "read_through": 0,
+     "samples": 1188
+    },
+    "every_cell_reads_through": true,
+    "frontmost_components": {
+     "(open sky)": 610,
+     "cell_01_corner_01": 2,
+     "cell_01_corner_02": 2,
+     "cell_01_corner_03": 2,
+     "cell_01_corner_04": 2,
+     "cell_02_corner_01": 2,
+     "cell_02_corner_02": 2,
+     "cell_02_corner_03": 2,
+     "cell_02_corner_04": 2,
+     "cell_03_corner_01": 2,
+     "cell_03_corner_02": 2,
+     "cell_03_corner_03": 2,
+     "cell_03_corner_04": 2,
+     "cell_04_corner_01": 2,
+     "cell_04_corner_02": 2,
+     "cell_04_corner_03": 2,
+     "cell_04_corner_04": 2,
+     "cell_05_corner_01": 2,
+     "cell_05_corner_02": 2,
+     "cell_05_corner_03": 2,
+     "cell_05_corner_04": 2,
+     "cell_06_corner_01": 2,
+     "cell_06_corner_02": 2,
+     "cell_06_corner_03": 2,
+     "cell_06_corner_04": 2,
+     "chassis_conduit_l": 1,
+     "chassis_conduit_r": 1,
+     "chassis_deck": 2,
+     "chassis_deck_kerb": 4,
+     "chassis_deck_spine": 2,
+     "chassis_flank_l": 2,
+     "chassis_flank_low_l": 1,
+     "chassis_flank_low_r": 1,
+     "chassis_flank_r": 2,
+     "chassis_frame": 80,
+     "chassis_prow_block": 22,
+     "chassis_prow_buttress": 16,
+     "chassis_prow_corner": 6,
+     "chassis_prow_lower": 18,
+     "chassis_prow_rail": 8,
+     "chassis_prow_upper": 36,
+     "chassis_prow_vent": 20,
+     "leg_fl_mount": 7,
+     "leg_fr_mount": 7,
+     "op_l_arch": 11,
+     "op_l_arch_leg": 6,
+     "op_l_chest_plate": 5,
+     "op_l_cowl": 16,
+     "op_l_shoulder": 3,
+     "op_l_torso": 5,
+     "op_r_arch": 11,
+     "op_r_arch_leg": 6,
+     "op_r_chest_plate": 5,
+     "op_r_cowl": 16,
+     "op_r_shoulder": 3,
+     "op_r_torso": 5,
+     "wing_l_arm": 30,
+     "wing_l_arm_web": 14,
+     "wing_l_hinge_barrel": 19,
+     "wing_l_strut": 28,
+     "wing_l_strut_cap": 10,
+     "wing_r_arm": 30,
+     "wing_r_arm_web": 14,
+     "wing_r_hinge_barrel": 19,
+     "wing_r_strut": 28,
+     "wing_r_strut_cap": 10
+    },
+    "grid_per_cell": [
+     11,
+     18
+    ],
+    "lod": 0,
+    "method": "Ray cast from +X over each frame's inner opening on the cutaway review assembly; a sample 'reads through' when the frontmost surface is chassis, operator, emitter, leg, wing or open sky - i.e. something BEHIND the pane, which is what the reference shows through the glass. Never used to certify a fidelity check.",
+    "operator_samples": 92,
+    "read_through_fraction": 0.9596,
+    "read_through_the_pane": 1140,
+    "samples": 1188
+   },
+   "removes": [
+    "the six field slabs",
+    "the six opaque back plates"
+   ],
+   "role": "TRANSLUCENCY STAND-IN (the review renderer has none)"
+  },
+  "note": "Non-shipped review tiles. None certifies a fidelity check; each may only appear beside a shipped tile, each is captioned INTO the tile image by make_sheets.py, and each sheet has a renders/concept-compare/<sheet>.tiles.json sidecar naming every tile in order.",
+  "packed_panes_shown": {
+   "role": "INTEGRATION FAILURE CONTROL: the packed pose with the assembly still drawn, i.e. what concept-v3 shipped"
+  }
+ },
+ "revision": "ebs-mer-unt-003-concept-v5",
  "rig": {
   "bone_count_note": "the card requires 18; the fidelity file's prose list enumerates 16. The emitter and shield_anchor bones carry the remaining two and each drives a named socket (README section 8).",
   "bones": [
@@ -2989,7 +3944,7 @@
   },
   "reference_measurement": "bulwark-centered-wings-reference.png deployed panel, wall outer frame 825 x 462 px, ground row 882; 1 px = 0.60606 cm.",
   "source": "concept-fidelity.md: the deployed face is authored at W = 500 cm to match cover_half_width_cm 250 (Content/Data/Source/units.json mc_bulwark_team).",
-  "status": "CONCEPT-MEASURED BLOCKOUT (concept-v2)"
+  "status": "CONCEPT-MEASURED BLOCKOUT (concept-v5)"
  },
  "skel_revision": "ebs-skelkit-v2",
  "source_bindings": {
@@ -3055,10 +4010,10 @@
    }
   ]
  },
- "stage": "BLOCKOUT (concept-v2)",
- "stage_boundary": "Concept-matched deployed rest geometry, 18-bone transformation rig, keyframed clip data and the packed state as a posed review assembly; no textures, no import, no gate acceptance, no owner acceptance. The deployed rear read is geometry (opaque pane back plates, measured 0.0 percent barrier field frontmost from -X); the packed flank read is a runtime material requirement, measured and recorded as README section 8 deviation 16.",
+ "stage": "BLOCKOUT (concept-v5)",
+ "stage_boundary": "Concept-matched deployed rest geometry, 18-bone transformation rig, keyframed clip data and the packed state as a posed review assembly; no textures, no import, no gate acceptance, no owner acceptance. Both state reads are now GEOMETRY on shipped meshes: the deployed rear is opaque because every pane carries a charcoal back plate (0.0 percent barrier field frontmost from -X), and the packed flanks are open cages because the removable pane assembly is a separate sub-object the runtime hides (0.0 percent barrier field on both flanks of the shipped packed mesh). The VISIBILITY of that sub-object is a written runtime contract this blockout records and cannot enforce - see visibility_contract.",
  "tools": {
-  "builder_sha256": "a5a23c1aae62b4770dd50ecb7d4639f991e3394833d97c545f5f89c20580aeb5",
+  "builder_sha256": "709b831640fbd643c3373c052196139530ff199e6ffbaf8998b492c813232d43",
   "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
   "python": "3.14.7"
  },
@@ -3069,5 +4024,28 @@
   "pivot": "ground-contact centre (root)",
   "runtime_presentation_note": "EchoesEntityView.cpp:1817 draws EntityType::HeavyUnit at 1.75; not part of the asset. At 1.75 the 500 cm authored face draws 875 cm wide against a 500 cm authoritative cover width - README section 8 OWNER-QUESTION.",
   "runtime_presentation_scale": 1.75
+ },
+ "visibility_contract": {
+  "cancellation": "a deploy cancelled mid-swing never reaches DEPLOYED, so the assembly is never shown and there is nothing to clean up; the cancel clip returns the frames to the travel profile",
+  "component": "SK_EBS_MER_UNT_003_Barrier_Panes",
+  "driven_by": "the authoritative simulation deployment state, read every frame the state changes",
+  "enforceable_here": false,
+  "enforcement_note": "THIS BLOCKOUT CANNOT ENFORCE ANY OF THIS. It ships the separation the rule needs - a third object that can be hidden without disturbing the frames - and nothing more. Wiring the visibility to the authoritative state, and proving it survives cancellation and save restoration, is integration work in the runtime, not here.",
+  "hidden_in": [
+   "PACKED",
+   "DEPLOYING",
+   "PACKING"
+  ],
+  "never_driven_by": [
+   "an animation notify",
+   "a montage or clip event",
+   "a local presentation-only toggle",
+   "the clip that happens to be playing"
+  ],
+  "rejected_alternative": "hiding the assembly only in PACKED (visible through both transitions) was considered and rejected: it puts the change at the END of the pack, where the measured flank silhouette loses 47.1 percent of its area in one frame (packed_flank_visibility_panes_shown)",
+  "rule": "visible if and only if the AUTHORITATIVE deployment state is DEPLOYED",
+  "save_restoration": "on load the saved deployment state sets the visibility directly, before the first frame is drawn; no clip has to play and no notify has to fire for the packed unit to load with open cages or the deployed unit to load with its wall",
+  "state_endpoints": "THE ENDPOINT RULE, STATED ONCE. The rule is the state, not the clip. The authoritative state is ENTERED at deploy t = 1.0 and LEFT at pack t > 0, so deploy t = 1.0 and pack t = 0.0 are DEPLOYED frames and the assembly is drawn in them; every other frame of deploy and pack is a transition frame and it is hidden. 'Hidden through the DEPLOYING and PACKING transitions' means exactly that and nothing more - the two shared endpoint frames belong to DEPLOYED.",
+  "transition": "the one visibility change coincides with the authoritative cover state change (40 percent frontal reduction on, or off), which is the moment the player is already told about; the field material's own fade covers it"
  }
 }

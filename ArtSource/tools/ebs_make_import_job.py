@@ -111,14 +111,28 @@ def skeletal_job(manifest: dict, source_root: str, destination: str, report: str
     rows = glb_rows(manifest, skinned=True)
     if not rows:
         raise SystemExit("manifest has no skinned SK_* GLB rows; run the generator with --skinned")
+    # A package may ship more than one skinned mesh: the unit itself plus skinned sub-objects (for
+    # example the Bulwark's barrier pane assembly, which follows the same cell bones). Only the rows
+    # whose mesh IS the package asset are the unit's LODs; every other skinned mesh is its own asset.
+    # Treating a sub-object as the unit's LOD1 makes two entries import under one name, and the second
+    # returns no objects — which is exactly how this went wrong once.
+    primary = [o for o in rows if o["mesh"] == asset]
+    others = [o for o in rows if o["mesh"] != asset]
     assets = []
-    for row in sorted(rows, key=lambda o: int(o["lod"])):
+    for row in sorted(primary, key=lambda o: int(o["lod"])):
         lod = int(row["lod"])
         entry_name = asset if lod == 0 else f"{asset}_LOD{lod}Source"
         if meshes and entry_name not in meshes:
             continue
         assets.append({"name": entry_name, "file": os.path.join(source_root, row["path"]), "clips": clips})
-    o0 = pick(rows, asset, 0) or rows[0]
+    for row in sorted(others, key=lambda o: (o["mesh"], int(o["lod"]))):
+        lod = int(row["lod"])
+        entry_name = row["mesh"] if lod == 0 else f"{row['mesh']}_LOD{lod}Source"
+        if meshes and entry_name not in meshes:
+            continue
+        assets.append({"name": entry_name, "file": os.path.join(source_root, row["path"]),
+                       "clips": clips, "sub_object_of": asset})
+    o0 = pick(primary, asset, 0) or primary[0]
     socks = sorted(s["name"] for s in (o0.get("sockets") or []))
     if not socks:
         inv = (manifest.get("component_inventory") or {}).get("sockets") or {}

@@ -227,7 +227,7 @@
    "production_asset_id": "EBS-MER-UNT-002",
    "subject": "Lancer",
    "production_maturity": "BLOCKOUT",
-   "current_revision": "ebs-mer-unt-002-concept-v3",
+   "current_revision": "ebs-mer-unt-002-concept-v4",
    "asset_name": "SK_EBS_MER_UNT_002",
    "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_002/",
    "canon_status": "CANDIDATE (EBS-CON-MER-UNT-002 (REPLACE; the lancer-candidate sheet and its derived turnaround are the direction)); not owner acceptance",
@@ -240,9 +240,15 @@
      "date": "2026-09-07",
      "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-002/ (receipt.json, renders/concept-compare/, import/)",
      "result": "Braced two-legged line-fire frame built to the candidate: hip-mounted rail-lance with a full-length cyan channel, low sensor cowl between two shoulder pods, exposed charcoal flanks, slim rear-leg recoil strut with a sliding gland. 18-bone rig with the card's lance_yaw/lance_barrel sub-objects and sockets Muzzle_Flash_01, Target_Anchor_Center, Left_Tread_Vector; 9 clips including the halt-plant-aim-fire-recover sequence. LOD0 1,828 / LOD1 968 tris against 8,000 / 3,500. 27 tests, 13 comparison sheets, two verification lenses and a fix pass. Import: 0 errors, 18 AnimSequences, 3 sockets."
+    },
+    {
+     "stage": "BLOCKOUT (owner ruling, ebs-mer-unt-002-concept-v4)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-002/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Owner ruling implemented (concept-v4): Rear_Recoil_Strut_Anchor added at the strut's upper clevis where recoil enters the frame, Left_Tread_Vector kept at the identical transform as a temporary compatibility alias, and Foot_Contact_L/R added at the soles so ground contact has its own name. LOD1 ceiling confirmed at 3,500 per REL-ART-028. Geometry unchanged; 34 tests; import 0 errors, 18 AnimSequences, 6 sockets."
     }
    ],
-   "next": "Owner ruling on the card's printed LOD1 ceiling typo and the Left_Tread_Vector name on a legged frame; textures (2048^2); emissive measurement; in-engine playback; gates.",
+   "next": "Textures (2048^2), emissive measurement, in-engine playback, gates. The compatibility alias is dropped when the adapter migration is tested.",
    "gates": {
     "art": "NOT_EVALUATED",
     "gameplay": "NOT_EVALUATED",
@@ -255,7 +261,7 @@
    "production_asset_id": "EBS-MER-UNT-003",
    "subject": "Bulwark Team",
    "production_maturity": "BLOCKOUT",
-   "current_revision": "ebs-mer-unt-003-concept-v3",
+   "current_revision": "ebs-mer-unt-003-concept-v5",
    "asset_name": "SK_EBS_MER_UNT_003",
    "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_003/",
    "canon_status": "CANDIDATE (EBS-CON-MER-UNT-003 (KEEP) with the owner-corrected six-cell derived reference); not owner acceptance",
@@ -268,9 +274,15 @@
      "date": "2026-09-07",
      "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/ (receipt.json, renders/concept-compare/, import/)",
      "result": "Wide two-operator chassis on four legs with six hinged barrier cells, three per wing, deploying into one flat frontal face 499 cm across with the 03/04 seam on the operator centreline and the emitter beneath it. Every cell carries an opaque back plate so the rear read is geometry, not a material promise (verified by a depth-sorted visibility census: 0.0% barrier field frontmost from behind). Both wings export as the card's Left_Shield_Panel / Right_Shield_Panel sub-objects. 18-bone rig, 10 clips, LOD0 3,618 / LOD1 1,846 against 8,200 / 3,600. 64 tests, 15 sheets, two lenses and a fix pass. Import: 0 errors, 20 AnimSequences, 9 sockets."
+    },
+    {
+     "stage": "BLOCKOUT (owner ruling, ebs-mer-unt-003-concept-v5)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Owner ruling implemented (concept-v5): the barrier field slabs, cyan rims and opaque back plates moved into SK_EBS_MER_UNT_003_Barrier_Panes, a separately controlled skinned sub-object on the same 18-bone skeleton, so the packed silhouette loses the barrier while the chassis, wings and six structural frames stay present. Whole unit unchanged at LOD0 3,618 / LOD1 1,846 (main 2,898 + panes 720 / 1,126 + 720); 81 tests; import 0 errors, 40 AnimSequences across the unit and the sub-object."
     }
    ],
-   "next": "OWNER-QUESTION F: how the barrier leaves the packed silhouette (a third sub-object shown only while deployed, or its own material section) - the packed flanks still carry the pane slabs; textures; in-engine playback; gates.",
+   "next": "Integration owns the visibility contract: the pane assembly follows authoritative deployment state including cancellation and save restoration. Then textures, in-engine playback, gates.",
    "gates": {
     "art": "NOT_EVALUATED",
     "gameplay": "NOT_EVALUATED",
@@ -320,7 +332,7 @@
   "tests": "ArtSource/tools/test_ebs_render.py, test_ebs_skelkit.py, test_ebs_texbake.py and each package's test_*.py",
   "comparison_sheet": "ArtSource/tools/ebs_sheet.py (concept crop beside renders)",
   "concept_crops": "ArtSource/tools/ebs_concept_crops.py (hash-verified crops of every registered concept input)",
-  "import_job_generator": "ArtSource/tools/ebs_make_import_job.py (derives the isolated-import job and its expectations from a package build manifest)"
+  "import_job_generator": "ArtSource/tools/ebs_make_import_job.py (derives the isolated-import job and its expectations from a package build manifest) (separates skinned sub-objects from the unit's LODs)"
  },
  "authority_note_2026_09_06": "Owner ruling: the registered concept images define what every production asset looks like; each package carries concept-fidelity.md as its authoritative visual target, and forced deviations are recorded in the README §8 with the rule cited.",
  "pipeline_findings": [

@@ -3,7 +3,7 @@
 # Frame: Unreal +X forward, +Y right, +Z up; centimeters; no axis conversion
 # Kit: ebs-meshkit-v3
 # Production ID EBS-MER-UNT-002
-# Revision ebs-mer-unt-002-concept-v3
+# Revision ebs-mer-unt-002-concept-v4
 # LOD1 rest stance
 o SK_EBS_MER_UNT_002
 v 8.0 -32.0 104.0

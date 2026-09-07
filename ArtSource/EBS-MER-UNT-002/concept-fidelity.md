@@ -4,7 +4,7 @@ author: Angelis Pseftis
 creator: Angelis Pseftis
 created: 2026-09-07
 status: AUTHORITATIVE production target (owner ruling 2026-09-06: the concepts define what every asset should be)
-amended: concept-v1 2026-09-07 (brace span, pod separation, leg split, antennas, lance projection); concept-v2 2026-09-07 (fore-aft placement of the upper assembly, per-section lance depth and cyan continuity, ceramic on outer faces only, the strut as a per-clip constraint)
+amended: concept-v1 2026-09-07 (brace span, pod separation, leg split, antennas, lance projection); concept-v2 2026-09-07 (fore-aft placement of the upper assembly, per-section lance depth and cyan continuity, ceramic on outer faces only, the strut as a per-clip constraint); concept-v4 2026-09-07 (owner ruling: the socket set and the confirmed LOD1 ceiling); concept-v4 record pass 2026-09-07 (the REAR-panel cross-check for the strut anchor withdrawn as a quarter-view mis-scaling; the track inventory recorded against gap-decisions.json)
 ---
 
 # Concept fidelity target — Lancer
@@ -92,11 +92,31 @@ so H = 200 cm is PROVISIONAL at the same authored scale (runtime `PresentationSc
 - 18 bones (`REL-ART-005.MC.LANCER` .ANIM_RIG), including `lance_yaw` (the card's `Turret_Y` sub-object)
   and `lance_barrel` (`Barrel_X`), the cowl, both legs (thigh/shin/foot), both pods, and the two-part
   recoil strut. No root motion; the runtime owns facing (`SPEC-MOV-010`).
-- Sockets required by the card: `Muzzle_Flash_01` (lance muzzle), `Target_Anchor_Center` (body centre),
-  `Left_Tread_Vector` (card name; this frame walks on legs, so it is placed at the left foot ground
-  contact and the naming conflict is recorded as a deviation, exactly as for the Surveyor's tread wording).
+- Sockets. Card names (`REL-ART-005.MC.LANCER` .ANIM_RIG): `Muzzle_Flash_01` (lance muzzle),
+  `Target_Anchor_Center` (body centre), `Left_Tread_Vector`.
+  **[corrected concept-v4, 2026-09-07 — owner ruling: "Correct the socket interpretation. Our recorded
+  Lancer decision specifies `Rear_Recoil_Strut_Anchor`, with `Left_Tread_Vector` retained temporarily as a
+  compatibility alias. Left-foot ground contact is a different function; it should have a separately named
+  foot-contact socket if needed. Preserve the two-legged concept."** ~~`Left_Tread_Vector` is placed at the
+  left foot ground contact and the naming conflict is recorded as a deviation, exactly as for the
+  Surveyor's tread wording~~ — that reading merged two functions onto one socket. The built set is six:
+  `Muzzle_Flash_01` (`lance_barrel`), `Target_Anchor_Center` (`body`), **`Rear_Recoil_Strut_Anchor`**
+  (`strut_upper`, at the strut's UPPER anchor — the end bolted to the frame, measured at z = 113.9 cm =
+  0.57 H on the turnaround LEFT SIDE panel; built 112.0 cm = 0.56 H) ~~and z ≈ 112 cm on the REAR panel~~
+  *(struck 2026-09-07: the REAR panel is a quarter view and its 0.509 cm/px scale was taken from the
+  central cowl block, not the pod caps; re-scaled from the pod caps at 0.538 cm/px it reads 119.4 cm =
+  0.60 H and disagrees with the LEFT SIDE panel by 5.5 cm, so it is not a cross-check — README §8.1)**,
+  **`Left_Tread_Vector`** as a TEMPORARY COMPATIBILITY ALIAS at that identical transform (drop it when the
+  adapter migration is tested), and **`Foot_Contact_L` / `Foot_Contact_R`** at the two sole ground-contact
+  centres, (−66, −35, 0) and (62, 35, 0). The two-legged concept is unchanged: no tread geometry, no
+  stance change. README §8.1 and §8.8.]**
 - Tracks per canon: idle, move, turn, stop, **halt-plant-aim-fire-recover** (the card's line: never fires
   while moving; recoil returns through the mount and the strut slides), damage, death, cancel, restore.
+  **[recorded 2026-09-07: `Docs/VisualAssetPipeline/motion/gap-decisions.json`
+  `required_track_inventory` asks for ELEVEN tracks, splitting the attack into `attack_anticipation` /
+  `attack_execution` / `attack_recovery`. This package builds nine, with one 2.2 s `fire` clip carrying
+  all three phases as keyed sections. The three separately named clips are STILL OWED, not delivered —
+  deviation in README §8.3 and `build-manifest.json` → `component_inventory.tracks.source_contract`.]**
   **[added concept-v2, 2026-09-07: item 6's strut is BOLTED to the trailing ankle, so it is a constraint on
   every clip, not just on the rest stance. Its lower end must follow the trailing foot in every braced,
   planting and firing state; where a walking leg swings forward past the body anchor no strut can both stay
@@ -106,8 +126,12 @@ so H = 200 cm is PROVISIONAL at the same authored scale (runtime `PresentationSc
 
 ## Budgets and rules that bound the concept (do not replace it)
 
-`REL-ART-005.MC.LANCER`: LOD0 ≤ 8,000 tris; LOD1 ceiling is printed as "3,3500" in Requirements.md — an
-evident typo, bounded here at 3,500 and raised as an OWNER-QUESTION rather than silently chosen. 2048²
+`REL-ART-005.MC.LANCER`: LOD0 ≤ 8,000 tris; **LOD1 ≤ 3,500 — CONFIRMED by the owner ruling of 2026-09-07:
+"Confirm 3,500 triangles for Lancer LOD1. '3,3500' is malformed. Both `REL-ART-028` and our recorded
+production decision specify 8,000 LOD0 / 3,500 LOD1."** ~~the LOD1 ceiling is printed as "3,3500" in
+Requirements.md — an evident typo, bounded here at 3,500 and raised as an OWNER-QUESTION rather than
+silently chosen~~ *(the question is ANSWERED; the printed "3,3500" stands as a Requirements.md typo to
+correct in the card)*. 2048²
 PBR stack; emissive ≤ 15% of surface with an un-bloomed amber/cyan blend; team colour by mask. Nanite
 off; cm, +X forward (lance axis), +Y right, +Z up; root at ground-contact centre between the feet.
 Where a rule forces a deviation from the concept, record it in the README §8 with the rule cited.
@@ -120,6 +144,8 @@ Where a rule forces a deviation from the concept, record it in the README §8 wi
 - [ ] Side view: the cyan channel reads as ONE stroke past every collar, and the lance's clear shaft is
       0.095 H with its thickest collar at 0.110 H.
 - [ ] Every clip: the recoil strut's lower end is on the trailing ankle, or the piston is drawn home.
+- [ ] Sockets: `Rear_Recoil_Strut_Anchor` on the strut's frame-side (upper) anchor, `Left_Tread_Vector` an
+      alias at the identical transform, and the foot contacts at the two soles — not on the strut.
 - [ ] Front view: narrow body, two pods flanking a low cowl, thin exposed flanks.
 - [ ] Top view: the lance runs down the centreline and projects well past the leading foot.
 - [ ] Rear view: recoil strut and open frame; no rear armour.

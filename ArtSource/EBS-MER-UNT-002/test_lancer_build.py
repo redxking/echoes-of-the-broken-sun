@@ -8,6 +8,7 @@ to the generator. Not gate acceptance.
 """
 from __future__ import annotations
 
+import json
 import math
 import os
 import sys
@@ -256,11 +257,18 @@ class LancerBlockoutTests(unittest.TestCase):
             self.assertLessEqual(abs(yoke.component_bounds("yaw_ring")[0][0] + yoke.component_bounds("yaw_ring")[1][0]) / 2.0, 1e-6)
 
     def test_sockets_named_and_placed(self):
+        """concept-v4: the socket set of the owner ruling, 2026-09-07 — Rear_Recoil_Strut_Anchor added,
+        Left_Tread_Vector kept only as a temporary alias at that same transform, and the ground-contact
+        function moved onto separately named foot-contact sockets."""
         names = sorted(s.name for s in self.mesh0.sockets)
-        self.assertEqual(names, ["Left_Tread_Vector", "Muzzle_Flash_01", "Target_Anchor_Center"])
+        self.assertEqual(names, ["Foot_Contact_L", "Foot_Contact_R", "Left_Tread_Vector",
+                                 "Muzzle_Flash_01", "Rear_Recoil_Strut_Anchor", "Target_Anchor_Center"])
         self.assertEqual(self.sockets_on_bones["Muzzle_Flash_01"], "lance_barrel")
         self.assertEqual(self.sockets_on_bones["Target_Anchor_Center"], "body")
-        self.assertEqual(self.sockets_on_bones["Left_Tread_Vector"], "l_foot")
+        self.assertEqual(self.sockets_on_bones["Rear_Recoil_Strut_Anchor"], "strut_upper")
+        self.assertEqual(self.sockets_on_bones["Left_Tread_Vector"], "strut_upper")
+        self.assertEqual(self.sockets_on_bones["Foot_Contact_L"], "l_foot")
+        self.assertEqual(self.sockets_on_bones["Foot_Contact_R"], "r_foot")
         by_name = {s.name: s for s in self.mesh0.sockets}
         muzzle = by_name["Muzzle_Flash_01"].position
         self.assertAlmostEqual(muzzle[0], bl.LANCE_TIP_X, places=3)
@@ -269,12 +277,130 @@ class LancerBlockoutTests(unittest.TestCase):
         centre = by_name["Target_Anchor_Center"].position
         self.assertTrue(0.55 * H <= centre[2] <= 0.80 * H, centre)
         self.assertAlmostEqual(centre[1], 0.0, places=6)
-        tread = by_name["Left_Tread_Vector"].position
-        self.assertAlmostEqual(tread[2], 0.0, places=6)               # ground contact
-        self.assertLess(tread[1], 0.0)                                 # LEFT foot (-Y), the trailing leg
-        sole = self.mesh0.component_bounds("l_foot_foot_sole")
-        self.assertTrue(sole[0][0] - 1e-6 <= tread[0] <= self.mesh0.component_bounds("l_toe_toe_block")[1][0] + 1e-6)
-        self.assertIn("naming conflict", by_name["Left_Tread_Vector"].purpose)
+
+    def test_strut_anchor_socket_is_at_the_end_that_transmits_recoil_into_the_frame(self):
+        """Owner ruling 2026-09-07: the socket goes at the strut's anchor end — the end that transmits
+        recoil INTO THE FRAME. The strut runs from the tail beam down and back to the trailing heel, so
+        the frame end is the UPPER one; the lower end delivers the load to the ground through the foot."""
+        anchor = {s.name: s for s in self.mesh0.sockets}["Rear_Recoil_Strut_Anchor"]
+        self.assertAlmostEqual(math.dist(anchor.position, bl.STRUT_TOP), 0.0, places=6)
+        self.assertAlmostEqual(math.dist(anchor.position, bl.STRUT_END), bl.STRUT_LEN, places=6)
+        self.assertGreater(anchor.position[2], bl.STRUT_END[2] + 50.0)      # the upper end, not the foot end
+        self.assertLess(anchor.position[1], 0.0)                            # on the trailing (-Y) side
+        # it sits on the geometry that bolts the strut to the frame: the strut_anchor clevis, inside the
+        # rear tail beam it is bolted to (concept: the slim diagonal leaves the lower rear of the body)
+        clevis = self.mesh0.component_bounds("strut_upper_strut_anchor")
+        for axis in range(3):
+            self.assertTrue(clevis[0][axis] - 1e-6 <= anchor.position[axis] <= clevis[1][axis] + 1e-6)
+        beam = self.mesh0.component_bounds("body_tail_beam")
+        for axis in (0, 1, 2):
+            self.assertTrue(beam[0][axis] - 8.0 <= anchor.position[axis] <= beam[1][axis] + 8.0,
+                            f"anchor is not on the tail beam in axis {axis}: {anchor.position} vs {beam}")
+        # and it is the head of the bone it rides, i.e. the joint's own rotation centre
+        self.assertAlmostEqual(math.dist(anchor.position, self.skel.get("strut_upper").head), 0.0, places=6)
+        self.assertIn("transmits recoil into the frame", anchor.purpose)
+
+    def test_left_tread_vector_is_a_temporary_alias_at_the_strut_anchor_transform(self):
+        """Owner ruling 2026-09-07: `Left_Tread_Vector` is retained ONLY as a temporary compatibility
+        alias of `Rear_Recoil_Strut_Anchor`, at the same transform, and marked as an alias in its purpose
+        string. It must not be a ground-contact socket any more."""
+        by_name = {s.name: s for s in self.mesh0.sockets}
+        alias, anchor = by_name["Left_Tread_Vector"], by_name["Rear_Recoil_Strut_Anchor"]
+        self.assertEqual(self.sockets_on_bones["Left_Tread_Vector"], self.sockets_on_bones["Rear_Recoil_Strut_Anchor"])
+        self.assertEqual(tuple(alias.position), tuple(anchor.position))
+        self.assertEqual(alias.yaw_deg, anchor.yaw_deg)
+        self.assertIn("ALIAS", alias.purpose.upper())
+        self.assertIn("TEMPORARY", alias.purpose.upper())
+        self.assertIn("Rear_Recoil_Strut_Anchor", alias.purpose)
+        # the ground-contact function does NOT ride on it any more
+        self.assertGreater(alias.position[2], 100.0)
+        self.assertNotIn(self.sockets_on_bones["Left_Tread_Vector"], ("l_foot", "r_foot", "l_toe", "r_toe"))
+        for foot in ("Foot_Contact_L", "Foot_Contact_R"):
+            self.assertGreater(math.dist(alias.position, by_name[foot].position), 50.0)
+
+    def test_foot_contact_sockets_are_at_the_soles_not_at_the_strut(self):
+        """Owner ruling 2026-09-07: left-foot ground contact is a DIFFERENT function and gets its own
+        named socket. Both soles carry one, at the real contact patch (z = 0, inside the block foot)."""
+        by_name = {s.name: s for s in self.mesh0.sockets}
+        for name, side, sign in (("Foot_Contact_L", "l", -1.0), ("Foot_Contact_R", "r", 1.0)):
+            pos = by_name[name].position
+            self.assertAlmostEqual(pos[2], 0.0, places=6)                       # on the ground plane
+            self.assertEqual(self.sockets_on_bones[name], f"{side}_foot")
+            self.assertGreater(sign * pos[1], 0.0, f"{name} is on the wrong side")
+            sole = self.mesh0.component_bounds(f"{side}_foot_foot_sole")
+            toe = self.mesh0.component_bounds(f"{side}_toe_toe_block")
+            self.assertTrue(sole[0][0] - 1e-6 <= pos[0] <= toe[1][0] + 1e-6, f"{name} outside the footprint")
+            self.assertTrue(sole[0][1] - 1e-6 <= pos[1] <= sole[1][1] + 1e-6, f"{name} outside the footprint")
+            self.assertAlmostEqual(pos[2], self.mesh0.bounds()[0][2], places=6)  # the lowest surface: contact
+            self.assertGreater(math.dist(pos, bl.STRUT_TOP), 50.0)               # not the strut anchor
+            self.assertIn("ground-contact", by_name[name].purpose)
+        self.assertGreater(by_name["Foot_Contact_R"].position[0], by_name["Foot_Contact_L"].position[0])
+
+    def test_strut_anchor_socket_holds_the_anchor_through_every_clip(self):
+        """The anchor socket rides `strut_upper`, whose head IS the anchor, so it stays on the clevis
+        that bolts the strut to the frame in every frame of every clip while the strut solve swings the
+        rod; the alias follows it exactly."""
+        for clip in self.clips:
+            steps = max(1, int(round(clip.duration_s / 0.05)))
+            for i in range(steps + 1):
+                t = clip.duration_s * i / max(1, steps)
+                pose = dict(pr.sample(clip, t), _sockets=self.sockets_on_bones)
+                posed = skel.pose_mesh(self.mesh0, self.skel, pose)
+                by_name = {s.name: s for s in posed.sockets}
+                clevis = self._component_centre(posed, "strut_upper_strut_anchor")
+                anchor = by_name["Rear_Recoil_Strut_Anchor"].position
+                self.assertLessEqual(math.dist(anchor, clevis), 0.5,
+                                     f"{clip.name} at {t:.2f}s: anchor socket {math.dist(anchor, clevis):.2f} cm off the clevis")
+                self.assertLessEqual(math.dist(anchor, by_name["Left_Tread_Vector"].position), 1e-6)
+                # the foot-contact sockets ride the feet, so they are never on the strut anchor
+                self.assertGreater(math.dist(anchor, by_name["Foot_Contact_L"].position), 40.0)
+
+    def test_two_legged_concept_is_preserved(self):
+        """Owner ruling 2026-09-07: \"Preserve the two-legged concept.\" No tread, track, roller or wheel
+        geometry may appear, and the braced stance is untouched by the socket change."""
+        comps = list(self.mesh0.components()) + list(self.mesh1.components())
+        for word in ("tread", "track", "roller", "wheel", "bogie"):
+            self.assertEqual([c for c in comps if word in c.lower()], [], f"{word} geometry on a legged frame")
+        self.assertEqual(self.inventory["legs"]["built"], 2)
+        self.assertEqual(self.inventory["feet"]["built"], 2)
+        self.assertEqual(self.inventory["recoil_strut"]["built"], 1)
+        # the brace itself is unchanged: foot centres and heel-to-toe still in the measured concept band
+        self.assertAlmostEqual(self.m["foot_centres_apart_cm"], abs(bl.LEAD_ANKLE_X - bl.TRAIL_ANKLE_X), places=3)
+
+    def test_lod1_ceiling_is_the_confirmed_bound(self):
+        """Owner ruling 2026-09-07: \"Confirm 3,500 triangles for Lancer LOD1. '3,3500' is malformed.
+        Both REL-ART-028 and our recorded production decision specify 8,000 LOD0 / 3,500 LOD1.\" The
+        bound is no longer an open question, and the record must say so where it is written down."""
+        self.assertEqual((bl.LOD0_CAP, bl.LOD1_CAP), (8000, 3500))
+        self.assertLessEqual(self.mesh1.triangle_count(), 3500)
+        with open(os.path.join(HERE, "build-manifest.json"), encoding="utf-8") as handle:
+            manifest = json.load(handle)
+        note = manifest["budgets"]["lod1_cap_note"]
+        self.assertIn("CONFIRMED", note)
+        self.assertIn("REL-ART-028", note)
+        self.assertIn("owner ruling 2026-09-07", note.lower())
+        self.assertNotIn("not raised as an owner decision", note)
+        self.assertEqual(manifest["budgets"]["lod1_cap"], 3500)
+
+    def test_records_carry_the_answered_ruling(self):
+        """The ruling has to land in the records, not only in the geometry: the socket contract in the
+        manifest, the OWNER-QUESTION blocks marked ANSWERED in the README, and the authoritative
+        fidelity target updated to the new socket set."""
+        with open(os.path.join(HERE, "build-manifest.json"), encoding="utf-8") as handle:
+            manifest = json.load(handle)
+        built = sorted(s["name"] for s in manifest["sockets"])
+        self.assertEqual(built, sorted(s.name for s in self.mesh0.sockets))
+        self.assertEqual(manifest["socket_policy"]["anchor_end"][:5], "UPPER")
+        self.assertTrue(manifest["socket_policy"]["alias"]["same_transform"])
+        with open(os.path.join(HERE, "README.md"), encoding="utf-8") as handle:
+            readme = handle.read()
+        self.assertIn("OWNER-QUESTION 2 — `Left_Tread_Vector` on a legged frame. ANSWERED", readme)
+        self.assertIn("Rear_Recoil_Strut_Anchor", readme)
+        self.assertIn("Foot_Contact_L", readme)
+        with open(os.path.join(HERE, "concept-fidelity.md"), encoding="utf-8") as handle:
+            fidelity = handle.read()
+        self.assertIn("Rear_Recoil_Strut_Anchor", fidelity)
+        self.assertNotIn("raised as an OWNER-QUESTION rather than silently chosen", fidelity)
 
     def test_every_polygon_bound_and_no_root_geometry(self):
         self.assertTrue(all(getattr(p, "bone", None) for p in self.mesh0.polygons))
@@ -325,6 +451,94 @@ class LancerBlockoutTests(unittest.TestCase):
         self.assertEqual(sorted(restore.tracks), sorted(b.name for b in self.skel.bones if b.name != "root"))
         for keys in restore.tracks.values():
             self.assertEqual([tuple(k.rotation_deg) for k in keys], [(0.0, 0.0, 0.0)])
+
+    # 30 fps frame grid: the Interchange skeletal import SILENTLY drops a clip whose duration is not a
+    # whole frame (probe evidence under .../skeletal-clip-duration-probe/). Before 2026-09-07 nothing in
+    # this suite asserted the property - it held only because build_clips() self-retimes and the shared
+    # kit refuses an unaligned clip - so a change to the retime call would have passed every test here.
+    EXPECTED_FRAMES = {"idle": 72, "move": 18, "turn": 18, "stop": 12, "fire": 66,
+                       "damage": 11, "death": 42, "cancel": 12, "restore": 0}
+
+    def test_clip_durations_are_whole_frames(self):
+        self.assertEqual({c.name for c in self.clips}, set(self.EXPECTED_FRAMES))
+        for clip in self.clips:
+            self.assertTrue(skel.is_frame_aligned(clip.duration_s), f"{clip.name}: {clip.duration_s!r}")
+            frames = clip.duration_s * skel.ANIMATION_FPS
+            self.assertAlmostEqual(frames, self.EXPECTED_FRAMES[clip.name], places=6, msg=clip.name)
+            for keys in clip.tracks.values():                 # every key time on the grid too
+                for k in keys:
+                    self.assertLessEqual(k.time_s, clip.duration_s + 1e-9, clip.name)
+        damage = next(c for c in self.clips if c.name == "damage")
+        self.assertNotAlmostEqual(damage.duration_s, 0.35, places=6)   # 0.35 s is 10.5 frames: dropped on import
+
+    def test_readme_clip_table_matches_the_built_clips(self):
+        """README section 5 prints a duration and a key count per clip; bind them to the generator so a
+        stale printed figure cannot survive a retime (it did: `damage` printed 0.35 s through
+        concept-v3 and concept-v4 while the built clip was 0.366667 s)."""
+        import re
+        with open(os.path.join(HERE, "README.md"), encoding="utf-8") as handle:
+            readme = handle.read()
+        rows = dict((m.group(1), (m.group(2).strip(), int(m.group(3))))
+                    for m in re.finditer(r"^\| (idle|move|turn|stop|fire|damage|death|cancel|restore) \| ([^|]+) \| (\d+) \|",
+                                         readme, re.M))
+        self.assertEqual(set(rows), set(self.EXPECTED_FRAMES), "README section 5 clip table")
+        for clip in self.clips:
+            printed, keys = rows[clip.name]
+            self.assertEqual(keys, sum(len(v) for v in clip.tracks.values()), f"{clip.name} key count")
+            if "single frame" in printed:
+                self.assertEqual(clip.duration_s, 0.0, clip.name)
+            else:
+                seconds = re.match(r"([0-9.]+) s", printed)
+                self.assertIsNotNone(seconds, f"{clip.name}: README prints {printed!r}, not a duration in seconds")
+                self.assertAlmostEqual(float(seconds.group(1)), clip.duration_s, delta=1e-6,
+                                       msg=f"{clip.name}: README prints {printed!r}, built {clip.duration_s!r}")
+            frames = re.search(r"\((\d+) frames?\)", printed)
+            self.assertIsNotNone(frames, f"{clip.name}: README prints {printed!r} with no '(N frames)' marker")
+            self.assertEqual(int(frames.group(1)), self.EXPECTED_FRAMES[clip.name], f"{clip.name} printed frames")
+
+    def test_track_contract_records_the_frozen_record(self):
+        """gap-decisions.json - the record the owner ruling cites as authority for the socket name, the
+        LOD caps and the legacy alias - asks for eleven tracks, splitting the attack into
+        attack_anticipation / attack_execution / attack_recovery. This package builds nine. The
+        difference has to be ON RECORD as a deviation, not resolved by a self-declared contract."""
+        with open(os.path.join(HERE, "build-manifest.json"), encoding="utf-8") as handle:
+            manifest = json.load(handle)
+        tracks = manifest["component_inventory"]["tracks"]
+        self.assertEqual(tracks["built"], [c.name for c in self.clips])
+        source = tracks["source_contract"]
+        self.assertIn("gap-decisions.json", source["record"])
+        self.assertEqual(len(source["tracks"]), 11)
+        for owed in ("attack_anticipation", "attack_execution", "attack_recovery"):
+            self.assertIn(owed, source["tracks"])
+            self.assertNotIn(owed, tracks["built"])
+        self.assertIn("STILL OWED", source["deviation"])
+        self.assertEqual(source["status"][:18], "DEVIATION_RECORDED")
+        gap = os.path.join(os.path.dirname(os.path.dirname(HERE)), "Docs", "VisualAssetPipeline", "motion", "gap-decisions.json")
+        if os.path.exists(gap):                                # the frozen record itself, when readable
+            with open(gap, encoding="utf-8") as handle:
+                entries = [e for e in json.load(handle).get("production_policy", [])
+                           if e.get("reserved_production_asset_id") == bl.PRODUCTION_ID]
+            self.assertEqual(len(entries), 1)
+            self.assertEqual(entries[0]["required_track_inventory"], source["tracks"])
+        strut = manifest["component_inventory"]["recoil_strut"]
+        self.assertEqual(strut["source_record_name"], "recoil_brace")
+
+    def test_whole_unit_triangle_sum_is_recorded(self):
+        """The two standalone lance parts duplicate geometry already skinned into the SK, so the whole
+        unit has two figures depending on the integration route. Both have to be on record."""
+        with open(os.path.join(HERE, "build-manifest.json"), encoding="utf-8") as handle:
+            manifest = json.load(handle)
+        whole = manifest["budgets"]["whole_unit_triangles"]
+        sk0, sk1 = self.mesh0.triangle_count(), self.mesh1.triangle_count()
+        subs = {(o["mesh"], int(o["lod"])): o["triangles"] for o in manifest["outputs"]
+                if o.get("mesh", "").startswith("SM_") and "triangles" in o}
+        self.assertEqual(whole["lod0_skeletal_only"], sk0)
+        self.assertEqual(whole["lod1_skeletal_only"], sk1)
+        self.assertEqual(whole["lod0_with_both_sub_objects"], sk0 + sum(v for (m, l), v in subs.items() if l == 0))
+        self.assertEqual(whole["lod1_with_both_sub_objects"], sk1 + sum(v for (m, l), v in subs.items() if l == 1))
+        self.assertLessEqual(whole["lod0_with_both_sub_objects"], bl.LOD0_CAP)
+        self.assertLessEqual(whole["lod1_with_both_sub_objects"], bl.LOD1_CAP)
+        self.assertIn("ALTERNATES", whole["note"])
 
     def test_fire_clip_states(self):
         # canon SPEC-UNIT-002: halt, plant the strut, aim, fire with recoil through the mount, recover
@@ -477,6 +691,21 @@ class LancerBlockoutTests(unittest.TestCase):
     def test_rest_stance_is_grounded_and_forward_facing(self):
         (x0, y0, z0), (x1, y1, z1) = self.mesh0.bounds()
         self.assertAlmostEqual(z0, 0.0, places=3)
+        # the pivot claim, bounded: the root is on the ground plane and on the centreline, and the brace
+        # is asymmetric fore-and-aft, so the origin is NEAR - not on - the sole-contact midpoint. Pin the
+        # offset so the recorded wording and the geometry cannot drift apart.
+        root = next(b for b in self.skel.bones if b.name == "root")
+        self.assertEqual(tuple(root.head), (0.0, 0.0, 0.0))
+        contacts = [s for s in self.mesh0.sockets if s.name.startswith("Foot_Contact_")]
+        self.assertEqual(len(contacts), 2)
+        mid_x = sum(s.position[0] for s in contacts) / 2.0
+        self.assertAlmostEqual(root.head[0] - mid_x, 2.0, places=6)      # 2.0 cm ahead of the sole midpoint
+        self.assertLessEqual(abs(root.head[0] - mid_x), 5.0)
+        with open(os.path.join(HERE, "build-manifest.json"), encoding="utf-8") as handle:
+            manifest = json.load(handle)
+        self.assertAlmostEqual(manifest["units"]["pivot_offset_cm"]["ahead_of_sole_contact_midpoint_x"],
+                               root.head[0] - mid_x, places=6)
+        self.assertNotIn("ground-contact centre between the braced feet (root)", manifest["units"]["pivot"])
         self.assertGreater(x1, 0.9 * H)                              # the lance reaches far forward
         self.assertLess(abs(y1 + y0), 2.0)                           # symmetric across the centreline
         self.assertGreater(x1 - x0, z1)                              # longer than tall: a line-fire frame
