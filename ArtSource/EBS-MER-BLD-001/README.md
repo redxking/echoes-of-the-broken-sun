@@ -58,7 +58,7 @@ construction and production are simulation-owned; nothing here changes them.
 |---|---|---|
 | Footprint | 5×5 tiles = 1,000 cm square; every part stays inside it | `buildings.json` `mc_anchor.footprint_cells`, asserted by test |
 | Drum | 720 cm across (0.72 of the footprint), mass 432 cm tall → 0.60 height/width | measured on the candidate: a big drum with stub arms, and canon's "squat, wide" |
-| Mast | tip at 660 cm; the mast is 0.345 of the total height | measured on the candidate's main view silhouette (0.345) |
+| Mast | tip at 700 cm; the mast is 0.383 of the total height | re-measured on the comparison sheet (the candidate's mast runs 0.38–0.40) |
 | Conduit roots | stubs from r 396 to nodes at r 468 (outer 498), inside the 500 cm half-width | the footprint is the outer bound; the candidate draws short arms |
 | Units / axes / pivot | cm; +X forward (the bay arc), +Y right, +Z up; pivot at ground-contact centre | contract `import_policy` |
 
@@ -73,8 +73,9 @@ and a four-column mast lattice with rungs, a sensor head and two whips.
 Slots: `MI_EBS_MER_CeramicCivic`, `MI_EBS_MER_CompactFrame`, `MI_EBS_MER_StatusCyan`.
 Sockets (14): `Target_Anchor_Center`, `Worker_Bay_01..03`, `Matter_Intake_Chute`,
 `Conduit_Node_01..08`, `Mast_Top`. Collision: two UBX boxes on the plinth and the drum mass only, so
-the ramps, conduit stubs and nodes never read as blockers. Budgets: LOD0 1,660 ≤ 3,500 (LOD1 932),
-against the tighter `REL-ART-028` bound rather than the card's 12,000. Exact numbers and hashes:
+the ramps, conduit stubs and nodes never read as blockers. Budgets: LOD0 1,840 ≤ 8,000 and LOD1 960 ≤ 3,500,
+against the tighter `REL-ART-028` bound rather than the card's 12,000 / 4,500, applied to the complete
+asset (a test sums every exported mesh, so a future articulated assembly counts toward the same ceiling). Exact numbers and hashes:
 [build-manifest.json](build-manifest.json).
 
 ## 5. States
@@ -95,8 +96,10 @@ monochrome pass) for each state. Checks: 19 structural tests in
 and in the damaged state, nothing below ground, the squat-drum and mast-fraction ratios, bay portals
 reading from outside the wall, each bay's ramp reaching the ground, the chute separate from the bays,
 socket names and placements, collision covering the mass only, budgets, the damaged-state difference,
-and determinism — all passing. Not yet: comparison sheets against the candidate crop, textures,
-in-engine capture, gates.
+the whole-asset budget and determinism — all passing. Six comparison sheets in
+`renders/concept-compare/` put the candidate's own panels beside the build: three-quarter, front bays
+and chute, top, damaged, the tactical read and LOD0 against LOD1. Not yet: textures, in-engine
+capture, gates.
 
 ## 7. Reproduction
 
@@ -117,28 +120,34 @@ for s in working damaged lod1; do python3 ../tools/ebs_render.py --scene "<evide
 2. **Proportions came from a pixel trace, not an estimate.** A first pass built a 600 cm drum with long
    arms and a 478 cm mast; the candidate's silhouette measures a drum that dominates the width with
    stub arms and a mast at 0.345 of the total height, and the constants now follow that.
-3. **Height/width divergence, recorded.** The candidate's whole silhouette measures 0.97 height over
-   width; this build measures 0.70. The width is pinned by the 5×5 footprint and canon fixes the drum
-   as "squat, wide", so matching 0.97 would need a drum nearly as tall as it is wide. Canon wins and
-   the divergence is recorded rather than split. **OWNER-QUESTION A.**
-4. **Budget bound.** `REL-BLD-015.MC.CORE` allows 12,000 / 4,500 for this structure while `REL-ART-028`
-   bounds the whole Meridian roster at 8,000 / 3,500. The build uses the tighter pair so both hold; the
-   conflict between the two records is reported, not resolved here. **OWNER-QUESTION B.**
+3. **Height/width is a production choice, not a canon-prescribed dimension.** The candidate's whole
+   silhouette measures 0.97 height over width; this build measures 0.70. **Owner ruling, 2026-09-07
+   (OWNER-QUESTION A, ANSWERED):** keep 0.70 as the provisional build proportion; preserve the squat,
+   wide drum and the tall central mast; do not stretch the drum to chase 0.97. The owner also notes
+   that the candidate's figure measures the WHOLE silhouette — mast, arms and ramps included — so it
+   does not establish the drum's proportions by itself. 0.70 is therefore recorded here as a production
+   choice, not a dimension canon prescribes, and it can be revisited without contradicting the record.
+4. **Budget confirmed at 8,000 / 3,500 for the complete asset.** `REL-BLD-015.MC.CORE` allows
+   12,000 / 4,500 while `REL-ART-028` bounds the Meridian roster at 8,000 / 3,500. **Owner ruling,
+   2026-09-07 (OWNER-QUESTION B, ANSWERED):** the tighter Meridian limits govern, matching the recorded
+   decision, and the ceilings apply to the **complete asset including any articulated components** —
+   not to the primary mesh alone. A test now sums every exported mesh against those ceilings, so the
+   pending vane assembly (item 6) cannot be added without counting toward them.
 5. **Destroyed state not built.** Canon calls for an engineered collapse; this stage ships working and
    damaged only.
-6. **The card's 4-bone rig is not built.** `REL-BLD-015.MC.CORE` names a 4-bone rig for core exhaust
-   vanes and data-grid extensions. This blockout is a static mesh; the vanes and extensions are not
-   modelled. **OWNER-QUESTION C.**
+6. **The card's 4-bone rig is PENDING, not waived.** `REL-BLD-015.MC.CORE` names a 4-bone rig for core
+   exhaust vanes and data-grid extensions. **Owner ruling, 2026-09-07 (OWNER-QUESTION C, ANSWERED):** a
+   static mesh is acceptable **for this blockout only** and is not closure of the production
+   requirement. The pipeline specifies a static primary structure with role-required articulated
+   components, so the four-bone requirement stays open for a small articulated assembly carrying the
+   vanes and data-grid extensions and the required damage presentation. Their absence from the concept
+   is missing reference detail, not grounds to waive the card. **This asset must not be marked
+   compliant until that assembly is implemented or the card is explicitly amended** — recorded in the
+   manifest as `pending_requirements` and in the ledger's `next`.
 7. Open: comparison sheets against the candidate crop, textures (4096² per the card), in-engine
    capture, gate reviews, owner acceptance.
 
-> **OWNER-QUESTION A — silhouette proportion.** Canon's "squat, wide" drum and the candidate's 0.97
-> height/width cannot both hold inside a 5×5 footprint. The build follows canon (0.70). Confirm, or the
-> drum grows taller toward the candidate and the canon wording is amended.
-
-> **OWNER-QUESTION B — which budget governs.** `REL-BLD-015.MC.CORE` (12,000 / 4,500) against
-> `REL-ART-028` (8,000 / 3,500) for the same asset. The build uses the tighter pair.
-
-> **OWNER-QUESTION C — the card's 4-bone rig.** Core exhaust vanes and data-grid extensions are named
-> by the card but are not in the concept. Confirm the Anchor ships as a static mesh at this stage, or
-> the vanes and extensions are designed and rigged.
+All three of this package's owner questions were answered on 2026-09-07 and are recorded in §8.3, §8.4
+and §8.6. One requirement stays open by the owner's decision: the four-bone articulated assembly for the
+vanes, data-grid extensions and damage presentation. Until it exists or the card is amended, the
+technical gate cannot be called compliant.

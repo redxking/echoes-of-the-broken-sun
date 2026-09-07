@@ -336,13 +336,19 @@
      "date": "2026-09-07",
      "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-001/ (receipt.json, renders/concept-compare/, import/)",
      "result": "Squat two-tier ceramic drum 720 cm across on a charcoal plinth, filling the 5x5 footprint with stub conduit roots to eight edge nodes, three numbered worker-bay portals with lit interiors and ramps, a separate Matter intake chute, a stepped dome and a slim sensor mast at 0.38 of the height. Proportions traced from the candidate silhouette after a first pass inverted them. Working and damaged states; 14 sockets; two UBX boxes on the mass only so ramps and arms never read as blockers. LOD0 1,840 / LOD1 960 against the tighter REL-ART-028 bound of 8,000 / 3,500. 19 tests, six comparison sheets. Import: 1 mesh, all checks pass."
+    },
+    {
+     "stage": "BLOCKOUT (owner rulings recorded, concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-001/ (receipt.json, README section 8.3/8.4/8.6, build-manifest pending_requirements)",
+     "result": "Silhouette 0.70 recorded as a production choice rather than a canon dimension; the 8,000 / 3,500 ceilings confirmed and now asserted across every exported mesh by test; the four-bone vane assembly recorded as PENDING with the technical gate blocked until it is implemented or the card is amended. 21 tests."
     }
    ],
-   "next": "OWNER-QUESTIONS: the candidate's 0.97 height-over-width against canon's squat drum; which budget governs (card 12,000/4,500 vs REL-ART-028 8,000/3,500); whether the card's 4-bone vane rig is wanted. Then textures (4096^2), destroyed state, in-engine capture, gates.",
+   "next": "PENDING REQUIREMENT (owner ruling 2026-09-07): a small four-bone articulated assembly for the core exhaust vanes, the data-grid extensions and the required damage presentation, counting toward the same 8,000 / 3,500 whole-asset ceilings. This asset must not be marked compliant until it exists or REL-BLD-015.MC.CORE is explicitly amended. Then textures (4096^2), the destroyed state, in-engine capture and gates.",
    "gates": {
     "art": "NOT_EVALUATED",
     "gameplay": "NOT_EVALUATED",
-    "technical": "NOT_EVALUATED"
+    "technical": "BLOCKED — the card's 4-bone articulated assembly is pending (owner ruling 2026-09-07)"
    },
    "owner_acceptance": "NOT_ACCEPTED"
   },
@@ -351,7 +357,7 @@
    "production_asset_id": "EBS-KHA-UNT-001",
    "subject": "Tender",
    "production_maturity": "BLOCKOUT",
-   "current_revision": "ebs-kha-unt-001-concept-v1",
+   "current_revision": "ebs-kha-unt-001-concept-v2",
    "asset_name": "SK_EBS_KHA_UNT_001",
    "planned_unreal_folder": "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_001/",
    "canon_status": "CANDIDATE (the tender-candidate sheet under a REPLACE decision); not owner acceptance",
@@ -364,9 +370,15 @@
      "date": "2026-09-07",
      "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-UNT-001/ (receipt.json, renders/concept-compare/, import/)",
      "result": "Stocky humanoid cultivator in faceted basalt strata: broad shoulder yoke, thickened forearms with amber wrist nodules, wrapped kilt, bare feet, a forked resonance staff standing taller than the figure, and a woven sling whose Matter load is a separate component so loaded and empty read. 19-bone rig with the worker socket set; 12 clips including the kneeling gather and the circling grow, both solved by forward kinematics so nothing passes through the ground. No machined panel, bolt or cyan anywhere (REL-ART-007). LOD0 552 / LOD1 408; amber 2.0% of surface area against the 5% cap. 16 tests, six comparison sheets. Import: 19 bones, 3 sockets, 24 AnimSequences, 0 errors."
+    },
+    {
+     "stage": "BLOCKOUT (owner's provisional contract, ebs-kha-unt-001-concept-v2)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-UNT-001/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Two export material slots (the woven fibre folds into the strata as a texture channel) and amber emissive concentrated at the six working wrist nodules and the staff bead, 0.9% of surface area against the 5% cap. Geometry, the 19-bone rig, the 12 clips and the 3 sockets are unchanged. 18 tests. Import: 19 bones, 2 material slots, 3 sockets, 24 AnimSequences, 0 errors."
     }
    ],
-   "next": "OWNER-QUESTION: no Tender asset card exists, so budgets and rig are inherited from the Surveyor's card - confirm or issue one. Then surface detail and textures (the largest gap against the candidate), in-engine playback, gates.",
+   "next": "Deformation and animation checks against the 19-bone rig (the owner's contract makes the rig conditional on them), then surface detail and textures (2048^2), in-engine playback, gates.",
    "gates": {
     "art": "NOT_EVALUATED",
     "gameplay": "NOT_EVALUATED",
@@ -425,6 +437,29 @@
      "subject": "EBS-MER-UNT-004 Relay Skiff weapon",
      "question": "The novel says the skiff could not fight; the requirements give it a weapon",
      "ruling": "Keep the weapon. Game requirements govern the game asset: retain the small forward emitter and its attack animation while the mast, dish and archive cradle stay dominant. The book difference is recorded as a cross-media difference; it does not block model production or authorise removing the game's weapon."
+    }
+   ]
+  },
+  {
+   "date": "2026-09-07",
+   "recorded_by": "Angelis Pseftis (owner), answering the Anchor and Tender questions",
+   "boundary": "These answers clarify production direction. They do not themselves amend the repository or establish production acceptance.",
+   "rulings": [
+    {
+     "subject": "EBS-MER-BLD-001 Anchor silhouette",
+     "ruling": "Keep 0.70 as the provisional build proportion; preserve the squat, wide drum and the tall central mast; do not stretch the drum to chase the candidate's 0.97. The candidate measurement covers the whole silhouette, so it does not establish the drum's proportions by itself. 0.70 is recorded as a production choice, not a canon-prescribed dimension."
+    },
+    {
+     "subject": "EBS-MER-BLD-001 Anchor budget",
+     "ruling": "Confirmed 8,000 / 3,500 triangles, matching the recorded decision to use the tighter Meridian limits, applied to the complete asset including any articulated components."
+    },
+    {
+     "subject": "EBS-MER-BLD-001 Anchor rig",
+     "ruling": "A static mesh is acceptable for this blockout but is not closure of the production requirement. The pipeline specifies a static primary structure with role-required articulated components, so the four-bone requirement stays PENDING for a small articulated assembly supporting the vanes and data-grid extensions and the required damage presentation. Their absence from the concept is missing reference detail, not grounds to silently waive the card. The finished asset must not be marked compliant until that requirement is implemented or explicitly amended."
+    },
+    {
+     "subject": "EBS-KHA-UNT-001 Tender contract",
+     "ruling": "Use a Tender-specific provisional contract, not blanket Surveyor inheritance: LOD0 <= 4,500 and LOD1 <= 1,800 triangles; a 2048^2 PBR stack with two material slots maximum; amber emissive <= 5% of surface area concentrated at the working wrist nodules; retain the 19-bone humanoid rig subject to deformation and animation checks; preserve Kharuun faceted mineral anatomy, staff, sling and cultivator motions, with Surveyor machinery, tread language and cyan treatment not transferring. These are deliberate production targets within the earlier provisional ceilings, not an existing authoritative asset card."
     }
    ]
   }

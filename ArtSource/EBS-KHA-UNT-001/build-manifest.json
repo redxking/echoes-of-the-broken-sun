@@ -28,10 +28,10 @@
  },
  "budgets": {
   "cap_source": "No Tender card exists; bounded by the equivalent worker card REL-FAC-025.MC.SURVEYOR.ASSET (README section 8, OWNER-QUESTION A)",
-  "emissive_area_fraction_lod0": 0.02019,
+  "emissive_area_fraction_lod0": 0.00883,
   "emissive_cap": 0.05,
   "emissive_measure": "surface area, as the card states; the triangle share is reported alongside because a blockout's small amber boxes inflate it",
-  "emissive_triangle_fraction_lod0": 0.19565,
+  "emissive_triangle_fraction_lod0": 0.15217,
   "emissive_within_cap": true,
   "lod0_cap": 4500,
   "lod0_triangles": 552,
@@ -380,10 +380,9 @@
  },
  "creator": "Angelis Pseftis",
  "kit_revision": "ebs-meshkit-v3",
- "material_slot_policy": "Faceted basalt strata, woven mineral fibre, amber seams and nodules. No machined panel or bolt anywhere (REL-ART-007).",
+ "material_slot_policy": "TWO export slots per the owner's provisional Tender contract (2026-09-07): faceted basalt strata (the weave of the sling, kilt and cuffs rides in it as a texture channel) and amber, the only emissive, concentrated at the working wrist nodules. The review meshes keep a third pseudo slot so the renders can separate weave from stone. No machined panel or bolt anywhere (REL-ART-007).",
  "material_slots": [
   "MI_EBS_KHA_Strata",
-  "MI_EBS_KHA_Fibre",
   "MI_EBS_KHA_Amber"
  ],
  "outputs": [
@@ -401,9 +400,8 @@
     ]
    ],
    "by_slot": {
-    "MI_EBS_KHA_Amber": 108,
-    "MI_EBS_KHA_Fibre": 84,
-    "MI_EBS_KHA_Strata": 360
+    "MI_EBS_KHA_Amber": 84,
+    "MI_EBS_KHA_Strata": 468
    },
    "clips": [
     "idle",
@@ -423,12 +421,16 @@
    "lod": 0,
    "mesh": "SK_EBS_KHA_UNT_001",
    "path": "export/SK_EBS_KHA_UNT_001_LOD0.glb",
-   "section_slot_names": [
+   "review_slots": [
     "MI_EBS_KHA_Strata",
     "MI_EBS_KHA_Fibre",
     "MI_EBS_KHA_Amber"
    ],
-   "sha256": "79d0d6a10b950cc41688756893a74f5de9c9416faf66d27da61c4525fc4cedad",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "03968751e66e2bbc893c3bcc1721db137bc1033b19c07f71f6efb0810d30e44e",
    "sockets": [
     {
      "bone": "staff",
@@ -471,7 +473,7 @@
    "lod": 0,
    "mesh": "SK_EBS_KHA_UNT_001",
    "path": "export/SK_EBS_KHA_UNT_001_LOD0.obj",
-   "sha256": "93da55e969f01fc5e20184a4acdf9e232347e0b8bd255144d59cb1b02f6b4a42"
+   "sha256": "7578037249c7182ebf11cb353e00f2c54d3a853a8faf8966cfc4a18ce53ed084"
   },
   {
    "bounds_cm": [
@@ -488,8 +490,7 @@
    ],
    "by_slot": {
     "MI_EBS_KHA_Amber": 12,
-    "MI_EBS_KHA_Fibre": 72,
-    "MI_EBS_KHA_Strata": 324
+    "MI_EBS_KHA_Strata": 396
    },
    "clips": [
     "idle",
@@ -509,12 +510,16 @@
    "lod": 1,
    "mesh": "SK_EBS_KHA_UNT_001",
    "path": "export/SK_EBS_KHA_UNT_001_LOD1.glb",
-   "section_slot_names": [
+   "review_slots": [
     "MI_EBS_KHA_Strata",
     "MI_EBS_KHA_Fibre",
     "MI_EBS_KHA_Amber"
    ],
-   "sha256": "9558ea6fa41be635a0c71db85e3c7c6530d6a591642ad41899360354a08dfb9a",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "3ce5679a24d10a7a4cbf0c41dc24d3c50e941836c0c522d3c55b3a2dcba00ac2",
    "sockets": [
     {
      "bone": "staff",
@@ -557,12 +562,25 @@
    "lod": 1,
    "mesh": "SK_EBS_KHA_UNT_001",
    "path": "export/SK_EBS_KHA_UNT_001_LOD1.obj",
-   "sha256": "4a9e818dac9085ea976ff2956f615ca97fd3de54a035fd7e262ea75290d2c826"
+   "sha256": "f9fb74de67f8e3252ba5aa62877b1acd376ff3d9893bb439ec2c5b74faafd15d"
   }
  ],
  "package_id": "EBS-PKG-KA-TENDER",
  "planned_unreal_folder": "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_001/",
  "production_asset_id": "EBS-KHA-UNT-001",
+ "provisional_contract": {
+  "bounds": {
+   "emissive": "amber <= 5% of surface area, concentrated at the working wrist nodules",
+   "identity": "preserve Kharuun faceted mineral anatomy, staff, sling and cultivator motions; Surveyor machinery, tread language and cyan treatment do not transfer",
+   "lod0_triangles": 4500,
+   "lod1_triangles": 1800,
+   "material_slots_max": 2,
+   "rig": "retain the 19-bone humanoid rig, subject to deformation and animation checks",
+   "texture_stack": "2048^2 PBR"
+  },
+  "source": "Owner ruling 2026-09-07, answering the package's OWNER-QUESTION A",
+  "status": "A deliberate production target within the earlier provisional ceilings. It is NOT an existing authoritative asset card, it does not amend the repository, and it does not establish production acceptance."
+ },
  "review": {
   "scenes": [
    "scenes/rest.json",
@@ -586,86 +604,86 @@
   {
    "name": "rest",
    "path": "review/SK_EBS_KHA_UNT_001_rest_LOD0.obj",
-   "sha256": "7bf5258df1d9f6d56e7fbe56f86627cc013b4eccc1ab8c2237ae8dfeaf829c94",
+   "sha256": "d4c44054f714a1f76b770189291cb71a145ceba8c11813b2729f3bb64733c830",
    "triangles": 552
   },
   {
    "name": "rest_unloaded",
    "path": "review/SK_EBS_KHA_UNT_001_rest_unloaded_LOD0.obj",
-   "sha256": "02355e89e93a5439b3e7319e05bf082eb2b6348349274ec12518ab0cb0165ab8",
+   "sha256": "4498e7e84f2155c8797a0a61bcd7c928662db025d152c8019fef6548efe72b14",
    "triangles": 492
   },
   {
    "lowest_z_cm": 0.0,
    "name": "pose_idle_0.50",
    "path": "review/pose_idle_050.obj",
-   "sha256": "f57a24d97eb36422e4901c73fc2a881fe1d5e5df1def94785c5587ea67f6dc88"
+   "sha256": "15f32664a00803c61102070009d40ac1ba8f644f49b33babfebceecb2462ed82"
   },
   {
    "lowest_z_cm": 1.44,
    "name": "pose_move_0.25",
    "path": "review/pose_move_025.obj",
-   "sha256": "4b5bec52ef75cba211bdc83bd8548b363bf1527e3f4b2609197e885e0d6b202b"
+   "sha256": "71cf1a5b014a7f3a71e3acb771b4376f39a16289bc83717879f4877f5c360843"
   },
   {
    "lowest_z_cm": 2.46,
    "name": "pose_move_0.50",
    "path": "review/pose_move_050.obj",
-   "sha256": "03ad40b14c84f503cfb7abb63d3030e195e39acce642bcfe1db241a2df767e7b"
+   "sha256": "7d4833d480e5cbee00a12692278200d46e2a3c96fde816f14bf14506d2eca3d0"
   },
   {
    "lowest_z_cm": 0.0,
    "name": "pose_turn_0.25",
    "path": "review/pose_turn_025.obj",
-   "sha256": "1fa5b3532531d8d7a888b06c634be321c1055418e5078ec31145206b9d543cb6"
+   "sha256": "4107cddc65ee00dec1c21d872d04bfe2c990f102511caabfa4629f7ae81b2060"
   },
   {
    "lowest_z_cm": 0.01,
    "name": "pose_stop_0.00",
    "path": "review/pose_stop_000.obj",
-   "sha256": "2fe50b41912a834cc2a58aecd12815a1756758371a0e9a94b6dbd361d404075b"
+   "sha256": "0858b8bb1c7d6d88b9edc93d6a22386596695739773e4f285e3b659a00aa5dc4"
   },
   {
    "lowest_z_cm": -0.14,
    "name": "pose_gather_0.50",
    "path": "review/pose_gather_050.obj",
-   "sha256": "ae08851f22f600fccf7d0aa1145d5ea4736bcb7d30554dd0ec46f1df07cd1c34"
+   "sha256": "618102037e7d99124a5372ba235edb418fe66c1b0c4ee54868a40038ea59d864"
   },
   {
    "lowest_z_cm": 2.3,
    "name": "pose_grow_0.25",
    "path": "review/pose_grow_025.obj",
-   "sha256": "14c24c66ae40a96e586d7e2cbb789aa77abe11adbe8ab87d62c068303b868392"
+   "sha256": "bbcf2ddc9cd50628b7773343f170ea587bdeb99c84f6d2ab175d1e7fb84937ea"
   },
   {
    "lowest_z_cm": 0.09,
    "name": "pose_deliver_0.50",
    "path": "review/pose_deliver_050.obj",
-   "sha256": "27a76a5e5dd6a81a13c1b677e4014ea74fec2b1a4e8e88bd1af0d33a69311285"
+   "sha256": "a4a3958a5118fc9d7190d54cba8d7fe4617fe2fdf70ef69499fbac4751cecef7"
   },
   {
    "lowest_z_cm": 0.05,
    "name": "pose_stabilize_scar_0.50",
    "path": "review/pose_stabilize_scar_050.obj",
-   "sha256": "9b36704d0fb335eab799efb2e2ea4f51065163f2e47a732dc58824016b2194d9"
+   "sha256": "c9572863a75c473b6e6325ed3c5defdf877feb249cabdc9f3f6f992b0941d20b"
   },
   {
    "lowest_z_cm": 0.02,
    "name": "pose_damage_0.25",
    "path": "review/pose_damage_025.obj",
-   "sha256": "db6a4cd3c15dda9e4e6ebe6afb15c95756aea4b2762f403e86d387d348181c2d"
+   "sha256": "d9d84e40dafe7f451fac3a3029d8e1476b13241580140223d7454805abc046fd"
   },
   {
    "lowest_z_cm": 6.37,
    "name": "pose_death_1.00",
    "path": "review/pose_death_100.obj",
-   "sha256": "427a004120d36f9b091346b4231c5bc72b5da68c2c2eba2910d12a20b581e1e3"
+   "sha256": "44b7c859da42588acf4bbb41d809fff21fc58ebc86e580ca938555cd2ed92d04"
   },
   {
    "lowest_z_cm": 0.03,
    "name": "pose_cancel_0.00",
    "path": "review/pose_cancel_000.obj",
-   "sha256": "667423aed24eeef8ac7b9e43ba71c9bfff214ddecc1d3f88bcd6405505237d2a"
+   "sha256": "c05f96f9f144a360d04c24fb18807e177cf3479cc14b346f099ffb375b6d7f2b"
   },
   {
    "name": "rest_lod1",
@@ -674,7 +692,10 @@
    "triangles": 408
   }
  ],
- "revision": "ebs-kha-unt-001-concept-v1",
+ "review_only_slots": [
+  "MI_EBS_KHA_Fibre"
+ ],
+ "revision": "ebs-kha-unt-001-concept-v2",
  "rig": {
   "bones": [
    {

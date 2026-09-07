@@ -6,7 +6,7 @@ created: 2026-09-07
 package: EBS-PKG-KA-TENDER
 production_asset_id: EBS-KHA-UNT-001
 production_maturity: BLOCKOUT
-revision: ebs-kha-unt-001-concept-v1
+revision: ebs-kha-unt-001-concept-v2
 canon_status: CANDIDATE (the tender-candidate sheet replaces the original under a REPLACE decision; not owner acceptance)
 status: Isolated production source; no Unreal integration authorization
 ---
@@ -62,12 +62,15 @@ circling walk is authored in place and the runtime drives the path.
 ## 4. Geometry and rig (revision `ebs-kha-unt-001-concept-v1`)
 
 Generator: [build_tender.py](build_tender.py) on the mesh kit and the skeletal kit. One skinned mesh
-`SK_EBS_KHA_UNT_001`. Slots: `MI_EBS_KHA_Strata`, `MI_EBS_KHA_Fibre`, `MI_EBS_KHA_Amber` (the only
-emissive). 19 bones: root, pelvis, spine, chest, head, both arm chains (upper, forearm, hand), both leg
+`SK_EBS_KHA_UNT_001`. **Two export slots** per the owner's provisional contract: `MI_EBS_KHA_Strata`
+and `MI_EBS_KHA_Amber` (the only emissive). The woven fibre of the sling, kilt and cuffs is a
+review-only pseudo slot folded into the strata on export — its tone becomes a texture channel — so the
+review renders can still separate weave from stone while the shipped mesh carries two sections. 19 bones: root, pelvis, spine, chest, head, both arm chains (upper, forearm, hand), both leg
 chains (thigh, shin, foot), plus `staff` parented to the working hand and `sling` on the chest so the
 carried Matter can be shown or hidden. Sockets: `Harvest_Tether_Muzzle` (staff head),
 `Cargo_Drop_Anchor` (sling centre), `Center_Hitbox_Socket` (chest) — the worker set the Surveyor uses.
-Budgets: LOD0 552 ≤ 4,500, LOD1 408 ≤ 1,800; amber is 2.0% of surface area against the 5% cap.
+Budgets: LOD0 552 ≤ 4,500, LOD1 408 ≤ 1,800; amber is 0.9% of surface area against the 5% cap and sits only on the six
+wrist nodules and the staff bead — the chest seams are strata relief, not emissive.
 
 ## 5. Clips (keyframed, Unreal rotators)
 
@@ -116,10 +119,23 @@ for f in "<evidence root>/EBS-KHA-UNT-001/scenes/"*.json; do python3 ../tools/eb
 
 ## 8. Decisions and open items
 
-1. **No Tender asset card exists.** `REL-FAC-026.KA.TENDER` records only gameplay metrics. The build is
-   bounded by the equivalent worker card (`REL-FAC-025.MC.SURVEYOR.ASSET`: LOD0 ≤4,500, LOD1 ≤1,800,
-   2048² stack, emissive ≤5%) and the bone count is chosen for a humanoid rather than given.
-   **OWNER-QUESTION A.**
+1. **No Tender asset card exists, and blanket Surveyor inheritance was refused.** `REL-FAC-026.KA.TENDER`
+   records only gameplay metrics. **Owner ruling, 2026-09-07 (OWNER-QUESTION A, ANSWERED):** use a
+   Tender-specific provisional contract rather than inheriting the Surveyor's card wholesale —
+
+   > * LOD0 ≤4,500; LOD1 ≤1,800 triangles.
+   > * 2048² PBR stack; two material slots maximum.
+   > * Amber emissive ≤5% surface area, concentrated at the working wrist nodules.
+   > * Retain the current 19-bone humanoid rig, subject to deformation and animation checks.
+   > * Preserve Kharuun faceted mineral anatomy, staff, sling, and cultivator motions. Surveyor
+   >   machinery, tread language, and cyan treatment do not transfer.
+
+   The owner records these as deliberate production targets within the earlier provisional ceilings:
+   they are **not an existing authoritative asset card**, they do not amend the repository, and they do
+   not establish production acceptance. concept-v2 implements them: the export folds to two slots, the
+   amber moved off the chest seams so it sits only at the wrist nodules and the staff bead (0.9% of
+   area), and the 19-bone rig, the Kharuun anatomy, the staff, the sling and the cultivator motions are
+   unchanged. Deformation and animation checks against that rig are still open.
 2. **Emissive is measured by surface area**, as the card states, not by triangle count. On a blockout the
    two differ sharply: amber is 2.0% of area but 20% of triangles, because the body is a few large boxes
    and the seams are many small ones. Both numbers are in the manifest.
@@ -133,6 +149,16 @@ for f in "<evidence root>/EBS-KHA-UNT-001/scenes/"*.json; do python3 ../tools/eb
 5. Open: textures (2048² per the equivalent card), in-engine capture and playback, gate reviews, owner
    acceptance.
 
-> **OWNER-QUESTION A — no Tender asset card.** The Kharuun roster record gives the Tender gameplay
-> metrics but no visual asset manifest, so its triangle, texture, emissive and rig budgets are inherited
-> from the Surveyor's card. Confirm that inheritance, or issue a Tender card.
+> **OWNER-QUESTION A — no Tender asset card. ANSWERED 2026-09-07 (owner).** Blanket Surveyor
+> inheritance refused; a Tender-specific provisional contract was issued instead and is quoted in §8.1.
+> Implemented at concept-v2. Nothing is outstanding for the coordinator on this package.
+
+## 9. Concept-v2 amendment — the owner's provisional contract (2026-09-07)
+
+concept-v2 changes exactly two things and nothing else: the export now folds the woven-fibre pseudo
+slot into the strata so the shipped mesh carries **two** material sections, and the amber emissive
+moved off the chest seams so it is **concentrated at the working wrist nodules** (with the staff bead),
+dropping from 2.0% to 0.9% of surface area. Geometry, the 19-bone rig, every clip and every socket are
+unchanged from concept-v1; the review meshes keep the third pseudo slot so the renders still separate
+weave from stone. Two tests were added: the export ships two slots with every skin binding preserved,
+and the amber components are the six wrist nodules plus the staff bead and nothing else.

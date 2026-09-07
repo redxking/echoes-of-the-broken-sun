@@ -146,10 +146,39 @@ class AnchorBlockout(unittest.TestCase):
 
     # --- budgets and states ----------------------------------------------------------------------
     def test_budgets_within_the_tighter_meridian_rule(self):
-        # REL-ART-028 (8,000 / 3,500) is tighter than REL-BLD-015.MC.CORE (12,000 / 4,500)
-        self.assertLessEqual(self.m0.triangle_count(), 8000)
-        self.assertLessEqual(self.m1.triangle_count(), 3500)
+        # Owner ruling 2026-09-07: REL-ART-028's 8,000 / 3,500 govern, and they apply to the COMPLETE
+        # asset including any articulated components — not to the primary mesh alone. Summing every
+        # exported mesh here means the pending vane assembly cannot be added without counting.
+        import json
+        manifest_path = os.path.join(HERE, "build-manifest.json")
+        lod0 = lod1 = 0
+        if os.path.exists(manifest_path):
+            with open(manifest_path, encoding="utf-8") as handle:
+                data = json.load(handle)
+            for row in data.get("outputs", []):
+                if str(row.get("path", "")).endswith(".glb") and "triangles" in row:
+                    if int(row["lod"]) == 0:
+                        lod0 += row["triangles"]
+                    else:
+                        lod1 += row["triangles"]
+        lod0 = lod0 or self.m0.triangle_count()
+        lod1 = lod1 or self.m1.triangle_count()
+        self.assertLessEqual(lod0, 8000, "whole asset LOD0")
+        self.assertLessEqual(lod1, 3500, "whole asset LOD1")
         self.assertLess(self.m1.triangle_count(), self.m0.triangle_count())
+
+    def test_the_pending_four_bone_requirement_is_recorded(self):
+        # the owner kept the card's 4-bone vane rig OPEN; the record must say so, and must not claim
+        # technical compliance while it is open
+        import json
+        manifest_path = os.path.join(HERE, "build-manifest.json")
+        if not os.path.exists(manifest_path):
+            self.skipTest("build-manifest.json not written yet")
+        with open(manifest_path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        pending = data.get("pending_requirements") or []
+        self.assertTrue(any("4-bone" in p.get("requirement", "") for p in pending))
+        self.assertIn("BLOCKED", data["acceptance"]["technical"])
 
     def test_damaged_state_darkens_a_band_and_opens_a_panel_section(self):
         working_band = [p for p in self.m0.polygons if p.component == "band_lower"]

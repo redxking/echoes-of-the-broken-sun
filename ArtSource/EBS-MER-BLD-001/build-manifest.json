@@ -3,18 +3,20 @@
   "art": "NOT_EVALUATED",
   "gameplay": "NOT_EVALUATED",
   "owner": "NOT_ACCEPTED",
-  "technical": "NOT_EVALUATED"
+  "technical": "BLOCKED \u2014 the card's 4-bone articulated assembly is pending (see pending_requirements)"
  },
  "asset_name": "SM_EBS_MER_BLD_001",
  "author": "Angelis Pseftis",
  "budgets": {
-  "cap_source": "REL-ART-028 bounds the whole Meridian roster at 8,000 / 3,500 and REL-BLD-015.MC.CORE allows 12,000 / 4,500 for this structure; the tighter rule is used so both hold. The conflict is recorded in README section 8, not resolved here.",
+  "cap_source": "CONFIRMED by the owner ruling 2026-09-07: the tighter Meridian limits of REL-ART-028 govern (8,000 / 3,500) rather than REL-BLD-015.MC.CORE's 12,000 / 4,500, matching the recorded decision, and the ceilings apply to the COMPLETE asset including any articulated components. There is one mesh today, so the whole-asset figures equal the primary mesh's.",
   "lod0_cap": 8000,
   "lod0_triangles": 1840,
   "lod0_within_cap": true,
   "lod1_cap": 3500,
   "lod1_triangles": 960,
-  "lod1_within_cap": true
+  "lod1_within_cap": true,
+  "whole_asset_lod0_triangles": 1840,
+  "whole_asset_lod1_triangles": 960
  },
  "component_inventory": {
   "central_mast": {
@@ -512,6 +514,15 @@
   }
  ],
  "package_id": "EBS-PKG-MC-ANCHOR",
+ "pending_requirements": [
+  {
+   "consequence": "This asset must not be marked compliant until the assembly is implemented or the card is explicitly amended.",
+   "counts_toward": "the same 8,000 / 3,500 whole-asset ceilings",
+   "requirement": "REL-BLD-015.MC.CORE .ANIM_RIG \u2014 4-bone rig for core exhaust vanes and data-grid extensions, plus the required damage presentation",
+   "ruling": "A static mesh is acceptable for this blockout and is NOT closure of the production requirement. The pipeline specifies a static primary structure with role-required articulated components, so the four-bone requirement stays open for a small articulated assembly. Its absence from the concept is missing reference detail, not grounds to waive the card.",
+   "status": "PENDING (owner ruling 2026-09-07)"
+  }
+ ],
  "planned_unreal_folder": "/Game/Echoes/Production/MER/BLD/EBS_MER_BLD_001/",
  "production_asset_id": "EBS-MER-BLD-001",
  "review": {

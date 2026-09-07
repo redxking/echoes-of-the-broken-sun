@@ -340,18 +340,32 @@ def manifest(exported: dict) -> dict:
         "material_slot_policy": "Pale civic ceramic, charcoal frame, cyan status. Numerals, hazard striping and plate seams are texture, not geometry.",
         "budgets": {
             "lod0_triangles": m0.triangle_count(), "lod1_triangles": m1.triangle_count(),
+            "whole_asset_lod0_triangles": m0.triangle_count(), "whole_asset_lod1_triangles": m1.triangle_count(),
             "lod0_cap": 8000, "lod1_cap": 3500,
-            "cap_source": ("REL-ART-028 bounds the whole Meridian roster at 8,000 / 3,500 and REL-BLD-015.MC.CORE allows "
-                           "12,000 / 4,500 for this structure; the tighter rule is used so both hold. The conflict is "
-                           "recorded in README section 8, not resolved here."),
+            "cap_source": ("CONFIRMED by the owner ruling 2026-09-07: the tighter Meridian limits of REL-ART-028 govern "
+                           "(8,000 / 3,500) rather than REL-BLD-015.MC.CORE's 12,000 / 4,500, matching the recorded "
+                           "decision, and the ceilings apply to the COMPLETE asset including any articulated components. "
+                           "There is one mesh today, so the whole-asset figures equal the primary mesh's."),
             "lod0_within_cap": m0.triangle_count() <= 8000, "lod1_within_cap": m1.triangle_count() <= 3500,
         },
+        "pending_requirements": [
+            {"requirement": "REL-BLD-015.MC.CORE .ANIM_RIG — 4-bone rig for core exhaust vanes and data-grid extensions, "
+                            "plus the required damage presentation",
+             "status": "PENDING (owner ruling 2026-09-07)",
+             "ruling": ("A static mesh is acceptable for this blockout and is NOT closure of the production requirement. The "
+                        "pipeline specifies a static primary structure with role-required articulated components, so the "
+                        "four-bone requirement stays open for a small articulated assembly. Its absence from the concept is "
+                        "missing reference detail, not grounds to waive the card."),
+             "consequence": "This asset must not be marked compliant until the assembly is implemented or the card is explicitly amended.",
+             "counts_toward": "the same 8,000 / 3,500 whole-asset ceilings"},
+        ],
         "concept_measurements": measurements(m0),
         "component_inventory": contract_inventory(m0),
         "states": {s: "review assembly" for s in STATES},
         "outputs": exported["outputs"], "review_assemblies": exported["review_assemblies"],
         "tools": {"mesh_kit": "ArtSource/tools/ebs_meshkit.py", "renderer": "ArtSource/tools/ebs_render.py"},
-        "acceptance": {"art": "NOT_EVALUATED", "gameplay": "NOT_EVALUATED", "technical": "NOT_EVALUATED",
+        "acceptance": {"art": "NOT_EVALUATED", "gameplay": "NOT_EVALUATED",
+                       "technical": "BLOCKED — the card's 4-bone articulated assembly is pending (see pending_requirements)",
                        "owner": "NOT_ACCEPTED"},
         "source_bindings": {
             "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/anchor-review/anchor-candidate.png",

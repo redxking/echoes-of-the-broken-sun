@@ -46,8 +46,28 @@ class TenderBlockout(unittest.TestCase):
     def test_no_cyan_slot(self):
         # cyan is the Meridian Compact's colour; the Kharuun palette is strata, fibre and amber
         self.assertEqual(self.m0.slots, [td.STRATA, td.FIBRE, td.AMBER])
-        for slot in self.m0.slots:
+        for slot in self.m0.slots + td.export_mesh(self.m0).slots:
             self.assertNotIn("Cyan", slot)
+
+    def test_export_ships_two_material_slots(self):
+        # owner's provisional Tender contract 2026-09-07: two material slots maximum. The woven fibre
+        # is a review-only pseudo slot folded into the strata; amber stays separate because it is the
+        # emissive one.
+        e = td.export_mesh(self.m0)
+        self.assertEqual(e.slots, [td.STRATA, td.AMBER])
+        self.assertEqual(e.triangle_count(), self.m0.triangle_count())
+        self.assertTrue(all(getattr(p, "bone", None) for p in e.polygons), "the fold must keep every skin binding")
+        self.assertEqual([s.name for s in e.sockets], [s.name for s in self.m0.sockets])
+
+    def test_amber_is_concentrated_at_the_working_wrist_nodules(self):
+        e = td.export_mesh(self.m0)
+        amber_index = e.slots.index(td.AMBER)
+        amber = {p.component for p in e.polygons if p.slot == amber_index}
+        self.assertTrue(amber)
+        wrist = {c for c in amber if "wrist_nodule" in c}
+        self.assertEqual(len(wrist), 6, "three nodules on each wrist")
+        self.assertEqual(amber - wrist, {"staff_bead"}, "amber lives at the wrists and the staff bead only")
+        self.assertLessEqual(td.slot_area_fraction(e, td.AMBER), 0.05)
 
     def test_forearms_are_heavier_than_the_upper_arms(self):
         self.assertGreater(td.FORE_W, td.UPPER_W)
@@ -119,7 +139,7 @@ class TenderBlockout(unittest.TestCase):
         self.assertLessEqual(self.m0.triangle_count(), 4500)
         self.assertLessEqual(self.m1.triangle_count(), 1800)
         self.assertLess(self.m1.triangle_count(), self.m0.triangle_count())
-        self.assertLessEqual(td.slot_area_fraction(self.m0, td.AMBER), 0.05)
+        self.assertLessEqual(td.slot_area_fraction(td.export_mesh(self.m0), td.AMBER), 0.05)
 
     def test_deterministic_export(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -128,7 +148,7 @@ class TenderBlockout(unittest.TestCase):
             self.assertEqual(a, b)
 
     def test_revision_string(self):
-        self.assertEqual(td.REVISION, f"{td.PRODUCTION_ID.lower()}-concept-v1")
+        self.assertEqual(td.REVISION, f"{td.PRODUCTION_ID.lower()}-concept-v2")
 
 
 if __name__ == "__main__":

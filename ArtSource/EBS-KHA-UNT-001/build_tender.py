@@ -36,7 +36,7 @@ PACKAGE_ID = "EBS-PKG-KA-TENDER"
 PRODUCTION_ID = "EBS-KHA-UNT-001"
 ASSET = "SK_EBS_KHA_UNT_001"
 PLANNED_FOLDER = "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_001/"
-REVISION = "ebs-kha-unt-001-concept-v1"
+REVISION = "ebs-kha-unt-001-concept-v2"
 
 STRATA = "MI_EBS_KHA_Strata"     # faceted basalt body
 FIBRE = "MI_EBS_KHA_Fibre"       # woven mineral-fibre sling, kilt wrap and belt
@@ -120,7 +120,8 @@ def build_body(lod: int, loaded: bool = True) -> kit.Mesh:
     if fine:
         m.box((6.0, 0.0, HEAD_C + 4.0), (10.0, 20.0, 12.0), strata, "head_brow")
         for i, z in enumerate((CHEST_Z + 2.0, CHEST_Z + 14.0)):
-            m.box((14.0, 0.0, z), (4.0, 34.0, 3.0), amber, f"chest_seam_{i + 1:02d}")
+            m.box((14.0, 0.0, z), (4.0, 34.0, 3.0), strata, f"chest_seam_{i + 1:02d}")   # seam relief, not emissive:
+            # the owner's provisional contract concentrates the amber emissive at the working wrist nodules
 
     # arms: upper arm, thickened forearm, hand; amber nodules at each wrist
     for side, sign in (("r", 1.0), ("l", -1.0)):
@@ -390,6 +391,30 @@ POSE_SAMPLES = [("idle", 0.5), ("move", 0.25), ("move", 0.5), ("turn", 0.25), ("
 
 
 
+
+def export_mesh(m: kit.Mesh) -> kit.Mesh:
+    """The two-slot export mesh: the woven-fibre pseudo slot folds into the strata.
+
+    The owner's provisional Tender contract (2026-09-07) caps the asset at TWO material slots. The
+    sling, kilt and cuffs are a weave, not a second material system, so they ship inside the strata
+    slot and their tone is a texture channel; the review meshes keep the third slot so the renders can
+    still tell the weave from the stone. Amber stays its own slot because it is the emissive one.
+    """
+    out = kit.Mesh(m.name)
+    out.slot(STRATA)
+    out.slot(AMBER)
+    remap = {m.slots.index(STRATA): 0, m.slots.index(FIBRE): 0, m.slots.index(AMBER): 1}
+    for poly in m.polygons:
+        copy = kit.Polygon(poly.points, poly.normal, remap[poly.slot], poly.component,
+                           poly.uv_axis, poly.uv_override, poly.atlas_cells, poly.chart_id)
+        bone = getattr(poly, "bone", None)
+        if bone is not None:
+            copy.bone = bone
+        out.polygons.append(copy)
+    out.sockets = list(m.sockets)
+    out.collision = list(m.collision)
+    return out
+
 def slot_area_fraction(m: kit.Mesh, slot_name: str) -> float:
     """Share of the mesh's SURFACE AREA carried by one slot.
 
@@ -460,7 +485,8 @@ def export(evidence_dir: str, out_dir: str, skinned: bool) -> dict:
     skeleton = build_skeleton()
     clips = build_clips(skeleton)
     for lod in (0, 1):
-        m, s, _c, socks = assemble(lod, True)
+        review_mesh, s, _c, socks = assemble(lod, True)
+        m = export_mesh(review_mesh)
         base = os.path.join(out_dir, f"{ASSET}_LOD{lod}")
         extras = {"production_id": PRODUCTION_ID, "package_id": PACKAGE_ID, "revision": REVISION, "lod": lod, "author": AUTHOR}
         if skinned:
@@ -469,6 +495,7 @@ def export(evidence_dir: str, out_dir: str, skinned: bool) -> dict:
             outputs.append({"mesh": ASSET, "lod": lod, "kind": "skinned + clips", "path": os.path.relpath(base + ".glb", HERE),
                             "sha256": digest, "triangles": m.triangle_count(), "bounds_cm": [list(p) for p in m.bounds()],
                             "section_slot_names": m.slots, "by_slot": m.triangle_count_by("slot"),
+                            "review_slots": review_mesh.slots,
                             "clips": [c.name for c in clips],
                             "sockets": [{"name": sk.name, "bone": socks[sk.name], "position_cm": [round(v, 2) for v in sk.position],
                                          "yaw_deg": sk.yaw_deg, "purpose": sk.purpose} for sk in m.sockets]})
@@ -511,8 +538,21 @@ def manifest(exported: dict) -> dict:
                   "pivot": "ground-contact centre", "nanite": False},
         "scale_basis": {"canon": "SPEC-UNIT-005 (Bible line 551): a stocky Kharuun cultivator with a resonance staff and a woven sling",
                         "height_cm": H, "status": "PROVISIONAL; no Tender asset card exists (README section 8)"},
-        "material_slots": [STRATA, FIBRE, AMBER],
-        "material_slot_policy": "Faceted basalt strata, woven mineral fibre, amber seams and nodules. No machined panel or bolt anywhere (REL-ART-007).",
+        "material_slots": [STRATA, AMBER],
+        "review_only_slots": [FIBRE],
+        "material_slot_policy": ("TWO export slots per the owner's provisional Tender contract (2026-09-07): faceted basalt strata "
+                                 "(the weave of the sling, kilt and cuffs rides in it as a texture channel) and amber, the only "
+                                 "emissive, concentrated at the working wrist nodules. The review meshes keep a third pseudo slot "
+                                 "so the renders can separate weave from stone. No machined panel or bolt anywhere (REL-ART-007)."),
+        "provisional_contract": {
+            "source": "Owner ruling 2026-09-07, answering the package's OWNER-QUESTION A",
+            "status": ("A deliberate production target within the earlier provisional ceilings. It is NOT an existing authoritative "
+                       "asset card, it does not amend the repository, and it does not establish production acceptance."),
+            "bounds": {"lod0_triangles": 4500, "lod1_triangles": 1800, "texture_stack": "2048^2 PBR",
+                       "material_slots_max": 2, "emissive": "amber <= 5% of surface area, concentrated at the working wrist nodules",
+                       "rig": "retain the 19-bone humanoid rig, subject to deformation and animation checks",
+                       "identity": ("preserve Kharuun faceted mineral anatomy, staff, sling and cultivator motions; Surveyor machinery, "
+                                    "tread language and cyan treatment do not transfer")}},
         "budgets": {"lod0_triangles": m0.triangle_count(), "lod1_triangles": m1.triangle_count(),
                     "lod0_cap": 4500, "lod1_cap": 1800,
                     "cap_source": "No Tender card exists; bounded by the equivalent worker card REL-FAC-025.MC.SURVEYOR.ASSET (README section 8, OWNER-QUESTION A)",
