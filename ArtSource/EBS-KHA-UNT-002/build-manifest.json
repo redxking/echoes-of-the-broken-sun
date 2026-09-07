@@ -1731,10 +1731,31 @@
    "transition": "R alone drives it; G and B only say which end state a piece belongs to."
   },
   "requirement": "card .MESH_PROP: 3 vertex ID coloring channels for public molting phase transitions",
-  "status": "VERIFIED THROUGH EXPORT AND IMPORT; material assigned, in-engine capture outstanding",
+  "status": "VERIFIED THROUGH EXPORT, IMPORT AND IN-ENGINE RENDER; simulation integration outstanding",
   "still_outstanding": [
-   "an in-engine capture of the material under a real RHI"
+   "Integration with a RUNNING simulation driving MoltProgress from the real 80-tick window; the captures show the material's behaviour, not the game's.",
+   "The shipped art material: what was rendered is a debug material whose base colour is the channels.",
+   "Engine LOD reduction: untested, because no generated LOD chain exists yet.",
+   "The TeamColor mechanism, which is defined but not built, and gates material acceptance."
   ],
+  "sweep_convention": {
+   "defect_found_and_fixed": "The first material used a strict '>' with the A == B branch wired to zero, so the R = 0 legs NEVER completed at progress 1. It compiled and was assigned, which is why 'compiles and is assigned' was not evidence of correct response. Now '>=' via both the A > B and A == B branches.",
+   "endpoints_verified": {
+    "progress 0": "0 of 10 quantised levels swept",
+    "progress 1": "10 of 10 swept, the R = 0 legs included"
+   },
+   "intermediate_boundaries": "Checked AFTER 8-bit quantisation. The ten quantised levels cross at ten distinct progress values; the smallest margin between neighbours is 0.049 progress = 3.92 ticks of the 80-tick window, against a quantisation step worth about 0.3 ticks. Recorded in sweep-boundaries.json.",
+   "rule": "HIGHER R MEANS EARLIER treatment.",
+   "threshold": "threshold = 1.02 - progress * 1.04; swept where R >= threshold",
+   "timing": "The material exposes MoltProgress, a scalar the simulation writes, and contains no Time or Panner node. It consumes authoritative molt progress and keeps no timing of its own. Still to be confirmed against a running simulation, including interruption and restoration.",
+   "why_outside_the_unit_range": "progress 0 must sweep NOTHING (the maximum authored R is 1.0) and progress 1 must sweep EVERYTHING including the R = 0 legs. A threshold confined to [0, 1] cannot do both. The 0.02 margin exceeds the 1/255 quantisation step by a factor of five."
+  },
+  "team_identification": {
+   "mechanism": "Team ownership is delivered by a dedicated vector parameter TeamColor, modulating a team mask carried in the packed utility channel of the 2048^2 texture stack. It is a texture and parameter path, entirely disjoint from COLOR_0.",
+   "requirement": "Owner ruling 2026-09-07: record the separate team-identification mechanism BEFORE material acceptance.",
+   "status": "DEFINED, NOT BUILT. It belongs to the texture pass and gates material acceptance, not this export work.",
+   "why_disjoint": "Adaptation state changes during play and is opponent-facing; ownership is fixed for the unit's life. Sharing a channel would make a molting unit's owner ambiguous exactly when the 80-tick window makes it most worth reading."
+  },
   "team_ownership": "IN NO CHANNEL. Owner ruling 2026-09-07: team ownership must stay distinguishable from adaptation state. Team colour lives in its own material parameter and mask texture, so a reader never disambiguates ownership from adaptation. Alpha is reserved rather than left spare so it cannot later be quietly taken for team.",
   "verification": {
    "export": {
@@ -1742,22 +1763,36 @@
     "result": "PASS"
    },
    "import": {
-    "detail": "baseline 10 authored / 10 imported distinct colours, carapace_molt 11 / 11, striker_molt 11 / 11; no missing and no unexpected values in any state. G is non-zero only in carapace_molt, B only in striker_molt, and alpha is 1.0 everywhere. Vertex counts 1056 / 1176 / 1104 at LOD0.",
-    "evidence": "BuildArtifacts/.../EBS-KHA-UNT-002/vertex-id-route/channel-verification.json",
-    "method": "Presence is not evidence. Each state's GLB was imported headlessly, then exported back out with GLTFSkeletalMeshExporter and COLOR_0 read as VALUES and compared against the authored mapping.",
-    "result": "PASS"
+    "evidence": [
+     "vertex-id-route/channel-verification.json",
+     "vertex-id-route/lods/lod-spatial-verification.json"
+    ],
+    "membership": "baseline 10 authored / 10 imported distinct colours, carapace_molt 11 / 11, striker_molt 11 / 11; no missing and no unexpected values. G is non-zero only in carapace_molt, B only in striker_molt, alpha 1.0 everywhere.",
+    "method": "Round-trip export was the method used successfully: the asset was exported back out with GLTFSkeletalMeshExporter and COLOR_0 read as VALUES. It is not the only possible way to inspect Unreal's vertex colours - a C++ or engine-side reader of the render data would serve, and was not attempted. What made a round-trip attractive here is that no Python accessor for the values exists in 5.8.",
+    "result": "PASS",
+    "spatial_placement": "Set equality does not establish placement, so every imported vertex was matched to its authored position within 0.06 cm and its colour compared to the colours authored there: LOD0 1056 of 1056 vertices placed and coloured correctly, LOD1 696 of 696. Zero mismatches."
+   },
+   "lods_tested": {
+    "splitting": "The exporter writes unindexed triangles, so nothing is welded on the way out and each corner takes its component's colour. The import returned every authored position with its authored colour, so no split or weld moved a value.",
+    "what_was_NOT_tested": "ENGINE LOD REDUCTION. Both imported meshes report a single LOD, so no generated LOD chain exists and none was exercised. The earlier claim that 'LOD generation altered nothing' was unsupported and is withdrawn: nothing generated LODs. If a reduction chain is added later, channel placement must be re-verified on every generated level.",
+    "what_was_tested": "The two SHIPPED LODs, each authored and imported as its own asset: SK_EBS_KHA_UNT_002 (1056 vertices) and SK_EBS_KHA_UNT_002_LOD1Source (696). Channel placement and membership verified spatially on each."
    },
    "material": {
-    "detail": "M_EBS_KHA_UNT_002_MoltPhase reads VertexColor R, G and B, exposes the scalar parameter MoltSweep that the 80-tick window drives, compiles, and is assigned to every material slot on all three imported states.",
+    "endpoints_seen": "tick 0 sweeps nothing - the carapace plates read as unswept new growth and every other surface is dark; tick 80 sweeps everything, the R = 0 legs included.",
     "evidence": [
-     "vertex-id-route/material-response.json",
-     "vertex-id-route/sweep/carapace_sweep.png"
+     "vertex-id-route/inengine/capture-report.json",
+     "vertex-id-route/inengine/sheet_carapace_molt_tactical.png",
+     "vertex-id-route/inengine/sheet_striker_molt_tactical.png",
+     "vertex-id-route/inengine/sheet_interruption.png"
     ],
-    "outstanding": "No in-engine capture: the headless editor runs -nullrhi, so nothing was rendered by Unreal's shader. The sweep was rendered offline from the same authored channel data instead.",
-    "result": "PARTIAL"
+    "graph": "M_EBS_KHA_UNT_002_MoltPhase reads VertexColor R, G and B, exposes the scalar parameter MoltProgress, and contains no Time or Panner node.",
+    "interruption_and_restoration": "open -> mid -> interrupted -> restored open -> restored mid -> restored complete. The interrupted frame returns to baseline with no partial sweep retained and no adaptation geometry, and the restored sequence RESTARTS from zero rather than resuming. Canon REL-FAC-009 cancels the adaptation without refund, which is what that shows.",
+    "outstanding": "This is a debug material whose base colour IS the channels, rendered through an editor SceneCapture. Not tested: the shipped art material, and integration with a RUNNING simulation driving MoltProgress from the real 80-tick window. The behaviour above is the material's, not the game's.",
+    "rendered": "Unreal rendered the response offscreen: ticks 0/20/40/60/80 for all three variants at two framings (tactical, 1400 cm arm at -55 deg; close, 520 cm at -18 deg), 30 frames, plus a six-step interruption and restoration sequence.",
+    "result": "RENDERED IN ENGINE; integration with the simulation still outstanding",
+    "timing": "Every frame is a pure function of MoltProgress supplied from outside the material by a MaterialInstanceConstant per value. The material holds no state and no clock, which is why interruption reads instantly and restoration restarts. It therefore CONSUMES authoritative progress and creates no gameplay timing of its own."
    },
-   "quantisation": "Interchange stores skeletal vertex colours as 8-bit unsigned normalised, so authored floats round-trip within 1/255 (0.85 returns as 0.851). Any channel needing more than 256 levels would not survive; the sweep grade uses ten.",
-   "splitting_and_lods": "The exporter writes unindexed triangles, so nothing is welded on the way out and each corner takes its component's colour. The import round-trip returned exactly the authored set with no interpolated in-between values, so neither vertex splitting nor LOD generation altered them."
+   "quantisation": "Interchange stores skeletal vertex colours as 8-bit unsigned normalised, so authored floats round-trip within 1/255 (0.85 returns as 0.851). Any channel needing more than 256 levels would not survive; the sweep grade uses ten."
   },
   "verified": true
  }

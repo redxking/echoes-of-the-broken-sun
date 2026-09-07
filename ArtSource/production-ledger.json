@@ -885,6 +885,20 @@
    "package": "EBS-PKG-KHA-RIFTSTALKER",
    "finding": "SkeletalMaterial entries returned by mesh.get_editor_property('materials') are COPIES. Mutating them in place and saving reports success while the asset keeps its old material, which read as a passing assignment until the result was read back.",
    "rule": "Rebuild the whole materials array and set it as one property, then read it back to confirm."
+  },
+  {
+   "id": "PF-016",
+   "date": "2026-09-07",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "A material authored in a -nullrhi editor has no platform shader map, and loading it in a later rendering run leaves it compiling indefinitely: every captured frame renders the DEFAULT material. It looks exactly like a working assignment - get_material returns the right instance, the parameter reads back, no error is logged. A 90-second pixel-gated wait never went bright; the same material built inside the rendering run was ready on the first poll.",
+   "rule": "Build or recompile a material in the SAME run that renders it, and gate captures on PIXELS rather than on a sleep: sample the render target until it shows the expected response, and fail if it never does."
+  },
+  {
+   "id": "PF-017",
+   "date": "2026-09-07",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "create_dynamic_material_instance reported correctly through get_material but the captures showed the default material. Switching to a MaterialInstanceConstant per parameter value assigned with set_material worked. Both that switch and the -nullrhi fix (PF-016) were made before the first good capture, and the MID path was not re-tested afterwards, so PF-016 is the confirmed cause and the MID behaviour is unresolved.",
+   "rule": "Prefer a MaterialInstanceConstant per value for deterministic headless capture, and do not report a MID assignment as working on the strength of get_material alone."
   }
  ],
  "owner_rulings": [
@@ -1129,7 +1143,44 @@
     {
      "topic": "Scope and write ownership",
      "ruling": "Keep the exporter change scoped and coordinated with its current write owner. It does not require changing gameplay or resolving the rig amendment first.",
-     "applied": "Write ownership checked before editing: ebs_meshkit.py exists only in this worktree, every commit touching it is from this lane, and the tree was clean. No gameplay data was touched and the rig amendment is untouched and still unresolved."
+     "applied": "Write ownership checked before editing: ebs_meshkit.py exists only in this worktree, every commit touching it is from this lane, and the tree was clean. No gameplay data was touched and the rig amendment is untouched and still unresolved.",
+     "applied_correction_2026_09_07": "Owner qualification: file location and commit authorship show HISTORICAL responsibility, not necessarily exclusive current write ownership. The check I ran establishes history and the absence of uncommitted competing edits at that moment; it is not live coordination, and 'write ownership checked' overstated it."
+    }
+   ]
+  },
+  {
+   "date": "2026-09-07",
+   "subject": "Qualifications on the vertex-ID report, and the in-engine capture",
+   "rulings": [
+    {
+     "topic": "Sweep direction",
+     "ruling": "Higher R means earlier treatment: verify the threshold uses that convention. Tick 0 nothing already swept; tick 80 even the R=0 legs complete. Check intermediate boundaries after 8-bit quantisation.",
+     "applied": "A REAL DEFECT was found. The first material compared with a strict '>' and wired the A == B branch to zero, so the R = 0 legs NEVER completed at tick 80. It compiled and was assigned, which is exactly why 'compiles and is assigned' was not evidence. Rebuilt as threshold = 1.02 - progress * 1.04 with '>=': tick 0 sweeps 0 of 10 quantised levels, tick 80 sweeps 10 of 10 including R = 0. The ten quantised levels cross at ten distinct progress values, smallest margin 3.92 ticks against a quantisation step worth about 0.3 ticks. Recorded in sweep-boundaries.json and asserted by a test."
+    },
+    {
+     "topic": "LOD evidence",
+     "ruling": "Matching distinct-colour sets does not establish spatial assignment or unchanged LODs. Verify placement and membership per LOD, or narrow the claim.",
+     "applied": "Both. Placement verified spatially: every imported vertex matched to its authored position within 0.06 cm and its colour compared - LOD0 1056/1056 and LOD1 696/696, zero mismatches. And the claim is narrowed: 'LOD generation altered nothing' is WITHDRAWN. Both imported meshes report a single LOD, so no engine reduction chain exists and none was exercised; that is now recorded as untested."
+    },
+    {
+     "topic": "Inspection method",
+     "ruling": "Describe round-trip export as the method used successfully, not the only possible way.",
+     "applied": "Reworded in the manifest, naming an engine-side reader as an untried alternative, and asserted by a test."
+    },
+    {
+     "topic": "Team ownership",
+     "ruling": "Reserving alpha is sensible, but record the separate team-identification mechanism before material acceptance.",
+     "applied": "Recorded: a dedicated TeamColor vector parameter modulating a team mask in the packed utility channel of the 2048^2 stack - a texture and parameter path disjoint from COLOR_0, with the reason (ownership is fixed for life, adaptation changes during play and is opponent-facing). Marked DEFINED, NOT BUILT and gating material acceptance."
+    },
+    {
+     "topic": "Ownership evidence",
+     "ruling": "File location and commit authorship show historical responsibility, not necessarily exclusive current write ownership. Retain the live coordination evidence separately.",
+     "applied": "Corrected. The ledger now carries a write_coordination block separating historical evidence from live coordination, which is recorded as NOT OBTAINED, with how to obtain it and the risk accepted this time."
+    },
+    {
+     "topic": "Capture",
+     "ruling": "Capture Unreal-rendered ticks 0/20/40/60/80, all three variants, at representative tactical distances. Include interruption and restoration, and verify the sweep consumes authoritative molt progress without creating its own gameplay timing.",
+     "applied": "Done offscreen with a real RHI: 30 frames (three variants x two framings x five ticks) plus a six-step interruption and restoration sequence. Endpoints confirmed on screen. The interrupted frame returns to baseline with no partial sweep retained and restoration RESTARTS from zero, which is what shows the material holds no clock - every frame is a pure function of a MoltProgress parameter written from outside. Integration with a running simulation, and the shipped art material rather than this debug material, remain outstanding."
     }
    ]
   }
@@ -1159,5 +1210,21 @@
    "Runtime verification of simultaneous locomotion and firing.",
    "Detail judgements at gameplay distance, in-engine capture, gate reviews, owner acceptance."
   ]
+ },
+ "write_coordination": {
+  "as_of": "2026-09-07",
+  "subject": "ArtSource/tools/ebs_meshkit.py and ebs_skelkit.py (shared exporters)",
+  "historical_evidence": {
+   "sole_copy": "No copy exists in Project/ or Worktrees/map-environment-concepts.",
+   "authorship": "Every commit touching ebs_meshkit.py is from this lane (0e5ee13, bf4f795, bd5c6a3, 82fc808).",
+   "tree_state": "Clean at the moment of the check: no uncommitted edits by anyone.",
+   "what_this_shows": "Historical responsibility, and no competing uncommitted edit at that instant."
+  },
+  "live_coordination_evidence": {
+   "status": "NOT OBTAINED",
+   "what_is_missing": "No live confirmation was sought that another session is not about to edit these files. A clean tree does not exclude an in-flight edit elsewhere.",
+   "how_to_obtain": "Announce the change in the coordination lane and get an acknowledgement, or hold a recorded lock, before the next shared-tool change.",
+   "risk_accepted_this_time": "The change is additive and opt-in: with no vertex colours supplied no attribute is written, and all 21 packages verified byte-identical. A concurrent editor would conflict in git rather than silently lose work."
+  }
  }
 }

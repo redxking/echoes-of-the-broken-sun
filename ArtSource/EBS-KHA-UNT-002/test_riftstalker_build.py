@@ -148,13 +148,67 @@ class RiftstalkerBlockout(unittest.TestCase):
         self.assertNotIn("blocked_by", v, "the COLOR_0 blocker is cleared")
         self.assertEqual(v["verification"]["export"]["result"], "PASS")
         self.assertEqual(v["verification"]["import"]["result"], "PASS")
-        # the material is only PARTIAL until something renders it under a real RHI
-        self.assertEqual(v["verification"]["material"]["result"], "PARTIAL")
-        self.assertIn("nullrhi", v["verification"]["material"]["outstanding"])
+        self.assertIn("RENDERED IN ENGINE", v["verification"]["material"]["result"])
+        material = v["verification"]["material"]
+        self.assertIn("no Time or Panner node", material["graph"])
+        self.assertIn("RESTARTS from zero", material["interruption_and_restoration"])
+        self.assertIn("CONSUMES authoritative progress", material["timing"])
+        self.assertIn("RUNNING simulation", material["outstanding"])
         self.assertTrue(v["still_outstanding"])
         self.assertEqual(sorted(v["phase_read"]), sorted(list(rs.STATES) + ["transition"]))
         self.assertIn("IN NO CHANNEL", v["team_ownership"])
         self.assertIn("8-bit", v["verification"]["quantisation"])
+
+    def test_the_import_claim_is_about_shipped_lods_not_engine_reduction(self):
+        # "LOD generation altered nothing" was unsupported: nothing generated LODs (owner ruling 2026-09-07)
+        path = os.path.join(HERE, "build-manifest.json")
+        if not os.path.exists(path):
+            self.skipTest("no manifest")
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        lods = data["vertex_id_channels"]["verification"]["lods_tested"]
+        self.assertIn("ENGINE LOD REDUCTION", lods["what_was_NOT_tested"])
+        self.assertIn("withdrawn", lods["what_was_NOT_tested"])
+        self.assertIn("spatial_placement", data["vertex_id_channels"]["verification"]["import"])
+
+    def test_the_inspection_method_is_not_claimed_to_be_the_only_one(self):
+        path = os.path.join(HERE, "build-manifest.json")
+        if not os.path.exists(path):
+            self.skipTest("no manifest")
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        method = data["vertex_id_channels"]["verification"]["import"]["method"]
+        self.assertIn("not the only", method)
+
+    def test_the_team_identification_mechanism_is_recorded(self):
+        # owner ruling: record it BEFORE material acceptance
+        path = os.path.join(HERE, "build-manifest.json")
+        if not os.path.exists(path):
+            self.skipTest("no manifest")
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        team = data["vertex_id_channels"]["team_identification"]
+        self.assertIn("TeamColor", team["mechanism"])
+        self.assertIn("NOT BUILT", team["status"])
+
+    def test_the_sweep_convention_completes_at_both_ends(self):
+        # higher R sweeps earlier; progress 0 sweeps nothing and progress 1 sweeps the R = 0 legs
+        HIGH, LOW = 1.02, -0.02
+        quantise = lambda x: round(x * 255) / 255.0
+        levels = sorted({quantise(v[0]) for state in rs.STATES
+                         for v in rs.assemble(0, state)[0].vertex_colors.values()})
+        threshold = lambda p: HIGH - p * (HIGH - LOW)
+        swept = lambda p: [l for l in levels if l >= threshold(p) - 1e-9]
+        self.assertEqual(swept(0.0), [], "progress 0 must sweep nothing")
+        self.assertEqual(len(swept(1.0)), len(levels), "progress 1 must sweep everything, legs included")
+        self.assertIn(0.0, swept(1.0), "the R = 0 legs must complete")
+        # the strict '>' the first material used left the legs behind for ever
+        self.assertFalse([l for l in levels if l > threshold(1.0)] == levels and 0.0 not in levels)
+        # intermediate boundaries must stay resolvable after 8-bit quantisation
+        crossings = sorted((HIGH - l) / (HIGH - LOW) for l in levels)
+        margins = [b - a for a, b in zip(crossings, crossings[1:])]
+        self.assertGreater(min(margins) * 80.0, 1.0, "levels must be more than a tick apart in the 80-tick window")
+        self.assertGreater(min(margins), 1.0 / 255.0, "and further apart than the quantisation step")
 
     def test_the_rig_discrepancy_is_recorded_not_resolved(self):
         path = os.path.join(HERE, "build-manifest.json")

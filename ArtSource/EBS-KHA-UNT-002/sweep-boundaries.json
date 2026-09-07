@@ -1,0 +1,127 @@
+{
+  "convention": "higher R sweeps earlier",
+  "sweep_high": 1.02,
+  "sweep_low": -0.02,
+  "quantised_levels": [
+    0.0,
+    0.149,
+    0.2,
+    0.298,
+    0.3765,
+    0.451,
+    0.5255,
+    0.6,
+    0.851,
+    1.0
+  ],
+  "ticks": [
+    {
+      "tick": 0,
+      "progress": 0.0,
+      "threshold": 1.02,
+      "swept_levels": 0,
+      "levels": []
+    },
+    {
+      "tick": 20,
+      "progress": 0.25,
+      "threshold": 0.76,
+      "swept_levels": 2,
+      "levels": [
+        0.851,
+        1.0
+      ]
+    },
+    {
+      "tick": 40,
+      "progress": 0.5,
+      "threshold": 0.5,
+      "swept_levels": 4,
+      "levels": [
+        0.5255,
+        0.6,
+        0.851,
+        1.0
+      ]
+    },
+    {
+      "tick": 60,
+      "progress": 0.75,
+      "threshold": 0.24,
+      "swept_levels": 7,
+      "levels": [
+        0.298,
+        0.3765,
+        0.451,
+        0.5255,
+        0.6,
+        0.851,
+        1.0
+      ]
+    },
+    {
+      "tick": 80,
+      "progress": 1.0,
+      "threshold": -0.02,
+      "swept_levels": 10,
+      "levels": [
+        0.0,
+        0.149,
+        0.2,
+        0.298,
+        0.3765,
+        0.451,
+        0.5255,
+        0.6,
+        0.851,
+        1.0
+      ]
+    }
+  ],
+  "level_crossings_progress": [
+    [
+      0.0,
+      0.98077
+    ],
+    [
+      0.149,
+      0.83748
+    ],
+    [
+      0.2,
+      0.78846
+    ],
+    [
+      0.298,
+      0.69419
+    ],
+    [
+      0.3765,
+      0.61878
+    ],
+    [
+      0.451,
+      0.54713
+    ],
+    [
+      0.5255,
+      0.47549
+    ],
+    [
+      0.6,
+      0.40385
+    ],
+    [
+      0.851,
+      0.16252
+    ],
+    [
+      1.0,
+      0.01923
+    ]
+  ],
+  "smallest_margin_progress": 0.04902,
+  "smallest_margin_ticks": 3.92,
+  "quantisation_step": 0.003922,
+  "endpoints_correct": true
+}

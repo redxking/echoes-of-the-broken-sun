@@ -148,17 +148,61 @@ then exported back out of Unreal with `GLTFSkeletalMeshExporter` and `COLOR_0` r
 | carapace_molt | 11 | 11 | none | none |
 | striker_molt | 11 | 11 | none | none |
 
-`G` is non-zero only in carapace, `B` only in striker, alpha 1.0 throughout. The exporter writes
-unindexed triangles, so nothing is welded on the way out, and the round-trip returned exactly the
-authored set with no interpolated in-between values — neither vertex splitting nor LOD generation
-altered them.
+`G` is non-zero only in carapace, `B` only in striker, alpha 1.0 throughout.
 
-**Material response is PARTIAL, not passed.** `M_EBS_KHA_UNT_002_MoltPhase` reads VertexColor R, G and
-B, exposes the scalar parameter `MoltSweep` that the 80-tick window drives, compiles, and is assigned to
-every material slot on all three imported states. But the headless editor runs `-nullrhi`, so **nothing
-was rendered by Unreal's shader**. The sweep was rendered offline from the same authored channel data
-(`vertex-id-route/sweep/carapace_sweep.png`), which shows the transition spreading from the seams and
-prow nose-to-tail across the 80 ticks. An in-engine capture under a real RHI is outstanding.
+**Set equality does not establish placement**, so every imported vertex was matched to its authored
+position within 0.06 cm and its colour compared against the colours authored there: **LOD0 1056 of 1056
+and LOD1 696 of 696 placed and coloured correctly, zero mismatches**.
+
+**What was not tested: engine LOD reduction.** Both imported meshes report a single LOD — the two
+shipped LODs are authored and imported as separate assets — so no generated LOD chain exists and none
+was exercised. An earlier claim that "LOD generation altered nothing" is withdrawn: nothing generated
+LODs. If a reduction chain is added, placement must be re-verified on every generated level.
+
+Round-trip export is the method that worked here, not the only way to inspect Unreal's vertex colours —
+an engine-side reader of the render data would also serve and was not attempted. What made the
+round-trip attractive is that 5.8 exposes no Python accessor for the values.
+
+### Team identification
+
+Team ownership is delivered by a dedicated `TeamColor` vector parameter modulating a team mask in the
+packed utility channel of the 2048² stack — a texture and parameter path entirely disjoint from
+`COLOR_0`. Ownership is fixed for a unit's life while adaptation changes during play and is
+opponent-facing; sharing a channel would make a molting unit's owner ambiguous exactly when the public
+window makes it most worth reading. **Defined, not built** — it belongs to the texture pass and gates
+material acceptance.
+
+### Sweep convention
+
+**Higher R means earlier treatment**, so `threshold = 1.02 - progress * 1.04` and a surface is swept
+where `R >= threshold`. The threshold runs outside `[0, 1]` deliberately: progress 0 must sweep
+*nothing* (the maximum authored R is 1.0) and progress 1 must sweep *everything* including the R = 0
+legs, and a threshold confined to the unit range cannot do both. The 0.02 margin is five times the
+1/255 quantisation step.
+
+**A real defect was found here.** The first material compared with a strict `>` and wired the `A == B`
+branch to zero, so **the R = 0 legs never completed at tick 80**. It compiled and was assigned — which
+is precisely why "compiles and is assigned" was not evidence of correct response. Checked after
+quantisation, the ten levels now cross at ten distinct progress values with a smallest margin of 3.92
+ticks, against a quantisation step worth about 0.3 ticks (`sweep-boundaries.json`).
+
+### Rendered in engine
+
+Unreal rendered the response offscreen with a real RHI: **ticks 0/20/40/60/80 for all three variants at
+two framings** — tactical (1400 cm arm, −55°) and close (520 cm, −18°) — 30 frames, plus a six-step
+**interruption and restoration** sequence. On screen, tick 0 sweeps nothing and tick 80 sweeps
+everything, legs included.
+
+The interrupted frame returns to baseline with no partial sweep retained and no adaptation geometry,
+and restoration **restarts from zero rather than resuming** — canon `REL-FAC-009` cancels the adaptation
+without refund. That is what shows the material holds no clock: every frame is a pure function of a
+`MoltProgress` parameter written from outside, one MaterialInstanceConstant per value. The material
+**consumes authoritative progress and creates no gameplay timing of its own**.
+
+**Still outstanding:** this is a debug material whose base colour *is* the channels, rendered through an
+editor SceneCapture. The shipped art material, and integration with a running simulation driving
+`MoltProgress` from the real 80-tick window, are untested — the captures show the material's behaviour,
+not the game's.
 
 Evidence: `…/EBS-KHA-UNT-002/vertex-id-route/` — `channel-verification.json`, `material-response.json`,
 `route-report.json`, `sweep/`.
