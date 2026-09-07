@@ -49,6 +49,7 @@ UNITS only. None of the four remaining packages is a unit. REL-FAC-027.HC.INTERV
 |---|---|---|---|---|
 | `REL-BLD-017.HC.CONCORDANCE.ASSET` | Concordance | 8,000 | 3,500 | PROVISIONAL |
 | `REL-BLD-017.HC.INTERVAL.ASSET` | Interval Loom | 3,000 | 1,200 | PROVISIONAL |
+| `REL-BLD-017.HC.CHORUS.ASSET` | Chorus Loom | 6,000 | 2,400 | PROVISIONAL |
 
 ### REL-BLD-017.HC.CONCORDANCE.ASSET — Concordance
 
@@ -141,4 +142,52 @@ UNITS only. None of the four remaining packages is a unit. REL-FAC-027.HC.INTERV
 * Supplied, ticking and insolvent must be distinguishable at gameplay distance; the player's Dawn solvency is the read.
 * The drop-off pad must read as a place workers deliver to.
 * LOD1 shall preserve both arches, the four feet, the pad and the edge lines.
+* Triangle counts under the ceiling are headroom, not sufficiency.
+
+### REL-BLD-017.HC.CHORUS.ASSET — Chorus Loom
+
+| Field | Value |
+|---|---|
+| Status | PROVISIONAL |
+| Package | `EBS-PKG-HC-CHORUS-LOOM` |
+| Production asset | `EBS-HOL-BLD-003` |
+| Canon | SPEC-BLD-017.HC.CHORUS |
+| Function | Production centre: 680 HP, 550 cm sight, 170 construction ticks, 4x4 footprint. Trains all Choir mobile combat units and hosts research. Coherence: charges 5 Dawn every 600 ticks, reduced to 4 inside a Phase Anchor field |
+
+**.MESH_PROP.** LOD0 ceiling 6,000 triangles; LOD1 ceiling 2,400. Scope: the complete assembly including both posts, the warp and the floating beam. Footprint 4x4 tiles. Nanite off. Pivot at the platform ground-contact centre. below the faction default: a slab, two posts, a warp of thin threads and one hovering beam
+
+**.TEX_MAPS.** 2048x2048 packed PBR following the HC unit cards' stack.
+
+**.MAT_RULE.** Construction: A low platform with two upright posts and a beam that hovers unsupported above them. Nothing braces the beam, and nothing should be added to. Emissive: Magenta Fracture on the post edge strips and the beam's underside, <= 12% of surface area as a CEILING not a target. Forbidden: No Kharuun strata, no Meridian plates or conduits, no amber, no cyan.
+
+**.COMPONENTS.**
+
+* A low rectangular platform filling the footprint
+* Two upright posts, one at each end of the platform, with magenta edge strips on their inner borders
+* A warp of fine horizontal threads strung between the posts
+* A beam hovering above the warp, touching nothing
+
+**.ANIM_RIG.** Static primary structure. Provisional plan is root, one bone per post and one for the floating beam, so the beam can hang out of step with the posts — the faction's reality-bleed device, NOT a canon motion clause for this building.
+
+**.ARTICULATION.** PENDING, not waived.
+
+**.ROOT_MOTION.** None.
+
+**.SOCKETS.** `Target_Anchor_Center`, `Rally_Default`, `Weave_Center`, `Research_Beam`, `Unit_Emergence`.
+
+**.STATES.**
+
+| State | Read |
+|---|---|
+| `producing` | the warp is strung and the weave centre is occupied; a unit is being woven |
+| `researching` | the warp doubles and the hovering beam lights; the weave centre is empty |
+| `insolvent` | warp and beam dark; the frame reads as unpowered |
+| `destroyed` | the posts down and the beam fallen onto the platform |
+
+**.READABILITY.**
+
+* Producing and researching must be distinguishable at gameplay distance, and both from insolvent.
+* The woven form at the weave centre is a LIGHT EFFECT, not geometry; the mesh provides a socket only.
+* The hovering beam must read as unsupported; adding a strut destroys the faction read.
+* LOD1 shall preserve both posts, the warp and the beam.
 * Triangle counts under the ceiling are headroom, not sufficiency.

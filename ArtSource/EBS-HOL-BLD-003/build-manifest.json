@@ -1,0 +1,557 @@
+{
+ "acceptance": {
+  "animation": "NOT_EVALUATED",
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "PENDING \u2014 built against a provisional card that is not in the authoritative requirements"
+ },
+ "asset_name": "SK_EBS_HOL_BLD_003",
+ "author": "Angelis Pseftis",
+ "bind_counts": {
+  "beam": 24,
+  "post_l": 48,
+  "post_r": 48,
+  "root": 172
+ },
+ "budgets": {
+  "cap_source": "REL-BLD-017.HC.CHORUS.ASSET (PROVISIONAL)",
+  "headroom_note": "Under the ceiling is HEADROOM, not sufficiency (owner ruling 2026-09-07).",
+  "lod0_cap": 6000,
+  "lod0_triangles": 292,
+  "lod0_within_cap": true,
+  "lod1_cap": 2400,
+  "lod1_triangles": 232,
+  "lod1_within_cap": true,
+  "magenta_area_fraction_producing": 0.07051,
+  "magenta_cap": 0.12,
+  "magenta_within_cap": true,
+  "researching_state_triangles": 444,
+  "worst_state_triangles": 444
+ },
+ "clips": [
+  {
+   "bones": [
+    "beam",
+    "post_l",
+    "post_r"
+   ],
+   "duration_s": 6.0,
+   "loop": true,
+   "name": "producing_idle",
+   "purpose": "weaving: the posts hold and the hovering beam drifts out of step with them. Faction reality-bleed device, NOT a canon motion clause for this building",
+   "ticks": 120
+  },
+  {
+   "bones": [
+    "beam",
+    "post_l",
+    "post_r"
+   ],
+   "duration_s": 6.0,
+   "loop": true,
+   "name": "researching",
+   "purpose": "research: the beam settles level and steady while the posts keep their drift",
+   "ticks": 120
+  },
+  {
+   "bones": [
+    "beam",
+    "post_l",
+    "post_r"
+   ],
+   "duration_s": 0.0,
+   "loop": false,
+   "name": "restore",
+   "purpose": "single-frame rest pose for reconstruction from saved state",
+   "ticks": 0
+  }
+ ],
+ "component_inventory": {
+  "bones": {
+   "built": 4,
+   "contract": "root, two posts and the beam",
+   "names": [
+    "root",
+    "post_l",
+    "post_r",
+    "beam"
+   ]
+  },
+  "hovering_beam": {
+   "built": true,
+   "contract": "touches nothing",
+   "gap_to_warp_cm": 77.0
+  },
+  "platform": {
+   "built": true,
+   "contract": 1
+  },
+  "posts": {
+   "built": 2,
+   "contract": 2,
+   "edge_strips": 4
+  },
+  "sockets": {
+   "built": [
+    "Rally_Default",
+    "Research_Beam",
+    "Target_Anchor_Center",
+    "Unit_Emergence",
+    "Weave_Center"
+   ],
+   "contract": [
+    "Rally_Default",
+    "Research_Beam",
+    "Target_Anchor_Center",
+    "Unit_Emergence",
+    "Weave_Center"
+   ]
+  },
+  "states": {
+   "built": [
+    "producing",
+    "researching",
+    "insolvent",
+    "destroyed"
+   ],
+   "contract": [
+    "producing",
+    "researching",
+    "insolvent",
+    "destroyed"
+   ]
+  },
+  "tracks": {
+   "built": [
+    "producing_idle",
+    "researching",
+    "restore"
+   ],
+   "contract": [
+    "producing_idle",
+    "researching",
+    "restore"
+   ]
+  },
+  "warp": {
+   "built": 20,
+   "contract": 20,
+   "lit": 20
+  },
+  "woven_form": {
+   "built_as_geometry": false,
+   "contract": "a LIGHT EFFECT, not geometry",
+   "socket": "Weave_Center"
+  }
+ },
+ "concept_measurements": {
+  "beam_gap_cm": 37.0,
+  "beam_hovers": true,
+  "bounds_cm": [
+   [
+    -380.0,
+    -310.0,
+    0.0
+   ],
+   [
+    380.0,
+    310.0,
+    381.0
+   ]
+  ],
+  "everything_inside_the_footprint": true,
+  "footprint_cm": 800.0,
+  "footprint_tiles": [
+   4,
+   4
+  ],
+  "height_cm": 381.0,
+  "max_extent_cm": 380.0,
+  "post_height_cm": 300.0,
+  "post_span_cm": 572.0,
+  "warp_count": 20
+ },
+ "creator": "Angelis Pseftis",
+ "faction_language_inference": {
+  "source": "the four REL-FAC-027.HC.* UNIT cards",
+  "status": "INFERENCE, not a requirement. No authoritative card places it on a Hollow Choir BUILDING.",
+  "what": "the 12% Magenta Fracture ceiling"
+ },
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Three slots: vitrified stone for the posts and beam, a worn stone for the platform, and Magenta Fracture for the post edge strips, the warp and the beam's underside.",
+ "material_slots": [
+  "MI_EBS_HOL_Vitrified",
+  "MI_EBS_HOL_ApronStone",
+  "MI_EBS_HOL_Magenta"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -380.0,
+     -310.0,
+     0.0
+    ],
+    [
+     380.0,
+     310.0,
+     381.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_HOL_ApronStone": 12,
+    "MI_EBS_HOL_Magenta": 208,
+    "MI_EBS_HOL_Vitrified": 72
+   },
+   "clips": [
+    "producing_idle",
+    "researching",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_HOL_BLD_003",
+   "path": "export/SK_EBS_HOL_BLD_003_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_HOL_Vitrified",
+    "MI_EBS_HOL_ApronStone",
+    "MI_EBS_HOL_Magenta"
+   ],
+   "sha256": "a82f47a48b86cd1acbb00c91566d35befb96b915c555f49891f1b078191b4382",
+   "sockets": [
+    {
+     "bone": "root",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      176.0
+     ],
+     "purpose": "targeting and selection anchor",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Rally_Default",
+     "position_cm": [
+      0.0,
+      -460.0,
+      0.0
+     ],
+     "purpose": "default rally point off the platform",
+     "yaw_deg": -90.0
+    },
+    {
+     "bone": "root",
+     "name": "Weave_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      176.0
+     ],
+     "purpose": "where the woven form appears. It is a LIGHT EFFECT, not geometry; this socket is all the mesh provides",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "beam",
+     "name": "Research_Beam",
+     "position_cm": [
+      0.0,
+      0.0,
+      363.0
+     ],
+     "purpose": "the hovering beam's underside: the research read",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Unit_Emergence",
+     "position_cm": [
+      0.0,
+      -270.0,
+      26.0
+     ],
+     "purpose": "finished units step off the platform's near edge",
+     "yaw_deg": -90.0
+    }
+   ],
+   "triangles": 292
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_HOL_BLD_003",
+   "path": "export/SK_EBS_HOL_BLD_003_LOD0.obj",
+   "sha256": "3df6bc55066308e83a55bd9bd40a0b65af7dc138b8f94d173377099e4c12fcf9"
+  },
+  {
+   "bounds_cm": [
+    [
+     -380.0,
+     -310.0,
+     0.0
+    ],
+    [
+     380.0,
+     310.0,
+     381.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_HOL_ApronStone": 12,
+    "MI_EBS_HOL_Magenta": 160,
+    "MI_EBS_HOL_Vitrified": 60
+   },
+   "clips": [
+    "producing_idle",
+    "researching",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_HOL_BLD_003",
+   "path": "export/SK_EBS_HOL_BLD_003_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_HOL_Vitrified",
+    "MI_EBS_HOL_ApronStone",
+    "MI_EBS_HOL_Magenta"
+   ],
+   "sha256": "0ce9b6c6e28105bb4e70381eb9cbe79314914dafb2a52a0b78714c3b5390a717",
+   "sockets": [
+    {
+     "bone": "root",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      176.0
+     ],
+     "purpose": "targeting and selection anchor",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Rally_Default",
+     "position_cm": [
+      0.0,
+      -460.0,
+      0.0
+     ],
+     "purpose": "default rally point off the platform",
+     "yaw_deg": -90.0
+    },
+    {
+     "bone": "root",
+     "name": "Weave_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      176.0
+     ],
+     "purpose": "where the woven form appears. It is a LIGHT EFFECT, not geometry; this socket is all the mesh provides",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "beam",
+     "name": "Research_Beam",
+     "position_cm": [
+      0.0,
+      0.0,
+      363.0
+     ],
+     "purpose": "the hovering beam's underside: the research read",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Unit_Emergence",
+     "position_cm": [
+      0.0,
+      -270.0,
+      26.0
+     ],
+     "purpose": "finished units step off the platform's near edge",
+     "yaw_deg": -90.0
+    }
+   ],
+   "triangles": 232
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_HOL_BLD_003",
+   "path": "export/SK_EBS_HOL_BLD_003_LOD1.obj",
+   "sha256": "1b5cdab3f01ef78ea359af311a81819d7f7ab38df3e89eeed69bb727bbd3fa5d"
+  }
+ ],
+ "package_id": "EBS-PKG-HC-CHORUS-LOOM",
+ "pending_requirements": [
+  {
+   "detail": "The post and beam drift is a presentation device, not a role-required articulated assembly.",
+   "requirement": "Articulated components for a structure of this role",
+   "status": "PENDING, not waived"
+  }
+ ],
+ "planned_unreal_folder": "/Game/Echoes/Production/HOL/BLD/EBS_HOL_BLD_003/",
+ "production_asset_id": "EBS-HOL-BLD-003",
+ "provisional_contract": {
+  "bounds": {
+   "lod0_triangles": 6000,
+   "lod1_triangles": 2400
+  },
+  "card": "REL-BLD-017.HC.CHORUS.ASSET in ArtSource/hollow-choir-asset-cards.json (rendered to hollow-choir-asset-cards.md)",
+  "status": "PROVISIONAL. Authored in this worktree after the trace; NOT in Docs/Requirements.md."
+ },
+ "review": {
+  "scenes": [
+   "scenes/producing.json",
+   "scenes/researching.json",
+   "scenes/insolvent.json",
+   "scenes/destroyed.json",
+   "scenes/lod1.json",
+   "scenes/pose_producing_idle_025.json",
+   "scenes/pose_researching_025.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "lit_threads": 20,
+   "name": "producing",
+   "path": "review/SK_EBS_HOL_BLD_003_producing_LOD0.obj",
+   "sha256": "b7a37357411d24da9c9e85a3702e323c87cb2ba45c8529943306a758a4248f33",
+   "triangles": 292
+  },
+  {
+   "lit_threads": 39,
+   "name": "researching",
+   "path": "review/SK_EBS_HOL_BLD_003_researching_LOD0.obj",
+   "sha256": "50a33f18bb0427f038c542004b5eb7596fad65dd750121daccbaea0d8db88192",
+   "triangles": 444
+  },
+  {
+   "lit_threads": 0,
+   "name": "insolvent",
+   "path": "review/SK_EBS_HOL_BLD_003_insolvent_LOD0.obj",
+   "sha256": "cd5f647be01d03bcf8c32e8b2a9460528dd89e5c1999706ccec718c8b5354a23",
+   "triangles": 292
+  },
+  {
+   "lit_threads": 0,
+   "name": "destroyed",
+   "path": "review/SK_EBS_HOL_BLD_003_destroyed_LOD0.obj",
+   "sha256": "457fbaf27559a06afd68697fd6b6f7ef0aa5853730dc1c83b976d7f4d39dd734",
+   "triangles": 48
+  },
+  {
+   "name": "producing_lod1",
+   "path": "review/SK_EBS_HOL_BLD_003_producing_LOD1.obj",
+   "sha256": "9a4fb3848b2004a160e041334481ff16192cd269ebf49fc19ba17fe15b5cc9a7",
+   "triangles": 232
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_producing_idle_025",
+   "path": "review/pose_producing_idle_025.obj",
+   "sha256": "0d9a3262d2a97120ca3a533ea7b9efe42b2f47ab152bf4ecf4c96497153c45a7"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_researching_025",
+   "path": "review/pose_researching_025.obj",
+   "sha256": "f616256041c233a6d0185244aa87d8e2151d131484518659d2dc377cc6679563"
+  }
+ ],
+ "revision": "ebs-hol-bld-003-concept-v1",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "platform ground-contact centre; the Chorus Loom never moves"
+   },
+   {
+    "head_cm": [
+     -286.0,
+     0.0,
+     26.0
+    ],
+    "name": "post_l",
+    "parent": "root",
+    "purpose": "left post: drifts on its own phase (faction reality-bleed device)"
+   },
+   {
+    "head_cm": [
+     286.0,
+     0.0,
+     26.0
+    ],
+    "name": "post_r",
+    "parent": "root",
+    "purpose": "right post: drifts on its own phase"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     372.0
+    ],
+    "name": "beam",
+    "parent": "root",
+    "purpose": "the hovering beam: unsupported, and it hangs out of step with the posts"
+   }
+  ],
+  "policy": "Root, one bone per post and one for the hovering beam. The drift is the faction's reality-bleed device, NOT a canon motion clause for this building. No root motion."
+ },
+ "scale_basis": {
+  "canon": "SPEC-BLD-017.HC.CHORUS: trains all Choir mobile combat units and hosts research",
+  "footprint_cm": 800.0,
+  "footprint_tiles": [
+   4,
+   4
+  ],
+  "source": "Content/Data/Source/buildings.json hc_chorus_loom",
+  "upkeep": "600 ticks = 30 s between charges"
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/chorus-loom-review/chorus-loom-candidate.png",
+  "canon": "Requirements SPEC-BLD-017.HC.CHORUS",
+  "gameplay": "Content/Data/Source/buildings.json hc_chorus_loom"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "state_read": {
+  "insolvent_threads": 0,
+  "mechanism": "researching DOUBLES the warp and lights the beam's underside; insolvent moves every thread and strip into the vitrified slot. The states differ in GEOMETRY as well as in material, so none of them relies on brightness alone.",
+  "producing_threads": 20,
+  "researching_threads": 39
+ },
+ "states": {
+  "destroyed": "posts down and the beam fallen onto the platform",
+  "insolvent": "warp, strips and beam dark",
+  "producing": "the warp is strung and lit; the weave centre is the runtime's to fill",
+  "researching": "the warp doubles and the beam's underside lights"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py"
+ },
+ "traced_before_the_card": {
+  "card_written_after": true,
+  "directive": "Owner ruling 2026-09-07: trace each selected concept BEFORE authoring its provisional card.",
+  "trace": "the candidate's PRODUCING view, dark-pixel column spans; two tall posts near the ends of a low platform, a warp between them, a beam floating clear above"
+ },
+ "units": {
+  "axes": "+X forward, +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "platform ground-contact centre"
+ }
+}

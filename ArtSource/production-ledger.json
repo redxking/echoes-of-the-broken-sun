@@ -695,6 +695,35 @@
    "open_items": [
     "The articulated-component requirement stays pending; the arch drift is a presentation device."
    ]
+  },
+  {
+   "package_id": "EBS-PKG-HC-CHORUS-LOOM",
+   "production_asset_id": "EBS-HOL-BLD-003",
+   "subject": "Chorus Loom",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-hol-bld-003-concept-v1",
+   "asset_name": "SK_EBS_HOL_BLD_003",
+   "planned_unreal_folder": "/Game/Echoes/Production/HOL/BLD/EBS_HOL_BLD_003/",
+   "canon_status": "CANDIDATE (chorus-loom candidate against canon SPEC-BLD-017.HC.CHORUS); not owner acceptance",
+   "source_root": "ArtSource/EBS-HOL-BLD-003/",
+   "authoritative_document": "ArtSource/EBS-HOL-BLD-003/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-HOL-BLD-003/concept-fidelity.md",
+   "asset_card": "REL-BLD-017.HC.CHORUS.ASSET (PROVISIONAL, authored AFTER the trace; not in Docs/Requirements.md)",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-hol-bld-003-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-HOL-BLD-003/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "A low platform carrying two slab posts 572 cm apart, a 20-thread warp between them, and a beam hovering 37 cm clear of the post crowns touching nothing. Traced before the card was authored. The state read is geometry as well as material: producing lights 20 threads at 292 triangles, researching interleaves 19 finer threads and lights the beam's underside line at 39 threads and 444 triangles, insolvent lights none. The woven form is a light effect, not geometry: the mesh gives only the Weave_Center socket. LOD0 292 / LOD1 232 against the provisional 6,000 / 2,400; magenta 7.1% producing and 10.9% researching against 12%, after the researching state first measured 15.4%. 19 tests. Import clean: 0 errors, 0 warnings, 0 pipeline property failures, 4 bones, 5 sockets, 3 material slots, 3 clips on both meshes, bounds matching source exactly."
+    }
+   ],
+   "next": "Textures, a detail judgement at gameplay distance, in-engine capture, gate reviews, card incorporation, owner acceptance.",
+   "open_owner_questions": [],
+   "open_items": [
+    "The articulated-component requirement stays pending; the post and beam drift is a presentation device.",
+    "The platform fills the 4x4 footprint on the long axis only (760 x 620 in an 800 square); flagged, not forced.",
+    "The beam sits 37 cm above the post crowns where the candidate draws it at roughly crown height, so it reads as unsupported without the drawing's isometric depth cue."
+   ]
   }
  ],
  "tools": {
@@ -776,6 +805,20 @@
     "hollow_choir_buildings_covered": [],
     "note": "REL-FAC-027.HC.INTERVALIST is the Intervalist UNIT and does not govern the Interval Loom building."
    }
+  },
+  {
+   "id": "PF-009",
+   "date": "2026-09-07",
+   "package": "EBS-PKG-HC-CHORUS-LOOM",
+   "finding": "An emissive ceiling measured by surface area can be breached by a STATE, not by the rest pose. The Chorus Loom's producing state measured 6.8% magenta and its researching state 15.4%, because that state doubles the warp. Thinning every thread was the wrong fix: at a 1.0 cm radius the worst state still reached 11.85%, with no headroom and a thinner warp in every state. Making the state's ADDED rows finer than the base rows, and narrowing the beam's lit underside from a 72 cm panel to a 14 cm line, brought it to 10.9% without touching the base read.",
+   "rule": "Measure the emissive ceiling in every state, not the rest pose, and fix a state's breach in what that state adds."
+  },
+  {
+   "id": "PF-010",
+   "date": "2026-09-07",
+   "package": "EBS-PKG-HC-CHORUS-LOOM",
+   "finding": "ue_import_inspect_skeletal.py reads its job path from the EBS_IMPORT_JOB environment variable. Passing the path as an argument after the script name in -ExecutePythonScript crashed the editor with KeyError: 'EBS_IMPORT_JOB' under -ScriptErrorsAreFatal, and the wrapper log showed only a shutdown handler; the cause was visible solely in the engine's own EBSPreview.log.",
+   "rule": "Set EBS_IMPORT_JOB in the environment, and read the engine log rather than the wrapper log when a headless run exits non-zero. My invocation error, not an engine defect."
   }
  ],
  "owner_rulings": [
@@ -967,10 +1010,9 @@
   "as_of": "2026-09-07",
   "counting_authority": "Docs/VisualAssetPipeline/reference-packages.json, audited 2026-09-07",
   "total_packages": 21,
-  "at_blockout": 19,
-  "remaining": 2,
+  "at_blockout": 20,
+  "remaining": 1,
   "remaining_packages": [
-   "EBS-PKG-HC-CHORUS-LOOM",
    "EBS-PKG-HC-PHASE-ANCHOR"
   ]
  }
