@@ -317,6 +317,62 @@
     "technical": "NOT_EVALUATED"
    },
    "owner_acceptance": "NOT_ACCEPTED"
+  },
+  {
+   "package_id": "EBS-PKG-MC-ANCHOR",
+   "production_asset_id": "EBS-MER-BLD-001",
+   "subject": "Anchor",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-mer-bld-001-concept-v1",
+   "asset_name": "SM_EBS_MER_BLD_001",
+   "planned_unreal_folder": "/Game/Echoes/Production/MER/BLD/EBS_MER_BLD_001/",
+   "canon_status": "CANDIDATE (two REWORK inputs reconciled by the anchor-candidate sheet); not owner acceptance",
+   "source_root": "ArtSource/EBS-MER-BLD-001/",
+   "authoritative_document": "ArtSource/EBS-MER-BLD-001/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-MER-BLD-001/concept-fidelity.md",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-mer-bld-001-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-001/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Squat two-tier ceramic drum 720 cm across on a charcoal plinth, filling the 5x5 footprint with stub conduit roots to eight edge nodes, three numbered worker-bay portals with lit interiors and ramps, a separate Matter intake chute, a stepped dome and a slim sensor mast at 0.38 of the height. Proportions traced from the candidate silhouette after a first pass inverted them. Working and damaged states; 14 sockets; two UBX boxes on the mass only so ramps and arms never read as blockers. LOD0 1,840 / LOD1 960 against the tighter REL-ART-028 bound of 8,000 / 3,500. 19 tests, six comparison sheets. Import: 1 mesh, all checks pass."
+    }
+   ],
+   "next": "OWNER-QUESTIONS: the candidate's 0.97 height-over-width against canon's squat drum; which budget governs (card 12,000/4,500 vs REL-ART-028 8,000/3,500); whether the card's 4-bone vane rig is wanted. Then textures (4096^2), destroyed state, in-engine capture, gates.",
+   "gates": {
+    "art": "NOT_EVALUATED",
+    "gameplay": "NOT_EVALUATED",
+    "technical": "NOT_EVALUATED"
+   },
+   "owner_acceptance": "NOT_ACCEPTED"
+  },
+  {
+   "package_id": "EBS-PKG-KA-TENDER",
+   "production_asset_id": "EBS-KHA-UNT-001",
+   "subject": "Tender",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-kha-unt-001-concept-v1",
+   "asset_name": "SK_EBS_KHA_UNT_001",
+   "planned_unreal_folder": "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_001/",
+   "canon_status": "CANDIDATE (the tender-candidate sheet under a REPLACE decision); not owner acceptance",
+   "source_root": "ArtSource/EBS-KHA-UNT-001/",
+   "authoritative_document": "ArtSource/EBS-KHA-UNT-001/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-KHA-UNT-001/concept-fidelity.md",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-kha-unt-001-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-UNT-001/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Stocky humanoid cultivator in faceted basalt strata: broad shoulder yoke, thickened forearms with amber wrist nodules, wrapped kilt, bare feet, a forked resonance staff standing taller than the figure, and a woven sling whose Matter load is a separate component so loaded and empty read. 19-bone rig with the worker socket set; 12 clips including the kneeling gather and the circling grow, both solved by forward kinematics so nothing passes through the ground. No machined panel, bolt or cyan anywhere (REL-ART-007). LOD0 552 / LOD1 408; amber 2.0% of surface area against the 5% cap. 16 tests, six comparison sheets. Import: 19 bones, 3 sockets, 24 AnimSequences, 0 errors."
+    }
+   ],
+   "next": "OWNER-QUESTION: no Tender asset card exists, so budgets and rig are inherited from the Surveyor's card - confirm or issue one. Then surface detail and textures (the largest gap against the candidate), in-engine playback, gates.",
+   "gates": {
+    "art": "NOT_EVALUATED",
+    "gameplay": "NOT_EVALUATED",
+    "technical": "NOT_EVALUATED"
+   },
+   "owner_acceptance": "NOT_ACCEPTED"
   }
  ],
  "tools": {

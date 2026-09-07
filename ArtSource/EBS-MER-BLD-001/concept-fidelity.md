@@ -26,11 +26,18 @@ Canon row `SPEC-BLD-015.MC.ANCHOR` (Bible line 513) stays intact: a squat wide c
 charcoal plinth, tall central mast, three visible worker bays at ground level, a Matter intake chute,
 thick conduit roots to the network, cyan bands ringing the drum.
 
-## Form and proportion (measured on the candidate; D = 1,000 cm drum diameter on the 5×5 tile footprint)
+## Form and proportion (amended 2026-09-07 from a pixel trace of the candidate; the 5×5 footprint is the outer bound)
 
 Scale basis: `SPEC-BLD-015.MC.ANCHOR` fixes a 5×5 tile footprint = 1,000 cm across at the 200 cm
-presentation tile. The drum fills it: D = 1,000 cm, drum height ≈ 0.34 D (340 cm) to the upper rim,
-mast top ≈ 0.85 D (850 cm). Ramps and conduit arms extend past the drum but stay inside the 5×5 square.
+presentation tile. ~~The drum fills it: D = 1,000 cm, drum height ≈ 0.34 D (340 cm) to the upper rim,
+mast top ≈ 0.85 D (850 cm).~~ **[amended 2026-09-07]** The drum cannot fill the footprint AND leave the
+ramps and conduit arms outside it, and the candidate draws both. Measured on the candidate's main view
+(silhouette traced against the paper, title block excluded): the drum dominates the width with stub
+arms, and the mast above the mass is **0.345** of the total silhouette height. Built to that:
+**drum 720 cm across (0.72 F), mass 432 cm tall (0.60 height/width — squat and wide per canon), mast
+tip 660 cm**, conduit nodes at r 468 (outer 498) inside the 500 cm half-width. Recorded divergence: the
+candidate's whole silhouette measures 0.97 height/width against this build's 0.70, because the width is
+pinned by the footprint while canon fixes the drum as squat (README §8.3, OWNER-QUESTION A).
 
 1. **Squat ceramic drum.** A wide, low, many-sided ceramic drum (the candidate reads as a 16-sided
    rotunda) rising in two tiers: a broad lower tier of vertical panel bays and a stepped upper tier that

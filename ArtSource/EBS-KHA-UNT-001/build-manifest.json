@@ -1,0 +1,898 @@
+{
+ "acceptance": {
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "NOT_EVALUATED"
+ },
+ "asset_name": "SK_EBS_KHA_UNT_001",
+ "author": "Angelis Pseftis",
+ "bind_counts": {
+  "chest": 36,
+  "head": 36,
+  "l_foot": 12,
+  "l_fore": 60,
+  "l_hand": 12,
+  "l_shin": 24,
+  "l_thigh": 12,
+  "l_upper": 24,
+  "pelvis": 60,
+  "r_foot": 12,
+  "r_fore": 60,
+  "r_hand": 12,
+  "r_shin": 24,
+  "r_thigh": 12,
+  "r_upper": 24,
+  "sling": 84,
+  "staff": 48
+ },
+ "budgets": {
+  "cap_source": "No Tender card exists; bounded by the equivalent worker card REL-FAC-025.MC.SURVEYOR.ASSET (README section 8, OWNER-QUESTION A)",
+  "emissive_area_fraction_lod0": 0.02019,
+  "emissive_cap": 0.05,
+  "emissive_measure": "surface area, as the card states; the triangle share is reported alongside because a blockout's small amber boxes inflate it",
+  "emissive_triangle_fraction_lod0": 0.19565,
+  "emissive_within_cap": true,
+  "lod0_cap": 4500,
+  "lod0_triangles": 552,
+  "lod0_within_cap": true,
+  "lod1_cap": 1800,
+  "lod1_triangles": 408,
+  "lod1_within_cap": true
+ },
+ "clips": [
+  {
+   "bones": [
+    "chest",
+    "l_thigh",
+    "pelvis",
+    "r_thigh",
+    "r_upper"
+   ],
+   "duration_s": 2.0,
+   "loop": true,
+   "name": "idle",
+   "purpose": "standing cultivator: slow breath, staff planted, feet flat"
+  },
+  {
+   "bones": [
+    "l_foot",
+    "l_shin",
+    "l_thigh",
+    "l_upper",
+    "pelvis",
+    "r_foot",
+    "r_shin",
+    "r_thigh",
+    "r_upper"
+   ],
+   "duration_s": 0.6,
+   "loop": true,
+   "name": "move",
+   "purpose": "walk at 390 cm/s; play rate follows the authoritative velocity (REL-ART-009)"
+  },
+  {
+   "bones": [
+    "l_foot",
+    "l_shin",
+    "l_thigh",
+    "pelvis",
+    "r_foot",
+    "r_shin",
+    "r_thigh"
+   ],
+   "duration_s": 0.6,
+   "loop": true,
+   "name": "turn",
+   "purpose": "stationary shuffle while the runtime sweeps heading; no root yaw"
+  },
+  {
+   "bones": [
+    "l_thigh",
+    "pelvis",
+    "r_thigh"
+   ],
+   "duration_s": 0.4,
+   "loop": false,
+   "name": "stop",
+   "purpose": "short settle: a forward lean recovered, staff re-planted"
+  },
+  {
+   "bones": [
+    "chest",
+    "l_foot",
+    "l_fore",
+    "l_shin",
+    "l_thigh",
+    "l_upper",
+    "pelvis",
+    "r_foot",
+    "r_fore",
+    "r_shin",
+    "r_thigh",
+    "r_upper",
+    "staff"
+   ],
+   "duration_s": 1.2,
+   "loop": true,
+   "name": "gather",
+   "purpose": "kneeling press of the staff into the strata (canon); the crumble is an effect"
+  },
+  {
+   "bones": [
+    "chest",
+    "l_foot",
+    "l_shin",
+    "l_thigh",
+    "pelvis",
+    "r_foot",
+    "r_shin",
+    "r_thigh",
+    "r_upper",
+    "staff"
+   ],
+   "duration_s": 1.6,
+   "loop": true,
+   "name": "grow",
+   "purpose": "slow circling walk that leaves the organism's first ring (canon); authored in place"
+  },
+  {
+   "bones": [
+    "l_fore",
+    "l_thigh",
+    "l_upper",
+    "pelvis",
+    "r_thigh"
+   ],
+   "duration_s": 0.8,
+   "loop": false,
+   "name": "deliver",
+   "purpose": "the sling is presented and its Matter released; the load empties only on the authorised transfer"
+  },
+  {
+   "bones": [
+    "chest",
+    "l_fore",
+    "l_thigh",
+    "l_upper",
+    "pelvis",
+    "r_fore",
+    "r_thigh",
+    "r_upper",
+    "staff"
+   ],
+   "duration_s": 1.6,
+   "loop": true,
+   "name": "stabilize_scar",
+   "purpose": "continuous channel over a scarred tile (SPEC-UNIT-005); staff held out, both hands"
+  },
+  {
+   "bones": [
+    "l_thigh",
+    "l_upper",
+    "pelvis",
+    "r_thigh",
+    "r_upper"
+   ],
+   "duration_s": 0.4,
+   "loop": false,
+   "name": "damage",
+   "purpose": "flinch: the frame rocks back, the staff arm lifts; no displacement"
+  },
+  {
+   "bones": [
+    "chest",
+    "head",
+    "l_foot",
+    "l_fore",
+    "l_shin",
+    "l_thigh",
+    "l_upper",
+    "pelvis",
+    "r_foot",
+    "r_fore",
+    "r_shin",
+    "r_thigh",
+    "r_upper",
+    "staff"
+   ],
+   "duration_s": 1.2,
+   "loop": false,
+   "name": "death",
+   "purpose": "the cultivator folds to the ground and settles; held pose, cosmetic debris <= 200 ticks"
+  },
+  {
+   "bones": [
+    "chest",
+    "l_thigh",
+    "l_upper",
+    "pelvis",
+    "r_thigh",
+    "r_upper",
+    "staff"
+   ],
+   "duration_s": 0.4,
+   "loop": false,
+   "name": "cancel",
+   "purpose": "work interrupted: the staff returns to rest from any work pose"
+  },
+  {
+   "bones": [
+    "chest",
+    "head",
+    "l_foot",
+    "l_fore",
+    "l_hand",
+    "l_shin",
+    "l_thigh",
+    "l_upper",
+    "pelvis",
+    "r_foot",
+    "r_fore",
+    "r_hand",
+    "r_shin",
+    "r_thigh",
+    "r_upper",
+    "sling",
+    "spine",
+    "staff"
+   ],
+   "duration_s": 0.0,
+   "loop": false,
+   "name": "restore",
+   "purpose": "single-frame rest pose for reconstruction from saved state; never replays a one-shot"
+  }
+ ],
+ "component_inventory": {
+  "bare_feet": {
+   "built": 2,
+   "contract": 2
+  },
+  "bones": {
+   "built": 19,
+   "names": [
+    "root",
+    "pelvis",
+    "spine",
+    "chest",
+    "head",
+    "r_upper",
+    "r_fore",
+    "r_hand",
+    "l_upper",
+    "l_fore",
+    "l_hand",
+    "r_thigh",
+    "r_shin",
+    "r_foot",
+    "l_thigh",
+    "l_shin",
+    "l_foot",
+    "staff",
+    "sling"
+   ]
+  },
+  "forbidden": {
+   "panel_or_bolt_components": [],
+   "rule": "REL-ART-007.FAIL: machined metallic panels or industrial bolts fail the Kharuun rules"
+  },
+  "humanoid_body": {
+   "built": 1,
+   "contract": 1,
+   "parts": [
+    "pelvis_block",
+    "chest_block",
+    "head_block"
+   ]
+  },
+  "kilt_wrap": {
+   "built": 1,
+   "contract": 1
+  },
+  "resonance_staff": {
+   "bead": true,
+   "built": 1,
+   "contract": 1,
+   "forked_head": 2
+  },
+  "sockets": {
+   "built": [
+    "Harvest_Tether_Muzzle",
+    "Cargo_Drop_Anchor",
+    "Center_Hitbox_Socket"
+   ],
+   "contract": [
+    "Cargo_Drop_Anchor",
+    "Center_Hitbox_Socket",
+    "Harvest_Tether_Muzzle"
+   ]
+  },
+  "thickened_forearms": {
+   "built": 2,
+   "contract": 2
+  },
+  "tracks": {
+   "built": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "gather",
+    "grow",
+    "deliver",
+    "stabilize_scar",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "contract": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "gather",
+    "grow",
+    "deliver",
+    "stabilize_scar",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ]
+  },
+  "woven_sling": {
+   "built": 1,
+   "contract": 1,
+   "matter_nodules": 5
+  },
+  "wrist_nodules": {
+   "built": 2,
+   "contract": 2
+  }
+ },
+ "concept_measurements": {
+  "_shoulder_block": [
+   8.0,
+   9.0,
+   153.0
+  ],
+  "arm_span_cm": 83.0,
+  "bounds_cm": [
+   [
+    -24.5,
+    -46.5,
+    0.0
+   ],
+   [
+    21.0,
+    46.5,
+    198.28
+   ]
+  ],
+  "feet_on_the_ground": true,
+  "head_height_over_H": 0.1684,
+  "height_cm": 198.28,
+  "leg_length_over_H": 0.4842,
+  "shoulder_width_cm": 52.0,
+  "shoulder_width_over_H": 0.2737,
+  "staff_length_over_H": 0.95
+ },
+ "creator": "Angelis Pseftis",
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Faceted basalt strata, woven mineral fibre, amber seams and nodules. No machined panel or bolt anywhere (REL-ART-007).",
+ "material_slots": [
+  "MI_EBS_KHA_Strata",
+  "MI_EBS_KHA_Fibre",
+  "MI_EBS_KHA_Amber"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -24.5,
+     -46.5,
+     0.0
+    ],
+    [
+     21.0,
+     46.5,
+     198.275
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Amber": 108,
+    "MI_EBS_KHA_Fibre": 84,
+    "MI_EBS_KHA_Strata": 360
+   },
+   "clips": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "gather",
+    "grow",
+    "deliver",
+    "stabilize_scar",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_UNT_001",
+   "path": "export/SK_EBS_KHA_UNT_001_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Fibre",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "79d0d6a10b950cc41688756893a74f5de9c9416faf66d27da61c4525fc4cedad",
+   "sockets": [
+    {
+     "bone": "staff",
+     "name": "Harvest_Tether_Muzzle",
+     "position_cm": [
+      0.0,
+      39.0,
+      181.86
+     ],
+     "purpose": "staff head: the gather and grow effect origin",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "sling",
+     "name": "Cargo_Drop_Anchor",
+     "position_cm": [
+      -20.0,
+      0.0,
+      138.0
+     ],
+     "purpose": "sling centre: Matter load reference; the load empties only on an authorised transfer",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "chest",
+     "name": "Center_Hitbox_Socket",
+     "position_cm": [
+      0.0,
+      0.0,
+      138.0
+     ],
+     "purpose": "torso centre",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 552
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_UNT_001",
+   "path": "export/SK_EBS_KHA_UNT_001_LOD0.obj",
+   "sha256": "93da55e969f01fc5e20184a4acdf9e232347e0b8bd255144d59cb1b02f6b4a42"
+  },
+  {
+   "bounds_cm": [
+    [
+     -24.5,
+     -46.5,
+     0.0
+    ],
+    [
+     21.0,
+     46.5,
+     198.275
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Amber": 12,
+    "MI_EBS_KHA_Fibre": 72,
+    "MI_EBS_KHA_Strata": 324
+   },
+   "clips": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "gather",
+    "grow",
+    "deliver",
+    "stabilize_scar",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_UNT_001",
+   "path": "export/SK_EBS_KHA_UNT_001_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Fibre",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "9558ea6fa41be635a0c71db85e3c7c6530d6a591642ad41899360354a08dfb9a",
+   "sockets": [
+    {
+     "bone": "staff",
+     "name": "Harvest_Tether_Muzzle",
+     "position_cm": [
+      0.0,
+      39.0,
+      181.86
+     ],
+     "purpose": "staff head: the gather and grow effect origin",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "sling",
+     "name": "Cargo_Drop_Anchor",
+     "position_cm": [
+      -20.0,
+      0.0,
+      138.0
+     ],
+     "purpose": "sling centre: Matter load reference; the load empties only on an authorised transfer",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "chest",
+     "name": "Center_Hitbox_Socket",
+     "position_cm": [
+      0.0,
+      0.0,
+      138.0
+     ],
+     "purpose": "torso centre",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 408
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_UNT_001",
+   "path": "export/SK_EBS_KHA_UNT_001_LOD1.obj",
+   "sha256": "4a9e818dac9085ea976ff2956f615ca97fd3de54a035fd7e262ea75290d2c826"
+  }
+ ],
+ "package_id": "EBS-PKG-KA-TENDER",
+ "planned_unreal_folder": "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_001/",
+ "production_asset_id": "EBS-KHA-UNT-001",
+ "review": {
+  "scenes": [
+   "scenes/rest.json",
+   "scenes/rest_unloaded.json",
+   "scenes/lod1.json",
+   "scenes/pose_idle_050.json",
+   "scenes/pose_move_025.json",
+   "scenes/pose_move_050.json",
+   "scenes/pose_turn_025.json",
+   "scenes/pose_stop_000.json",
+   "scenes/pose_gather_050.json",
+   "scenes/pose_grow_025.json",
+   "scenes/pose_deliver_050.json",
+   "scenes/pose_stabilize_scar_050.json",
+   "scenes/pose_damage_025.json",
+   "scenes/pose_death_100.json",
+   "scenes/pose_cancel_000.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "name": "rest",
+   "path": "review/SK_EBS_KHA_UNT_001_rest_LOD0.obj",
+   "sha256": "7bf5258df1d9f6d56e7fbe56f86627cc013b4eccc1ab8c2237ae8dfeaf829c94",
+   "triangles": 552
+  },
+  {
+   "name": "rest_unloaded",
+   "path": "review/SK_EBS_KHA_UNT_001_rest_unloaded_LOD0.obj",
+   "sha256": "02355e89e93a5439b3e7319e05bf082eb2b6348349274ec12518ab0cb0165ab8",
+   "triangles": 492
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_idle_0.50",
+   "path": "review/pose_idle_050.obj",
+   "sha256": "f57a24d97eb36422e4901c73fc2a881fe1d5e5df1def94785c5587ea67f6dc88"
+  },
+  {
+   "lowest_z_cm": 1.44,
+   "name": "pose_move_0.25",
+   "path": "review/pose_move_025.obj",
+   "sha256": "4b5bec52ef75cba211bdc83bd8548b363bf1527e3f4b2609197e885e0d6b202b"
+  },
+  {
+   "lowest_z_cm": 2.46,
+   "name": "pose_move_0.50",
+   "path": "review/pose_move_050.obj",
+   "sha256": "03ad40b14c84f503cfb7abb63d3030e195e39acce642bcfe1db241a2df767e7b"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_turn_0.25",
+   "path": "review/pose_turn_025.obj",
+   "sha256": "1fa5b3532531d8d7a888b06c634be321c1055418e5078ec31145206b9d543cb6"
+  },
+  {
+   "lowest_z_cm": 0.01,
+   "name": "pose_stop_0.00",
+   "path": "review/pose_stop_000.obj",
+   "sha256": "2fe50b41912a834cc2a58aecd12815a1756758371a0e9a94b6dbd361d404075b"
+  },
+  {
+   "lowest_z_cm": -0.14,
+   "name": "pose_gather_0.50",
+   "path": "review/pose_gather_050.obj",
+   "sha256": "ae08851f22f600fccf7d0aa1145d5ea4736bcb7d30554dd0ec46f1df07cd1c34"
+  },
+  {
+   "lowest_z_cm": 2.3,
+   "name": "pose_grow_0.25",
+   "path": "review/pose_grow_025.obj",
+   "sha256": "14c24c66ae40a96e586d7e2cbb789aa77abe11adbe8ab87d62c068303b868392"
+  },
+  {
+   "lowest_z_cm": 0.09,
+   "name": "pose_deliver_0.50",
+   "path": "review/pose_deliver_050.obj",
+   "sha256": "27a76a5e5dd6a81a13c1b677e4014ea74fec2b1a4e8e88bd1af0d33a69311285"
+  },
+  {
+   "lowest_z_cm": 0.05,
+   "name": "pose_stabilize_scar_0.50",
+   "path": "review/pose_stabilize_scar_050.obj",
+   "sha256": "9b36704d0fb335eab799efb2e2ea4f51065163f2e47a732dc58824016b2194d9"
+  },
+  {
+   "lowest_z_cm": 0.02,
+   "name": "pose_damage_0.25",
+   "path": "review/pose_damage_025.obj",
+   "sha256": "db6a4cd3c15dda9e4e6ebe6afb15c95756aea4b2762f403e86d387d348181c2d"
+  },
+  {
+   "lowest_z_cm": 6.37,
+   "name": "pose_death_1.00",
+   "path": "review/pose_death_100.obj",
+   "sha256": "427a004120d36f9b091346b4231c5bc72b5da68c2c2eba2910d12a20b581e1e3"
+  },
+  {
+   "lowest_z_cm": 0.03,
+   "name": "pose_cancel_0.00",
+   "path": "review/pose_cancel_000.obj",
+   "sha256": "667423aed24eeef8ac7b9e43ba71c9bfff214ddecc1d3f88bcd6405505237d2a"
+  },
+  {
+   "name": "rest_lod1",
+   "path": "review/SK_EBS_KHA_UNT_001_rest_LOD1.obj",
+   "sha256": "3fda05a51d44b7ae9f366354667e35671a35af593c3f78f12f4b47ee271e0346",
+   "triangles": 408
+  }
+ ],
+ "revision": "ebs-kha-unt-001-concept-v1",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "ground contact centre; never carries simulation translation"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     95.0
+    ],
+    "name": "pelvis",
+    "parent": "root",
+    "purpose": "hips"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     112.0
+    ],
+    "name": "spine",
+    "parent": "pelvis",
+    "purpose": "lower spine"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     132.0
+    ],
+    "name": "chest",
+    "parent": "spine",
+    "purpose": "chest and shoulders; the sling rides here"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     158.0
+    ],
+    "name": "head",
+    "parent": "chest",
+    "purpose": "faceted crown"
+   },
+   {
+    "head_cm": [
+     0.0,
+     31.0,
+     148.0
+    ],
+    "name": "r_upper",
+    "parent": "chest",
+    "purpose": "right upper arm"
+   },
+   {
+    "head_cm": [
+     0.0,
+     35.0,
+     118.0
+    ],
+    "name": "r_fore",
+    "parent": "r_upper",
+    "purpose": "right forearm, thickened working strata"
+   },
+   {
+    "head_cm": [
+     0.0,
+     37.0,
+     88.0
+    ],
+    "name": "r_hand",
+    "parent": "r_fore",
+    "purpose": "right hand; carries the staff"
+   },
+   {
+    "head_cm": [
+     0.0,
+     -31.0,
+     148.0
+    ],
+    "name": "l_upper",
+    "parent": "chest",
+    "purpose": "left upper arm"
+   },
+   {
+    "head_cm": [
+     0.0,
+     -35.0,
+     118.0
+    ],
+    "name": "l_fore",
+    "parent": "l_upper",
+    "purpose": "left forearm, thickened working strata"
+   },
+   {
+    "head_cm": [
+     0.0,
+     -37.0,
+     88.0
+    ],
+    "name": "l_hand",
+    "parent": "l_fore",
+    "purpose": "left hand"
+   },
+   {
+    "head_cm": [
+     0.0,
+     12.0,
+     92.0
+    ],
+    "name": "r_thigh",
+    "parent": "pelvis",
+    "purpose": "right thigh"
+   },
+   {
+    "head_cm": [
+     0.0,
+     12.0,
+     50.0
+    ],
+    "name": "r_shin",
+    "parent": "r_thigh",
+    "purpose": "right shin"
+   },
+   {
+    "head_cm": [
+     0.0,
+     12.0,
+     10.0
+    ],
+    "name": "r_foot",
+    "parent": "r_shin",
+    "purpose": "right foot, bare sole"
+   },
+   {
+    "head_cm": [
+     0.0,
+     -12.0,
+     92.0
+    ],
+    "name": "l_thigh",
+    "parent": "pelvis",
+    "purpose": "left thigh"
+   },
+   {
+    "head_cm": [
+     0.0,
+     -12.0,
+     50.0
+    ],
+    "name": "l_shin",
+    "parent": "l_thigh",
+    "purpose": "left shin"
+   },
+   {
+    "head_cm": [
+     0.0,
+     -12.0,
+     10.0
+    ],
+    "name": "l_foot",
+    "parent": "l_shin",
+    "purpose": "left foot, bare sole"
+   },
+   {
+    "head_cm": [
+     0.0,
+     39.0,
+     88.0
+    ],
+    "name": "staff",
+    "parent": "r_hand",
+    "purpose": "resonance staff, parented to the working hand"
+   },
+   {
+    "head_cm": [
+     -14.0,
+     0.0,
+     136.0
+    ],
+    "name": "sling",
+    "parent": "chest",
+    "purpose": "woven sling and its Matter load; hidden when empty"
+   }
+  ],
+  "policy": "No root motion; the runtime owns facing and translation (REL-ART-009, SPEC-MOV-010)."
+ },
+ "scale_basis": {
+  "canon": "SPEC-UNIT-005 (Bible line 551): a stocky Kharuun cultivator with a resonance staff and a woven sling",
+  "height_cm": 190.0,
+  "status": "PROVISIONAL; no Tender asset card exists (README section 8)"
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/tender-review/tender-candidate.png",
+  "canon": "DevelopmentBible.md line 551 (SPEC-UNIT-005)",
+  "concept": "EBS-CON-KHA-UNT-001 (REPLACE)",
+  "gameplay": "Content/Data/Source/units.json ka_tender"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py"
+ },
+ "units": {
+  "axes": "+X forward, +Y right (anatomical right), +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "ground-contact centre"
+ }
+}

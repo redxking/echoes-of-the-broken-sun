@@ -1,0 +1,578 @@
+{
+ "acceptance": {
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "NOT_EVALUATED"
+ },
+ "asset_name": "SM_EBS_MER_BLD_001",
+ "author": "Angelis Pseftis",
+ "budgets": {
+  "cap_source": "REL-ART-028 bounds the whole Meridian roster at 8,000 / 3,500 and REL-BLD-015.MC.CORE allows 12,000 / 4,500 for this structure; the tighter rule is used so both hold. The conflict is recorded in README section 8, not resolved here.",
+  "lod0_cap": 8000,
+  "lod0_triangles": 1840,
+  "lod0_within_cap": true,
+  "lod1_cap": 3500,
+  "lod1_triangles": 960,
+  "lod1_within_cap": true
+ },
+ "component_inventory": {
+  "central_mast": {
+   "built": 1,
+   "columns": 4,
+   "contract": 1,
+   "note": "slim sensor core, not a reactor spire (review decision A)"
+  },
+  "ceramic_drum": {
+   "built": 2,
+   "contract": 1,
+   "evidence": "drum_lower + drum_upper + cap",
+   "tiers": 2
+  },
+  "charcoal_plinth": {
+   "built": 2,
+   "contract": 1
+  },
+  "conduit_roots": {
+   "built": 8,
+   "contract": 8
+  },
+  "matter_intake_chute": {
+   "built": 1,
+   "contract": 1,
+   "evidence": "separate housing with an angled throat and a lit slot; not a bay"
+  },
+  "sockets": {
+   "built": [
+    "Target_Anchor_Center",
+    "Worker_Bay_01",
+    "Worker_Bay_02",
+    "Worker_Bay_03",
+    "Matter_Intake_Chute",
+    "Conduit_Node_01",
+    "Conduit_Node_02",
+    "Conduit_Node_03",
+    "Conduit_Node_04",
+    "Conduit_Node_05",
+    "Conduit_Node_06",
+    "Conduit_Node_07",
+    "Conduit_Node_08",
+    "Mast_Top"
+   ],
+   "contract": [
+    "Target_Anchor_Center",
+    "Worker_Bay_01",
+    "Worker_Bay_02",
+    "Worker_Bay_03",
+    "Matter_Intake_Chute",
+    "Conduit_Node_01",
+    "Conduit_Node_02",
+    "Conduit_Node_03",
+    "Conduit_Node_04",
+    "Conduit_Node_05",
+    "Conduit_Node_06",
+    "Conduit_Node_07",
+    "Conduit_Node_08",
+    "Mast_Top"
+   ]
+  },
+  "states": {
+   "built": [
+    "working",
+    "damaged"
+   ],
+   "contract": [
+    "working",
+    "damaged"
+   ]
+  },
+  "worker_bays": {
+   "built": 3,
+   "contract": 3,
+   "ramps": 3
+  }
+ },
+ "concept_measurements": {
+  "bounds_cm": [
+   [
+    -471.57,
+    -471.57,
+    0.0
+   ],
+   [
+    488.0,
+    471.57,
+    700.0
+   ]
+  ],
+  "drum_diameter_cm": 720.0,
+  "drum_diameter_over_footprint": 0.72,
+  "drum_height_over_diameter": 0.5417,
+  "everything_inside_the_footprint": true,
+  "footprint_cm": 1000.0,
+  "footprint_tiles": [
+   5,
+   5
+  ],
+  "height_cm": 700.0,
+  "mast_top_over_drum_diameter": 0.9722,
+  "max_radius_cm": 488.0
+ },
+ "creator": "Angelis Pseftis",
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Pale civic ceramic, charcoal frame, cyan status. Numerals, hazard striping and plate seams are texture, not geometry.",
+ "material_slots": [
+  "MI_EBS_MER_CeramicCivic",
+  "MI_EBS_MER_CompactFrame",
+  "MI_EBS_MER_StatusCyan"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -471.5725101615735,
+     -471.5725101615735,
+     0.0
+    ],
+    [
+     488.0,
+     471.5725101615735,
+     700.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 384,
+    "MI_EBS_MER_CompactFrame": 1044,
+    "MI_EBS_MER_StatusCyan": 412
+   },
+   "collision_boxes": [
+    {
+     "center_cm": [
+      0.0,
+      0.0,
+      13.0
+     ],
+     "name": "plinth",
+     "size_cm": [
+      760.0,
+      760.0,
+      26.0
+     ]
+    },
+    {
+     "center_cm": [
+      0.0,
+      0.0,
+      217.0
+     ],
+     "name": "drum",
+     "size_cm": [
+      662.4,
+      662.4,
+      346.0
+     ]
+    }
+   ],
+   "lod": 0,
+   "mesh": "SM_EBS_MER_BLD_001",
+   "path": "export/SM_EBS_MER_BLD_001_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_MER_CeramicCivic",
+    "MI_EBS_MER_CompactFrame",
+    "MI_EBS_MER_StatusCyan"
+   ],
+   "sha256": "a5307fc119541b0a6c4c50fd716cc04f9873fe2513ce8037305f238563001fea",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      195.0
+     ],
+     "purpose": "targeting and selection anchor at the drum's centre of mass",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Worker_Bay_01",
+     "position_cm": [
+      312.08,
+      -195.01,
+      44.0
+     ],
+     "purpose": "worker bay 01 mouth: emergence and exit reference, facing out of the drum",
+     "yaw_deg": -32.0
+    },
+    {
+     "name": "Worker_Bay_02",
+     "position_cm": [
+      368.0,
+      0.0,
+      44.0
+     ],
+     "purpose": "worker bay 02 mouth: emergence and exit reference, facing out of the drum",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Worker_Bay_03",
+     "position_cm": [
+      312.08,
+      195.01,
+      44.0
+     ],
+     "purpose": "worker bay 03 mouth: emergence and exit reference, facing out of the drum",
+     "yaw_deg": 32.0
+    },
+    {
+     "name": "Matter_Intake_Chute",
+     "position_cm": [
+      192.79,
+      433.02,
+      118.4
+     ],
+     "purpose": "Matter delivery mouth: drop-off reference and the chute clatter origin; separate from the worker bays",
+     "yaw_deg": 66.0
+    },
+    {
+     "name": "Conduit_Node_01",
+     "position_cm": [
+      432.38,
+      179.1,
+      50.0
+     ],
+     "purpose": "network root 01: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 22.5
+    },
+    {
+     "name": "Conduit_Node_02",
+     "position_cm": [
+      179.1,
+      432.38,
+      50.0
+     ],
+     "purpose": "network root 02: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 67.5
+    },
+    {
+     "name": "Conduit_Node_03",
+     "position_cm": [
+      -179.1,
+      432.38,
+      50.0
+     ],
+     "purpose": "network root 03: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 112.5
+    },
+    {
+     "name": "Conduit_Node_04",
+     "position_cm": [
+      -432.38,
+      179.1,
+      50.0
+     ],
+     "purpose": "network root 04: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 157.5
+    },
+    {
+     "name": "Conduit_Node_05",
+     "position_cm": [
+      -432.38,
+      -179.1,
+      50.0
+     ],
+     "purpose": "network root 05: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 202.5
+    },
+    {
+     "name": "Conduit_Node_06",
+     "position_cm": [
+      -179.1,
+      -432.38,
+      50.0
+     ],
+     "purpose": "network root 06: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 247.5
+    },
+    {
+     "name": "Conduit_Node_07",
+     "position_cm": [
+      179.1,
+      -432.38,
+      50.0
+     ],
+     "purpose": "network root 07: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 292.5
+    },
+    {
+     "name": "Conduit_Node_08",
+     "position_cm": [
+      432.38,
+      -179.1,
+      50.0
+     ],
+     "purpose": "network root 08: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 337.5
+    },
+    {
+     "name": "Mast_Top",
+     "position_cm": [
+      0.0,
+      0.0,
+      680.0
+     ],
+     "purpose": "sensor head top: mast effect and status origin",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 1840
+  },
+  {
+   "lod": 0,
+   "mesh": "SM_EBS_MER_BLD_001",
+   "path": "export/SM_EBS_MER_BLD_001_LOD0.obj",
+   "sha256": "0a3a9d173ffea35a0ebf5dbf5a5e069b8f25712609864bfa29e7bc71b0e491b0"
+  },
+  {
+   "bounds_cm": [
+    [
+     -471.5725101615735,
+     -471.5725101615735,
+     0.0
+    ],
+    [
+     488.0,
+     471.5725101615735,
+     700.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 136,
+    "MI_EBS_MER_CompactFrame": 636,
+    "MI_EBS_MER_StatusCyan": 188
+   },
+   "collision_boxes": [],
+   "lod": 1,
+   "mesh": "SM_EBS_MER_BLD_001",
+   "path": "export/SM_EBS_MER_BLD_001_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_MER_CeramicCivic",
+    "MI_EBS_MER_CompactFrame",
+    "MI_EBS_MER_StatusCyan"
+   ],
+   "sha256": "6aa4283e886a1d995bd20c7cb2d168d4cfc6216f35d0ab37ee7bcf4852ce1a7c",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      195.0
+     ],
+     "purpose": "targeting and selection anchor at the drum's centre of mass",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Worker_Bay_01",
+     "position_cm": [
+      312.08,
+      -195.01,
+      44.0
+     ],
+     "purpose": "worker bay 01 mouth: emergence and exit reference, facing out of the drum",
+     "yaw_deg": -32.0
+    },
+    {
+     "name": "Worker_Bay_02",
+     "position_cm": [
+      368.0,
+      0.0,
+      44.0
+     ],
+     "purpose": "worker bay 02 mouth: emergence and exit reference, facing out of the drum",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Worker_Bay_03",
+     "position_cm": [
+      312.08,
+      195.01,
+      44.0
+     ],
+     "purpose": "worker bay 03 mouth: emergence and exit reference, facing out of the drum",
+     "yaw_deg": 32.0
+    },
+    {
+     "name": "Matter_Intake_Chute",
+     "position_cm": [
+      192.79,
+      433.02,
+      118.4
+     ],
+     "purpose": "Matter delivery mouth: drop-off reference and the chute clatter origin; separate from the worker bays",
+     "yaw_deg": 66.0
+    },
+    {
+     "name": "Conduit_Node_01",
+     "position_cm": [
+      432.38,
+      179.1,
+      50.0
+     ],
+     "purpose": "network root 01: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 22.5
+    },
+    {
+     "name": "Conduit_Node_02",
+     "position_cm": [
+      179.1,
+      432.38,
+      50.0
+     ],
+     "purpose": "network root 02: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 67.5
+    },
+    {
+     "name": "Conduit_Node_03",
+     "position_cm": [
+      -179.1,
+      432.38,
+      50.0
+     ],
+     "purpose": "network root 03: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 112.5
+    },
+    {
+     "name": "Conduit_Node_04",
+     "position_cm": [
+      -432.38,
+      179.1,
+      50.0
+     ],
+     "purpose": "network root 04: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 157.5
+    },
+    {
+     "name": "Conduit_Node_05",
+     "position_cm": [
+      -432.38,
+      -179.1,
+      50.0
+     ],
+     "purpose": "network root 05: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 202.5
+    },
+    {
+     "name": "Conduit_Node_06",
+     "position_cm": [
+      -179.1,
+      -432.38,
+      50.0
+     ],
+     "purpose": "network root 06: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 247.5
+    },
+    {
+     "name": "Conduit_Node_07",
+     "position_cm": [
+      179.1,
+      -432.38,
+      50.0
+     ],
+     "purpose": "network root 07: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 292.5
+    },
+    {
+     "name": "Conduit_Node_08",
+     "position_cm": [
+      432.38,
+      -179.1,
+      50.0
+     ],
+     "purpose": "network root 08: the conduit line to the neighbouring node leaves here",
+     "yaw_deg": 337.5
+    },
+    {
+     "name": "Mast_Top",
+     "position_cm": [
+      0.0,
+      0.0,
+      680.0
+     ],
+     "purpose": "sensor head top: mast effect and status origin",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 960
+  },
+  {
+   "lod": 1,
+   "mesh": "SM_EBS_MER_BLD_001",
+   "path": "export/SM_EBS_MER_BLD_001_LOD1.obj",
+   "sha256": "7dff210dbe26982bcdda00d06f7dbd42603b377c46d0876c1247c0e644eb4aba"
+  }
+ ],
+ "package_id": "EBS-PKG-MC-ANCHOR",
+ "planned_unreal_folder": "/Game/Echoes/Production/MER/BLD/EBS_MER_BLD_001/",
+ "production_asset_id": "EBS-MER-BLD-001",
+ "review": {
+  "scenes": [
+   "scenes/working.json",
+   "scenes/damaged.json",
+   "scenes/lod1.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "lod": 0,
+   "path": "review/SM_EBS_MER_BLD_001_assembly_working_LOD0.obj",
+   "sha256": "a7cf3ba32e4ceb752052b2895d1619cc5f7e6d3fda2e0d2cc4fb0a7c1568dc9f",
+   "state": "working",
+   "triangles": 1840
+  },
+  {
+   "lod": 1,
+   "path": "review/SM_EBS_MER_BLD_001_assembly_working_LOD1.obj",
+   "sha256": "11099a30bede20b3dc1c61763427c0a855c782d98ceebc67d422c24b49534bb2",
+   "state": "working",
+   "triangles": 960
+  },
+  {
+   "lod": 0,
+   "path": "review/SM_EBS_MER_BLD_001_assembly_damaged_LOD0.obj",
+   "sha256": "48a5cd84f2af2987ce1cf86bf58c9b1872c98b24b2f92be568dd488ddb82a0a2",
+   "state": "damaged",
+   "triangles": 1900
+  }
+ ],
+ "revision": "ebs-mer-bld-001-concept-v1",
+ "scale_basis": {
+  "concept": "concept-fidelity.md: squat two-tier drum, low dome, slim mast, arms out to the footprint edge",
+  "footprint": "5x5 tiles = 1,000 cm (buildings record mc_anchor.footprint_cells)",
+  "note": "The drum is 600 cm across (0.60 of the footprint) rather than filling it, because the candidate's conduit arms and bay ramps extend well past the drum and everything must stay inside the 5x5 square. concept-fidelity.md's 'D = 1,000 cm drum diameter' could not hold both readings; the drum diameter is the measured ratio and the footprint is the outer bound."
+ },
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/anchor-review/anchor-candidate.png",
+  "canon": "DevelopmentBible.md line 513 (SPEC-BLD-015.MC.ANCHOR)",
+  "concepts": [
+   "EBS-CON-MER-BLD-001 (REWORK)",
+   "EBS-CON-MER-BLD-005 (REWORK)"
+  ],
+  "gameplay": "Content/Data/Source/buildings.json mc_anchor"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "states": {
+  "damaged": "review assembly",
+  "working": "review assembly"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py"
+ },
+ "units": {
+  "axes": "+X forward (bay arc), +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "ground-contact centre"
+ }
+}
