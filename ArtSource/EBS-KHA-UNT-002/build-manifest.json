@@ -378,7 +378,7 @@
     "MI_EBS_KHA_Strata",
     "MI_EBS_KHA_Amber"
    ],
-   "sha256": "d234b15170fa5a16b423f4a360ec6e2173b10f83b1fb73946dbbe906370aefdc",
+   "sha256": "628ac0835801c6cdd6aeabd9e4016000bb059af0a3d49f2e3ac6ced8379d5d29",
    "sockets": [
     {
      "bone": "caster_pitch",
@@ -478,7 +478,7 @@
     "MI_EBS_KHA_Strata",
     "MI_EBS_KHA_Amber"
    ],
-   "sha256": "50125d822217cf839c8d046965003b9c9d3b72ea1fcdca1512f404d580ff614b",
+   "sha256": "a89ecd0da6d5e2136020520faa8f7a1d798245ddb18ffd8992d74c085480c0a2",
    "sockets": [
     {
      "bone": "caster_pitch",
@@ -574,6 +574,792 @@
   ]
  },
  "review_assemblies": [
+  {
+   "authored_vertex_colors": {
+    "caster_housing": [
+     0.15,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "caster_slot": [
+     0.15,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_foot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_hip": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_knee": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_lower": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_upper": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_foot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_hip": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_knee": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_lower": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_upper": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "prow": [
+     0.85,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "prow_seam": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_foot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_hip": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_knee": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_lower": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_upper": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_foot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_hip": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_knee": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_lower": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_upper": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_01_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_01_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_02_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_02_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_03_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_03_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_04_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_04_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_05_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_05_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_01": [
+     0.6,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_02": [
+     0.525,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_03": [
+     0.45,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_04": [
+     0.375,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_05": [
+     0.3,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "underbody": [
+     0.2,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "molt_state": "baseline",
+   "name": "baseline_vertexid_glb",
+   "path": "review/SK_EBS_KHA_UNT_002_baseline_vertexid.glb",
+   "sha256": "0f4cbe5766afb3c6b71cf6ddbdd40c5090fb5895640fff2418935ef550867f58"
+  },
+  {
+   "authored_vertex_colors": {
+    "caster_housing": [
+     0.15,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "caster_slot": [
+     0.15,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_foot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_hip": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_knee": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_lower": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_upper": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_foot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_hip": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_knee": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_lower": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_upper": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "molt_plate_01": [
+     1.0,
+     1.0,
+     0.0,
+     1.0
+    ],
+    "molt_plate_02": [
+     1.0,
+     1.0,
+     0.0,
+     1.0
+    ],
+    "molt_plate_03": [
+     1.0,
+     1.0,
+     0.0,
+     1.0
+    ],
+    "molt_plate_04": [
+     1.0,
+     1.0,
+     0.0,
+     1.0
+    ],
+    "molt_plate_05": [
+     1.0,
+     1.0,
+     0.0,
+     1.0
+    ],
+    "prow": [
+     0.85,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "prow_seam": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_foot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_hip": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_knee": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_lower": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_upper": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_foot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_hip": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_knee": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_lower": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_upper": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_01_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_01_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_02_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_02_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_03_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_03_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_04_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_04_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_05_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_05_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_01": [
+     0.6,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_02": [
+     0.525,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_03": [
+     0.45,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_04": [
+     0.375,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_05": [
+     0.3,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "underbody": [
+     0.2,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "molt_state": "carapace_molt",
+   "name": "carapace_molt_vertexid_glb",
+   "path": "review/SK_EBS_KHA_UNT_002_carapace_molt_vertexid.glb",
+   "sha256": "a7f6a36170a4096200c9a68fe345c7fbb30e60007acfae01484e8967daf94ba7"
+  },
+  {
+   "authored_vertex_colors": {
+    "caster_housing": [
+     0.15,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "caster_slot": [
+     0.15,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_foot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_hip": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_knee": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_lower": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fl_upper": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_foot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_hip": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_knee": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_lower": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "fr_upper": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "molt_striker_vane_l": [
+     1.0,
+     0.0,
+     1.0,
+     1.0
+    ],
+    "molt_striker_vane_r": [
+     1.0,
+     0.0,
+     1.0,
+     1.0
+    ],
+    "prow": [
+     0.85,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "prow_seam": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_foot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_hip": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_knee": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_lower": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rl_upper": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_foot": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_hip": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_knee": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_lower": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "rr_upper": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_01_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_01_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_02_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_02_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_03_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_03_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_04_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_04_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_05_l": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "seam_05_r": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_01": [
+     0.6,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_02": [
+     0.525,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_03": [
+     0.45,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_04": [
+     0.375,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "shell_05": [
+     0.3,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "underbody": [
+     0.2,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "molt_state": "striker_molt",
+   "name": "striker_molt_vertexid_glb",
+   "path": "review/SK_EBS_KHA_UNT_002_striker_molt_vertexid.glb",
+   "sha256": "887ebe87cdf93c3f3590e1638812135de56901cf09fd7d65c1c26092c51cd46a"
+  },
   {
    "name": "baseline",
    "path": "review/SK_EBS_KHA_UNT_002_baseline_LOD0.obj",
@@ -909,41 +1695,70 @@
   }
  ],
  "vertex_id_channels": {
-  "blocked_by": "ArtSource/tools/ebs_meshkit.py emits POSITION, NORMAL, TEXCOORD_0 and TEXCOORD_1 only. There is no COLOR_0 attribute in the export path, so the channels cannot reach a GLB, an import or a material yet. Adding COLOR_0 to the kit is the prerequisite.",
+  "canon": "REL-FAC-009: an eligible unit spends 25 Dawn for an 80-tick PUBLIC molt window, choosing Carapace (135% HP, 80% speed) or Striker (125% damage, 85% cooldown), replacing any prior adaptation. The window itself is public and is what the channels have to carry, not only the end states.",
+  "definition_changed_2026_09_07": "The earlier mapping used R as a redundant 'baseline chassis' membership flag, which is already implied by G == 0 and B == 0, and carried nothing for the 80-tick transition. R is now the molt SWEEP ORDER, so the public window has a channel of its own.",
+  "export": "ebs_meshkit.Mesh.vertex_colors is optional and per component; when it is empty NO COLOR_0 attribute is written, so all 21 packages export byte for byte as before. Verified across every package with --check on 2026-09-07.",
   "mapping": {
+   "channel_a": {
+    "meaning": "RESERVED",
+    "value": "always 1.0"
+   },
    "channel_b": {
-    "components": "molt_striker_vane_* and the lengthened caster housing",
-    "meaning": "striker-molt geometry: present only after a striker molt"
+    "meaning": "Striker adaptation membership",
+    "value": "1.0 on molt_striker_vane_*, 0.0 elsewhere"
    },
    "channel_g": {
-    "components": "molt_plate_* and the thickened shell profile",
-    "meaning": "carapace-molt geometry: present only after a carapace molt"
+    "meaning": "Carapace adaptation membership",
+    "value": "1.0 on molt_plate_*, 0.0 elsewhere"
    },
    "channel_r": {
-    "components": "shells, seams, underbody, prow, legs, caster housing and slot",
-    "meaning": "baseline chassis: geometry present in every molt phase"
+    "meaning": "molt sweep order: how early a region takes on the molt-window treatment, the 512^2 translucent core blending skin mask required by .TEX_MAPS. 1.0 sweeps first, 0.0 never changes. This is the channel that carries the PUBLIC 80-tick transition.",
+    "regions": {
+     "caster housing and slot": 0.15,
+     "legs": 0.0,
+     "prow": 0.85,
+     "seams and new growth": 1.0,
+     "shells": "0.60 nose to 0.30 tail",
+     "underbody": 0.2
+    },
+    "why_graded": "the sweep runs nose to tail, so the transition reads as directional rather than uniform"
    }
   },
-  "requirement": "card .MESH_PROP: 3 vertex ID coloring channels for public molting phase transitions",
-  "state_to_channels": {
-   "baseline": [
-    "R"
-   ],
-   "carapace_molt": [
-    "R",
-    "G"
-   ],
-   "striker_molt": [
-    "R",
-    "B"
-   ]
+  "phase_read": {
+   "baseline": "G = 0 and B = 0 everywhere. Seams still carry R, so a baseline unit shows where growth would emerge.",
+   "carapace_molt": "molt_plate_* carry G = 1. During the 80-tick window the material sweeps a threshold down R.",
+   "striker_molt": "molt_striker_vane_* carry B = 1, swept the same way.",
+   "transition": "R alone drives it; G and B only say which end state a piece belongs to."
   },
-  "status": "DEFINED, NOT IMPLEMENTED",
-  "verification_required": [
-   "export: COLOR_0 present in the GLB with the mapping above",
-   "import: the channel survives Interchange into the SkeletalMesh's vertex colours",
-   "material: a molt-phase material reads the channel and the phases are visibly distinct"
+  "requirement": "card .MESH_PROP: 3 vertex ID coloring channels for public molting phase transitions",
+  "status": "VERIFIED THROUGH EXPORT AND IMPORT; material assigned, in-engine capture outstanding",
+  "still_outstanding": [
+   "an in-engine capture of the material under a real RHI"
   ],
-  "verified": false
+  "team_ownership": "IN NO CHANNEL. Owner ruling 2026-09-07: team ownership must stay distinguishable from adaptation state. Team colour lives in its own material parameter and mask texture, so a reader never disambiguates ownership from adaptation. Alpha is reserved rather than left spare so it cannot later be quietly taken for team.",
+  "verification": {
+   "export": {
+    "detail": "COLOR_0 present on every primitive of the LOD0 and LOD1 skinned GLBs, plus one GLB per molt state.",
+    "result": "PASS"
+   },
+   "import": {
+    "detail": "baseline 10 authored / 10 imported distinct colours, carapace_molt 11 / 11, striker_molt 11 / 11; no missing and no unexpected values in any state. G is non-zero only in carapace_molt, B only in striker_molt, and alpha is 1.0 everywhere. Vertex counts 1056 / 1176 / 1104 at LOD0.",
+    "evidence": "BuildArtifacts/.../EBS-KHA-UNT-002/vertex-id-route/channel-verification.json",
+    "method": "Presence is not evidence. Each state's GLB was imported headlessly, then exported back out with GLTFSkeletalMeshExporter and COLOR_0 read as VALUES and compared against the authored mapping.",
+    "result": "PASS"
+   },
+   "material": {
+    "detail": "M_EBS_KHA_UNT_002_MoltPhase reads VertexColor R, G and B, exposes the scalar parameter MoltSweep that the 80-tick window drives, compiles, and is assigned to every material slot on all three imported states.",
+    "evidence": [
+     "vertex-id-route/material-response.json",
+     "vertex-id-route/sweep/carapace_sweep.png"
+    ],
+    "outstanding": "No in-engine capture: the headless editor runs -nullrhi, so nothing was rendered by Unreal's shader. The sweep was rendered offline from the same authored channel data instead.",
+    "result": "PARTIAL"
+   },
+   "quantisation": "Interchange stores skeletal vertex colours as 8-bit unsigned normalised, so authored floats round-trip within 1/255 (0.85 returns as 0.851). Any channel needing more than 256 levels would not survive; the sweep grade uses ten.",
+   "splitting_and_lods": "The exporter writes unindexed triangles, so nothing is welded on the way out and each corner takes its component's colour. The import round-trip returned exactly the authored set with no interpolated in-between values, so neither vertex splitting nor LOD generation altered them."
+  },
+  "verified": true
  }
 }

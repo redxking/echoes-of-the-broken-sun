@@ -578,8 +578,8 @@
     "Silhouette, joint and carapace detail not judged: the low counts are headroom, not sufficiency. Judge against the concept at gameplay distance.",
     "Monochrome separation from the Cairnback not yet comparable: baseline monochrome passes rendered here; the comparison waits on that package.",
     "Gait was a hop until 2026-09-07; the fix is in this package's second stage receipt.",
-    "Three vertex ID channels for public molting phase transitions are required by the authoritative card and are not implemented.",
-    "A 512x512 translucent core blend mask for molt transitions is required at the texture stage."
+    "A 512x512 translucent core blend mask for molt transitions is required at the texture stage.",
+    "Vertex ID channels: defined, exported, and verified through import for baseline, carapace_molt and striker_molt by reading COLOR_0 back out of Unreal as values. R is the molt sweep order, G Carapace membership, B Striker membership, A reserved; team ownership is in no channel. The molt material compiles and is assigned; an in-engine capture under a real RHI is outstanding."
    ],
    "acceptance_note": "Owner 2026-09-07: remains BLOCKOUT. Animation NOT_ACCEPTED. Import and test results are reported evidence, not independently inspected.",
    "resolved_owner_questions": [
@@ -864,6 +864,27 @@
    "package": "EBS-PKG-HC-PHASE-ANCHOR",
    "finding": "Two silent framing traps cost a render cycle each. A radial detail placed at a polygon's VERTEX angle instead of its face centre straddles an edge and never shows on a flat face; and ebs_render's perspective_camera puts the camera at target - arm * forward, so yaw 0 looks at the -X side of a subject, not at its +X face.",
    "rule": "Place face detail at the apothem and at a face-centre angle, and read perspective_camera before choosing a yaw, rather than inferring the camera's side from a render that shows nothing."
+  },
+  {
+   "id": "PF-013",
+   "date": "2026-09-07",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "Interchange stores skeletal vertex colours as 8-bit unsigned normalised. A glTF round-trip out of Unreal returns componentType 5121, so an authored 0.85 comes back as 0.851 and 0.15 as 0.149.",
+   "rule": "Compare imported vertex colours to the authored values within 1/255, not exactly, and never design a channel that needs more than 256 levels."
+  },
+  {
+   "id": "PF-014",
+   "date": "2026-09-07",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "USkeletalMesh exposes has_vertex_colors() but no Python accessor for the VALUES in 5.8, and MeshDescription offers no per-vertex-instance colour getter either. A flag that says 'colours exist' cannot show that the authored mapping survived.",
+   "rule": "Verify imported vertex data by exporting the asset back out with GLTFSkeletalMeshExporter and reading the attribute as values. Presence is not verification."
+  },
+  {
+   "id": "PF-015",
+   "date": "2026-09-07",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "SkeletalMaterial entries returned by mesh.get_editor_property('materials') are COPIES. Mutating them in place and saving reports success while the asset keeps its old material, which read as a passing assignment until the result was read back.",
+   "rule": "Rebuild the whole materials array and set it as one property, then read it back to confirm."
   }
  ],
  "owner_rulings": [
@@ -1080,6 +1101,37 @@
      "applied": "Recorded as the next_phase block below; no card has been moved into Docs/Requirements.md."
     }
    ]
+  },
+  {
+   "date": "2026-09-07",
+   "subject": "Clear the Riftstalker vertex-ID export dependency before its texture pass",
+   "rulings": [
+    {
+     "topic": "1. Define the channels",
+     "ruling": "Define the three channels' meanings against the card. Record which regions and molt phases each controls; keep team ownership distinguishable from adaptation state.",
+     "applied": "R is the molt SWEEP ORDER (how early a region takes the molt-window treatment, graded nose to tail), G is Carapace membership, B is Striker membership, A is reserved at 1.0. The earlier mapping used R as a 'baseline chassis' flag, which G == 0 and B == 0 already implied and which carried nothing for the public 80-tick window; that redefinition is recorded. TEAM OWNERSHIP IS IN NO CHANNEL - it stays in its own material parameter and mask, and alpha is reserved rather than left spare so it cannot later be taken for team. Two tests assert both."
+    },
+    {
+     "topic": "2. Optional COLOR_0 in the shared exporter",
+     "ruling": "Add optional COLOR_0. Preserve existing exports when no vertex colours are supplied. Verify splitting, seams and LOD generation retain the values.",
+     "applied": "ebs_meshkit.Mesh.vertex_colors is an optional per-component mapping; when empty NO COLOR_0 attribute is written. Both write_glb and write_skinned_glb emit it. All 21 packages re-checked: byte-identical exports. The exporter writes unindexed triangles, so nothing is welded on the way out; the import round-trip returned exactly the authored set with no interpolated in-between values, so neither splitting nor LOD generation altered them."
+    },
+    {
+     "topic": "3. Verify the complete route",
+     "ruling": "authored -> export -> import -> material response for every required molt state. Exported attribute presence alone is insufficient.",
+     "applied": "One skinned GLB per molt state was imported headlessly, then exported back out with GLTFSkeletalMeshExporter and COLOR_0 read as VALUES: baseline 10/10 distinct colours, carapace_molt 11/11, striker_molt 11/11, no missing and no unexpected values in any state, G non-zero only in carapace, B only in striker, alpha 1.0 throughout. M_EBS_KHA_UNT_002_MoltPhase reads VertexColor R/G/B, exposes the MoltSweep scalar the 80-tick window drives, compiles, and is assigned to every slot on all three states. Material response is PARTIAL, not PASS: the headless editor runs -nullrhi, so nothing was rendered by Unreal's shader; the sweep was rendered offline from the same authored data instead."
+    },
+    {
+     "topic": "4. Then the texture pass",
+     "ruling": "Begin the Riftstalker texture/material pass afterwards. Unrelated packages proceed independently under their provisional contracts.",
+     "applied": "The dependency is cleared except for the in-engine capture, which is recorded as outstanding."
+    },
+    {
+     "topic": "Scope and write ownership",
+     "ruling": "Keep the exporter change scoped and coordinated with its current write owner. It does not require changing gameplay or resolving the rig amendment first.",
+     "applied": "Write ownership checked before editing: ebs_meshkit.py exists only in this worktree, every commit touching it is from this lane, and the tree was clean. No gameplay data was touched and the rig amendment is untouched and still unresolved."
+    }
+   ]
   }
  ],
  "progress": {
@@ -1098,11 +1150,12 @@
    "Reconcile the Riftstalker rig amendment (REL-ART-005.KA.RIFTSTALKER, 22 bones against the card's 14) with Docs/Requirements.md."
   ],
   "may_proceed_independently": [
+   "The Riftstalker texture/material pass, now that the vertex-ID export dependency is cleared: masks, molt-state mapping and material response can be checked together.",
    "Texture and material work, against contracts named explicitly as PROVISIONAL in every artefact it produces. Provisional status must not be dropped from a filename, manifest or receipt because textures now exist."
   ],
   "also_open": [
    "Phase Anchor versus Chorus Loom separability, in representative terrain, lighting, team colour treatment and tactical camera views.",
-   "Riftstalker vertex-ID channels, blocked on adding COLOR_0 to ebs_meshkit.py.",
+   "Riftstalker vertex ID channels: CLEARED through export and import for all three molt states. Outstanding only: an in-engine capture of M_EBS_KHA_UNT_002_MoltPhase under a real RHI.",
    "Runtime verification of simultaneous locomotion and firing.",
    "Detail judgements at gameplay distance, in-engine capture, gate reviews, owner acceptance."
   ]

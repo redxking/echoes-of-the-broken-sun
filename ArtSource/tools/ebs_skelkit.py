@@ -441,7 +441,7 @@ def write_skinned_glb(mesh: kit.Mesh, skeleton: Skeleton, path: str, animations=
     bone_vertex_counts = {b.name: 0 for b in skeleton.bones}
     for slot_index in used_slots:
         pos_bytes, nrm_bytes, uv0_bytes, uv1_bytes, idx_bytes = bytearray(), bytearray(), bytearray(), bytearray(), bytearray()
-        jnt_bytes, wgt_bytes = bytearray(), bytearray()
+        jnt_bytes, wgt_bytes, col_bytes = bytearray(), bytearray(), bytearray()
         mins = [float("inf")] * 3
         maxs = [float("-inf")] * 3
         vertex = 0
@@ -452,6 +452,7 @@ def write_skinned_glb(mesh: kit.Mesh, skeleton: Skeleton, path: str, animations=
             if kit.v_dot(kit.v_cross(kit.v_sub(g[1], g[0]), kit.v_sub(g[2], g[0])), gn) < 0:
                 order = (0, 2, 1)
             j = bone_index[bone_name]
+            rgba = mesh.vertex_color(_component)
             for k in order:
                 p = g[k]
                 pos_bytes += struct.pack("<3f", *p)
@@ -460,6 +461,7 @@ def write_skinned_glb(mesh: kit.Mesh, skeleton: Skeleton, path: str, animations=
                 uv1_bytes += struct.pack("<2f", *uv1[k])
                 jnt_bytes += struct.pack(joint_fmt, j, 0, 0, 0)
                 wgt_bytes += struct.pack("<4f", 1.0, 0.0, 0.0, 0.0)
+                col_bytes += struct.pack("<4f", *rgba)
                 for axis in range(3):
                     mins[axis] = min(mins[axis], p[axis])
                     maxs[axis] = max(maxs[axis], p[axis])
@@ -472,18 +474,24 @@ def write_skinned_glb(mesh: kit.Mesh, skeleton: Skeleton, path: str, animations=
         uv1_view = push(bytes(uv1_bytes), 34962)
         jnt_view = push(bytes(jnt_bytes), 34962)
         wgt_view = push(bytes(wgt_bytes), 34962)
+        # COLOR_0 is written only when the mesh carries vertex colours, so exports that supply none
+        # are unchanged byte for byte.
+        col_view = push(bytes(col_bytes), 34962) if mesh.vertex_colors else None
         idx_view = push(bytes(idx_bytes), 34963)
         fmin = [_f32(m) for m in mins]
         fmax = [_f32(m) for m in maxs]
+        attributes = {
+            "POSITION": accessor(pos_view, vertex, 5126, "VEC3", (fmin, fmax)),
+            "NORMAL": accessor(nrm_view, vertex, 5126, "VEC3"),
+            "TEXCOORD_0": accessor(uv0_view, vertex, 5126, "VEC2"),
+            "TEXCOORD_1": accessor(uv1_view, vertex, 5126, "VEC2"),
+            "JOINTS_0": accessor(jnt_view, vertex, joint_ctype, "VEC4"),
+            "WEIGHTS_0": accessor(wgt_view, vertex, 5126, "VEC4"),
+        }
+        if col_view is not None:
+            attributes["COLOR_0"] = accessor(col_view, vertex, 5126, "VEC4")
         primitives.append({
-            "attributes": {
-                "POSITION": accessor(pos_view, vertex, 5126, "VEC3", (fmin, fmax)),
-                "NORMAL": accessor(nrm_view, vertex, 5126, "VEC3"),
-                "TEXCOORD_0": accessor(uv0_view, vertex, 5126, "VEC2"),
-                "TEXCOORD_1": accessor(uv1_view, vertex, 5126, "VEC2"),
-                "JOINTS_0": accessor(jnt_view, vertex, joint_ctype, "VEC4"),
-                "WEIGHTS_0": accessor(wgt_view, vertex, 5126, "VEC4"),
-            },
+            "attributes": attributes,
             "indices": accessor(idx_view, vertex, 5125, "SCALAR"),
             "material": material_index[slot_index],
             "mode": 4,

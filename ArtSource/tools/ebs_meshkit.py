@@ -124,6 +124,11 @@ class CollisionBox:
     size: tuple
 
 
+# Alpha is RESERVED and always 1.0. It is not team ownership and not a spare channel: a reader must
+# never have to disambiguate ownership from adaptation state (owner ruling 2026-09-07).
+VERTEX_COLOR_DEFAULT = (0.0, 0.0, 0.0, 1.0)
+
+
 @dataclass
 class Mesh:
     name: str
@@ -131,12 +136,26 @@ class Mesh:
     polygons: list = field(default_factory=list)
     sockets: list = field(default_factory=list)
     collision: list = field(default_factory=list)
+    # Optional per-component vertex colours: {component_name: (r, g, b, a)} with each channel in
+    # [0, 1]. Empty means NO COLOR_0 attribute is written at all, so every existing export is
+    # unchanged byte for byte. Components absent from the mapping take VERTEX_COLOR_DEFAULT.
+    vertex_colors: dict = field(default_factory=dict)
 
     # -- authoring -----------------------------------------------------------
     def slot(self, name: str) -> int:
         if name not in self.slots:
             self.slots.append(name)
         return self.slots.index(name)
+
+    def vertex_color(self, component: str) -> tuple:
+        """The RGBA a component's vertices carry. Unmapped components take the default."""
+        value = self.vertex_colors.get(component, VERTEX_COLOR_DEFAULT)
+        if len(value) != 4:
+            raise ValueError(f"vertex colour for {component!r} must be RGBA, got {value!r}")
+        for channel in value:
+            if not 0.0 <= float(channel) <= 1.0:
+                raise ValueError(f"vertex colour channel out of range for {component!r}: {value!r}")
+        return tuple(float(c) for c in value)
 
     def add_polygon(self, points, slot, component, normal=None, uv_axis=None):
         pts = [tuple(float(c) for c in p) for p in points]
@@ -446,10 +465,12 @@ class Mesh:
         for slot_index in used_slots:
             tris = per_slot[slot_index]
             pos_bytes, nrm_bytes, uv0_bytes, uv1_bytes, idx_bytes = bytearray(), bytearray(), bytearray(), bytearray(), bytearray()
+            col_bytes = bytearray()
             mins = [float("inf")] * 3
             maxs = [float("-inf")] * 3
             vertex = 0
             for (p0, p1, p2, n, _slot, _component, uv0, uv1) in tris:
+                rgba = self.vertex_color(_component)
                 g = [to_gltf_pos(p0), to_gltf_pos(p1), to_gltf_pos(p2)]
                 gn = to_gltf_dir(n)
                 order = (0, 1, 2)
@@ -462,6 +483,7 @@ class Mesh:
                     nrm_bytes += struct.pack("<3f", *gn)
                     uv0_bytes += struct.pack("<2f", *uv0[k])
                     uv1_bytes += struct.pack("<2f", *uv1[k])
+                    col_bytes += struct.pack("<4f", *rgba)
                     for axis in range(3):
                         mins[axis] = min(mins[axis], p[axis])
                         maxs[axis] = max(maxs[axis], p[axis])
@@ -471,17 +493,21 @@ class Mesh:
             nrm_view = push(bytes(nrm_bytes), 34962)
             uv0_view = push(bytes(uv0_bytes), 34962)
             uv1_view = push(bytes(uv1_bytes), 34962)
+            col_view = push(bytes(col_bytes), 34962) if self.vertex_colors else None
             idx_view = push(bytes(idx_bytes), 34963)
             # float32 min/max must be the stored values: round-trip through struct
             fmin = [struct.unpack("<f", struct.pack("<f", m))[0] for m in mins]
             fmax = [struct.unpack("<f", struct.pack("<f", m))[0] for m in maxs]
+            attributes = {
+                "POSITION": accessor(pos_view, vertex, 5126, "VEC3", (fmin, fmax)),
+                "NORMAL": accessor(nrm_view, vertex, 5126, "VEC3"),
+                "TEXCOORD_0": accessor(uv0_view, vertex, 5126, "VEC2"),
+                "TEXCOORD_1": accessor(uv1_view, vertex, 5126, "VEC2"),
+            }
+            if col_view is not None:
+                attributes["COLOR_0"] = accessor(col_view, vertex, 5126, "VEC4")
             primitives.append({
-                "attributes": {
-                    "POSITION": accessor(pos_view, vertex, 5126, "VEC3", (fmin, fmax)),
-                    "NORMAL": accessor(nrm_view, vertex, 5126, "VEC3"),
-                    "TEXCOORD_0": accessor(uv0_view, vertex, 5126, "VEC2"),
-                    "TEXCOORD_1": accessor(uv1_view, vertex, 5126, "VEC2"),
-                },
+                "attributes": attributes,
                 "indices": accessor(idx_view, vertex, 5125, "SCALAR"),
                 "material": material_index[slot_index],
                 "mode": 4,

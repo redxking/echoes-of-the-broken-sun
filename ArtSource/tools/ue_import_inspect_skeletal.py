@@ -233,6 +233,27 @@ def inspect_skeletal_mesh(mesh):
         # No Python-exposed triangle count exists for USkeletalMesh in 5.8; record what the API offers.
         item["triangles"] = None
         item["triangles_note"] = "USkeletalMesh exposes no triangle count to Python; see vertices/sections"
+        # Vertex ID channels: presence is not enough. Report the DISTINCT colours actually present at
+        # this LOD, so vertex splitting, seam duplication and LOD generation can be checked against the
+        # authored mapping rather than assumed. Colours are quantised to 3 decimals before counting.
+        try:
+            colors = unreal.SkeletalMeshEditorSubsystem.get_vertex_colors(mesh, lod) \
+                if hasattr(unreal.SkeletalMeshEditorSubsystem, "get_vertex_colors") else None
+            if colors is None:
+                geo = unreal.SkeletalMeshEditorSubsystem.get_lod_build_settings(mesh, lod) if False else None
+                del geo
+                item["vertex_colors"] = {"available": False,
+                                         "note": "no Python accessor for skeletal vertex colours in this engine build"}
+            else:
+                seen = {}
+                for c in colors:
+                    key = (round(c.r, 3), round(c.g, 3), round(c.b, 3), round(c.a, 3))
+                    seen[key] = seen.get(key, 0) + 1
+                item["vertex_colors"] = {"available": True, "count": len(colors),
+                                         "distinct": [{"rgba": list(k), "vertices": v}
+                                                      for k, v in sorted(seen.items())]}
+        except Exception as error:  # noqa: BLE001
+            item["vertex_colors"] = {"available": False, "error": f"{error}"}
         lods.append(item)
     entry["lods"] = lods
     materials = []

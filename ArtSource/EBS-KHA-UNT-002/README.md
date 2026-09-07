@@ -113,7 +113,57 @@ for s in baseline carapace_molt striker_molt lod1 pose_move_025 pose_move_050 \
     --out "<evidence root>/EBS-KHA-UNT-002/renders/$s"; done
 ```
 
-## 8. Decisions and open items
+## 8. Vertex ID channels (card `.MESH_PROP`), verified 2026-09-07
+
+The card requires "3 vertex ID coloring channels for public molting phase transitions", and canon
+`REL-FAC-009` makes the molt an **80-tick public window** between baseline, Carapace and Striker. The
+channels therefore have to carry the transition, not only the end states.
+
+| Channel | Meaning |
+|---|---|
+| **R** | **Molt sweep order.** How early a region takes the molt-window treatment — the 512² translucent core blending skin mask `.TEX_MAPS` calls for. Seams and new growth 1.0, prow 0.85, shells graded 0.60 nose to 0.30 tail, underbody 0.20, caster 0.15, legs 0.0. This is the channel that carries the public 80-tick transition. |
+| **G** | Carapace adaptation membership: 1.0 on `molt_plate_*`. |
+| **B** | Striker adaptation membership: 1.0 on `molt_striker_vane_*`. |
+| **A** | Reserved, always 1.0. |
+
+**Team ownership is in none of them.** Team colour stays in its own material parameter and mask
+texture, so a reader never has to disambiguate who owns a unit from what it has adapted into. Alpha is
+reserved rather than left spare so it cannot later be quietly taken for team. Two tests assert both.
+
+This replaces an earlier mapping that used R as a "baseline chassis" membership flag — already implied
+by `G == 0 and B == 0`, and carrying nothing for the transition.
+
+### The route, verified end to end
+
+`ebs_meshkit.Mesh.vertex_colors` is an **optional** per-component mapping. When it is empty no
+`COLOR_0` attribute is written at all, so every other package exports byte for byte as before — all 21
+re-checked. Both `write_glb` and `write_skinned_glb` emit it.
+
+**Attribute presence is not verification.** One skinned GLB per molt state was imported headlessly,
+then exported back out of Unreal with `GLTFSkeletalMeshExporter` and `COLOR_0` read as *values*:
+
+| State | Authored distinct | Imported distinct | Missing | Unexpected |
+|---|---|---|---|---|
+| baseline | 10 | 10 | none | none |
+| carapace_molt | 11 | 11 | none | none |
+| striker_molt | 11 | 11 | none | none |
+
+`G` is non-zero only in carapace, `B` only in striker, alpha 1.0 throughout. The exporter writes
+unindexed triangles, so nothing is welded on the way out, and the round-trip returned exactly the
+authored set with no interpolated in-between values — neither vertex splitting nor LOD generation
+altered them.
+
+**Material response is PARTIAL, not passed.** `M_EBS_KHA_UNT_002_MoltPhase` reads VertexColor R, G and
+B, exposes the scalar parameter `MoltSweep` that the 80-tick window drives, compiles, and is assigned to
+every material slot on all three imported states. But the headless editor runs `-nullrhi`, so **nothing
+was rendered by Unreal's shader**. The sweep was rendered offline from the same authored channel data
+(`vertex-id-route/sweep/carapace_sweep.png`), which shows the transition spreading from the seams and
+prow nose-to-tail across the 80 ticks. An in-engine capture under a real RHI is outstanding.
+
+Evidence: `…/EBS-KHA-UNT-002/vertex-id-route/` — `channel-verification.json`, `material-response.json`,
+`route-report.json`, `sweep/`.
+
+## 9. Decisions and open items
 
 1. **It is a quadruped, and I corrected my card rather than the model.** The provisional card first
    described a biped with a long neck and 24 bones, written before I traced the candidate. Both the

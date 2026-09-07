@@ -177,6 +177,55 @@ def build_body(lod: int, state: str = "baseline") -> kit.Mesh:
     return m
 
 
+# --- vertex ID channels (card .MESH_PROP: "3 vertex ID coloring channels for public molting phase
+# transitions"; canon REL-FAC-009: an 80-tick PUBLIC molt window between baseline, Carapace and
+# Striker) -----------------------------------------------------------------------------------------
+#
+#   R  molt sweep order. How early a region takes on the molt-window treatment - the 512^2
+#      translucent core blending skin mask the card's .TEX_MAPS clause calls for. 1.0 sweeps first,
+#      0.0 never changes. This is the channel that carries the PUBLIC 80-tick transition; the other
+#      two only say which end state a piece belongs to.
+#   G  Carapace adaptation membership. 1.0 on geometry that exists only after a Carapace molt.
+#   B  Striker adaptation membership.  1.0 on geometry that exists only after a Striker molt.
+#   A  RESERVED, always 1.0.
+#
+# TEAM OWNERSHIP IS IN NONE OF THEM (owner ruling 2026-09-07). Team colour stays in its own material
+# parameter and its own mask texture, so a reader never has to disambiguate who owns a unit from what
+# it has adapted into. A test asserts no channel is used for team.
+MOLT_SWEEP = {"seam": 1.0, "growth": 1.0, "prow": 0.85, "shell": (0.60, 0.30), "underbody": 0.20,
+              "caster": 0.15, "leg": 0.0}
+
+
+def vertex_colors_for(components) -> dict:
+    """The RGBA every component carries. Derived from names so a new part cannot silently
+    default to 'never changes' without appearing in this mapping."""
+    colors = {}
+    for c in components:
+        g = 1.0 if c.startswith("molt_plate_") else 0.0
+        b = 1.0 if c.startswith("molt_striker_vane_") else 0.0
+        if c.startswith("molt_"):
+            r = MOLT_SWEEP["growth"]
+        elif "seam" in c:
+            r = MOLT_SWEEP["seam"]
+        elif c == "prow":
+            r = MOLT_SWEEP["prow"]
+        elif c.startswith("shell_"):
+            # the sweep runs nose to tail, so the transition reads as directional rather than uniform
+            head, tail = MOLT_SWEEP["shell"]
+            t = (int(c.split("_")[1]) - 1) / max(1, CARAPACE_SHELLS - 1)
+            r = head + (tail - head) * t
+        elif c == "underbody":
+            r = MOLT_SWEEP["underbody"]
+        elif c.startswith("caster_"):
+            r = MOLT_SWEEP["caster"]
+        elif c.split("_")[0] in ("fl", "fr", "rl", "rr"):
+            r = MOLT_SWEEP["leg"]
+        else:
+            raise ValueError(f"component {c!r} has no vertex-ID channel mapping; add one deliberately")
+        colors[c] = (round(r, 4), g, b, 1.0)
+    return colors
+
+
 def build_skeleton() -> skel.Skeleton:
     s = skel.Skeleton("root")
     for name, parent, head, purpose in BONES:
@@ -231,6 +280,7 @@ def assemble(lod: int, state: str = "baseline"):
     m = build_body(lod, state)
     s = build_skeleton()
     counts = bind(m)
+    m.vertex_colors = vertex_colors_for(m.components())
     for name, (bone, pos, yaw, purpose) in SOCKETS.items():
         m.sockets.append(kit.Socket(name, pos, yaw, purpose))
     return m, s, counts, {n: v[0] for n, v in SOCKETS.items()}
@@ -497,6 +547,19 @@ def export(evidence_dir: str, out_dir: str, skinned: bool) -> dict:
                                                        "Unreal +X forward, +Y right, +Z up; centimetres"])
         outputs.append({"mesh": ASSET, "lod": lod, "kind": "rest-pose OBJ",
                         "path": os.path.relpath(base + ".obj", HERE), "sha256": obj})
+    if skinned:
+        # One skinned GLB per molt state, so the vertex ID channels can be verified through import
+        # and material for EVERY required state and not only the baseline rest pose.
+        for state in STATES:
+            m, s, _c, socks = assemble(0, state)
+            path = os.path.join(review, f"{ASSET}_{state}_vertexid.glb")
+            digest = skel.write_skinned_glb(m, s, path, animations=[], extras={
+                "production_id": PRODUCTION_ID, "revision": REVISION, "molt_state": state,
+                "purpose": "vertex ID channel verification", "author": AUTHOR},
+                include_collision=False, sockets_on_bones=socks)
+            review_rows.append({"name": f"{state}_vertexid_glb", "path": os.path.relpath(path, evidence_dir),
+                                "sha256": digest, "molt_state": state,
+                                "authored_vertex_colors": {c: list(v) for c, v in sorted(m.vertex_colors.items())}})
     for state in STATES:
         m = assemble(0, state)[0]
         path = os.path.join(review, f"{ASSET}_{state}_LOD0.obj")
@@ -595,23 +658,66 @@ def manifest(exported: dict) -> dict:
                 "molt_texture": "PENDING: a 512^2 translucent core blend mask is required at the texture stage."}},
         "vertex_id_channels": {
             "requirement": "card .MESH_PROP: 3 vertex ID coloring channels for public molting phase transitions",
-            "status": "DEFINED, NOT IMPLEMENTED",
+            "canon": ("REL-FAC-009: an eligible unit spends 25 Dawn for an 80-tick PUBLIC molt window, choosing Carapace "
+                      "(135% HP, 80% speed) or Striker (125% damage, 85% cooldown), replacing any prior adaptation. The "
+                      "window itself is public and is what the channels have to carry, not only the end states."),
+            "status": "VERIFIED THROUGH EXPORT AND IMPORT; material assigned, in-engine capture outstanding",
+            "definition_changed_2026_09_07": (
+                "The earlier mapping used R as a redundant 'baseline chassis' membership flag, which is already implied by "
+                "G == 0 and B == 0, and carried nothing for the 80-tick transition. R is now the molt SWEEP ORDER, so the "
+                "public window has a channel of its own."),
             "mapping": {
-                "channel_r": {"meaning": "baseline chassis: geometry present in every molt phase",
-                              "components": "shells, seams, underbody, prow, legs, caster housing and slot"},
-                "channel_g": {"meaning": "carapace-molt geometry: present only after a carapace molt",
-                              "components": "molt_plate_* and the thickened shell profile"},
-                "channel_b": {"meaning": "striker-molt geometry: present only after a striker molt",
-                              "components": "molt_striker_vane_* and the lengthened caster housing"}},
-            "state_to_channels": {"baseline": ["R"], "carapace_molt": ["R", "G"], "striker_molt": ["R", "B"]},
-            "blocked_by": ("ArtSource/tools/ebs_meshkit.py emits POSITION, NORMAL, TEXCOORD_0 and TEXCOORD_1 only. There is no "
-                           "COLOR_0 attribute in the export path, so the channels cannot reach a GLB, an import or a material "
-                           "yet. Adding COLOR_0 to the kit is the prerequisite."),
-            "verification_required": [
-                "export: COLOR_0 present in the GLB with the mapping above",
-                "import: the channel survives Interchange into the SkeletalMesh's vertex colours",
-                "material: a molt-phase material reads the channel and the phases are visibly distinct"],
-            "verified": False},
+                "channel_r": {"meaning": ("molt sweep order: how early a region takes on the molt-window treatment, the "
+                                          "512^2 translucent core blending skin mask required by .TEX_MAPS. 1.0 sweeps "
+                                          "first, 0.0 never changes. This is the channel that carries the PUBLIC 80-tick "
+                                          "transition."),
+                              "regions": {"seams and new growth": 1.0, "prow": 0.85, "shells": "0.60 nose to 0.30 tail",
+                                          "underbody": 0.20, "caster housing and slot": 0.15, "legs": 0.0},
+                              "why_graded": "the sweep runs nose to tail, so the transition reads as directional rather than uniform"},
+                "channel_g": {"meaning": "Carapace adaptation membership", "value": "1.0 on molt_plate_*, 0.0 elsewhere"},
+                "channel_b": {"meaning": "Striker adaptation membership", "value": "1.0 on molt_striker_vane_*, 0.0 elsewhere"},
+                "channel_a": {"meaning": "RESERVED", "value": "always 1.0"}},
+            "team_ownership": ("IN NO CHANNEL. Owner ruling 2026-09-07: team ownership must stay distinguishable from "
+                               "adaptation state. Team colour lives in its own material parameter and mask texture, so a "
+                               "reader never disambiguates ownership from adaptation. Alpha is reserved rather than left "
+                               "spare so it cannot later be quietly taken for team."),
+            "phase_read": {
+                "baseline": "G = 0 and B = 0 everywhere. Seams still carry R, so a baseline unit shows where growth would emerge.",
+                "carapace_molt": "molt_plate_* carry G = 1. During the 80-tick window the material sweeps a threshold down R.",
+                "striker_molt": "molt_striker_vane_* carry B = 1, swept the same way.",
+                "transition": "R alone drives it; G and B only say which end state a piece belongs to."},
+            "export": ("ebs_meshkit.Mesh.vertex_colors is optional and per component; when it is empty NO COLOR_0 attribute "
+                       "is written, so all 21 packages export byte for byte as before. Verified across every package with "
+                       "--check on 2026-09-07."),
+            "verification": {
+                "export": {"result": "PASS",
+                           "detail": "COLOR_0 present on every primitive of the LOD0 and LOD1 skinned GLBs, plus one GLB per molt state."},
+                "import": {"result": "PASS",
+                           "method": ("Presence is not evidence. Each state's GLB was imported headlessly, then exported "
+                                      "back out with GLTFSkeletalMeshExporter and COLOR_0 read as VALUES and compared "
+                                      "against the authored mapping."),
+                           "detail": ("baseline 10 authored / 10 imported distinct colours, carapace_molt 11 / 11, "
+                                      "striker_molt 11 / 11; no missing and no unexpected values in any state. G is "
+                                      "non-zero only in carapace_molt, B only in striker_molt, and alpha is 1.0 "
+                                      "everywhere. Vertex counts 1056 / 1176 / 1104 at LOD0."),
+                           "evidence": "BuildArtifacts/.../EBS-KHA-UNT-002/vertex-id-route/channel-verification.json"},
+                "material": {"result": "PARTIAL",
+                             "detail": ("M_EBS_KHA_UNT_002_MoltPhase reads VertexColor R, G and B, exposes the scalar "
+                                        "parameter MoltSweep that the 80-tick window drives, compiles, and is assigned "
+                                        "to every material slot on all three imported states."),
+                             "outstanding": ("No in-engine capture: the headless editor runs -nullrhi, so nothing was "
+                                             "rendered by Unreal's shader. The sweep was rendered offline from the same "
+                                             "authored channel data instead."),
+                             "evidence": ["vertex-id-route/material-response.json", "vertex-id-route/sweep/carapace_sweep.png"]},
+                "quantisation": ("Interchange stores skeletal vertex colours as 8-bit unsigned normalised, so authored "
+                                 "floats round-trip within 1/255 (0.85 returns as 0.851). Any channel needing more than "
+                                 "256 levels would not survive; the sweep grade uses ten."),
+                "splitting_and_lods": ("The exporter writes unindexed triangles, so nothing is welded on the way out and "
+                                       "each corner takes its component's colour. The import round-trip returned exactly "
+                                       "the authored set with no interpolated in-between values, so neither vertex "
+                                       "splitting nor LOD generation altered them.")},
+            "verified": True,
+            "still_outstanding": ["an in-engine capture of the material under a real RHI"]},
         "provisional_contract": {
             "card": f"{PROVISIONAL_CARD} in ArtSource/kharuun-asset-cards.json — SUPERSEDED for this asset by {CARD}",
             "status": ("PROVISIONAL. Authored in this worktree under the owner ruling of 2026-09-07; NOT incorporated into "

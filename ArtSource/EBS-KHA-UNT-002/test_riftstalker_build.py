@@ -15,6 +15,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "tools"))
 sys.path.insert(0, HERE)
 import ebs_skelkit as skel  # noqa: E402
+import ebs_meshkit as kit  # noqa: E402
 import build_riftstalker as rs  # noqa: E402
 
 GROUND_TOLERANCE_CM = 0.05   # see README section 8: the deepest sampled frame sits 0.18 mm under
@@ -135,20 +136,25 @@ class RiftstalkerBlockout(unittest.TestCase):
             self.assertIn(self.socks[new], {b.name for b in self.s.bones},
                           f"alias target {new} is bound to a bone that does not exist")
 
-    def test_the_vertex_id_channels_are_defined_and_openly_unimplemented(self):
-        # the card requires three; neither the rig decision nor a passing import waives them
+    def test_the_vertex_id_channels_are_verified_through_export_and_import(self):
+        # the card requires three; presence of the attribute alone is not evidence (owner ruling 2026-09-07)
         path = os.path.join(HERE, "build-manifest.json")
         if not os.path.exists(path):
             self.skipTest("no manifest")
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
         v = data["vertex_id_channels"]
-        self.assertEqual(v["status"], "DEFINED, NOT IMPLEMENTED")
-        self.assertFalse(v["verified"])
-        self.assertEqual(sorted(v["state_to_channels"]), sorted(rs.STATES))
-        self.assertEqual(v["state_to_channels"]["baseline"], ["R"])
-        self.assertIn("COLOR_0", v["blocked_by"])
-        self.assertEqual(len(v["verification_required"]), 3)
+        self.assertTrue(v["verified"])
+        self.assertNotIn("blocked_by", v, "the COLOR_0 blocker is cleared")
+        self.assertEqual(v["verification"]["export"]["result"], "PASS")
+        self.assertEqual(v["verification"]["import"]["result"], "PASS")
+        # the material is only PARTIAL until something renders it under a real RHI
+        self.assertEqual(v["verification"]["material"]["result"], "PARTIAL")
+        self.assertIn("nullrhi", v["verification"]["material"]["outstanding"])
+        self.assertTrue(v["still_outstanding"])
+        self.assertEqual(sorted(v["phase_read"]), sorted(list(rs.STATES) + ["transition"]))
+        self.assertIn("IN NO CHANNEL", v["team_ownership"])
+        self.assertIn("8-bit", v["verification"]["quantisation"])
 
     def test_the_rig_discrepancy_is_recorded_not_resolved(self):
         path = os.path.join(HERE, "build-manifest.json")
@@ -202,6 +208,74 @@ class RiftstalkerBlockout(unittest.TestCase):
 
     def test_revision_string(self):
         self.assertEqual(rs.REVISION, f"{rs.PRODUCTION_ID.lower()}-concept-v1")
+
+
+    # --- vertex ID channels (card .MESH_PROP; owner ruling 2026-09-07) -------------------------
+    def test_every_component_has_a_deliberate_channel_mapping(self):
+        for state in rs.STATES:
+            m = rs.assemble(0, state)[0]
+            self.assertEqual(sorted(m.vertex_colors), sorted(m.components()), state)
+        with self.assertRaises(ValueError):
+            rs.vertex_colors_for(["a_part_nobody_mapped"])
+
+    def test_team_ownership_is_in_no_channel(self):
+        # owner ruling: team ownership must stay distinguishable from adaptation state
+        src = open(os.path.join(HERE, "build_riftstalker.py"), encoding="utf-8").read()
+        window = src[src.index("MOLT_SWEEP"):src.index("def build_skeleton")]
+        self.assertNotIn("team", window.lower().replace("team colour stays", "").replace("for team", ""))
+        for state in rs.STATES:
+            m = rs.assemble(0, state)[0]
+            for component, rgba in m.vertex_colors.items():
+                self.assertEqual(rgba[3], 1.0, f"alpha is reserved: {component}")
+
+    def test_the_channels_separate_the_two_adaptations(self):
+        base = rs.assemble(0, "baseline")[0].vertex_colors
+        cara = rs.assemble(0, "carapace_molt")[0].vertex_colors
+        strk = rs.assemble(0, "striker_molt")[0].vertex_colors
+        self.assertFalse([c for c, v in base.items() if v[1] > 0 or v[2] > 0], "baseline carries neither adaptation")
+        self.assertTrue([c for c, v in cara.items() if v[1] > 0], "carapace sets G")
+        self.assertFalse([c for c, v in cara.items() if v[2] > 0], "carapace must not set B")
+        self.assertTrue([c for c, v in strk.items() if v[2] > 0], "striker sets B")
+        self.assertFalse([c for c, v in strk.items() if v[1] > 0], "striker must not set G")
+
+    def test_the_sweep_channel_is_graded_and_directional(self):
+        colors = rs.assemble(0, "baseline")[0].vertex_colors
+        shells = [colors[f"shell_{i + 1:02d}"][0] for i in range(rs.CARAPACE_SHELLS)]
+        self.assertEqual(shells, sorted(shells, reverse=True), "the sweep runs nose to tail")
+        self.assertEqual(colors["seam_01_l"][0], 1.0, "seams sweep first")
+        self.assertEqual(colors["fl_foot"][0], 0.0, "legs never take the molt treatment")
+        self.assertGreater(len({v[0] for v in colors.values()}), 3, "a graded sweep, not a flag")
+
+    def test_color_0_is_written_only_when_colours_are_supplied(self):
+        # every other package must export byte for byte as before
+        plain = kit.Mesh("plain")
+        plain.box((0.0, 0.0, 5.0), (10.0, 10.0, 10.0), plain.slot("MI_Test"), "box")
+        with tempfile.TemporaryDirectory() as tmp:
+            before = plain.write_glb(os.path.join(tmp, "a.glb"))
+            plain.vertex_colors = {"box": (1.0, 0.0, 0.0, 1.0)}
+            after = plain.write_glb(os.path.join(tmp, "b.glb"))
+        self.assertNotEqual(before, after, "supplying colours must change the file")
+
+    def test_the_exported_glb_carries_the_authored_channel_values(self):
+        import struct
+        path = os.path.join(HERE, "export", f"{rs.ASSET}_LOD0.glb")
+        if not os.path.exists(path):
+            self.skipTest("no export")
+        data = open(path, "rb").read()
+        length = struct.unpack("<I", data[12:16])[0]
+        gltf = json.loads(data[20:20 + length])
+        for primitive in gltf["meshes"][0]["primitives"]:
+            self.assertIn("COLOR_0", primitive["attributes"])
+        authored = {tuple(v) for v in rs.assemble(0, "baseline")[0].vertex_colors.values()}
+        binary = data[20 + length + 8:]
+        found = set()
+        for primitive in gltf["meshes"][0]["primitives"]:
+            acc = gltf["accessors"][primitive["attributes"]["COLOR_0"]]
+            view = gltf["bufferViews"][acc["bufferView"]]
+            offset = view.get("byteOffset", 0) + acc.get("byteOffset", 0)
+            for i in range(acc["count"]):
+                found.add(tuple(round(c, 4) for c in struct.unpack_from("<4f", binary, offset + i * 16)))
+        self.assertEqual(found, authored, "the GLB must carry exactly the authored values")
 
 
 if __name__ == "__main__":
