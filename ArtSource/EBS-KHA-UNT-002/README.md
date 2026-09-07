@@ -28,7 +28,7 @@ Single authoritative source record for the Kharuun skirmisher. Bounded by the sh
 | Selected candidate | `…/concept-discovery-20260906/riftstalker-review/riftstalker-candidate.png` (SKIRMISHER, MOVING FIRE, SHOULDER DETAIL) |
 | Canon | `SPEC-UNIT-006`: a lean, long-limbed warform with a low forward posture, a faceted carapace in charcoal with amber seams, and a shoulder-mounted shard-caster that fires while it moves. Fires on the move with a short sidestep after each shot. Molt at a Growth Basin shows a visible carapace or striker change |
 | Gameplay record | `units.json` `ka_riftstalker`: mobile skirmisher, 125 HP, 410 cm/s, 1,050 cm sight, population 2, 14 damage at 500 cm on a 22-tick cooldown |
-| Asset card | `REL-FAC-025.KA.RIFTSTALKER.ASSET` — **provisional**, authored in this worktree, not in `Docs/Requirements.md` |
+| Asset card | **`REL-ART-005.KA.RIFTSTALKER` — AUTHORITATIVE**, in `Docs/Requirements.md`. My provisional `REL-FAC-025.KA.RIFTSTALKER.ASSET` is superseded for this asset. See §8.7 |
 | Production ID | `EBS-KHA-UNT-002`, planned `SK_EBS_KHA_UNT_002` under `/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_002/` |
 
 ## 2. Contextual brief (`SPEC-VISD-008`)
@@ -153,4 +153,25 @@ for s in baseline carapace_molt striker_molt lod1 pose_move_025 pose_move_050 \
    monochrome comparison against the Cairnback, in-engine capture, gate reviews, incorporation of the
    provisional card into the authoritative requirements, owner acceptance.
 
-No OWNER-QUESTIONs are open for this package.
+7. **I missed an authoritative card, and reported that none existed.** On 2026-09-07 I told the owner
+   that no Kharuun asset card was in `Docs/Requirements.md`, and the ruling to author a provisional
+   Kharuun set was given on that premise. A full audit of every asset-card heading found
+   **`REL-ART-005.KA.RIFTSTALKER`**, which governs this asset. The other seven Kharuun packages are
+   genuinely uncovered, so the rest of the provisional set stands, but this one is superseded.
+
+   | Card clause | This build |
+   |---|---|
+   | LOD0 ≤7,500 / LOD1 ≤3,200 | 602 / 346 — within |
+   | Amber ≤15% of surface area | 3.1% — within |
+   | Hard-faceted, no smoothed topology | faceted throughout — within |
+   | Sockets `VFX_Muzzle_Shard_01`, `VFX_Molt_Origin_Base`, `Target_Hitbox_Center` | **now emitted**; the build's earlier names are kept as aliases |
+   | 14-bone kinematic rig | **conflict**: 22 bones, 16 of them limb bones alone. OWNER-QUESTION A |
+   | 3 vertex ID channels for molt phases | **not implemented** |
+   | 512² translucent core blend for molts | pending at the texture stage |
+
+> **OWNER-QUESTION A — the card's 14-bone rig against a four-legged animal.** `REL-ART-005.KA.RIFTSTALKER`
+> specifies a 14-bone kinematic layout. The selected concept is a quadruped with three-segment limbs,
+> which costs 16 bones in the limbs alone before a body, prow or caster mount. The card's figure is
+> consistent with the biped my provisional card first described and inconsistent with the concept the
+> owner's standing ruling makes authoritative. Confirm the quadruped and amend the card's bone count,
+> or direct a 14-bone rig — which means dropping a limb segment or the caster's independent aim.

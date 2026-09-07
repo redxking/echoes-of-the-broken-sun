@@ -38,7 +38,8 @@ PRODUCTION_ID = "EBS-KHA-UNT-002"
 ASSET = "SK_EBS_KHA_UNT_002"
 PLANNED_FOLDER = "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_002/"
 REVISION = "ebs-kha-unt-002-concept-v1"
-CARD = "REL-FAC-025.KA.RIFTSTALKER.ASSET"
+CARD = "REL-ART-005.KA.RIFTSTALKER"          # AUTHORITATIVE, in Docs/Requirements.md
+PROVISIONAL_CARD = "REL-FAC-025.KA.RIFTSTALKER.ASSET"   # mine; SUPERSEDED for this asset
 
 STRATA = "MI_EBS_KHA_Strata"      # faceted charcoal carapace plate, legs, prow
 AMBER = "MI_EBS_KHA_Amber"        # carapace seams and the caster slot — the only emissive
@@ -203,15 +204,26 @@ def bind(m: kit.Mesh) -> dict:
     return skel.bind_polygons(m, "root", by_component)
 
 
+# The authoritative card fixes three socket names. The build used its own until 2026-09-07, when the
+# card was found; the card's names are now primary and the previous names are kept as aliases, which is
+# the pattern the owner set for the Lancer's renamed socket on 2026-09-07.
 SOCKETS = {
-    "Shard_Caster_Muzzle": ("caster_pitch", (CASTER_X + 48.0, 0.0, CASTER_Z), 0.0,
-                            "where the shard leaves: forward, clear of the prow"),
-    "Caster_Mount": ("caster_yaw", (CASTER_X, 0.0, CASTER_Z), 0.0, "the caster's own pivot"),
-    "Target_Anchor_Center": ("body", (-16.0, 0.0, H - 46.0), 0.0, "targeting and selection anchor in the body"),
-    "Molt_Carapace_Anchor": ("body", (shell_profile(2)[0], 0.0, shell_profile(2)[1] + 30.0), 0.0,
-                             "where a carapace molt's added plate is anchored"),
+    "VFX_Muzzle_Shard_01": ("caster_pitch", (CASTER_X + 48.0, 0.0, CASTER_Z), 0.0,
+                            "card .ANIM_RIG: where the shard leaves, forward and clear of the prow"),
+    "VFX_Molt_Origin_Base": ("body", (shell_profile(2)[0], 0.0, shell_profile(2)[1] + 30.0), 0.0,
+                             "card .ANIM_RIG: the molt effect origin"),
+    "Target_Hitbox_Center": ("body", (-16.0, 0.0, H - 46.0), 0.0,
+                             "card .ANIM_RIG: targeting and selection anchor"),
+    "Caster_Mount": ("caster_yaw", (CASTER_X, 0.0, CASTER_Z), 0.0,
+                     "not named by the card: the caster's own pivot, needed by the two-bone mount"),
     "Molt_Striker_Anchor": ("caster_pitch", (CASTER_X + 26.0, 0.0, CASTER_Z + 4.0), 0.0,
-                            "where a striker molt's added vanes are anchored"),
+                            "not named by the card: where a striker molt's vanes attach"),
+}
+
+SOCKET_ALIASES = {
+    "Shard_Caster_Muzzle": "VFX_Muzzle_Shard_01",
+    "Molt_Carapace_Anchor": "VFX_Molt_Origin_Base",
+    "Target_Anchor_Center": "Target_Hitbox_Center",
 }
 
 
@@ -434,7 +446,9 @@ def contract_inventory(m: kit.Mesh, s: skel.Skeleton, clips) -> dict:
                           "striker_vanes": sum(1 for c in comps if c.startswith("molt_striker_"))},
         "bones": {"contract": "22: root, body, two-bone prow, two-bone caster, four three-segment legs",
                   "built": len(s.bones), "names": [b.name for b in s.bones]},
-        "sockets": {"contract": sorted(SOCKETS), "built": sorted(sk.name for sk in m.sockets)},
+        "sockets": {"contract": sorted(SOCKETS), "built": sorted(sk.name for sk in m.sockets),
+                    "aliases": dict(SOCKET_ALIASES),
+                    "card_required": ["VFX_Muzzle_Shard_01", "VFX_Molt_Origin_Base", "Target_Hitbox_Center"]},
         "tracks": {"contract": ["idle", "move", "fire_on_the_move", "sidestep", "molt", "death"],
                    "built": [c.name for c in clips]},
         "states": {"contract": list(STATES), "built": list(STATES)},
@@ -558,8 +572,24 @@ def manifest(exported: dict) -> dict:
              "detail": ("The two share a quadruped anatomy and must be distinguishable in monochrome at tactical distance. A "
                         "monochrome tactical render is produced here as the baseline for that comparison; the comparison "
                         "itself waits on the Cairnback package.")}],
+        "authoritative_card": {
+            "card": CARD,
+            "found": ("2026-09-07, during a full audit of every asset-card heading in Docs/Requirements.md. I had reported "
+                      "that no Kharuun asset card existed; that was wrong for this asset, and the owner's ruling to author a "
+                      "provisional Kharuun set was given on that false premise."),
+            "bounds": {"lod0_triangles": 7500, "lod1_triangles": 3200, "rig": "14-bone kinematic layout",
+                       "sockets": ["VFX_Muzzle_Shard_01", "VFX_Molt_Origin_Base", "Target_Hitbox_Center"],
+                       "vertex_id_channels": 3, "emissive": "Broken-Sun Amber <= 15% surface area"},
+            "compliance": {
+                "triangles": "WITHIN: 602 LOD0 and 346 LOD1 against 7,500 / 3,200",
+                "emissive": "WITHIN: 3.1% against 15%",
+                "faceted_no_smoothed_topology": "WITHIN",
+                "sockets": "NOW COMPLIANT: the card's three names are emitted; the build's previous names are aliases",
+                "rig": "CONFLICT: the card says 14 bones; this quadruped has 22, of which 16 are limb bones alone. OWNER-QUESTION A.",
+                "vertex_id_channels": "NOT IMPLEMENTED: three channels for public molting phase transitions are required.",
+                "molt_texture": "PENDING: a 512^2 translucent core blend mask is required at the texture stage."}},
         "provisional_contract": {
-            "card": f"{CARD} in ArtSource/kharuun-asset-cards.json (rendered to kharuun-asset-cards.md)",
+            "card": f"{PROVISIONAL_CARD} in ArtSource/kharuun-asset-cards.json — SUPERSEDED for this asset by {CARD}",
             "status": ("PROVISIONAL. Authored in this worktree under the owner ruling of 2026-09-07; NOT incorporated into "
                        "Docs/Requirements.md and not an existing authoritative per-asset requirement."),
             "bounds": {"lod0_triangles": 6000, "lod1_triangles": 2600,
@@ -568,9 +598,9 @@ def manifest(exported: dict) -> dict:
                     "carapace_molt_triangles": carapace.triangle_count(),
                     "striker_molt_triangles": striker.triangle_count(),
                     "worst_state_triangles": worst,
-                    "lod0_cap": 6000, "lod1_cap": 2600, "cap_source": f"{CARD} (PROVISIONAL)",
+                    "lod0_cap": 7500, "lod1_cap": 3200, "cap_source": f"{CARD} (AUTHORITATIVE); my provisional {PROVISIONAL_CARD} was tighter at 6,000/2,600",
                     "cap_scope": "the complete assembly including the caster and every molt-variant part carried on the same asset",
-                    "lod0_within_cap": worst <= 6000, "lod1_within_cap": m1.triangle_count() <= 2600,
+                    "lod0_within_cap": worst <= 7500, "lod1_within_cap": m1.triangle_count() <= 3200,
                     "amber_area_fraction_lod0": round(amber, 5), "amber_cap": 0.15,
                     "amber_measure": "surface area, per REL-ART-029; the cap is a ceiling, not a target",
                     "amber_within_cap": amber <= 0.15},

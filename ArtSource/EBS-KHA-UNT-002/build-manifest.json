@@ -19,6 +19,31 @@
  },
  "asset_name": "SK_EBS_KHA_UNT_002",
  "author": "Angelis Pseftis",
+ "authoritative_card": {
+  "bounds": {
+   "emissive": "Broken-Sun Amber <= 15% surface area",
+   "lod0_triangles": 7500,
+   "lod1_triangles": 3200,
+   "rig": "14-bone kinematic layout",
+   "sockets": [
+    "VFX_Muzzle_Shard_01",
+    "VFX_Molt_Origin_Base",
+    "Target_Hitbox_Center"
+   ],
+   "vertex_id_channels": 3
+  },
+  "card": "REL-ART-005.KA.RIFTSTALKER",
+  "compliance": {
+   "emissive": "WITHIN: 3.1% against 15%",
+   "faceted_no_smoothed_topology": "WITHIN",
+   "molt_texture": "PENDING: a 512^2 translucent core blend mask is required at the texture stage.",
+   "rig": "CONFLICT: the card says 14 bones; this quadruped has 22, of which 16 are limb bones alone. OWNER-QUESTION A.",
+   "sockets": "NOW COMPLIANT: the card's three names are emitted; the build's previous names are aliases",
+   "triangles": "WITHIN: 602 LOD0 and 346 LOD1 against 7,500 / 3,200",
+   "vertex_id_channels": "NOT IMPLEMENTED: three channels for public molting phase transitions are required."
+  },
+  "found": "2026-09-07, during a full audit of every asset-card heading in Docs/Requirements.md. I had reported that no Kharuun asset card existed; that was wrong for this asset, and the owner's ruling to author a provisional Kharuun set was given on that false premise."
+ },
  "bind_counts": {
   "body": 192,
   "caster_pitch": 24,
@@ -46,12 +71,12 @@
   "amber_measure": "surface area, per REL-ART-029; the cap is a ceiling, not a target",
   "amber_within_cap": true,
   "cap_scope": "the complete assembly including the caster and every molt-variant part carried on the same asset",
-  "cap_source": "REL-FAC-025.KA.RIFTSTALKER.ASSET (PROVISIONAL)",
+  "cap_source": "REL-ART-005.KA.RIFTSTALKER (AUTHORITATIVE); my provisional REL-FAC-025.KA.RIFTSTALKER.ASSET was tighter at 6,000/2,600",
   "carapace_molt_triangles": 602,
-  "lod0_cap": 6000,
+  "lod0_cap": 7500,
   "lod0_triangles": 542,
   "lod0_within_cap": true,
-  "lod1_cap": 2600,
+  "lod1_cap": 3200,
   "lod1_triangles": 346,
   "lod1_within_cap": true,
   "striker_molt_triangles": 566,
@@ -224,19 +249,29 @@
    "slot": true
   },
   "sockets": {
+   "aliases": {
+    "Molt_Carapace_Anchor": "VFX_Molt_Origin_Base",
+    "Shard_Caster_Muzzle": "VFX_Muzzle_Shard_01",
+    "Target_Anchor_Center": "Target_Hitbox_Center"
+   },
    "built": [
     "Caster_Mount",
-    "Molt_Carapace_Anchor",
     "Molt_Striker_Anchor",
-    "Shard_Caster_Muzzle",
-    "Target_Anchor_Center"
+    "Target_Hitbox_Center",
+    "VFX_Molt_Origin_Base",
+    "VFX_Muzzle_Shard_01"
+   ],
+   "card_required": [
+    "VFX_Muzzle_Shard_01",
+    "VFX_Molt_Origin_Base",
+    "Target_Hitbox_Center"
    ],
    "contract": [
     "Caster_Mount",
-    "Molt_Carapace_Anchor",
     "Molt_Striker_Anchor",
-    "Shard_Caster_Muzzle",
-    "Target_Anchor_Center"
+    "Target_Hitbox_Center",
+    "VFX_Molt_Origin_Base",
+    "VFX_Muzzle_Shard_01"
    ]
   },
   "states": {
@@ -343,17 +378,39 @@
     "MI_EBS_KHA_Strata",
     "MI_EBS_KHA_Amber"
    ],
-   "sha256": "0f224f73b675e8523abf54115ece6b10fe492e41d4899453b00ebfcbaf33d076",
+   "sha256": "d234b15170fa5a16b423f4a360ec6e2173b10f83b1fb73946dbbe906370aefdc",
    "sockets": [
     {
      "bone": "caster_pitch",
-     "name": "Shard_Caster_Muzzle",
+     "name": "VFX_Muzzle_Shard_01",
      "position_cm": [
       94.0,
       0.0,
       176.0
      ],
-     "purpose": "where the shard leaves: forward, clear of the prow",
+     "purpose": "card .ANIM_RIG: where the shard leaves, forward and clear of the prow",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "body",
+     "name": "VFX_Molt_Origin_Base",
+     "position_cm": [
+      -9.0,
+      0.0,
+      196.5
+     ],
+     "purpose": "card .ANIM_RIG: the molt effect origin",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "body",
+     "name": "Target_Hitbox_Center",
+     "position_cm": [
+      -16.0,
+      0.0,
+      154.0
+     ],
+     "purpose": "card .ANIM_RIG: targeting and selection anchor",
      "yaw_deg": 0.0
     },
     {
@@ -364,29 +421,7 @@
       0.0,
       176.0
      ],
-     "purpose": "the caster's own pivot",
-     "yaw_deg": 0.0
-    },
-    {
-     "bone": "body",
-     "name": "Target_Anchor_Center",
-     "position_cm": [
-      -16.0,
-      0.0,
-      154.0
-     ],
-     "purpose": "targeting and selection anchor in the body",
-     "yaw_deg": 0.0
-    },
-    {
-     "bone": "body",
-     "name": "Molt_Carapace_Anchor",
-     "position_cm": [
-      -9.0,
-      0.0,
-      196.5
-     ],
-     "purpose": "where a carapace molt's added plate is anchored",
+     "purpose": "not named by the card: the caster's own pivot, needed by the two-bone mount",
      "yaw_deg": 0.0
     },
     {
@@ -397,7 +432,7 @@
       0.0,
       180.0
      ],
-     "purpose": "where a striker molt's added vanes are anchored",
+     "purpose": "not named by the card: where a striker molt's vanes attach",
      "yaw_deg": 0.0
     }
    ],
@@ -443,17 +478,39 @@
     "MI_EBS_KHA_Strata",
     "MI_EBS_KHA_Amber"
    ],
-   "sha256": "31a870e53a15336a3031ce27f789b2caa7830ba20ef26c704d998435744e6333",
+   "sha256": "50125d822217cf839c8d046965003b9c9d3b72ea1fcdca1512f404d580ff614b",
    "sockets": [
     {
      "bone": "caster_pitch",
-     "name": "Shard_Caster_Muzzle",
+     "name": "VFX_Muzzle_Shard_01",
      "position_cm": [
       94.0,
       0.0,
       176.0
      ],
-     "purpose": "where the shard leaves: forward, clear of the prow",
+     "purpose": "card .ANIM_RIG: where the shard leaves, forward and clear of the prow",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "body",
+     "name": "VFX_Molt_Origin_Base",
+     "position_cm": [
+      -9.0,
+      0.0,
+      196.5
+     ],
+     "purpose": "card .ANIM_RIG: the molt effect origin",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "body",
+     "name": "Target_Hitbox_Center",
+     "position_cm": [
+      -16.0,
+      0.0,
+      154.0
+     ],
+     "purpose": "card .ANIM_RIG: targeting and selection anchor",
      "yaw_deg": 0.0
     },
     {
@@ -464,29 +521,7 @@
       0.0,
       176.0
      ],
-     "purpose": "the caster's own pivot",
-     "yaw_deg": 0.0
-    },
-    {
-     "bone": "body",
-     "name": "Target_Anchor_Center",
-     "position_cm": [
-      -16.0,
-      0.0,
-      154.0
-     ],
-     "purpose": "targeting and selection anchor in the body",
-     "yaw_deg": 0.0
-    },
-    {
-     "bone": "body",
-     "name": "Molt_Carapace_Anchor",
-     "position_cm": [
-      -9.0,
-      0.0,
-      196.5
-     ],
-     "purpose": "where a carapace molt's added plate is anchored",
+     "purpose": "not named by the card: the caster's own pivot, needed by the two-bone mount",
      "yaw_deg": 0.0
     },
     {
@@ -497,7 +532,7 @@
       0.0,
       180.0
      ],
-     "purpose": "where a striker molt's added vanes are anchored",
+     "purpose": "not named by the card: where a striker molt's vanes attach",
      "yaw_deg": 0.0
     }
    ],
@@ -520,7 +555,7 @@
    "lod0_triangles": 6000,
    "lod1_triangles": 2600
   },
-  "card": "REL-FAC-025.KA.RIFTSTALKER.ASSET in ArtSource/kharuun-asset-cards.json (rendered to kharuun-asset-cards.md)",
+  "card": "REL-FAC-025.KA.RIFTSTALKER.ASSET in ArtSource/kharuun-asset-cards.json \u2014 SUPERSEDED for this asset by REL-ART-005.KA.RIFTSTALKER",
   "status": "PROVISIONAL. Authored in this worktree under the owner ruling of 2026-09-07; NOT incorporated into Docs/Requirements.md and not an existing authoritative per-asset requirement."
  },
  "review": {

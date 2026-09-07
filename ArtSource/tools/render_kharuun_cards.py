@@ -102,6 +102,13 @@ def render(data: dict) -> str:
             out += ["", f"Owner: {a['confirmed_by_owner']}"]
         if m.get("acceptance"):
             out += ["", f"**.ACCEPTANCE.** {m['acceptance']}"]
+        if c.get("superseded_by"):
+            sb = c["superseded_by"]
+            out += ["", f"**.SUPERSEDED BY {sb['card']}** (found {sb['found']}).", "",
+                    "Conflicts with the current build:", ""]
+            out += _bullets(sb["conflicts_with_the_build"])
+            out += ["", "Not in conflict:", ""]
+            out += _bullets(sb["not_in_conflict"])
         if m.get("clips"):
             out += ["", "**.CLIPS.** " + ", ".join(f"`{x}`" for x in m["clips"]) + "."]
         out += ["", f"**.ROOT_MOTION.** {m['root_motion']}", "",

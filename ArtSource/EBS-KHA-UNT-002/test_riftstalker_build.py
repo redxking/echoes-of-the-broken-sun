@@ -65,8 +65,8 @@ class RiftstalkerBlockout(unittest.TestCase):
         self.assertLessEqual(rs.slot_area_fraction(self.m0, rs.AMBER), 0.15)  # REL-ART-029 ceiling
 
     def test_the_caster_is_a_shoulder_slot_aimed_past_the_prow(self):
-        muzzle = {s.name: s for s in self.m0.sockets}["Shard_Caster_Muzzle"]
-        self.assertEqual(self.socks["Shard_Caster_Muzzle"], "caster_pitch")
+        muzzle = {s.name: s for s in self.m0.sockets}["VFX_Muzzle_Shard_01"]
+        self.assertEqual(self.socks["VFX_Muzzle_Shard_01"], "caster_pitch")
         self.assertGreater(muzzle.position[2], rs.H - 60.0, "the caster sits high on the shoulder")
         prow_tip_z = self.m0.component_bounds("prow")[0][2]
         self.assertGreater(muzzle.position[2], prow_tip_z, "its line clears the prow")
@@ -120,8 +120,13 @@ class RiftstalkerBlockout(unittest.TestCase):
 
     def test_sockets(self):
         self.assertEqual(sorted(s.name for s in self.m0.sockets), sorted(rs.SOCKETS))
+        # the authoritative card REL-ART-005.KA.RIFTSTALKER fixes these three names
+        for required in ("VFX_Muzzle_Shard_01", "VFX_Molt_Origin_Base", "Target_Hitbox_Center"):
+            self.assertIn(required, rs.SOCKETS, "a card-required socket name is missing")
         self.assertEqual(self.socks["Molt_Striker_Anchor"], "caster_pitch")
-        self.assertEqual(self.socks["Molt_Carapace_Anchor"], "body")
+        self.assertEqual(self.socks["VFX_Molt_Origin_Base"], "body")
+        for old, new in rs.SOCKET_ALIASES.items():
+            self.assertIn(new, rs.SOCKETS, f"alias {old} points at a socket that does not exist")
 
     def test_provisional_card_budget(self):
         path = os.path.join(HERE, "build-manifest.json")
@@ -129,7 +134,8 @@ class RiftstalkerBlockout(unittest.TestCase):
         if os.path.exists(path):
             with open(path, encoding="utf-8") as handle:
                 data = json.load(handle)
-            self.assertIn("REL-FAC-025.KA.RIFTSTALKER.ASSET", data["provisional_contract"]["card"])
+            self.assertIn("REL-ART-005.KA.RIFTSTALKER", data["authoritative_card"]["card"])
+            self.assertIn("CONFLICT", data["authoritative_card"]["compliance"]["rig"])
             self.assertIn("PENDING", data["acceptance"]["technical"])
             self.assertIn("FOUR legs", data["anatomy_correction"]["why_wrong"])
             for row in data.get("outputs", []):
@@ -141,8 +147,8 @@ class RiftstalkerBlockout(unittest.TestCase):
         worst = max(lod0 or self.m0.triangle_count(), self.carapace.triangle_count(),
                     self.striker.triangle_count())
         lod1 = lod1 or self.m1.triangle_count()
-        self.assertLessEqual(worst, 6000)
-        self.assertLessEqual(lod1, 2600)
+        self.assertLessEqual(worst, 7500)
+        self.assertLessEqual(lod1, 3200)
         self.assertLess(self.m1.triangle_count(), self.m0.triangle_count())
 
     def test_lod1_keeps_four_legs_and_the_caster(self):

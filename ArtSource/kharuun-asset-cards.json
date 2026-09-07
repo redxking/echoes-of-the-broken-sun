@@ -11,7 +11,8 @@
    "NOT an amendment to Docs/Requirements.md. Section 18.2 still carries Meridian cards only; nothing in this file has been incorporated there.",
    "NOT existing authoritative per-asset requirements. The owner stated plainly that these match the preparation pipeline's selected limits and are not existing authoritative contracts.",
    "NOT owner acceptance of any asset built against them.",
-   "NOT a licence to mark any asset technically compliant. Final technical acceptance stays pending until these cards are incorporated into the authoritative requirements and their checks pass."
+   "NOT a licence to mark any asset technically compliant. Final technical acceptance stays pending until these cards are incorporated into the authoritative requirements and their checks pass.",
+   "NOT applicable to the Riftstalker's mesh, rig or socket contract. REL-ART-005.KA.RIFTSTALKER EXISTS in Docs/Requirements.md and is authoritative for that asset. I reported on 2026-09-07 that no Kharuun asset card existed; that was wrong, and the owner's ruling to author this provisional set was given on that false premise. The rest of the set stands because the other seven Kharuun assets genuinely have no card."
   ],
   "binding_requirements_above_these_cards": [
    "REL-ART-029 \u2014 Kharuun Roster Grown Mineral Architecture: faceted basalt silhouette, zero organic smoothing, packed 2048x2048 PBR stacks with micro-noise normal maps, amber emissive clamped to <= 15.0% of mesh surface area.",
@@ -28,6 +29,30 @@
    "monochrome_separation": "Owner ruling 2026-09-07. Roster members that share an anatomy must remain distinguishable from each other in MONOCHROME at tactical distance. Colour, emissive and texture do not count toward that separation; silhouette, mass, stance and gait do. The pair this currently governs is the Riftstalker and the Cairnback, both Kharuun quadrupeds.",
    "budget_headroom": "Owner ruling 2026-09-07. Sitting below a triangle ceiling does NOT establish sufficient silhouette, joint or carapace detail. Detail is judged against the concept at gameplay distance; a low count is headroom for refinement, not evidence of completeness.",
    "cards_follow_traced_concepts": "Recorded 2026-09-07 after the third anatomy error. These cards were all authored in one pass BEFORE their concepts were traced, and three of them described the wrong animal: the Riftstalker as a biped, the Growth Basin's niches as closing, and the Resonant as a biped. Every one was corrected against the concept rather than the model being bent to fit the card. Any future card is to be written AFTER its candidate is traced, not before."
+  },
+  "card_coverage_audit": {
+   "date": "2026-09-07",
+   "method": "every '#### [Asset Card: ...]' heading in Docs/Requirements.md enumerated and matched against all 21 packages",
+   "authoritative_cards_found": 15,
+   "kharuun_covered": [
+    "Riftstalker \u2014 REL-ART-005.KA.RIFTSTALKER"
+   ],
+   "kharuun_uncovered": [
+    "Tender",
+    "Cairnback",
+    "Resonant",
+    "Memory Hearth",
+    "Waystone",
+    "Growth Basin",
+    "Listening Spine"
+   ],
+   "hollow_choir_buildings_uncovered": [
+    "Concordance",
+    "Interval Loom",
+    "Chorus Loom",
+    "Phase Anchor"
+   ],
+   "note": "The four REL-FAC-027.HC.* cards cover Hollow Choir UNITS, not the four building packages that remain. REL-FAC-027.HC.INTERVALIST is the Intervalist unit and does NOT govern the Interval Loom."
   }
  },
  "cards": [
@@ -323,7 +348,7 @@
   },
   {
    "card_id": "REL-FAC-025.KA.RIFTSTALKER.ASSET",
-   "status": "PROVISIONAL",
+   "status": "SUPERSEDED \u2014 an authoritative card exists",
    "package_id": "EBS-PKG-KA-RIFTSTALKER",
    "production_asset_id": "EBS-KHA-UNT-002",
    "subject": "Riftstalker",
@@ -393,7 +418,34 @@
     "Firing while moving must be legible. Identical leg tracks between the move and fire clips are a useful REGRESSION CHECK ONLY and do not alone prove runtime behaviour. Simultaneous locomotion and firing must later be verified through turns, stops, targeting changes and animation transitions.",
     "It must remain distinguishable from the Cairnback in MONOCHROME at tactical distance, and must visibly lack the mass for a frontal fight. Colour and emissive do not count toward that separation.",
     "Triangle counts well under the ceiling are headroom, not sufficiency. Silhouette, joint and carapace detail are judged against the concept at gameplay distance."
-   ]
+   ],
+   "superseded_by": {
+    "card": "REL-ART-005.KA.RIFTSTALKER in Docs/Requirements.md",
+    "found": "2026-09-07, during a full audit of every asset-card heading",
+    "authoritative_bounds": {
+     "lod0_triangles": 7500,
+     "lod1_triangles": 3200,
+     "rig": "14-bone kinematic layout",
+     "sockets": [
+      "VFX_Muzzle_Shard_01",
+      "VFX_Molt_Origin_Base",
+      "Target_Hitbox_Center"
+     ],
+     "vertex_id_channels": "3, for public molting phase transitions",
+     "textures": "2048^2 PBR plus a 512^2 translucent core blend for molt transitions",
+     "emissive": "Broken-Sun Amber, <= 15% mesh surface area"
+    },
+    "conflicts_with_the_build": [
+     "RIG: the card specifies 14 bones; the built quadruped has 22, of which 16 are limb bones alone. A four-legged animal with three-segment limbs cannot fit 14. Raised as OWNER-QUESTION A.",
+     "SOCKETS: the card fixes three names the build did not use. The build now emits the card's names, with the previous names retained as aliases.",
+     "VERTEX ID CHANNELS: three channels for molt phases are required and are not implemented."
+    ],
+    "not_in_conflict": [
+     "Triangle counts: 602 LOD0 and 346 LOD1 sit under both the card's 7,500/3,200 and my tighter provisional 6,000/2,600.",
+     "Emissive: 3.1% against the 15% ceiling.",
+     "Faceted construction with no smoothed topology."
+    ]
+   }
   },
   {
    "card_id": "REL-FAC-025.KA.CAIRNBACK.ASSET",

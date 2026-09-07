@@ -555,7 +555,7 @@
    "source_root": "ArtSource/EBS-KHA-UNT-002/",
    "authoritative_document": "ArtSource/EBS-KHA-UNT-002/README.md",
    "concept_fidelity_target": "ArtSource/EBS-KHA-UNT-002/concept-fidelity.md",
-   "asset_card": "REL-FAC-025.KA.RIFTSTALKER.ASSET (PROVISIONAL, ArtSource/kharuun-asset-cards.json)",
+   "asset_card": "REL-ART-005.KA.RIFTSTALKER (AUTHORITATIVE, Docs/Requirements.md); my provisional card is superseded for this asset",
    "stage_receipts": [
     {
      "stage": "BLOCKOUT (concept build, ebs-kha-unt-002-concept-v1)",
@@ -571,13 +571,17 @@
     }
    ],
    "next": "Close the open items above, then textures, in-engine capture, gate reviews, incorporation of the provisional card into the authoritative requirements, owner acceptance.",
-   "open_owner_questions": [],
+   "open_owner_questions": [
+    "A - the card specifies a 14-bone rig; the concept's quadruped needs 16 limb bones alone. Confirm the quadruped and amend the count, or direct a 14-bone rig (README section 8.7)."
+   ],
    "open_items": [
     "Death pose leaves one leg raised: OPEN BLOCKOUT DEFECT; resolve both it and the preferred fold through a supported collapse pose. Not final animation acceptance.",
     "Simultaneous locomotion and firing unverified: identical leg tracks are a regression check only. Verify through turns, stops, targeting changes and animation transitions.",
     "Silhouette, joint and carapace detail not judged: the low counts are headroom, not sufficiency. Judge against the concept at gameplay distance.",
     "Monochrome separation from the Cairnback not yet comparable: baseline monochrome passes rendered here; the comparison waits on that package.",
-    "Gait was a hop until 2026-09-07; the fix is in this package's second stage receipt."
+    "Gait was a hop until 2026-09-07; the fix is in this package's second stage receipt.",
+    "Three vertex ID channels for public molting phase transitions are required by the authoritative card and are not implemented.",
+    "A 512x512 translucent core blend mask for molt transitions is required at the texture stage."
    ],
    "acceptance_note": "Owner 2026-09-07: remains BLOCKOUT. Animation NOT_ACCEPTED. Import and test results are reported evidence, not independently inspected."
   },
@@ -702,6 +706,21 @@
    "finding": "Three of eight Kharuun cards described the wrong anatomy because the cards were written before the concepts were traced",
    "detail": "The Riftstalker was specified as a biped, the Growth Basin's niches as closing, and the Resonant as a biped. All three were contradicted by their own candidates. Every one was corrected against the concept rather than the model being bent to fit the card.",
    "resolution": "A faction rule now requires a card to be authored AFTER its candidate is traced. The rule arrived three errors late; any future faction's cards are to follow it from the start."
+  },
+  {
+   "date": "2026-09-07",
+   "finding": "I reported that no Kharuun asset card existed. One does, and it governs the Riftstalker.",
+   "detail": "REL-ART-005.KA.RIFTSTALKER is present in Docs/Requirements.md section 18.2's neighbourhood at line 4535, in a second block of asset cards well below the Meridian set I had checked. My claim of 'no Kharuun asset card' was based on searching only the first block. The owner's ruling of 2026-09-07 to author a provisional Kharuun card set was given on that false premise.",
+   "impact": "The Riftstalker was built against my provisional bounds instead of the authoritative card. Triangles and emissive are within the real card, but its three required socket names were absent, its 14-bone rig conflicts with the built 22-bone quadruped, and its three vertex ID channels for molt phases are unimplemented. The other seven Kharuun packages are genuinely uncovered, so the rest of the provisional set stands.",
+   "resolution": "A full audit now enumerates every '#### [Asset Card: ...]' heading and matches it against all 21 packages; the result is recorded in kharuun-asset-cards.json under card_coverage_audit. The Riftstalker emits the card's socket names with its own as aliases, its manifest carries a clause-by-clause compliance table, and the bone-count conflict is raised as OWNER-QUESTION A. Run that audit before claiming a card is absent.",
+   "audit_result": {
+    "authoritative_cards": 15,
+    "kharuun_covered": [
+     "Riftstalker"
+    ],
+    "hollow_choir_buildings_covered": [],
+    "note": "REL-FAC-027.HC.INTERVALIST is the Intervalist UNIT and does not govern the Interval Loom building."
+   }
   }
  ],
  "owner_rulings": [
