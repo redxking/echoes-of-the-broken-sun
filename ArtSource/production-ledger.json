@@ -407,8 +407,9 @@
     }
    ],
    "next": "Textures (2048 grit/grease stack, hazard striping), the card's interior assembly lights, in-engine capture, gate reviews, owner acceptance.",
-   "open_owner_questions": [
-    "A - the 4x4 footprint with a ramp at each end caps the hall at 2:1 while the candidate reads roughly 3:1 (README section 8.1)."
+   "open_owner_questions": [],
+   "resolved_owner_questions": [
+    "A - hall proportion: CONFIRMED 2:1 within the footprint, ramps inside the placement envelope, recorded as a footprint-driven adaptation (owner, 2026-09-07)."
    ]
   },
   {
@@ -432,8 +433,9 @@
     }
    ],
    "next": "Textures (2048 PBR, brass trim, pad chevrons), in-engine capture, gate reviews, owner acceptance.",
-   "open_owner_questions": [
-    "A - the asset card's .MESH_PROP pillbox wording contradicts canon, both review decisions and the candidate (README section 8.2)."
+   "open_owner_questions": [],
+   "resolved_owner_questions": [
+    "A - card pillbox wording: CONFIRMED the three-legged mount with twin emitters; the pillbox wording is to be retired by a coordinated card amendment, which has not happened yet (owner, 2026-09-07)."
    ]
   }
  ],
@@ -510,6 +512,21 @@
     {
      "subject": "EBS-KHA-UNT-001 Tender contract",
      "ruling": "Use a Tender-specific provisional contract, not blanket Surveyor inheritance: LOD0 <= 4,500 and LOD1 <= 1,800 triangles; a 2048^2 PBR stack with two material slots maximum; amber emissive <= 5% of surface area concentrated at the working wrist nodules; retain the 19-bone humanoid rig subject to deformation and animation checks; preserve Kharuun faceted mineral anatomy, staff, sling and cultivator motions, with Surveyor machinery, tread language and cyan treatment not transferring. These are deliberate production targets within the earlier provisional ceilings, not an existing authoritative asset card."
+    }
+   ]
+  },
+  {
+   "date": "2026-09-07",
+   "source": "Owner message answering the Array Foundry and Aegis Post OWNER-QUESTIONs",
+   "status": "Production-direction confirmations only. NOT acceptance of the finished assets, and NOT a claim that the asset cards have already been amended.",
+   "rulings": [
+    {
+     "subject": "EBS-MER-BLD-003 Array Foundry - hall proportion",
+     "ruling": "Confirmed: the 2:1 hall within the 4x4 footprint. Both ramps stay inside the placement envelope; they are NOT to be extended onto walkable ground merely to match the candidate's apparent 3:1 proportion. Preserve the long-axis production flow, the aligned entrance and exit, and the straight internal rail. Record the proportion change as a footprint-driven adaptation. Navigation and placement rules are unchanged."
+    },
+    {
+     "subject": "EBS-MER-BLD-004 Aegis Post - card pillbox wording",
+     "ruling": "Confirmed: the three-legged ceramic mount with twin emitters, following the selected concept and the explicit decision to replace the bunker. The conflicting pillbox / vertical-barrel wording is to be retired through a coordinated asset-card amendment. Preserve the tripod silhouette and the twin-emitter aiming assembly. No canon or concept-review reversal is needed."
     }
    ]
   }

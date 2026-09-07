@@ -115,7 +115,10 @@ for s in powered offline lod1 pose_powered_idle_050 pose_aim_100 pose_fire_025 p
    turret barrel mounted onto an elevated orthogonal protective concrete pillbox carriage". The canon
    row, both review decisions and the selected candidate all call for a three-legged ceramic mount with
    twin emitters, and decision B explicitly replaces the bunker. This build follows canon and the
-   concept. **OWNER-QUESTION A.**
+   concept. **Owner ruling 2026-09-07: the three-legged mount with twin emitters is confirmed**, and the
+   conflicting pillbox wording is to be retired through a coordinated asset-card amendment. That
+   amendment has not happened; the card still carries the pillbox line, so anyone reading it will still
+   meet the contradiction until it is amended. No canon or concept-review reversal is needed.
 3. **Offline is geometry plus slot assignment, not a material promise.** The state mesh moves the band
    and the muzzle cores into the charcoal slot; the `offline` clip supplies the 34° droop. A test asserts
    the component set is identical between states, so a state cannot silently add or drop parts.
@@ -126,9 +129,10 @@ for s in powered offline lod1 pose_powered_idle_050 pose_aim_100 pose_fire_025 p
 6. Open: textures (2048² per the card, including the brass trim and the pad chevrons), in-engine
    capture, gate reviews, owner acceptance.
 
-> **OWNER-QUESTION A — the asset card's pillbox wording.** `REL-BLD-015.MC.AEGIS.ASSET` `.MESH_PROP`
-> specifies a vertical barrel on an elevated concrete pillbox carriage. Canon `SPEC-BLD-015.MC.AEGIS`,
-> both concept review decisions and the selected candidate specify a three-legged ceramic mount with a
-> twin-emitter head, and decision B explicitly replaces the bunker. I built to canon and the concept.
-> Confirm that reading, or direct the pillbox instead — in which case the canon row and both review
-> decisions need amending, which is not something I can do.
+> **OWNER-QUESTION A — RESOLVED 2026-09-07.** Asked: confirm the three-legged mount, or direct the
+> card's pillbox instead. Owner ruling: the three-legged ceramic mount with twin emitters is confirmed,
+> following the selected concept and the explicit decision to replace the bunker; the pillbox and
+> vertical-barrel wording is to be retired through a coordinated asset-card amendment. The tripod
+> silhouette and the twin-emitter aiming assembly are preserved. **The card is not yet amended** — that
+> amendment is outside this worktree's authority and remains outstanding. This is production direction,
+> not acceptance of the finished asset.

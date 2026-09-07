@@ -104,7 +104,11 @@ for s in producing researching interrupted lod1; do python3 ../tools/ebs_render.
    ramp at BOTH ends of a long hall. Inside the 4×4 square the length is shared: hall half (260) +
    intake hood (70) + intake ramp (60) = 390 ≤ 400. A longer hall would push a ramp outside the
    footprint. The proportion is a consequence of the rule, not a design preference, and it is the
-   largest divergence from the candidate. **OWNER-QUESTION A.**
+   largest divergence from the candidate. **Owner ruling 2026-09-07: the 2:1 hall is confirmed.** Both
+   ramps stay inside the placement envelope; they are not to be extended onto walkable ground to chase
+   the candidate's apparent 3:1. The long-axis production flow, the aligned entrance and exit, and the
+   straight internal rail are preserved, and this is recorded as a footprint-driven adaptation.
+   Navigation and placement rules are unchanged.
 2. **The intake mouth and the output door are dark recesses with lit edges**, not glowing panels. A
    first pass made both large emissive slabs, which read as screens rather than doorways.
 3. **The three states are geometry plus slot assignment**, not material promises: the carriage exists or
@@ -115,7 +119,7 @@ for s in producing researching interrupted lod1; do python3 ../tools/ebs_render.
 5. Open: textures (2048² per the card, including the grit and grease layers and the hazard striping),
    the interior assembly lights the card calls for, in-engine capture, gate reviews, owner acceptance.
 
-> **OWNER-QUESTION A — hall proportion against the footprint.** The candidate reads roughly 3:1; the
-> 4×4 footprint with a ramp at each end caps the hall at 2:1. Confirm the 2:1 hall, or allow the ramps
-> to extend past the footprint onto walkable ground (they carry no collision), which would let the hall
-> lengthen toward the candidate.
+> **OWNER-QUESTION A — RESOLVED 2026-09-07.** Asked: confirm the 2:1 hall, or allow the ramps past the
+> footprint so the hall could lengthen toward the candidate's 3:1. Owner ruling: the 2:1 hall is
+> confirmed and both ramps stay inside the placement envelope. The proportion is recorded as a
+> footprint-driven adaptation. This is production direction, not acceptance of the finished asset.
