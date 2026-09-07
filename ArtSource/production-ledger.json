@@ -609,6 +609,33 @@
     "Feet float up to 2.6 cm during the walk, the price of the constant 6.33 cm body lift that keeps them out of the ground.",
     "Detail sufficiency not judged: the low counts are headroom (owner ruling 2026-09-07)."
    ]
+  },
+  {
+   "package_id": "EBS-PKG-KA-RESONANT",
+   "production_asset_id": "EBS-KHA-UNT-004",
+   "subject": "Resonant",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-kha-unt-004-concept-v1",
+   "asset_name": "SK_EBS_KHA_UNT_004",
+   "planned_unreal_folder": "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_004/",
+   "canon_status": "CANDIDATE (resonant candidate against canon SPEC-UNIT-008); not owner acceptance",
+   "source_root": "ArtSource/EBS-KHA-UNT-004/",
+   "authoritative_document": "ArtSource/EBS-KHA-UNT-004/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-KHA-UNT-004/concept-fidelity.md",
+   "asset_card": "REL-FAC-025.KA.RESONANT.ASSET (PROVISIONAL, ArtSource/kharuun-asset-cards.json)",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-kha-unt-004-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-UNT-004/ (receipt.json, renders/concept-compare/ with two silhouette reports, import/)",
+     "result": "A tall slender QUADRUPED on four stilts, 255 cm at the crown and 167 long, with a four-segment arched spine carrying thirteen amber-veined sensor fins. The card said biped; corrected against the candidate, the third such correction in eight cards. Separation from BOTH other Kharuun quadrupeds measured: monochrome tactical intersection over union 0.392 against the Riftstalker and 0.344 against the Cairnback, both lower than that pair's own 0.540. Emissive is the fin VEIN, not the whole blade: thirteen full amber blades measured 32% against REL-ART-029's 15% ceiling, and the veins measure 7.7%. LOD0 736 / LOD1 540 against the provisional card's 4,500 / 1,800. 20 tests, 5 sheets. Import clean: 0 errors, 0 warnings, 24 bones, 4 sockets, 5 clips."
+    }
+   ],
+   "next": "Textures including the fins' translucency mask, a detail judgement at gameplay distance, in-engine capture, gate reviews, card incorporation, owner acceptance.",
+   "open_owner_questions": [],
+   "open_items": [
+    "The collapse rides 17.3 cm higher than rest to keep the feet planted; recorded in the manifest."
+   ]
   }
  ],
  "tools": {
@@ -662,6 +689,19 @@
    "finding": "AnimationClip.key APPENDS, so a second key at the same time is never read",
    "detail": "The sampler takes the first key matching a time. A correction pass that adds a key at an existing time therefore does nothing at all, while looking as though it worked. This silently defeated two rounds of foot-planting corrections on EBS-KHA-UNT-003.",
    "resolution": "Replace keys by time rather than appending. The Cairnback generator carries a set_key helper that does this."
+  },
+  {
+   "date": "2026-09-07",
+   "finding": "AnimationClip.key appends AND SORTS, so a key-replacement helper that takes the last element deletes the key it meant to insert",
+   "detail": "A helper written to replace a key at an existing time appended the new key, then rebuilt the track from keys[:-1] plus keys[-1], assuming the appended key was last. It is only last when its time is the largest in the track. For every other time the real new key was dropped, which emptied a body track down to one key and made a collapse interpolate from a constant. Nothing errors.",
+   "resolution": "Rebuild the track directly: filter out any key at that time and append a Keyframe, then sort. Fixed in both EBS-KHA-UNT-003 and EBS-KHA-UNT-004, which shared the helper.",
+   "related": "The third silent animation defect in this roster, after the gait phase collapse and the pitch/yaw slot mix-up."
+  },
+  {
+   "date": "2026-09-07",
+   "finding": "Three of eight Kharuun cards described the wrong anatomy because the cards were written before the concepts were traced",
+   "detail": "The Riftstalker was specified as a biped, the Growth Basin's niches as closing, and the Resonant as a biped. All three were contradicted by their own candidates. Every one was corrected against the concept rather than the model being bent to fit the card.",
+   "resolution": "A faction rule now requires a card to be authored AFTER its candidate is traced. The rule arrived three errors late; any future faction's cards are to follow it from the start."
   }
  ],
  "owner_rulings": [

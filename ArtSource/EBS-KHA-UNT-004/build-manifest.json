@@ -1,0 +1,852 @@
+{
+ "acceptance": {
+  "animation": "NOT_EVALUATED",
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "PENDING \u2014 built against the provisional card; final technical acceptance waits on that card being incorporated into the authoritative requirements and its checks passing"
+ },
+ "anatomy_correction": {
+  "pattern": "The third of my eight Kharuun cards to carry the wrong anatomy, all authored in one pass before their concepts were traced. The faction rules now require the trace first.",
+  "source_references": [
+   "BuildArtifacts/Evidence/concept-discovery-20260906/resonant-review/resonant-candidate.png (LISTENING, DETECTING, SENSOR FINS)",
+   "BuildArtifacts/Evidence/asset-production-20260906T221157Z/concept-crops/all/EBS-PKG-KA-RESONANT/EBS-CON-KHA-UNT-004.png"
+  ],
+  "status": "SUPERSEDED AND NOT GUIDANCE. The quadruped plan is the sole anatomy for this asset.",
+  "what": "An earlier draft of the provisional card described a slender BIPED with 26 bones.",
+  "why_wrong": "Written before the candidate was traced. Its LISTENING and DETECTING views both show FOUR stilt legs."
+ },
+ "asset_name": "SK_EBS_KHA_UNT_004",
+ "author": "Angelis Pseftis",
+ "bind_counts": {
+  "body": 12,
+  "fl_foot": 12,
+  "fl_lower": 20,
+  "fl_upper": 20,
+  "fr_foot": 12,
+  "fr_lower": 20,
+  "fr_upper": 20,
+  "head": 24,
+  "neck": 20,
+  "rl_foot": 12,
+  "rl_lower": 20,
+  "rl_upper": 20,
+  "rr_foot": 12,
+  "rr_lower": 20,
+  "rr_upper": 20,
+  "spine_01": 136,
+  "spine_02": 112,
+  "spine_03": 112,
+  "spine_04": 112
+ },
+ "budgets": {
+  "amber_area_fraction_detecting": 0.07748,
+  "amber_cap": 0.15,
+  "amber_within_cap": true,
+  "cap_scope": "the complete assembly; the mineral cover is a separate asset",
+  "cap_source": "REL-FAC-025.KA.RESONANT.ASSET (PROVISIONAL)",
+  "detecting_state_triangles": 736,
+  "headroom_note": "Owner ruling 2026-09-07: sitting below the ceiling is HEADROOM, not sufficiency. Silhouette, joint and carapace detail are judged against the concept at gameplay distance and have not been judged here.",
+  "lod0_cap": 4500,
+  "lod0_triangles": 736,
+  "lod0_within_cap": true,
+  "lod1_cap": 1800,
+  "lod1_triangles": 540,
+  "lod1_within_cap": true,
+  "worst_state_triangles": 736
+ },
+ "clips": [
+  {
+   "bones": [
+    "fl_foot",
+    "fr_foot",
+    "neck",
+    "rl_foot",
+    "rr_foot",
+    "spine_01",
+    "spine_02",
+    "spine_03",
+    "spine_04"
+   ],
+   "duration_s": 5.0,
+   "loop": true,
+   "name": "idle",
+   "purpose": "listening: the head rides high and the spine breathes",
+   "ticks": 100
+  },
+  {
+   "bones": [
+    "body",
+    "fl_foot",
+    "fl_upper",
+    "fr_foot",
+    "fr_upper",
+    "rl_foot",
+    "rl_upper",
+    "rr_foot",
+    "rr_upper"
+   ],
+   "duration_s": 1.0,
+   "loop": true,
+   "name": "move",
+   "purpose": "470 cm/s and almost silent: a quick, small-stride diagonal gait",
+   "ticks": 20
+  },
+  {
+   "bones": [
+    "fl_foot",
+    "fr_foot",
+    "head",
+    "neck",
+    "rl_foot",
+    "rr_foot",
+    "spine_01",
+    "spine_02",
+    "spine_03",
+    "spine_04"
+   ],
+   "duration_s": 2.0,
+   "loop": false,
+   "name": "detect",
+   "purpose": "a contact: the spine lowers and sweeps toward the source while the fins run their sequence. The sequence is a per-fin MATERIAL animation the runtime drives; this clip carries only the sweep",
+   "ticks": 40
+  },
+  {
+   "bones": [
+    "fl_foot",
+    "fr_foot",
+    "head",
+    "neck",
+    "rl_foot",
+    "rr_foot"
+   ],
+   "duration_s": 1.2,
+   "loop": false,
+   "name": "attack",
+   "purpose": "the incidental 8-damage emitter: a short head jab, no body commitment",
+   "ticks": 24
+  },
+  {
+   "bones": [
+    "body",
+    "fl_foot",
+    "fl_lower",
+    "fl_upper",
+    "fr_foot",
+    "fr_lower",
+    "fr_upper",
+    "neck",
+    "rl_foot",
+    "rl_lower",
+    "rl_upper",
+    "rr_foot",
+    "rr_lower",
+    "rr_upper",
+    "spine_01",
+    "spine_02",
+    "spine_03",
+    "spine_04"
+   ],
+   "duration_s": 2.2,
+   "loop": false,
+   "name": "death",
+   "purpose": "the delicate frame folds: the stilts give and the body comes down",
+   "ticks": 44
+  }
+ ],
+ "component_inventory": {
+  "arched_spine": {
+   "contract": "an arch from the shoulders to the neck",
+   "rises": true,
+   "segments": 8
+  },
+  "bones": {
+   "built": 24,
+   "contract": "24: root, body, a four-segment spine, neck, head, four stilt chains",
+   "names": [
+    "root",
+    "body",
+    "spine_01",
+    "spine_02",
+    "spine_03",
+    "spine_04",
+    "neck",
+    "head",
+    "fl_hip",
+    "fl_upper",
+    "fl_lower",
+    "fl_foot",
+    "fr_hip",
+    "fr_upper",
+    "fr_lower",
+    "fr_foot",
+    "rl_hip",
+    "rl_upper",
+    "rl_lower",
+    "rl_foot",
+    "rr_hip",
+    "rr_upper",
+    "rr_lower",
+    "rr_foot"
+   ]
+  },
+  "fin_array": {
+   "built": 13,
+   "contract": 13,
+   "individually_addressable": true,
+   "note": "one component per fin so the runtime can light them in sequence",
+   "veins": 13
+  },
+  "quadruped_on_stilts": {
+   "contract": 4,
+   "legs": 4,
+   "limb_radius_cm": 7.5
+  },
+  "small_head": {
+   "built": true,
+   "contract": "carried high, no fight in the silhouette"
+  },
+  "sockets": {
+   "built": [
+    "Emitter_Muzzle",
+    "Fin_Array_Base",
+    "Fin_Array_Tip",
+    "Target_Anchor_Center"
+   ],
+   "contract": [
+    "Emitter_Muzzle",
+    "Fin_Array_Base",
+    "Fin_Array_Tip",
+    "Target_Anchor_Center"
+   ]
+  },
+  "states": {
+   "built": [
+    "passive",
+    "detecting"
+   ],
+   "contract": [
+    "passive",
+    "detecting"
+   ]
+  },
+  "tracks": {
+   "built": [
+    "idle",
+    "move",
+    "detect",
+    "attack",
+    "death"
+   ],
+   "contract": [
+    "idle",
+    "move",
+    "detect",
+    "attack",
+    "death"
+   ]
+  }
+ },
+ "concept_measurements": {
+  "body_length_cm": 166.64,
+  "bounds_cm": [
+   [
+    -75.0,
+    -67.0,
+    0.0
+   ],
+   [
+    91.64,
+    67.0,
+    255.0
+   ]
+  ],
+  "feet_on_the_ground": true,
+  "fin_count": 13,
+  "height_over_extent": 1.5302,
+  "limb_radius_cm": 7.5,
+  "max_horizontal_extent_cm": 166.64,
+  "separation_from_the_other_quadrupeds": {
+   "cairnback": {
+    "mine": 1.5302,
+    "separation": 0.8202,
+    "theirs": 0.71
+   },
+   "riftstalker": {
+    "mine": 1.5302,
+    "separation": 0.8502,
+    "theirs": 0.68
+   }
+  },
+  "standing_height_cm": 255.0,
+  "taller_than_it_is_long": true
+ },
+ "creator": "Angelis Pseftis",
+ "detection_readout": {
+  "addressing": "one component per fin, ordered along the spine, so the runtime can light them in sequence",
+  "fin_count": 13,
+  "note": "The state assemblies show all-dark and all-lit only. The ordered sequence toward a source is a per-fin MATERIAL animation and is not represented in geometry."
+ },
+ "foot_planting": {
+  "body_lift_cm": {
+   "attack": 0.0,
+   "death": 17.28,
+   "detect": 0.0,
+   "idle": 0.0,
+   "move": 1.14
+  },
+  "why": "Long stilts magnify any rotation at the hip, so each foot is counter-rotated by the negation of everything above it and the residual is removed by raising the body. The lifts are MEASURED on the posed mesh, not dialled in by eye."
+ },
+ "gait_separation": {
+  "cairnback": "a lateral sequence at 270 cm/s",
+  "note": "This one shares the Riftstalker's diagonal pattern; its separation is carried by proportion and the fin array, not by the gait.",
+  "resonant": "a quick small-stride diagonal gait at 470 cm/s, almost silent",
+  "riftstalker": "a diagonal gait at 410 cm/s"
+ },
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Two slots: dark faceted plate for the torso, spine, stilts and head, and amber for the translucent sensor fins, which are the only emissive. The fins carry a translucency mask in texture.",
+ "material_slots": [
+  "MI_EBS_KHA_Strata",
+  "MI_EBS_KHA_Amber"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -75.0,
+     -67.0,
+     0.0
+    ],
+    [
+     91.64,
+     67.0,
+     255.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Strata": 736
+   },
+   "clips": [
+    "idle",
+    "move",
+    "detect",
+    "attack",
+    "death"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_UNT_004",
+   "path": "export/SK_EBS_KHA_UNT_004_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "b6685ee7ad25b32e69b5758a2f12348da45f073069258b3a7f22f3105c7d22b9",
+   "sockets": [
+    {
+     "bone": "spine_01",
+     "name": "Fin_Array_Base",
+     "position_cm": [
+      -55.44,
+      0.0,
+      176.0
+     ],
+     "purpose": "the first fin in the sequence: where a detection run starts",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "spine_04",
+     "name": "Fin_Array_Tip",
+     "position_cm": [
+      44.88,
+      0.0,
+      226.0
+     ],
+     "purpose": "the last fin in the sequence",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "body",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      150.0
+     ],
+     "purpose": "targeting and selection anchor in the torso",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "head",
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      98.64,
+      0.0,
+      240.0
+     ],
+     "purpose": "the incidental 8-damage emitter; the silhouette must not promise a fight",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 736
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_UNT_004",
+   "path": "export/SK_EBS_KHA_UNT_004_LOD0.obj",
+   "sha256": "f2d392c3ada884f4100ac19be9f8d1188675abed1a1ff7955d3d00ef4ec81816"
+  },
+  {
+   "bounds_cm": [
+    [
+     -75.0,
+     -67.0,
+     0.0
+    ],
+    [
+     90.64,
+     67.0,
+     255.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Strata": 540
+   },
+   "clips": [
+    "idle",
+    "move",
+    "detect",
+    "attack",
+    "death"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_UNT_004",
+   "path": "export/SK_EBS_KHA_UNT_004_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "a2e2aa8f2aa5582d3bdd6304cb70cc8ee140f8c265073ee315e4860217deb3cb",
+   "sockets": [
+    {
+     "bone": "spine_01",
+     "name": "Fin_Array_Base",
+     "position_cm": [
+      -55.44,
+      0.0,
+      176.0
+     ],
+     "purpose": "the first fin in the sequence: where a detection run starts",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "spine_04",
+     "name": "Fin_Array_Tip",
+     "position_cm": [
+      44.88,
+      0.0,
+      226.0
+     ],
+     "purpose": "the last fin in the sequence",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "body",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      150.0
+     ],
+     "purpose": "targeting and selection anchor in the torso",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "head",
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      98.64,
+      0.0,
+      240.0
+     ],
+     "purpose": "the incidental 8-damage emitter; the silhouette must not promise a fight",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 540
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_UNT_004",
+   "path": "export/SK_EBS_KHA_UNT_004_LOD1.obj",
+   "sha256": "fef440dff5e3b622925bf0f479dd03190bc80dc3d468004a0c32b7552245ef4b"
+  }
+ ],
+ "package_id": "EBS-PKG-KA-RESONANT",
+ "planned_unreal_folder": "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_004/",
+ "production_asset_id": "EBS-KHA-UNT-004",
+ "provisional_contract": {
+  "bounds": {
+   "basis": "matched to the Tender, the other light non-combat frame",
+   "lod0_triangles": 4500,
+   "lod1_triangles": 1800
+  },
+  "card": "REL-FAC-025.KA.RESONANT.ASSET in ArtSource/kharuun-asset-cards.json (rendered to kharuun-asset-cards.md)",
+  "status": "PROVISIONAL. Authored in this worktree under the owner ruling of 2026-09-07; NOT incorporated into Docs/Requirements.md and not an existing authoritative per-asset requirement."
+ },
+ "review": {
+  "scenes": [
+   "scenes/passive.json",
+   "scenes/detecting.json",
+   "scenes/lod1.json",
+   "scenes/pose_move_025.json",
+   "scenes/pose_detect_040.json",
+   "scenes/pose_detect_100.json",
+   "scenes/pose_death_100.json",
+   "scenes/silhouette.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "name": "passive",
+   "path": "review/SK_EBS_KHA_UNT_004_passive_LOD0.obj",
+   "sha256": "adf9d09fd3ebb85929c149800ba77ea48760c2c0c16dadae7d174fee99346743",
+   "triangles": 736
+  },
+  {
+   "name": "detecting",
+   "path": "review/SK_EBS_KHA_UNT_004_detecting_LOD0.obj",
+   "sha256": "5556d2f9fea3394ef9fa4b02f1398c0d2afd8b173dc5db7571a8320f293801bd",
+   "triangles": 736
+  },
+  {
+   "name": "passive_lod1",
+   "path": "review/SK_EBS_KHA_UNT_004_passive_LOD1.obj",
+   "sha256": "6c56145b824c5d40d59c7913061cccb267c8cd826930ff18f4fb52966e5c9b16",
+   "triangles": 540
+  },
+  {
+   "lowest_z_cm": 0.6,
+   "name": "pose_move_025",
+   "path": "review/pose_move_025.obj",
+   "sha256": "f05d1ab8980298ab8e0ca1005d1b5dc401447acff36dbc52b0dee413f6ee0d6c"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_detect_040",
+   "path": "review/pose_detect_040.obj",
+   "sha256": "8e9bef1f5e3dc1033b1bed7e033035c074bde776959ef22a298fd1871f09c705"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_detect_100",
+   "path": "review/pose_detect_100.obj",
+   "sha256": "375d5858bf3d3962430df9b2d2e9a55d28b25107d509f36b186b0aa7ec00d022"
+  },
+  {
+   "lowest_z_cm": 37.33,
+   "name": "pose_death_100",
+   "path": "review/pose_death_100.obj",
+   "sha256": "e1cd3431b268faa13e5dbaba3a356985d7184d6569f8a94c065a1da46a42da56"
+  }
+ ],
+ "revision": "ebs-kha-unt-004-concept-v1",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "ground-contact centre between the feet; the runtime owns translation"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     150.0
+    ],
+    "name": "body",
+    "parent": "root",
+    "purpose": "the slight torso the spine and limbs hang from"
+   },
+   {
+    "head_cm": [
+     -30.359999999999996,
+     0.0,
+     157.17936471873148
+    ],
+    "name": "spine_01",
+    "parent": "body",
+    "purpose": "spine segment 1: the arch, and it carries fins 1-4"
+   },
+   {
+    "head_cm": [
+     -5.279999999999994,
+     0.0,
+     168.94645708137998
+    ],
+    "name": "spine_02",
+    "parent": "spine_01",
+    "purpose": "spine segment 2: the arch, and it carries fins 4-7"
+   },
+   {
+    "head_cm": [
+     19.80000000000001,
+     0.0,
+     183.42379608686255
+    ],
+    "name": "spine_03",
+    "parent": "spine_02",
+    "purpose": "spine segment 3: the arch, and it carries fins 7-10"
+   },
+   {
+    "head_cm": [
+     44.88000000000001,
+     0.0,
+     200.0
+    ],
+    "name": "spine_04",
+    "parent": "spine_03",
+    "purpose": "spine segment 4: the arch, and it carries fins 10-13"
+   },
+   {
+    "head_cm": [
+     55.44,
+     0.0,
+     200.0
+    ],
+    "name": "neck",
+    "parent": "spine_04",
+    "purpose": "a long thin neck"
+   },
+   {
+    "head_cm": [
+     68.64,
+     0.0,
+     243.0
+    ],
+    "name": "head",
+    "parent": "neck",
+    "purpose": "the small head carried high in listening, dropped in contact"
+   },
+   {
+    "head_cm": [
+     52.0,
+     -30.0,
+     134.0
+    ],
+    "name": "fl_hip",
+    "parent": "body",
+    "purpose": "fl stilt: attachment at the body"
+   },
+   {
+    "head_cm": [
+     52.0,
+     -30.0,
+     134.0
+    ],
+    "name": "fl_upper",
+    "parent": "fl_hip",
+    "purpose": "fl stilt: upper segment, pivoting at the hip"
+   },
+   {
+    "head_cm": [
+     58.0,
+     -44.0,
+     92.0
+    ],
+    "name": "fl_lower",
+    "parent": "fl_upper",
+    "purpose": "fl stilt: lower segment, pivoting at the knee"
+   },
+   {
+    "head_cm": [
+     64.0,
+     -58.0,
+     10.0
+    ],
+    "name": "fl_foot",
+    "parent": "fl_lower",
+    "purpose": "fl stilt: the small foot"
+   },
+   {
+    "head_cm": [
+     52.0,
+     30.0,
+     134.0
+    ],
+    "name": "fr_hip",
+    "parent": "body",
+    "purpose": "fr stilt: attachment at the body"
+   },
+   {
+    "head_cm": [
+     52.0,
+     30.0,
+     134.0
+    ],
+    "name": "fr_upper",
+    "parent": "fr_hip",
+    "purpose": "fr stilt: upper segment, pivoting at the hip"
+   },
+   {
+    "head_cm": [
+     58.0,
+     44.0,
+     92.0
+    ],
+    "name": "fr_lower",
+    "parent": "fr_upper",
+    "purpose": "fr stilt: lower segment, pivoting at the knee"
+   },
+   {
+    "head_cm": [
+     64.0,
+     58.0,
+     10.0
+    ],
+    "name": "fr_foot",
+    "parent": "fr_lower",
+    "purpose": "fr stilt: the small foot"
+   },
+   {
+    "head_cm": [
+     -52.0,
+     -30.0,
+     134.0
+    ],
+    "name": "rl_hip",
+    "parent": "body",
+    "purpose": "rl stilt: attachment at the body"
+   },
+   {
+    "head_cm": [
+     -52.0,
+     -30.0,
+     134.0
+    ],
+    "name": "rl_upper",
+    "parent": "rl_hip",
+    "purpose": "rl stilt: upper segment, pivoting at the hip"
+   },
+   {
+    "head_cm": [
+     -58.0,
+     -44.0,
+     92.0
+    ],
+    "name": "rl_lower",
+    "parent": "rl_upper",
+    "purpose": "rl stilt: lower segment, pivoting at the knee"
+   },
+   {
+    "head_cm": [
+     -64.0,
+     -58.0,
+     10.0
+    ],
+    "name": "rl_foot",
+    "parent": "rl_lower",
+    "purpose": "rl stilt: the small foot"
+   },
+   {
+    "head_cm": [
+     -52.0,
+     30.0,
+     134.0
+    ],
+    "name": "rr_hip",
+    "parent": "body",
+    "purpose": "rr stilt: attachment at the body"
+   },
+   {
+    "head_cm": [
+     -52.0,
+     30.0,
+     134.0
+    ],
+    "name": "rr_upper",
+    "parent": "rr_hip",
+    "purpose": "rr stilt: upper segment, pivoting at the hip"
+   },
+   {
+    "head_cm": [
+     -58.0,
+     44.0,
+     92.0
+    ],
+    "name": "rr_lower",
+    "parent": "rr_upper",
+    "purpose": "rr stilt: lower segment, pivoting at the knee"
+   },
+   {
+    "head_cm": [
+     -64.0,
+     58.0,
+     10.0
+    ],
+    "name": "rr_foot",
+    "parent": "rr_lower",
+    "purpose": "rr stilt: the small foot"
+   }
+  ],
+  "policy": "The corrected card's plan: a slender quadruped with a four-segment spine carrying the fin array, weighted toward the spine and neck rather than the limbs \u2014 the inverse of the Cairnback's weighting. No root motion."
+ },
+ "scale_basis": {
+  "basis": "the tallest Kharuun unit and the lightest: 85 health against the Cairnback's 245",
+  "body_length_cm": 132.0,
+  "canon": "SPEC-UNIT-008: a tall, thin scout with sensor-fins of translucent amber along the spine and head, and a delicate frame",
+  "gameplay": "Content/Data/Source/units.json ka_resonant",
+  "standing_height_cm": 255.0
+ },
+ "silhouette_first": {
+  "directive": "Owner ruling 2026-09-07: roster members sharing an anatomy must separate in monochrome at tactical distance.",
+  "measures": {
+   "cairnback": {
+    "mine": 1.5302,
+    "separation": 0.8202,
+    "theirs": 0.71
+   },
+   "riftstalker": {
+    "mine": 1.5302,
+    "separation": 0.8502,
+    "theirs": 0.68
+   }
+  },
+  "this_asset": "The third Kharuun quadruped, so it must separate from BOTH the others. Its own separation is that it is taller than it is long, which neither of them is."
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/resonant-review/resonant-candidate.png",
+  "canon": "DevelopmentBible.md SPEC-UNIT-008",
+  "concepts": [
+   "EBS-CON-KHA-UNT-004"
+  ],
+  "gameplay": "Content/Data/Source/units.json ka_resonant"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "states": {
+  "chipped": "strata visibly broken, per canon's 'damage chips strata'",
+  "passive": "the shell whole"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py",
+  "silhouette": "ArtSource/tools/ebs_silhouette.py",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py"
+ },
+ "units": {
+  "axes": "+X forward, +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "ground-contact centre between the feet"
+ }
+}

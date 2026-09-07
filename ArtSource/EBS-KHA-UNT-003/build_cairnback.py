@@ -259,6 +259,32 @@ def _plant_feet(clip) -> float:
         return 0.0
 
     def set_key(track, t, rotation, translation=(0.0, 0.0, 0.0)):
+        """Replace any key already at this time, by rebuilding the track directly.
+
+        AnimationClip.key appends AND SORTS, so the new key is not necessarily last. An earlier
+        version took keys[-1] as "the one just added" and therefore deleted the key it meant to
+        insert whenever the time was not the largest in the track — which silently emptied the body
+        track down to a single key and made a collapse interpolate from nothing.
+        """
+        keys = [k for k in clip.tracks.get(track, []) if abs(k.time_s - t) > 1e-9]
+        keys.append(skel.Keyframe(float(t), tuple(rotation), tuple(translation)))
+        clip.tracks[track] = sorted(keys, key=lambda k: k.time_s)
+
+    def pitch_at(track, t):
+        keys = clip.tracks.get(track)
+        if not keys:
+            return 0.0
+        if t <= keys[0].time_s:
+            return keys[0].rotation_deg[0]
+        if t >= keys[-1].time_s:
+            return keys[-1].rotation_deg[0]
+        for a, b in zip(keys, keys[1:]):
+            if a.time_s <= t <= b.time_s:
+                f = 0.0 if b.time_s == a.time_s else (t - a.time_s) / (b.time_s - a.time_s)
+                return a.rotation_deg[0] + (b.rotation_deg[0] - a.rotation_deg[0]) * f
+        return 0.0
+
+    def set_key(track, t, rotation, translation=(0.0, 0.0, 0.0)):
         """Replace any key already at this time. AnimationClip.key APPENDS, and a duplicate at the
         same time is invisible to the sampler, which reads the first match — so an appended
         correction silently did nothing."""
