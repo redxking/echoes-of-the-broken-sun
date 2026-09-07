@@ -542,6 +542,33 @@
    ],
    "next": "Textures (2048 packed PBR with micro-noise normals), in-engine capture, gate reviews, incorporation of the provisional card into the authoritative requirements, owner acceptance.",
    "open_owner_questions": []
+  },
+  {
+   "package_id": "EBS-PKG-KA-RIFTSTALKER",
+   "production_asset_id": "EBS-KHA-UNT-002",
+   "subject": "Riftstalker",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-kha-unt-002-concept-v1",
+   "asset_name": "SK_EBS_KHA_UNT_002",
+   "planned_unreal_folder": "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_002/",
+   "canon_status": "CANDIDATE (riftstalker candidate against canon SPEC-UNIT-006); not owner acceptance",
+   "source_root": "ArtSource/EBS-KHA-UNT-002/",
+   "authoritative_document": "ArtSource/EBS-KHA-UNT-002/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-KHA-UNT-002/concept-fidelity.md",
+   "asset_card": "REL-FAC-025.KA.RIFTSTALKER.ASSET (PROVISIONAL, ArtSource/kharuun-asset-cards.json)",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-kha-unt-002-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-UNT-002/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Lean QUADRUPED skirmisher: 201 cm standing, 295 cm long (1.47 of the height against the traced 1.46), on four long three-segment legs with high outboard knees, under overlapping carapace shells that step down toward a forward prow. Shoulder-mounted shard-caster on a two-bone mount that aims independently of the gait; a test requires the leg tracks of move and fire_on_the_move to be identical so the two never fight. Three states with visible molt geometry. LOD0 542 baseline / 602 heaviest molt / LOD1 346 against the provisional card's 6,000 / 2,600; amber 3.1% against REL-ART-029's 15% ceiling. 18 tests, 6 comparison sheets. Import clean: 0 errors, 0 warnings, 22 bones, 5 sockets exact, all 6 clips."
+    }
+   ],
+   "next": "The death pose's raised leg, textures, a side-by-side against the Cairnback once it exists, in-engine capture, gate reviews, incorporation of the provisional card into the authoritative requirements, owner acceptance.",
+   "open_owner_questions": [],
+   "open_items": [
+    "The death pose leaves one leg raised; the better-reading fold sinks 3.6 cm through the ground, so ground contact was kept instead."
+   ]
   }
  ],
  "tools": {
@@ -575,6 +602,13 @@
    "detail": "StaticMeshEditorSubsystem.import_lod does not honour UBX_ collision naming the way the primary Interchange import does. A LOD1 glTF that includes the UBX boxes imports them as ordinary render geometry inside the LOD1 sections. On EBS-KHA-BLD-001 that added 24 phantom triangles (634 exported, 658 imported) and the import still reported success apart from the triangle-count check.",
    "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-BLD-001/import/ (run1 mismatched at 658, run2 clean at 634)",
    "resolution": "Write collision into the LOD0 file only: write_glb(..., include_collision=(lod == 0)). Every other generator in this pipeline already did; the Hearth generator did not, so this was my bug, not an engine defect. The import job's lod1_triangles_match check is what caught it."
+  },
+  {
+   "date": "2026-09-07",
+   "finding": "ebs_skelkit pose rotations are (pitch, yaw, roll), and a limb fold written into the yaw slot silently swings the limb sideways",
+   "detail": "On EBS-KHA-UNT-002 every leg stride, body pitch and caster pitch was authored into index 1 (yaw) instead of index 0 (pitch). Nothing errors: the clips build, import and play, and the legs simply swing sideways instead of stepping. It was only visible in a rendered pose.",
+   "resolution": "Corrected in the generator and guarded by a test that requires a stride to be pure pitch with zero yaw and roll. Worth checking in every future creature generator before the first render.",
+   "related": "The same package found that bone heads must sit at the PROXIMAL end of each segment; heads at the distal end make a limb pivot about its far joint and tear away from the body under rotation."
   }
  ],
  "owner_rulings": [

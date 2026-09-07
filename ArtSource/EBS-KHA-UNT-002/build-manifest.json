@@ -1,0 +1,847 @@
+{
+ "acceptance": {
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "PENDING \u2014 built against the provisional card; final technical acceptance waits on that card being incorporated into the authoritative requirements and its checks passing"
+ },
+ "anatomy_correction": {
+  "resolution": "The CARD was corrected to a 22-bone quadruped plan, not the model bent to fit it. A test asserts the skeleton contains no bone named neck or head and that four legs exist.",
+  "what": "The provisional card first described a biped with a long neck and 24 bones.",
+  "why_wrong": "Written before the candidate was traced. Its SKIRMISHER and MOVING FIRE views both show FOUR legs and no neck."
+ },
+ "asset_name": "SK_EBS_KHA_UNT_002",
+ "author": "Angelis Pseftis",
+ "bind_counts": {
+  "body": 192,
+  "caster_pitch": 24,
+  "fl_foot": 12,
+  "fl_hip": 12,
+  "fl_lower": 20,
+  "fl_upper": 32,
+  "fr_foot": 12,
+  "fr_hip": 12,
+  "fr_lower": 20,
+  "fr_upper": 32,
+  "prow_base": 22,
+  "rl_foot": 12,
+  "rl_hip": 12,
+  "rl_lower": 20,
+  "rl_upper": 32,
+  "rr_foot": 12,
+  "rr_hip": 12,
+  "rr_lower": 20,
+  "rr_upper": 32
+ },
+ "budgets": {
+  "amber_area_fraction_lod0": 0.03102,
+  "amber_cap": 0.15,
+  "amber_measure": "surface area, per REL-ART-029; the cap is a ceiling, not a target",
+  "amber_within_cap": true,
+  "cap_scope": "the complete assembly including the caster and every molt-variant part carried on the same asset",
+  "cap_source": "REL-FAC-025.KA.RIFTSTALKER.ASSET (PROVISIONAL)",
+  "carapace_molt_triangles": 602,
+  "lod0_cap": 6000,
+  "lod0_triangles": 542,
+  "lod0_within_cap": true,
+  "lod1_cap": 2600,
+  "lod1_triangles": 346,
+  "lod1_within_cap": true,
+  "striker_molt_triangles": 566,
+  "worst_state_triangles": 602
+ },
+ "clips": [
+  {
+   "bones": [
+    "body",
+    "fl_upper",
+    "fr_upper",
+    "rl_upper",
+    "rr_upper"
+   ],
+   "duration_s": 4.0,
+   "loop": true,
+   "name": "idle",
+   "purpose": "watching: the body breathes and the legs hold their splay",
+   "ticks": 80
+  },
+  {
+   "bones": [
+    "body",
+    "fl_foot",
+    "fl_lower",
+    "fl_upper",
+    "fr_foot",
+    "fr_lower",
+    "fr_upper",
+    "rl_foot",
+    "rl_lower",
+    "rl_upper",
+    "rr_foot",
+    "rr_lower",
+    "rr_upper"
+   ],
+   "duration_s": 1.2,
+   "loop": true,
+   "name": "move",
+   "purpose": "410 cm/s: a diagonal gait under a body that stays level",
+   "ticks": 24
+  },
+  {
+   "bones": [
+    "caster_pitch",
+    "caster_yaw",
+    "fl_foot",
+    "fl_lower",
+    "fl_upper",
+    "fr_foot",
+    "fr_lower",
+    "fr_upper",
+    "rl_foot",
+    "rl_lower",
+    "rl_upper",
+    "rr_foot",
+    "rr_lower",
+    "rr_upper"
+   ],
+   "duration_s": 1.2,
+   "loop": true,
+   "name": "fire_on_the_move",
+   "purpose": "canon: fires WHILE it moves. The gait is unchanged and the caster works above it, so the two never fight each other",
+   "ticks": 24
+  },
+  {
+   "bones": [
+    "body",
+    "fl_upper",
+    "fr_upper",
+    "rl_upper",
+    "rr_upper"
+   ],
+   "duration_s": 0.8,
+   "loop": false,
+   "name": "sidestep",
+   "purpose": "canon's short sidestep after each shot: the legs carry it, the body stays level",
+   "ticks": 16
+  },
+  {
+   "bones": [
+    "body",
+    "fl_lower",
+    "fl_upper",
+    "fr_lower",
+    "fr_upper",
+    "rl_lower",
+    "rl_upper",
+    "rr_lower",
+    "rr_upper"
+   ],
+   "duration_s": 4.0,
+   "loop": false,
+   "name": "molt",
+   "purpose": "a molt at a Growth Basin: the body lowers, the carapace works, and it rises changed",
+   "ticks": 80
+  },
+  {
+   "bones": [
+    "body",
+    "fl_lower",
+    "fl_upper",
+    "fr_lower",
+    "fr_upper",
+    "rl_lower",
+    "rl_upper",
+    "rr_lower",
+    "rr_upper"
+   ],
+   "duration_s": 2.0,
+   "loop": false,
+   "name": "death",
+   "purpose": "the light frame folds: the legs give and the body settles onto the ground",
+   "ticks": 40
+  }
+ ],
+ "component_inventory": {
+  "bones": {
+   "built": 22,
+   "contract": "22: root, body, two-bone prow, two-bone caster, four three-segment legs",
+   "names": [
+    "root",
+    "body",
+    "prow_base",
+    "prow_tip",
+    "caster_yaw",
+    "caster_pitch",
+    "fl_hip",
+    "fl_upper",
+    "fl_lower",
+    "fl_foot",
+    "fr_hip",
+    "fr_upper",
+    "fr_lower",
+    "fr_foot",
+    "rl_hip",
+    "rl_upper",
+    "rl_lower",
+    "rl_foot",
+    "rr_hip",
+    "rr_upper",
+    "rr_lower",
+    "rr_foot"
+   ]
+  },
+  "layered_carapace": {
+   "built": 5,
+   "contract": 5,
+   "seams": 10
+  },
+  "molt_variants": {
+   "carapace_plates": 0,
+   "contract": "carapace and striker changes, separately controllable",
+   "striker_vanes": 0
+  },
+  "prow": {
+   "built": true,
+   "contract": "a forward taper, not a head on a neck",
+   "neck_bones": []
+  },
+  "quadruped": {
+   "contract": 4,
+   "legs": 4,
+   "note": "four legs and no neck: the candidate's SKIRMISHER and MOVING FIRE views both show this",
+   "segments_per_leg": 3
+  },
+  "shard_caster": {
+   "contract": "a shoulder slot aimed past the prow",
+   "housing": true,
+   "slot": true
+  },
+  "sockets": {
+   "built": [
+    "Caster_Mount",
+    "Molt_Carapace_Anchor",
+    "Molt_Striker_Anchor",
+    "Shard_Caster_Muzzle",
+    "Target_Anchor_Center"
+   ],
+   "contract": [
+    "Caster_Mount",
+    "Molt_Carapace_Anchor",
+    "Molt_Striker_Anchor",
+    "Shard_Caster_Muzzle",
+    "Target_Anchor_Center"
+   ]
+  },
+  "states": {
+   "built": [
+    "baseline",
+    "carapace_molt",
+    "striker_molt"
+   ],
+   "contract": [
+    "baseline",
+    "carapace_molt",
+    "striker_molt"
+   ]
+  },
+  "tracks": {
+   "built": [
+    "idle",
+    "move",
+    "fire_on_the_move",
+    "sidestep",
+    "molt",
+    "death"
+   ],
+   "contract": [
+    "idle",
+    "move",
+    "fire_on_the_move",
+    "sidestep",
+    "molt",
+    "death"
+   ]
+  }
+ },
+ "concept_measurements": {
+  "body_length_cm": 295.19,
+  "body_length_over_height": 1.4686,
+  "bounds_cm": [
+   [
+    -149.19,
+    -109.0,
+    1.98
+   ],
+   [
+    146.0,
+    109.0,
+    201.0
+   ]
+  ],
+  "carapace_slopes_forward": true,
+  "feet_on_the_ground": false,
+  "prow_ahead_of_front_feet": true,
+  "stance_width_cm": 218.0,
+  "standing_height_cm": 201.0
+ },
+ "creator": "Angelis Pseftis",
+ "ground_solve": {
+  "checked": "every clip is sampled across its length in the tests; no frame may pass through the ground",
+  "method": "_leg_fold_for_drop: forward kinematics on the leg's rest geometry, bisected so the ankle lands at the toe height for each key's body drop"
+ },
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Two slots: faceted charcoal carapace plate for shells, prow, legs and caster housing, and amber for the carapace seams, the prow seam and the caster slot, which are the only emissive.",
+ "material_slots": [
+  "MI_EBS_KHA_Strata",
+  "MI_EBS_KHA_Amber"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -149.18848223904604,
+     -109.0,
+     1.9807245885052023
+    ],
+    [
+     146.0,
+     109.0,
+     201.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Amber": 144,
+    "MI_EBS_KHA_Strata": 398
+   },
+   "clips": [
+    "idle",
+    "move",
+    "fire_on_the_move",
+    "sidestep",
+    "molt",
+    "death"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_UNT_002",
+   "path": "export/SK_EBS_KHA_UNT_002_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "e072ec43e3ee9c4d10a5f6bed1f345da45bd22a1122c077b2d7457512df6c4da",
+   "sockets": [
+    {
+     "bone": "caster_pitch",
+     "name": "Shard_Caster_Muzzle",
+     "position_cm": [
+      94.0,
+      0.0,
+      176.0
+     ],
+     "purpose": "where the shard leaves: forward, clear of the prow",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "caster_yaw",
+     "name": "Caster_Mount",
+     "position_cm": [
+      46.0,
+      0.0,
+      176.0
+     ],
+     "purpose": "the caster's own pivot",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "body",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      -16.0,
+      0.0,
+      154.0
+     ],
+     "purpose": "targeting and selection anchor in the body",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "body",
+     "name": "Molt_Carapace_Anchor",
+     "position_cm": [
+      -9.0,
+      0.0,
+      196.5
+     ],
+     "purpose": "where a carapace molt's added plate is anchored",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "caster_pitch",
+     "name": "Molt_Striker_Anchor",
+     "position_cm": [
+      72.0,
+      0.0,
+      180.0
+     ],
+     "purpose": "where a striker molt's added vanes are anchored",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 542
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_UNT_002",
+   "path": "export/SK_EBS_KHA_UNT_002_LOD0.obj",
+   "sha256": "cf4b4d6464eb073c4f287161caddc36279b785343d4d7bdf7a1b30089b054b58"
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.60994538831466,
+     -109.0,
+     1.9807245885052023
+    ],
+    [
+     146.0,
+     109.0,
+     201.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Amber": 12,
+    "MI_EBS_KHA_Strata": 334
+   },
+   "clips": [
+    "idle",
+    "move",
+    "fire_on_the_move",
+    "sidestep",
+    "molt",
+    "death"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_UNT_002",
+   "path": "export/SK_EBS_KHA_UNT_002_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "4236f61a7d2f60ae5df94bd06df517c974422a5197ab923a9a549d138790008c",
+   "sockets": [
+    {
+     "bone": "caster_pitch",
+     "name": "Shard_Caster_Muzzle",
+     "position_cm": [
+      94.0,
+      0.0,
+      176.0
+     ],
+     "purpose": "where the shard leaves: forward, clear of the prow",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "caster_yaw",
+     "name": "Caster_Mount",
+     "position_cm": [
+      46.0,
+      0.0,
+      176.0
+     ],
+     "purpose": "the caster's own pivot",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "body",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      -16.0,
+      0.0,
+      154.0
+     ],
+     "purpose": "targeting and selection anchor in the body",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "body",
+     "name": "Molt_Carapace_Anchor",
+     "position_cm": [
+      -9.0,
+      0.0,
+      196.5
+     ],
+     "purpose": "where a carapace molt's added plate is anchored",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "caster_pitch",
+     "name": "Molt_Striker_Anchor",
+     "position_cm": [
+      72.0,
+      0.0,
+      180.0
+     ],
+     "purpose": "where a striker molt's added vanes are anchored",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 346
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_UNT_002",
+   "path": "export/SK_EBS_KHA_UNT_002_LOD1.obj",
+   "sha256": "5f8fda81c79596e6c1eb41a42ef090afec862a3f41094a8beeed262d89176171"
+  }
+ ],
+ "package_id": "EBS-PKG-KA-RIFTSTALKER",
+ "planned_unreal_folder": "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_002/",
+ "production_asset_id": "EBS-KHA-UNT-002",
+ "provisional_contract": {
+  "bounds": {
+   "basis": "below the faction default because a light frame has to read as light",
+   "lod0_triangles": 6000,
+   "lod1_triangles": 2600
+  },
+  "card": "REL-FAC-025.KA.RIFTSTALKER.ASSET in ArtSource/kharuun-asset-cards.json (rendered to kharuun-asset-cards.md)",
+  "status": "PROVISIONAL. Authored in this worktree under the owner ruling of 2026-09-07; NOT incorporated into Docs/Requirements.md and not an existing authoritative per-asset requirement."
+ },
+ "review": {
+  "scenes": [
+   "scenes/baseline.json",
+   "scenes/carapace_molt.json",
+   "scenes/striker_molt.json",
+   "scenes/lod1.json",
+   "scenes/pose_move_025.json",
+   "scenes/pose_move_050.json",
+   "scenes/pose_fire_on_the_move_025.json",
+   "scenes/pose_sidestep_044.json",
+   "scenes/pose_molt_050.json",
+   "scenes/pose_death_100.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "name": "baseline",
+   "path": "review/SK_EBS_KHA_UNT_002_baseline_LOD0.obj",
+   "sha256": "2a58b176fadc1cc777b6d24672ce654af9fad77e422677da240b77207a178293",
+   "triangles": 542
+  },
+  {
+   "name": "carapace_molt",
+   "path": "review/SK_EBS_KHA_UNT_002_carapace_molt_LOD0.obj",
+   "sha256": "7850b4940e60404217f8bfe601c238e553eeee3c0271b1c3a5ed5ddc0af83295",
+   "triangles": 602
+  },
+  {
+   "name": "striker_molt",
+   "path": "review/SK_EBS_KHA_UNT_002_striker_molt_LOD0.obj",
+   "sha256": "7cf3f3a1f469870e254668b00570a947fa712e80cfce62cb145f5ab7800d66c9",
+   "triangles": 566
+  },
+  {
+   "name": "baseline_lod1",
+   "path": "review/SK_EBS_KHA_UNT_002_baseline_LOD1.obj",
+   "sha256": "d7f3d6cbf77325e006cf28e0258641a0c86bd686f187e32d78e047a4fced7379",
+   "triangles": 346
+  },
+  {
+   "lowest_z_cm": 13.59,
+   "name": "pose_move_025",
+   "path": "review/pose_move_025.obj",
+   "sha256": "6810084fe2d4f0c26235a8c38439dc9a3c29aba50187b0f3164f4d7faad92e60"
+  },
+  {
+   "lowest_z_cm": 8.28,
+   "name": "pose_move_050",
+   "path": "review/pose_move_050.obj",
+   "sha256": "929b0a115b0a15632dcf34774a61be496624c34bd329f104c7ea04d237794b7a"
+  },
+  {
+   "lowest_z_cm": 13.59,
+   "name": "pose_fire_on_the_move_025",
+   "path": "review/pose_fire_on_the_move_025.obj",
+   "sha256": "3ff981b04bc299c962b6bcd70fd78d97478f77151f0b3b17da502e9d29c72089"
+  },
+  {
+   "lowest_z_cm": 1.09,
+   "name": "pose_sidestep_044",
+   "path": "review/pose_sidestep_044.obj",
+   "sha256": "b669f76192b874a5d155cd1cac51880d94254238b776113bc10eb79ec13cac68"
+  },
+  {
+   "lowest_z_cm": 43.3,
+   "name": "pose_molt_050",
+   "path": "review/pose_molt_050.obj",
+   "sha256": "39e14c0fd50e64dc5d3f826c0a52615812a9caba45dab9aa0497d749733ec2dc"
+  },
+  {
+   "lowest_z_cm": 54.28,
+   "name": "pose_death_100",
+   "path": "review/pose_death_100.obj",
+   "sha256": "5e4886b693c20aca6ad6b48b5be7300704a59c181320f55b7ba5e538812d2282"
+  }
+ ],
+ "revision": "ebs-kha-unt-002-concept-v1",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "ground-contact centre between the feet; the runtime owns translation"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     156.0
+    ],
+    "name": "body",
+    "parent": "root",
+    "purpose": "the carapace body: the low forward posture lives in its rest pose"
+   },
+   {
+    "head_cm": [
+     58.0,
+     0.0,
+     148.0
+    ],
+    "name": "prow_base",
+    "parent": "body",
+    "purpose": "where the carapace begins tapering forward"
+   },
+   {
+    "head_cm": [
+     112.0,
+     0.0,
+     122.0
+    ],
+    "name": "prow_tip",
+    "parent": "prow_base",
+    "purpose": "the prow's forward point"
+   },
+   {
+    "head_cm": [
+     46.0,
+     0.0,
+     176.0
+    ],
+    "name": "caster_yaw",
+    "parent": "body",
+    "purpose": "shard-caster mount 1: aims independently of the gait"
+   },
+   {
+    "head_cm": [
+     66.0,
+     0.0,
+     176.0
+    ],
+    "name": "caster_pitch",
+    "parent": "caster_yaw",
+    "purpose": "shard-caster mount 2"
+   },
+   {
+    "head_cm": [
+     34.0,
+     -46.0,
+     144.0
+    ],
+    "name": "fl_hip",
+    "parent": "body",
+    "purpose": "fl leg: attachment at the body"
+   },
+   {
+    "head_cm": [
+     34.0,
+     -46.0,
+     144.0
+    ],
+    "name": "fl_upper",
+    "parent": "fl_hip",
+    "purpose": "fl leg: upper segment, pivoting at the hip toward the high outboard knee"
+   },
+   {
+    "head_cm": [
+     65.0,
+     -96.0,
+     152.0
+    ],
+    "name": "fl_lower",
+    "parent": "fl_upper",
+    "purpose": "fl leg: lower segment, pivoting at the knee"
+   },
+   {
+    "head_cm": [
+     96.0,
+     -74.0,
+     26.0
+    ],
+    "name": "fl_foot",
+    "parent": "fl_lower",
+    "purpose": "fl leg: the pointed foot, pivoting at the ankle"
+   },
+   {
+    "head_cm": [
+     34.0,
+     46.0,
+     144.0
+    ],
+    "name": "fr_hip",
+    "parent": "body",
+    "purpose": "fr leg: attachment at the body"
+   },
+   {
+    "head_cm": [
+     34.0,
+     46.0,
+     144.0
+    ],
+    "name": "fr_upper",
+    "parent": "fr_hip",
+    "purpose": "fr leg: upper segment, pivoting at the hip toward the high outboard knee"
+   },
+   {
+    "head_cm": [
+     65.0,
+     96.0,
+     152.0
+    ],
+    "name": "fr_lower",
+    "parent": "fr_upper",
+    "purpose": "fr leg: lower segment, pivoting at the knee"
+   },
+   {
+    "head_cm": [
+     96.0,
+     74.0,
+     26.0
+    ],
+    "name": "fr_foot",
+    "parent": "fr_lower",
+    "purpose": "fr leg: the pointed foot, pivoting at the ankle"
+   },
+   {
+    "head_cm": [
+     -70.0,
+     -46.0,
+     144.0
+    ],
+    "name": "rl_hip",
+    "parent": "body",
+    "purpose": "rl leg: attachment at the body"
+   },
+   {
+    "head_cm": [
+     -70.0,
+     -46.0,
+     144.0
+    ],
+    "name": "rl_upper",
+    "parent": "rl_hip",
+    "purpose": "rl leg: upper segment, pivoting at the hip toward the high outboard knee"
+   },
+   {
+    "head_cm": [
+     -105.0,
+     -96.0,
+     152.0
+    ],
+    "name": "rl_lower",
+    "parent": "rl_upper",
+    "purpose": "rl leg: lower segment, pivoting at the knee"
+   },
+   {
+    "head_cm": [
+     -140.0,
+     -74.0,
+     26.0
+    ],
+    "name": "rl_foot",
+    "parent": "rl_lower",
+    "purpose": "rl leg: the pointed foot, pivoting at the ankle"
+   },
+   {
+    "head_cm": [
+     -70.0,
+     46.0,
+     144.0
+    ],
+    "name": "rr_hip",
+    "parent": "body",
+    "purpose": "rr leg: attachment at the body"
+   },
+   {
+    "head_cm": [
+     -70.0,
+     46.0,
+     144.0
+    ],
+    "name": "rr_upper",
+    "parent": "rr_hip",
+    "purpose": "rr leg: upper segment, pivoting at the hip toward the high outboard knee"
+   },
+   {
+    "head_cm": [
+     -105.0,
+     96.0,
+     152.0
+    ],
+    "name": "rr_lower",
+    "parent": "rr_upper",
+    "purpose": "rr leg: lower segment, pivoting at the knee"
+   },
+   {
+    "head_cm": [
+     -140.0,
+     74.0,
+     26.0
+    ],
+    "name": "rr_foot",
+    "parent": "rr_lower",
+    "purpose": "rr leg: the pointed foot, pivoting at the ankle"
+   }
+  ],
+  "policy": "The corrected card's own rig: root, body, a two-bone prow, a two-bone caster that aims independently of the gait, and four three-segment legs. NOT the Tender's humanoid rig and NOT the Cairnback's heavy plan. No root motion; the runtime owns translation."
+ },
+ "scale_basis": {
+  "basis": "between the Tender's 190 cm crown and the Lancer's 213 cm, so the roster reads consistently",
+  "canon": "SPEC-UNIT-006: a lean, long-limbed warform with a low forward posture, a faceted carapace in charcoal with amber seams, and a shoulder-mounted shard-caster that fires while it moves",
+  "gameplay": "Content/Data/Source/units.json ka_riftstalker",
+  "standing_height_cm": 200.0
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/riftstalker-review/riftstalker-candidate.png",
+  "canon": "DevelopmentBible.md SPEC-UNIT-006",
+  "concepts": [
+   "EBS-CON-KHA-UNT-002"
+  ],
+  "gameplay": "Content/Data/Source/units.json ka_riftstalker"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "states": {
+  "baseline": "the unmolted form",
+  "carapace_molt": "thicker shells with added plates over them: visible on the unit, not only in the interface",
+  "striker_molt": "a longer caster housing with added vanes"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py"
+ },
+ "units": {
+  "axes": "+X forward, +Y right (anatomical right), +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "ground-contact centre between the feet"
+ }
+}
