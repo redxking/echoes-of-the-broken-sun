@@ -295,10 +295,10 @@
      "stage": "BLOCKOUT (concept build, ebs-mer-unt-004-concept-v3)",
      "date": "2026-09-07",
      "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-004/ (receipt.json, renders/concept-compare/, import/)",
-     "result": "Thin-hulled skimmer floating clear of the ground: stretched-hexagon hull, dominant relay mast and dish aft and offset, four lift pods (two per side, measured from the candidate underside), a strapped archive cradle as a separate hideable part, and a small nose emitter. 8-bone hover rig with sockets Scouting_Sensor_Pod and Logistics_Relay_Beam; 14 clips. LOD0 2,088 / LOD1 1,408 against 5,000 / 2,100. 30 tests, two lenses and a fix pass. Import: 0 errors, 28 AnimSequences, 2 sockets."
+     "result": "Thin-hulled skimmer floating clear of the ground: stretched-hexagon hull, dominant relay mast and dish aft and offset, four lift pods (two per side, measured from the candidate underside), a strapped archive cradle as a separate hideable part, and a small nose emitter. 8-bone hover rig with sockets Scouting_Sensor_Pod and Logistics_Relay_Beam; 14 clips. LOD0 2,088 / LOD1 1,408 against 5,000 / 2,100. 30 tests, two lenses and a fix pass. Import: 0 errors, 28 AnimSequences, 2 sockets. Owner ruling 2026-09-07: the secondary emitter and its attack animation stay; the novel's non-combat line is a cross-media difference. The author also corrected the fidelity target from the pixels (mast aft, four pods), which withdrew two of the package's owner questions."
     }
    ],
-   "next": "Book-versus-canon conflict over the secondary weapon (carried, not resolved); dish aim behaviour at the gameplay camera; textures; in-engine playback; gates.",
+   "next": "Open owner questions: the relay track name (relay_extend vs the frozen relay_activation) and the provisional L = 360 cm scale. Then textures (2048^2), emissive measurement, in-engine playback, gates. The book-versus-canon weapon conflict is decided: the weapon stays, recorded as a cross-media difference (owner ruling 2026-09-07).",
    "gates": {
     "art": "NOT_EVALUATED",
     "gameplay": "NOT_EVALUATED",
@@ -330,6 +330,35 @@
    "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/skeletal-clip-duration-probe/probe-record.json",
    "encoded_in": "ArtSource/tools/ebs_skelkit.py (ebs-skelkit-v2): write_skinned_glb refuses unaligned clips; frame_aligned_duration()/retime_clip() snap them",
    "cost_before_it_was_found": "one clip lost in each of EBS-MER-UNT-002, -003 (two) and -004"
+  }
+ ],
+ "owner_rulings": [
+  {
+   "date": "2026-09-07",
+   "recorded_by": "Angelis Pseftis (owner), answering the production lane's batched OWNER-QUESTION blocks",
+   "boundary": "Clarifies production direction. The owner states these answers did not edit the cards or the runtime in that turn, and they are not evidence of completed integration.",
+   "rulings": [
+    {
+     "subject": "EBS-MER-UNT-002 Lancer budget",
+     "question": "REL-ART-005.MC.LANCER prints its LOD1 ceiling as '3,3500'",
+     "ruling": "Confirmed 8,000 LOD0 / 3,500 LOD1 per REL-ART-028 and the recorded production decision; '3,3500' is malformed."
+    },
+    {
+     "subject": "EBS-MER-UNT-002 Lancer sockets",
+     "question": "The card names Left_Tread_Vector on a frame that walks on legs",
+     "ruling": "The recorded Lancer decision specifies Rear_Recoil_Strut_Anchor, with Left_Tread_Vector retained temporarily as a compatibility alias. Left-foot ground contact is a different function and needs its own separately named foot-contact socket if required. Preserve the two-legged concept."
+    },
+    {
+     "subject": "EBS-MER-UNT-003 Bulwark barrier",
+     "question": "How the barrier leaves the packed silhouette (OWNER-QUESTION F)",
+     "ruling": "Third, separately controlled barrier sub-object. Chassis, hinged wings and six structural frames stay physically present, three panes from each side, centred when deployed. The field slabs and the removable pane assembly are separated so they disappear while packed. The component contract is updated explicitly. Visibility follows authoritative deployment state including cancellation and save restoration. The added component does not increase the whole-unit triangle budget."
+    },
+    {
+     "subject": "EBS-MER-UNT-004 Relay Skiff weapon",
+     "question": "The novel says the skiff could not fight; the requirements give it a weapon",
+     "ruling": "Keep the weapon. Game requirements govern the game asset: retain the small forward emitter and its attack animation while the mast, dish and archive cradle stay dominant. The book difference is recorded as a cross-media difference; it does not block model production or authorise removing the game's weapon."
+    }
+   ]
   }
  ]
 }

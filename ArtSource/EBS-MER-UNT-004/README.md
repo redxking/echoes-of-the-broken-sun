@@ -403,7 +403,7 @@ The review decision records it explicitly: **the book says the skiff could not f
 (`SPEC-UNIT-004`, `REL-FAC-025.MC.SKIFF`) gives it 6 damage at 400 cm.** The build retains the game
 capability — a 0.11 L barrel under the nose (39.6 cm of built tube, tip on the nose face) with no armoured
 housing and no muzzle drama, and an attack triple whose recoil is 3.5 cm — so the asset reads as a scout that can defend itself, never as a gunship.
-The conflict is flagged for reconciliation, not decided here. See OWNER-QUESTION 2.
+**Decided by the owner on 2026-09-07:** the weapon stays. Game requirements govern the game asset, so the small forward emitter and its attack animation are retained while the mast, dish and archive cradle remain the dominant features; the novel's "could not fight" line is recorded here as a **cross-media difference**, which neither blocks model production nor authorises removing the game's weapon. See OWNER-QUESTION 2 (answered).
 
 ### 8.5 OWNER-QUESTION blocks (for the coordinator to batch; the owner is not addressed directly)
 
@@ -412,24 +412,29 @@ The conflict is flagged for reconciliation, not decided here. See OWNER-QUESTION
 > `relay_extend` with `relay_activation` recorded as an alias. Which name should the AnimSequence carry
 > when the integration task binds it? (One string in `build_clips`; no geometry or key changes.)
 
-> **OWNER-QUESTION 2 — book vs canon on the weapon.** The book paragraph attached to this package says the
-> skiff could not fight; the requirements give it a 6-damage 400 cm weapon, which this build models as a
-> small forward emitter. Confirm the weapon stays (current build), or the emitter and the attack triple are
-> removed and the requirement row is amended.
+> **OWNER-QUESTION 2 — book vs canon on the weapon. ANSWERED 2026-09-07 (owner).** Keep the secondary
+> weapon: "Game requirements govern the game asset. Retain the small forward emitter and its attack
+> animation, while preserving the mast, dish, and archive cradle as its dominant features. Record the book
+> discrepancy as a cross-media difference; it does not block model production or authorize removing the
+> game's weapon." The build already ships the emitter and the attack triple; nothing changes in the mesh
+> or the clips. §8.4 now records the difference as decided rather than open. The ruling clarifies
+> production direction and is not evidence of completed integration.
 
-> **OWNER-QUESTION 3 — mast end.** concept-fidelity.md says the mast is at the "front-left quarter"; the
-> candidate's own panels put it at the end opposite the nose and its emitter, and the build follows the
-> pixels (§8.2). Confirm the mast reads at the REAR quarter, or the prose is the intent and the mast and
-> emitter swap ends.
+> **OWNER-QUESTION 3 — mast end. WITHDRAWN 2026-09-07.** The author corrected `concept-fidelity.md`
+> against the candidate pixels (crops of the SIDE VIEW and TACTICAL SILHOUETTE panels): the mast stands at
+> the end opposite the chamfered prow, so with +X forward it is aft and offset from the centreline. The
+> superseded "front-left quarter" wording is struck through and dated in the target. The build already
+> matched the pixels, so the target and the build now agree and nothing is left for the owner to decide.
 
 > **OWNER-QUESTION 4 — scale.** L = 360 cm is PROVISIONAL: a 3.6 m skimmer overhangs a 100 cm tile and is
 > 2 × the Surveyor's height at the mast. Confirm 360 cm, or name the length the gameplay framing wants;
 > every proportion follows L.
 
-> **OWNER-QUESTION 5 — lift pod count.** concept-fidelity.md item 3 says six pods, three per side; all
-> three panels of the candidate show two per side and nothing at all in the middle stretch of the
-> underside (§8.2 carries the trace). The build follows the pixels and ships four. Confirm four, or the
-> prose is the intent and a third station returns at x ≈ 0 — one tuple in `POD_STATIONS_X`, plus the two
+> **OWNER-QUESTION 5 — lift pod count. WITHDRAWN 2026-09-07.** The author corrected `concept-fidelity.md`
+> item 3 to **four pods, two per side**, citing this package's own underside trace; the superseded "three
+> per side" estimate is struck through and dated. The build already ships four, so target and build agree.
+> (Superseded question text: confirm four, or the prose is the intent and a third station returns at
+> x ≈ 0 — one tuple in `POD_STATIONS_X`, plus the two
 > tests that hold the measured stations.
 
 ### 8.6 Open items
