@@ -50,6 +50,7 @@ UNITS only. None of the four remaining packages is a unit. REL-FAC-027.HC.INTERV
 | `REL-BLD-017.HC.CONCORDANCE.ASSET` | Concordance | 8,000 | 3,500 | PROVISIONAL |
 | `REL-BLD-017.HC.INTERVAL.ASSET` | Interval Loom | 3,000 | 1,200 | PROVISIONAL |
 | `REL-BLD-017.HC.CHORUS.ASSET` | Chorus Loom | 6,000 | 2,400 | PROVISIONAL |
+| `REL-BLD-017.HC.ANCHOR.ASSET` | Phase Anchor | 4,000 | 1,600 | PROVISIONAL |
 
 ### REL-BLD-017.HC.CONCORDANCE.ASSET — Concordance
 
@@ -190,4 +191,51 @@ UNITS only. None of the four remaining packages is a unit. REL-FAC-027.HC.INTERV
 * The woven form at the weave centre is a LIGHT EFFECT, not geometry; the mesh provides a socket only.
 * The hovering beam must read as unsupported; adding a strut destroys the faction read.
 * LOD1 shall preserve both posts, the warp and the beam.
+* Triangle counts under the ceiling are headroom, not sufficiency.
+
+### REL-BLD-017.HC.ANCHOR.ASSET — Phase Anchor
+
+| Field | Value |
+|---|---|
+| Status | PROVISIONAL |
+| Package | `EBS-PKG-HC-PHASE-ANCHOR` |
+| Production asset | `EBS-HOL-BLD-004` |
+| Canon | SPEC-BLD-017.HC.ANCHOR |
+| Function | Coherence optimizer: 480 HP, 800 cm sight, 130 construction ticks, 2x2 footprint, 120 Matter / 35 Dawn. Charges 5 Dawn every 600 ticks and projects a 700 cm cost-reduction aura field that drops other Choir structures' upkeep from 5 Dawn to 4. Fields do not stack. |
+
+**.MESH_PROP.** LOD0 ceiling 4,000 triangles; LOD1 ceiling 1,600. Scope: the complete assembly including the stepped plinth, the tapering spire and its apex cap. Footprint 2x2 tiles. Nanite off. Pivot at the plinth ground-contact centre. below the faction default: one hexagonal spire on a stepped hexagonal plinth
+
+**.TEX_MAPS.** 2048x2048 packed PBR following the HC unit cards' stack.
+
+**.MAT_RULE.** Construction: A tapering hexagonal spire standing on a low stepped hexagonal plinth. No arms, no dish, no aperture: the Anchor is a marker, and its whole silhouette is the taper. Emissive: Magenta Fracture on the shaft's arris lines and on the diamond register up its face, <= 12% of surface area as a CEILING not a target. Forbidden: No Kharuun strata, no Meridian plates or conduits, no amber, no cyan.
+
+**.COMPONENTS.**
+
+* A low stepped hexagonal plinth, inside the 2x2 footprint
+* A tapering hexagonal spire rising from the plinth to a pointed apex cap
+* Magenta arris lines up the spire's edges
+* A diamond register lattice on the spire's faces, the read the concept's REGISTER DETAIL panel calls out
+
+**.ANIM_RIG.** Static primary structure. Provisional plan is root, one bone for the spire and one for the apex, so the spire can drift out of phase with its own tip — the faction's reality-bleed device, NOT a canon motion clause for this building.
+
+**.ARTICULATION.** PENDING, not waived.
+
+**.ROOT_MOTION.** None.
+
+**.SOCKETS.** `Target_Anchor_Center`, `Field_Ring_Origin`, `Apex_Beacon`, `Register_Center`.
+
+**.STATES.**
+
+| State | Read |
+|---|---|
+| `field_active` | arrises and register lit; the 700 cm aura ring is projected from Field_Ring_Origin |
+| `field_lost` | arrises and register dark; the spire reads as inert stone |
+| `destroyed` | the spire toppled across its own plinth |
+
+**.READABILITY.**
+
+* Field active and field lost must be distinguishable at gameplay distance.
+* The 700 cm aura ring is a LIGHT EFFECT, not geometry; the mesh provides Field_Ring_Origin only. Its radius belongs to gameplay data, and the mesh must not imply any other radius.
+* The taper must read at tactical distance: this is the faction's tallest, thinnest silhouette and must not be confused with the Chorus Loom's posts.
+* LOD1 shall preserve the taper, the plinth steps and the arris lines.
 * Triangle counts under the ceiling are headroom, not sufficiency.

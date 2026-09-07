@@ -1,0 +1,524 @@
+{
+ "acceptance": {
+  "animation": "NOT_EVALUATED",
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "PENDING \u2014 built against a provisional card that is not in the authoritative requirements"
+ },
+ "asset_name": "SK_EBS_HOL_BLD_004",
+ "author": "Angelis Pseftis",
+ "bind_counts": {
+  "apex": 10,
+  "root": 52,
+  "spire": 192
+ },
+ "budgets": {
+  "cap_source": "REL-BLD-017.HC.ANCHOR.ASSET (PROVISIONAL)",
+  "field_lost_state_triangles": 254,
+  "headroom_note": "Under the ceiling is HEADROOM, not sufficiency (owner ruling 2026-09-07).",
+  "lod0_cap": 4000,
+  "lod0_triangles": 254,
+  "lod0_within_cap": true,
+  "lod1_cap": 1600,
+  "lod1_triangles": 158,
+  "lod1_within_cap": true,
+  "magenta_area_fraction_field_active": 0.05553,
+  "magenta_cap": 0.12,
+  "magenta_within_cap": true,
+  "worst_state_triangles": 254
+ },
+ "clips": [
+  {
+   "bones": [
+    "apex",
+    "spire"
+   ],
+   "duration_s": 7.0,
+   "loop": true,
+   "name": "field_active_idle",
+   "purpose": "field up: the shaft holds and its apex drifts out of phase with it. Faction reality-bleed device, NOT a canon motion clause for this building",
+   "ticks": 140
+  },
+  {
+   "bones": [
+    "apex",
+    "spire"
+   ],
+   "duration_s": 7.0,
+   "loop": true,
+   "name": "field_lost",
+   "purpose": "field down: the shaft settles and the drift dies out of the apex",
+   "ticks": 140
+  },
+  {
+   "bones": [
+    "apex",
+    "spire"
+   ],
+   "duration_s": 0.0,
+   "loop": false,
+   "name": "restore",
+   "purpose": "single-frame rest pose for reconstruction from saved state",
+   "ticks": 0
+  }
+ ],
+ "component_inventory": {
+  "apex_cap": {
+   "built": true,
+   "contract": 1
+  },
+  "arris_lines": {
+   "built": 6,
+   "contract": 6
+  },
+  "aura_field": {
+   "built_as_geometry": false,
+   "contract": "a LIGHT EFFECT, not geometry",
+   "radius_cm": 700.0,
+   "socket": "Field_Ring_Origin"
+  },
+  "bones": {
+   "built": 3,
+   "contract": "root, the spire and its apex",
+   "names": [
+    "root",
+    "spire",
+    "apex"
+   ]
+  },
+  "lit_lines": 14,
+  "plinth": {
+   "built": 3,
+   "contract": 3
+  },
+  "register": {
+   "built": 8,
+   "contract": 8
+  },
+  "shaft": {
+   "base_radius_cm": 56.0,
+   "built": 4,
+   "contract": "a tapering hexagonal spire",
+   "top_radius_cm": 23.0
+  },
+  "sockets": {
+   "built": [
+    "Apex_Beacon",
+    "Field_Ring_Origin",
+    "Register_Center",
+    "Target_Anchor_Center"
+   ],
+   "contract": [
+    "Apex_Beacon",
+    "Field_Ring_Origin",
+    "Register_Center",
+    "Target_Anchor_Center"
+   ]
+  },
+  "states": {
+   "built": [
+    "field_active",
+    "field_lost",
+    "destroyed"
+   ],
+   "contract": [
+    "field_active",
+    "field_lost",
+    "destroyed"
+   ]
+  },
+  "tracks": {
+   "built": [
+    "field_active_idle",
+    "field_lost",
+    "restore"
+   ],
+   "contract": [
+    "field_active_idle",
+    "field_lost",
+    "restore"
+   ]
+  }
+ },
+ "concept_measurements": {
+  "bounds_cm": [
+   [
+    -150.0,
+    -129.9,
+    0.0
+   ],
+   [
+    150.0,
+    129.9,
+    640.0
+   ]
+  ],
+  "everything_inside_the_footprint": true,
+  "footprint_cm": 400.0,
+  "footprint_tiles": [
+   2,
+   2
+  ],
+  "height_cm": 640.0,
+  "max_extent_cm": 150.0,
+  "plinth_across_corners_cm": 300.0,
+  "plinth_fraction_of_height": 0.175,
+  "plinth_height_cm": 112.0,
+  "slenderness": 0.175,
+  "traced_plinth_fraction": 0.176,
+  "traced_slenderness": 0.177
+ },
+ "creator": "Angelis Pseftis",
+ "faction_language_inference": {
+  "source": "the four REL-FAC-027.HC.* UNIT cards",
+  "status": "INFERENCE, not a requirement. No authoritative card places it on a Hollow Choir BUILDING.",
+  "what": "the 12% Magenta Fracture ceiling"
+ },
+ "footprint_adaptation": {
+  "authority": "Owner ruling 2026-09-07 (Array Foundry): adapt the proportion to the footprint; do not change navigation or placement rules to match a drawing's apparent proportion.",
+  "recorded_as": "a footprint-driven adaptation, not a concept deviation to be silently absorbed",
+  "what": "The plinth is held to 300 cm across corners.",
+  "why": "The traced plinth-to-shaft proportion would put it near 500 cm across, outside the 400 cm footprint."
+ },
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Three slots: vitrified stone for the spire and apex, a worn stone for the plinth steps, and Magenta Fracture for the arris lines and the diamond register.",
+ "material_slots": [
+  "MI_EBS_HOL_Vitrified",
+  "MI_EBS_HOL_ApronStone",
+  "MI_EBS_HOL_Magenta"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -129.9038105676658,
+     0.0
+    ],
+    [
+     150.0,
+     129.9038105676658,
+     640.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_HOL_ApronStone": 52,
+    "MI_EBS_HOL_Magenta": 112,
+    "MI_EBS_HOL_Vitrified": 90
+   },
+   "clips": [
+    "field_active_idle",
+    "field_lost",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_HOL_BLD_004",
+   "path": "export/SK_EBS_HOL_BLD_004_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_HOL_Vitrified",
+    "MI_EBS_HOL_ApronStone",
+    "MI_EBS_HOL_Magenta"
+   ],
+   "sha256": "c207720653b1cee737cc315ff0c12b85764ec7fa0e9312159f4950106cf9dafe",
+   "sockets": [
+    {
+     "bone": "root",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      262.4
+     ],
+     "purpose": "targeting and selection anchor, low on the shaft where the mass is",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Field_Ring_Origin",
+     "position_cm": [
+      0.0,
+      0.0,
+      2.0
+     ],
+     "purpose": "origin of the 700 cm aura ring. It is a LIGHT EFFECT, not geometry; the radius belongs to gameplay data and the mesh implies none",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "apex",
+     "name": "Apex_Beacon",
+     "position_cm": [
+      0.0,
+      0.0,
+      628.0
+     ],
+     "purpose": "the tip: the long-range read that the field is up",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "spire",
+     "name": "Register_Center",
+     "position_cm": [
+      0.0,
+      -39.45,
+      310.0
+     ],
+     "purpose": "centre of the diamond register on the front face",
+     "yaw_deg": -90.0
+    }
+   ],
+   "triangles": 254
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_HOL_BLD_004",
+   "path": "export/SK_EBS_HOL_BLD_004_LOD0.obj",
+   "sha256": "5158461750e74660c28ab24e3626d6da8b88dfc26e11639d8cdfc3452092ee8b"
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -129.9038105676658,
+     0.0
+    ],
+    [
+     150.0,
+     129.9038105676658,
+     640.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_HOL_ApronStone": 52,
+    "MI_EBS_HOL_Magenta": 16,
+    "MI_EBS_HOL_Vitrified": 90
+   },
+   "clips": [
+    "field_active_idle",
+    "field_lost",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_HOL_BLD_004",
+   "path": "export/SK_EBS_HOL_BLD_004_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_HOL_Vitrified",
+    "MI_EBS_HOL_ApronStone",
+    "MI_EBS_HOL_Magenta"
+   ],
+   "sha256": "30cbe2a4e78b4bfa9df6bbfd3b5f08ae5d25baf875e3c466e384ab2249f7fffc",
+   "sockets": [
+    {
+     "bone": "root",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      262.4
+     ],
+     "purpose": "targeting and selection anchor, low on the shaft where the mass is",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Field_Ring_Origin",
+     "position_cm": [
+      0.0,
+      0.0,
+      2.0
+     ],
+     "purpose": "origin of the 700 cm aura ring. It is a LIGHT EFFECT, not geometry; the radius belongs to gameplay data and the mesh implies none",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "apex",
+     "name": "Apex_Beacon",
+     "position_cm": [
+      0.0,
+      0.0,
+      628.0
+     ],
+     "purpose": "the tip: the long-range read that the field is up",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "spire",
+     "name": "Register_Center",
+     "position_cm": [
+      0.0,
+      -39.45,
+      310.0
+     ],
+     "purpose": "centre of the diamond register on the front face",
+     "yaw_deg": -90.0
+    }
+   ],
+   "triangles": 158
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_HOL_BLD_004",
+   "path": "export/SK_EBS_HOL_BLD_004_LOD1.obj",
+   "sha256": "2e37b553047753091f670f85f45a1b363e124e68ca5e11d5ce2e9dca148fba94"
+  }
+ ],
+ "package_id": "EBS-PKG-HC-PHASE-ANCHOR",
+ "pending_requirements": [
+  {
+   "detail": "The spire and apex drift is a presentation device, not a role-required articulated assembly.",
+   "requirement": "Articulated components for a structure of this role",
+   "status": "PENDING, not waived"
+  }
+ ],
+ "planned_unreal_folder": "/Game/Echoes/Production/HOL/BLD/EBS_HOL_BLD_004/",
+ "production_asset_id": "EBS-HOL-BLD-004",
+ "provisional_contract": {
+  "bounds": {
+   "lod0_triangles": 4000,
+   "lod1_triangles": 1600
+  },
+  "card": "REL-BLD-017.HC.ANCHOR.ASSET in ArtSource/hollow-choir-asset-cards.json (rendered to hollow-choir-asset-cards.md)",
+  "status": "PROVISIONAL. Authored in this worktree after the trace; NOT in Docs/Requirements.md."
+ },
+ "review": {
+  "scenes": [
+   "scenes/field_active.json",
+   "scenes/field_lost.json",
+   "scenes/destroyed.json",
+   "scenes/lod1.json",
+   "scenes/pose_field_active_idle_025.json",
+   "scenes/pose_field_lost_050.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "lit_lines": 14,
+   "name": "field_active",
+   "path": "review/SK_EBS_HOL_BLD_004_field_active_LOD0.obj",
+   "sha256": "2a8f3c51dc76cbd7a4d2c48c2c2a582bab1954b4a75fbff0ebd57880e1e1d413",
+   "triangles": 254
+  },
+  {
+   "lit_lines": 0,
+   "name": "field_lost",
+   "path": "review/SK_EBS_HOL_BLD_004_field_lost_LOD0.obj",
+   "sha256": "40abd9052992860ecd636a69eebc365714c720e5cb786101334a5613e158abb8",
+   "triangles": 254
+  },
+  {
+   "lit_lines": 0,
+   "name": "destroyed",
+   "path": "review/SK_EBS_HOL_BLD_004_destroyed_LOD0.obj",
+   "sha256": "9b9acc6f15ac69e7d46cee7f247777e6fccf5aada9edd824a31bed75e95a25a5",
+   "triangles": 112
+  },
+  {
+   "name": "field_active_lod1",
+   "path": "review/SK_EBS_HOL_BLD_004_field_active_LOD1.obj",
+   "sha256": "50f96397c72e4ad7b5bbcbba904431469ed68a3004d79fb50210b088eba318de",
+   "triangles": 158
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_field_active_idle_025",
+   "path": "review/pose_field_active_idle_025.obj",
+   "sha256": "683e7797f3c6ef3aab8f7054e5fe72e61a3719bc2a3fea3377de535b83855c25"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_field_lost_050",
+   "path": "review/pose_field_lost_050.obj",
+   "sha256": "3cc6b0d623472566ecbf29107a7a27d09ebfa19524749365e0beab159dec6055"
+  }
+ ],
+ "revision": "ebs-hol-bld-004-concept-v1",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "plinth ground-contact centre; the Phase Anchor never moves"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     112.0
+    ],
+    "name": "spire",
+    "parent": "root",
+    "purpose": "the tapering shaft: drifts on its own phase (faction reality-bleed device)"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     488.0
+    ],
+    "name": "apex",
+    "parent": "spire",
+    "purpose": "the apex cap: hangs out of phase with the shaft beneath it"
+   }
+  ],
+  "policy": "Root, the spire and its apex. The drift is the faction's reality-bleed device, NOT a canon motion clause for this building. No root motion."
+ },
+ "scale_basis": {
+  "aura_cm": 700.0,
+  "aura_is_not_geometry": "The 700 cm field is gameplay data projected as VFX from Field_Ring_Origin.",
+  "canon": "SPEC-BLD-017.HC.ANCHOR: coherence optimizer, 480 HP, 800 cm sight, 130 ticks, 2x2 footprint",
+  "footprint_cm": 400.0,
+  "footprint_tiles": [
+   2,
+   2
+  ],
+  "source": "Content/Data/Source/buildings.json hc_phase_anchor",
+  "upkeep": "600 ticks = 30 s between charges"
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/phase-anchor-review/phase-anchor-candidate.png",
+  "canon": "Requirements SPEC-BLD-017.HC.ANCHOR",
+  "gameplay": "Content/Data/Source/buildings.json hc_phase_anchor"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "state_read": {
+  "field_active_lit_lines": 14,
+  "field_lost_lit_lines": 0,
+  "mechanism": "field_lost moves every arris and register line into the vitrified slot, so the lit read is a slot change and not a brightness parameter. The register is the geometry that carries it; LOD1 keeps the two silhouette arrises so the read survives."
+ },
+ "states": {
+  "destroyed": "the spire toppled across its own plinth",
+  "field_active": "arrises and register lit; the aura ring is projected from Field_Ring_Origin",
+  "field_lost": "arrises and register dark; the spire reads as inert stone"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py"
+ },
+ "traced_before_the_card": {
+  "card_written_after": true,
+  "directive": "Owner ruling 2026-09-07: trace each selected concept BEFORE authoring its provisional card.",
+  "measurements_rejected_as_perspective": [
+   "the plinth's ~480 px apparent width",
+   "the field ring's 878 x 276 px ellipse"
+  ],
+  "trace": "the candidate's FIELD ACTIVE view, dark-pixel spans below luminance 120: apex to plinth base 682 px, plinth 120 px (0.176 of height), shaft base 121 px (slenderness 0.177)"
+ },
+ "units": {
+  "axes": "+X forward, +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "plinth ground-contact centre"
+ }
+}

@@ -724,6 +724,35 @@
     "The platform fills the 4x4 footprint on the long axis only (760 x 620 in an 800 square); flagged, not forced.",
     "The beam sits 37 cm above the post crowns where the candidate draws it at roughly crown height, so it reads as unsupported without the drawing's isometric depth cue."
    ]
+  },
+  {
+   "package_id": "EBS-PKG-HC-PHASE-ANCHOR",
+   "production_asset_id": "EBS-HOL-BLD-004",
+   "subject": "Phase Anchor",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-hol-bld-004-concept-v1",
+   "asset_name": "SK_EBS_HOL_BLD_004",
+   "planned_unreal_folder": "/Game/Echoes/Production/HOL/BLD/EBS_HOL_BLD_004/",
+   "canon_status": "CANDIDATE (phase-anchor candidate against canon SPEC-BLD-017.HC.ANCHOR); not owner acceptance",
+   "source_root": "ArtSource/EBS-HOL-BLD-004/",
+   "authoritative_document": "ArtSource/EBS-HOL-BLD-004/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-HOL-BLD-004/concept-fidelity.md",
+   "asset_card": "REL-BLD-017.HC.ANCHOR.ASSET (PROVISIONAL, authored AFTER the trace; not in Docs/Requirements.md)",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-hol-bld-004-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-HOL-BLD-004/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "A tapering hexagonal spire on a three-step hexagonal plinth, 640 cm to the apex, with magenta arris lines up all six edges and a diamond register up the front face. Traced before the card was authored: slenderness 0.175 against a traced 0.177, plinth 0.175 of height against a traced 0.176. Two traced figures rejected as perspective reads rather than proportions. The 700 cm aura is a light effect: the mesh provides Field_Ring_Origin and implies no radius. The lit read is a slot change, not brightness: the two power states share their 254 triangles exactly. LOD0 254 / LOD1 158 against the provisional 4,000 / 1,600; magenta 5.6% against 12%. Monochrome separability from the Chorus Loom on ground-free tactical renders: IoU 0.514, largest band difference 0.490, aspect difference 0.481. 21 tests. Import clean: 0 errors, 0 warnings, 0 pipeline property failures, 3 bones, 4 sockets, 3 material slots, 3 clips on both meshes."
+    }
+   ],
+   "next": "Textures, a detail judgement at gameplay distance, in-engine capture, gate reviews, card incorporation, owner acceptance.",
+   "open_owner_questions": [],
+   "open_items": [
+    "The articulated-component requirement stays pending; the spire and apex drift is a presentation device.",
+    "The plinth is held to 300 cm across corners against a traced proportion near 500 cm: a footprint-driven adaptation under the owner's Array Foundry ruling.",
+    "The destroyed state snaps the spire into a stump and two sections, because a 528 cm shaft cannot lie down inside a 400 cm footprint unbroken. The candidate has no destroyed panel; this is invention constrained by the footprint."
+   ]
   }
  ],
  "tools": {
@@ -819,6 +848,20 @@
    "package": "EBS-PKG-HC-CHORUS-LOOM",
    "finding": "ue_import_inspect_skeletal.py reads its job path from the EBS_IMPORT_JOB environment variable. Passing the path as an argument after the script name in -ExecutePythonScript crashed the editor with KeyError: 'EBS_IMPORT_JOB' under -ScriptErrorsAreFatal, and the wrapper log showed only a shutdown handler; the cause was visible solely in the engine's own EBSPreview.log.",
    "rule": "Set EBS_IMPORT_JOB in the environment, and read the engine log rather than the wrapper log when a headless run exits non-zero. My invocation error, not an engine defect."
+  },
+  {
+   "id": "PF-011",
+   "date": "2026-09-07",
+   "package": "EBS-PKG-HC-PHASE-ANCHOR",
+   "finding": "Collision in a skinned GLB is imported by Interchange as a SECOND SkeletalMesh with its own skeleton. The Phase Anchor was written with include_collision=(lod == 0), copied from an older static-mesh generator; the LOD0 file's UBX box arrived as UBX_SK_EBS_HOL_BLD_004_01 alongside a SK_..._scene_Skeleton, and the inspection failed on 7 imported objects against an expected 5.",
+   "rule": "Skeletal packages in this pipeline export with include_collision=False; collision for a skeletal mesh comes from a physics asset, not from UBX geometry. My deviation from the established convention, not a new engine defect, but the import behaviour is worth knowing."
+  },
+  {
+   "id": "PF-012",
+   "date": "2026-09-07",
+   "package": "EBS-PKG-HC-PHASE-ANCHOR",
+   "finding": "Two silent framing traps cost a render cycle each. A radial detail placed at a polygon's VERTEX angle instead of its face centre straddles an edge and never shows on a flat face; and ebs_render's perspective_camera puts the camera at target - arm * forward, so yaw 0 looks at the -X side of a subject, not at its +X face.",
+   "rule": "Place face detail at the apothem and at a face-centre angle, and read perspective_camera before choosing a yaw, rather than inferring the camera's side from a render that shows nothing."
   }
  ],
  "owner_rulings": [
@@ -1010,10 +1053,8 @@
   "as_of": "2026-09-07",
   "counting_authority": "Docs/VisualAssetPipeline/reference-packages.json, audited 2026-09-07",
   "total_packages": 21,
-  "at_blockout": 20,
-  "remaining": 1,
-  "remaining_packages": [
-   "EBS-PKG-HC-PHASE-ANCHOR"
-  ]
+  "at_blockout": 21,
+  "remaining": 0,
+  "remaining_packages": []
  }
 }

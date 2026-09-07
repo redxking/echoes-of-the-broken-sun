@@ -205,6 +205,78 @@
     "LOD1 shall preserve both posts, the warp and the beam.",
     "Triangle counts under the ceiling are headroom, not sufficiency."
    ]
+  },
+  {
+   "card_id": "REL-BLD-017.HC.ANCHOR.ASSET",
+   "status": "PROVISIONAL",
+   "package_id": "EBS-PKG-HC-PHASE-ANCHOR",
+   "production_asset_id": "EBS-HOL-BLD-004",
+   "subject": "Phase Anchor",
+   "canon": "SPEC-BLD-017.HC.ANCHOR",
+   "function": "Coherence optimizer: 480 HP, 800 cm sight, 130 construction ticks, 2x2 footprint, 120 Matter / 35 Dawn. Charges 5 Dawn every 600 ticks and projects a 700 cm cost-reduction aura field that drops other Choir structures' upkeep from 5 Dawn to 4. Fields do not stack.",
+   "traced_from": "BuildArtifacts/Evidence/concept-discovery-20260906/phase-anchor-review/phase-anchor-candidate.png (FIELD ACTIVE, FIELD LOST, REGISTER DETAIL), traced 2026-09-07 before this card was written",
+   "traced_measurements": {
+    "panel": "FIELD ACTIVE, dark-pixel spans below luminance 120",
+    "apex_to_plinth_base_px": 682,
+    "spire_alone_px": 562,
+    "plinth_px": 120,
+    "plinth_fraction_of_height": 0.176,
+    "shaft_base_width_px": 121,
+    "slenderness_shaft_base_over_height": 0.177,
+    "shaft_width_at_upper_quarter_px": 50,
+    "field_ring_ellipse_px": [
+     878,
+     276
+    ],
+    "note": "The plinth's 480 px apparent width is a perspective read of a hexagon's across-corners plus its ground shadow, and is NOT used as a build ratio. The ring ellipse is a circle seen in perspective and belongs to the aura VFX, not the mesh."
+   },
+   "mesh_prop": {
+    "lod0_triangles": 4000,
+    "lod1_triangles": 1600,
+    "scope": "the complete assembly including the stepped plinth, the tapering spire and its apex cap",
+    "footprint_tiles": [
+     2,
+     2
+    ],
+    "nanite": false,
+    "pivot": "plinth ground-contact centre",
+    "budget_note": "below the faction default: one hexagonal spire on a stepped hexagonal plinth"
+   },
+   "tex_maps": "2048x2048 packed PBR following the HC unit cards' stack.",
+   "mat_rule": {
+    "construction": "A tapering hexagonal spire standing on a low stepped hexagonal plinth. No arms, no dish, no aperture: the Anchor is a marker, and its whole silhouette is the taper.",
+    "emissive": "Magenta Fracture on the shaft's arris lines and on the diamond register up its face, <= 12% of surface area as a CEILING not a target.",
+    "forbidden": "No Kharuun strata, no Meridian plates or conduits, no amber, no cyan."
+   },
+   "components": [
+    "A low stepped hexagonal plinth, inside the 2x2 footprint",
+    "A tapering hexagonal spire rising from the plinth to a pointed apex cap",
+    "Magenta arris lines up the spire's edges",
+    "A diamond register lattice on the spire's faces, the read the concept's REGISTER DETAIL panel calls out"
+   ],
+   "motion": {
+    "rig": "Static primary structure. Provisional plan is root, one bone for the spire and one for the apex, so the spire can drift out of phase with its own tip \u2014 the faction's reality-bleed device, NOT a canon motion clause for this building.",
+    "articulated_requirement": "PENDING, not waived.",
+    "root_motion": "None."
+   },
+   "sockets": [
+    "Target_Anchor_Center",
+    "Field_Ring_Origin",
+    "Apex_Beacon",
+    "Register_Center"
+   ],
+   "states": {
+    "field_active": "arrises and register lit; the 700 cm aura ring is projected from Field_Ring_Origin",
+    "field_lost": "arrises and register dark; the spire reads as inert stone",
+    "destroyed": "the spire toppled across its own plinth"
+   },
+   "readability": [
+    "Field active and field lost must be distinguishable at gameplay distance.",
+    "The 700 cm aura ring is a LIGHT EFFECT, not geometry; the mesh provides Field_Ring_Origin only. Its radius belongs to gameplay data, and the mesh must not imply any other radius.",
+    "The taper must read at tactical distance: this is the faction's tallest, thinnest silhouette and must not be confused with the Chorus Loom's posts.",
+    "LOD1 shall preserve the taper, the plinth steps and the arris lines.",
+    "Triangle counts under the ceiling are headroom, not sufficiency."
+   ]
   }
  ]
 }
