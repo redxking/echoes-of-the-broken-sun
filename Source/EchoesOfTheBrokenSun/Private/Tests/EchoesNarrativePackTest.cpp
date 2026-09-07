@@ -20,6 +20,7 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
     UInputSettings* InputSettings = GetMutableDefault<UInputSettings>();
+    if (!TestNotNull(TEXT("Input settings prerequisite exists"), InputSettings)) return false;
     TArray<FInputActionKeyMapping> PriorRecenter;
     InputSettings->GetActionMappingByName(TEXT("SnapKeyboardTargetToSelection"), PriorRecenter);
     for (const auto& Mapping : PriorRecenter) InputSettings->RemoveActionMapping(Mapping, false);
@@ -38,6 +39,43 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
     InputSettings->RemoveActionMapping(TestMapping, false);
     for (const auto& Mapping : PriorRecenter) InputSettings->AddActionMapping(Mapping, false);
 
+
+    // Each prompt must follow runtime remapping and must not invent a default
+    // when the player has deliberately left an action unassigned. Never save
+    // these fixture mappings to the user's configuration.
+    const TPair<FName, FString> PromptActions[] = {
+        {TEXT("Select"), TEXT("{select_key}")},
+        {TEXT("CameraZoomIn"), TEXT("{zoom_in_key}")},
+        {TEXT("CameraZoomOut"), TEXT("{zoom_out_key}")},
+        {TEXT("ArmControlGroupAssignment"), TEXT("{assign_group_key}")},
+        {TEXT("RecallControlGroup1"), TEXT("{recall_group_key}")}};
+    for (const auto& Prompt : PromptActions)
+    {
+        TArray<FInputActionKeyMapping> Prior;
+        InputSettings->GetActionMappingByName(Prompt.Key, Prior);
+        for (const auto& Mapping : Prior) InputSettings->RemoveActionMapping(Mapping, false);
+        TestEqual(TEXT("Unassigned tutorial action reports the missing control"),
+            UEchoesNarrativeSubsystem::ResolveInputTokens(Prompt.Value),
+            NSLOCTEXT("EchoesNarrative", "ControlUnassigned", "unassigned control").ToString());
+        const FInputActionKeyMapping Remapped(Prompt.Key, EKeys::K, true, true);
+        InputSettings->AddActionMapping(Remapped, false);
+        TestEqual(TEXT("Tutorial prompt uses the remapped physical chord"),
+            UEchoesNarrativeSubsystem::ResolveInputTokens(Prompt.Value), FString(ExpectedPhysicalChord));
+        InputSettings->RemoveActionMapping(Remapped, false);
+        for (const auto& Mapping : Prior) InputSettings->AddActionMapping(Mapping, false);
+    }
+    TArray<FInputAxisKeyMapping> PriorForward, PriorRight;
+    InputSettings->GetAxisMappingByName(TEXT("CameraForward"), PriorForward);
+    InputSettings->GetAxisMappingByName(TEXT("CameraRight"), PriorRight);
+    for (const auto& Mapping : PriorForward) InputSettings->RemoveAxisMapping(Mapping, false);
+    for (const auto& Mapping : PriorRight) InputSettings->RemoveAxisMapping(Mapping, false);
+    const FInputAxisKeyMapping PanMapping(TEXT("CameraForward"), EKeys::Up, 1.0f);
+    InputSettings->AddAxisMapping(PanMapping, false);
+    TestEqual(TEXT("Tutorial pan prompt follows the current axis mapping"),
+        UEchoesNarrativeSubsystem::ResolveInputTokens(TEXT("{pan_keys}")), EKeys::Up.GetDisplayName().ToString());
+    InputSettings->RemoveAxisMapping(PanMapping, false);
+    for (const auto& Mapping : PriorForward) InputSettings->AddAxisMapping(Mapping, false);
+    for (const auto& Mapping : PriorRight) InputSettings->AddAxisMapping(Mapping, false);
 
     UGameInstance* GameInstance = NewObject<UGameInstance>(GEngine);
     GameInstance->InitializeStandalone();

@@ -19,6 +19,16 @@
 
 namespace
 {
+// Resolve on presentation so remapping never leaves stale default key hints.
+FText BoundTutorialText(const FText& Pattern)
+{
+    return FText::FromString(UEchoesNarrativeSubsystem::ResolveInputTokens(Pattern.ToString()));
+}
+}
+
+
+namespace
+{
 using namespace echoes::sim;
 
 FText Text(const FString& Value)
@@ -1650,7 +1660,7 @@ bool FEchoesFieldHudModel::Build(
                 ? static_cast<uint16>(
                     FEchoesTutorialPracticeState::ImplementedLessonMask &
                     ~PracticeTarget)
-                : Controller.GetPlayerProfile().TutorialVerifiedMask;
+                : Controller.GetTutorialProgressMask();
             if ((Mask & 7) == 7 && (Mask & 8) == 0)
             {
                 OutView.Minimap.MissionMarkers.Add({Normalize(Vec2::FromTiles(14, 18), OutView.Minimap.Width, OutView.Minimap.Height), LOCTEXT("RouteMarker", "R"), EEchoesFieldHudTone::Accent});
@@ -1663,6 +1673,7 @@ bool FEchoesFieldHudModel::Build(
                 OutView.ObjectiveControls.Add({LOCTEXT("InspectReserve", "Inspect reserve monitor"), FText::GetEmpty(), EEchoesFieldHudAction::InspectTutorialReserve});
         }
         const FText Tutorial = Controller.GetTutorialInstruction();
+        OutView.TutorialInstruction = Tutorial;
         if (!Tutorial.IsEmpty())
         {
             OutView.ObjectiveTitle = LOCTEXT("TutorialReadinessTitle", "READINESS CHECK");
@@ -1685,11 +1696,13 @@ bool FEchoesFieldHudModel::Build(
         }
         else if (OutView.bTutorialActive && Bridge.GetOperationMode() == EEchoesOperationMode::TrainingReadiness)
         {
-            const uint16 Mask = Controller.GetPlayerProfile().TutorialVerifiedMask | Controller.GetTutorialSkippedMask();
+            const uint16 Mask = Controller.GetTutorialProgressMask();
             if ((Mask & 1) == 0)
             {
-                FVector TargetWorld = Bridge.SimToWorld(UEchoesSimulationSubsystem::GetArchiveRecoverySite());
-                FText TargetName = LOCTEXT("SpotlightArchive", "Archive Recovery Site");
+                OutView.TutorialLessonTitle = LOCTEXT("Lesson1Title", "LESSON 1: SURVEY");
+                const auto& Survey = Controller.GetTutorialSurvey();
+                const int32 Waypoint = Survey.CompletedWaypoints();
+                FVector AnchorWorld = Bridge.SimToWorld(UEchoesSimulationSubsystem::GetArchiveRecoverySite());
                 if (const auto* Simulation = Bridge.GetSimulation())
                 {
                     if (const auto View = Simulation->CreatePlayerView(UEchoesSimulationSubsystem::LocalPlayerId))
@@ -1699,13 +1712,67 @@ bool FEchoesFieldHudModel::Build(
                             if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
                                 Entity.type == echoes::sim::EntityType::CommandCore)
                             {
-                                TargetWorld = Bridge.SimToWorld(Entity.position);
-                                TargetName = LOCTEXT("SpotlightAnchor", "Anchor");
+                                AnchorWorld = Bridge.SimToWorld(Entity.position);
                                 break;
                             }
                         }
                     }
                 }
+
+                FVector TargetWorld = AnchorWorld;
+                FText TargetName = LOCTEXT("SpotlightAnchor", "Anchor");
+                FText ActionPrompt = BoundTutorialText(LOCTEXT("ActionSelectAnchor", "Use {select_key} to select Anchor"));
+                FText InputBinding = BoundTutorialText(LOCTEXT("BindingSelectAnchor", "{select_key}"));
+
+                if (!Controller.IsTutorialCoreSelected())
+                {
+                    TargetWorld = AnchorWorld;
+                    TargetName = LOCTEXT("SpotlightAnchor", "Anchor");
+                    ActionPrompt = BoundTutorialText(LOCTEXT("ActionSelectAnchor", "Use {select_key} to select Anchor"));
+                    InputBinding = BoundTutorialText(LOCTEXT("BindingSelectAnchor", "{select_key}"));
+                }
+                else if (Waypoint == 0)
+                {
+                    TargetWorld = AnchorWorld;
+                    TargetName = LOCTEXT("SpotlightAnchor", "Anchor");
+                    if (!Survey.HasPanned())
+                    {
+                        ActionPrompt = BoundTutorialText(LOCTEXT("ActionPanCamera", "Pan camera with {pan_keys}"));
+                        InputBinding = BoundTutorialText(LOCTEXT("BindingPan", "{pan_keys}"));
+                    }
+                    else if (!(Survey.HasZoomedMin() && Survey.HasZoomedMax()))
+                    {
+                        ActionPrompt = BoundTutorialText(LOCTEXT("ActionZoomCamera", "Zoom with {zoom_in_key} / {zoom_out_key}"));
+                        InputBinding = BoundTutorialText(LOCTEXT("BindingZoom", "{zoom_in_key} / {zoom_out_key}"));
+                    }
+                    else
+                    {
+                        ActionPrompt = LOCTEXT("ActionRecenterAnchor", "Center Camera on Anchor (1.5s)");
+                        InputBinding = BoundTutorialText(LOCTEXT("BindingRecenter", "{recenter_key}"));
+                    }
+                }
+                else if (Waypoint == 1)
+                {
+                    TargetWorld = Bridge.SimToWorld(UEchoesSimulationSubsystem::GetArchiveRecoverySite());
+                    TargetName = LOCTEXT("SpotlightArchive", "Archive Recovery Site");
+                    ActionPrompt = LOCTEXT("ActionCenterArchive", "Center Camera Here (1.5s)");
+                    InputBinding = BoundTutorialText(LOCTEXT("BindingCenterArchive", "{pan_keys} / Minimap"));
+                }
+                else if (Waypoint == 2)
+                {
+                    TargetWorld = Bridge.SimToWorld(UEchoesSimulationSubsystem::GetEvacuationSite());
+                    TargetName = LOCTEXT("SpotlightEvac", "Evacuation Site");
+                    ActionPrompt = LOCTEXT("ActionCenterEvac", "Center Camera Here (1.5s)");
+                    InputBinding = BoundTutorialText(LOCTEXT("BindingCenterEvac", "{pan_keys} / Minimap"));
+                }
+                else
+                {
+                    TargetWorld = AnchorWorld;
+                    TargetName = LOCTEXT("SpotlightAnchor", "Anchor");
+                    ActionPrompt = BoundTutorialText(LOCTEXT("ActionCompleteSurvey", "Use {select_key} on Anchor to complete"));
+                    InputBinding = BoundTutorialText(LOCTEXT("BindingSelectAnchor", "{select_key}"));
+                }
+
                 FVector2D ScreenPos;
                 if (Controller.ProjectWorldLocationToScreen(TargetWorld, ScreenPos))
                 {
@@ -1713,10 +1780,13 @@ bool FEchoesFieldHudModel::Build(
                     OutView.TutorialSpotlight.ScreenCenter = ScreenPos;
                     OutView.TutorialSpotlight.ScreenSize = FVector2D(140.0f, 140.0f);
                     OutView.TutorialSpotlight.TargetName = TargetName;
+                    OutView.TutorialSpotlight.ActionPrompt = ActionPrompt;
+                    OutView.TutorialSpotlight.InputBinding = InputBinding;
                 }
             }
             else if ((Mask & 2) == 0)
             {
+                OutView.TutorialLessonTitle = LOCTEXT("Lesson2Title", "LESSON 2: ROSTER");
                 if (Controller.GetSelectedEntityIds().IsEmpty())
                 {
                     if (const auto* Simulation = Bridge.GetSimulation())
@@ -1735,6 +1805,8 @@ bool FEchoesFieldHudModel::Build(
                                         OutView.TutorialSpotlight.ScreenCenter = ScreenPos;
                                         OutView.TutorialSpotlight.ScreenSize = FVector2D(120.0f, 120.0f);
                                         OutView.TutorialSpotlight.TargetName = LOCTEXT("SpotlightSurveyor", "Surveyor");
+                                        OutView.TutorialSpotlight.ActionPrompt = BoundTutorialText(LOCTEXT("ActionSelectSurveyor", "Use {select_key} to select Surveyor"));
+                                        OutView.TutorialSpotlight.InputBinding = BoundTutorialText(LOCTEXT("BindingLeftClick", "{select_key}"));
                                     }
                                     break;
                                 }
@@ -1744,11 +1816,58 @@ bool FEchoesFieldHudModel::Build(
                 }
                 else
                 {
-                    OutView.TutorialSpotlight.bActive = true;
-                    OutView.TutorialSpotlight.ScreenCenter = FVector2D(530.0f, 610.0f);
-                    OutView.TutorialSpotlight.ScreenSize = FVector2D(520.0f, 180.0f);
-                    OutView.TutorialSpotlight.TargetName = LOCTEXT("SpotlightSelectionPanel", "Selection Panel");
+                    const auto Progress = Controller.GetTutorialSelection().RosterProgress();
+                    if (!Progress.bHudPublished)
+                    {
+                        OutView.TutorialSpotlight.bActive = true;
+                        OutView.TutorialSpotlight.ScreenCenter = FVector2D(530.0f, 610.0f);
+                        OutView.TutorialSpotlight.ScreenSize = FVector2D(520.0f, 180.0f);
+                        OutView.TutorialSpotlight.TargetName = LOCTEXT("SpotlightSelectionPanel", "Unit Card & Commands");
+                        OutView.TutorialSpotlight.ActionPrompt = LOCTEXT("ActionReadHud", "Reviewing Unit Stats and Orders");
+                        OutView.TutorialSpotlight.InputBinding = LOCTEXT("BindingInspect", "Keep Selected");
+                    }
+                    else
+                    {
+                        OutView.TutorialSpotlight.bActive = true;
+                        OutView.TutorialSpotlight.ScreenCenter = FVector2D(400.0f, 300.0f);
+                        OutView.TutorialSpotlight.ScreenSize = FVector2D(100.0f, 100.0f);
+                        OutView.TutorialSpotlight.TargetName = LOCTEXT("SpotlightGround", "Clear Ground");
+                        OutView.TutorialSpotlight.ActionPrompt = BoundTutorialText(LOCTEXT("ActionDeselect", "Use {select_key} on ground to deselect"));
+                        OutView.TutorialSpotlight.InputBinding = BoundTutorialText(LOCTEXT("BindingLeftClick", "{select_key}"));
+                    }
                 }
+            }
+            else if ((Mask & 4) == 0)
+            {
+                OutView.TutorialLessonTitle = LOCTEXT("Lesson3Title", "LESSON 3: MUSTER");
+                const auto Progress = Controller.GetTutorialSelection().MusterProgress();
+                OutView.TutorialSpotlight.bActive = true;
+                OutView.TutorialSpotlight.ScreenCenter = FVector2D(640.0f, 360.0f);
+                OutView.TutorialSpotlight.ScreenSize = FVector2D(360.0f, 260.0f);
+                OutView.TutorialSpotlight.TargetName = LOCTEXT("SpotlightMusterGroup", "Surveyors & Lancers");
+                if (!Progress.bDragSelected)
+                {
+                    OutView.TutorialSpotlight.ActionPrompt = LOCTEXT("ActionDragBox", "Click & Drag Box Around All 8 Units");
+                    OutView.TutorialSpotlight.InputBinding = BoundTutorialText(LOCTEXT("BindingDrag", "Hold {select_key} and drag"));
+                }
+                else if (!Progress.bControlGroupAssigned)
+                {
+                    OutView.TutorialSpotlight.ActionPrompt = BoundTutorialText(LOCTEXT("ActionAssignGroup", "Press {assign_group_key}, then {recall_group_key}"));
+                    OutView.TutorialSpotlight.InputBinding = BoundTutorialText(LOCTEXT("BindingGroup", "{assign_group_key}, then {recall_group_key}"));
+                }
+                else
+                {
+                    OutView.TutorialSpotlight.ActionPrompt = BoundTutorialText(LOCTEXT("ActionRecallGroup", "Use {recall_group_key} to recall group"));
+                    OutView.TutorialSpotlight.InputBinding = BoundTutorialText(LOCTEXT("BindingRecall", "{recall_group_key}"));
+                }
+            }
+            else if ((Mask & 8) == 0)
+            {
+                OutView.TutorialLessonTitle = LOCTEXT("Lesson4Title", "LESSON 4: ROUTE");
+            }
+            else if ((Mask & 16) == 0)
+            {
+                OutView.TutorialLessonTitle = LOCTEXT("Lesson5Title", "LESSON 5: RESERVE");
             }
         }
     }

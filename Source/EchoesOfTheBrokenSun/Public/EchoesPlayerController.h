@@ -83,6 +83,17 @@ public:
     void SetTutorialOperationAuthorized(bool bAuthorized) { bTutorialOperationAuthorized = bAuthorized; }
     [[nodiscard]] bool IsTutorialSkipModalVisible() const { return TutorialSkipModal.bVisible; }
     [[nodiscard]] uint16 GetTutorialSkippedMask() const { return TutorialSkippedMask; }
+    // Guidance progress may include deliberate skips and later genuine actions.
+    // Only TutorialVerifiedMask is durable mastery and can qualify readiness.
+    [[nodiscard]] uint16 GetTutorialProgressMask() const
+    {
+        return PlayerProfile.TutorialVerifiedMask | TutorialSkippedMask | TutorialSessionVerifiedMask;
+    }
+    [[nodiscard]] const FEchoesTutorialSurveyObservation& GetTutorialSurvey() const { return TutorialSurvey; }
+    [[nodiscard]] const FEchoesTutorialSelectionObservation& GetTutorialSelection() const { return TutorialSelection; }
+    [[nodiscard]] const FEchoesTutorialOrderObservation& GetTutorialOrders() const { return TutorialOrders; }
+    [[nodiscard]] bool IsTutorialCoreSelected() const { return bTutorialCoreSelected; }
+    [[nodiscard]] uint16 GetTutorialPresentedLessonBit() const { return TutorialPresentedLessonBit; }
     void OpenTutorialSkipModal();
     void CloseTutorialSkipModal(bool bRestorePause);
     void SkipTutorialCurrentStep();
@@ -542,6 +553,8 @@ private:
     bool bBuildPlacementValid = false;
 #if WITH_DEV_AUTOMATION_TESTS
     friend class FEchoesNetworkProtocolTest;
+    friend class FEchoesTrainingReadinessOperationTest;
+    friend class FEchoesTutorialAnchorSelectionTest;
 #endif
 
     UFUNCTION(Server, Reliable)
@@ -999,6 +1012,9 @@ private:
     uint16 TutorialActiveLessonBit = 0;
     uint16 TutorialPresentedLessonBit = 0;
     uint16 TutorialSkippedMask = 0;
+    // Transient: preserve genuine later completions without forging a contiguous
+    // durable mastery prefix across a skipped lesson. Reset on a fresh tutorial.
+    uint16 TutorialSessionVerifiedMask = 0;
     struct FEchoesTutorialSkipModal final
     {
         bool bVisible = false;
@@ -1013,6 +1029,9 @@ private:
     bool bTutorialReserveMonitorInspected = false;
     uint32 TutorialCoreId = 0;
     uint32 TutorialWorkerId = 0;
+    /** Last emitted observation trace; transitions only, never per tick. */
+    FString TutorialObservationTrace;
+    void TraceTutorialObservation(const FString& State);
     bool bPlayerProfileAvailable = false;
     bool bShellWasVisible = false;
     bool bMinimapDragging = false;

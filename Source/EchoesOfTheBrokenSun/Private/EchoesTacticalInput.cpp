@@ -450,7 +450,7 @@ bool AEchoesPlayerController::HandleFieldHudPointer(
         SetStatusMessage(LOCTEXT("ReplayOrdersReadOnly", "REPLAY VIEW — tactical orders are read-only.").ToString());
         return true;
     }
-    if (bTutorialOperationAuthorized && ((PlayerProfile.TutorialVerifiedMask | TutorialSkippedMask) & 2) == 0)
+    if (bTutorialOperationAuthorized && (GetTutorialProgressMask() & 2) == 0)
     {
         SetStatusMessage(LOCTEXT("TutorialUntaughtMinimap", "[TUTORIAL] Follow the active tutorial step before issuing orders.").ToString());
         return true;

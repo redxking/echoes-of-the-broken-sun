@@ -63,7 +63,14 @@ const mission_landmarks::Pack* ActiveMissionLandmarkPack(
 {
     if (!Operation.has_value()) return nullptr;
     EEchoesCampaignMissionId Mission;
-    if (!UEchoesSimulationSubsystem::GetMissionIdForOperation(*Operation, Mission)) return nullptr;
+    if (*Operation == EEchoesOperationMode::TrainingReadiness)
+    {
+        Mission = EEchoesCampaignMissionId::WhatTheLedgerKeeps;
+    }
+    else if (!UEchoesSimulationSubsystem::GetMissionIdForOperation(*Operation, Mission))
+    {
+        return nullptr;
+    }
     const uint8 Ordinal = static_cast<uint8>(Mission);
     for (const auto& Pack : mission_landmarks::kPacks)
         if (Pack.mission_ordinal == Ordinal) return &Pack;
@@ -580,8 +587,17 @@ bool AEchoesTerrainView::SyncTerrain(
     {
         return PlayerView ? PlayerView->TerrainAt(X, Y) : Simulation.TerrainAt(X, Y);
     };
-    const auto PresentedVisibilityAt = [&PlayerView](int32 X, int32 Y)
+    const auto PresentedVisibilityAt = [&PlayerView, this](int32 X, int32 Y)
     {
+        if (ActiveOperationMode == EEchoesOperationMode::TrainingReadiness)
+        {
+            if (X >= 18 && X <= 28 && Y >= 15 && Y <= 20)
+            {
+                const auto SimVis = PlayerView ? PlayerView->VisibilityAt(echoes::sim::Vec2::FromTiles(X, Y))
+                    : echoes::sim::Visibility::Visible;
+                return SimVis == echoes::sim::Visibility::Unexplored ? echoes::sim::Visibility::Explored : SimVis;
+            }
+        }
         return PlayerView ? PlayerView->VisibilityAt(echoes::sim::Vec2::FromTiles(X, Y))
             : echoes::sim::Visibility::Visible;
     };
@@ -1390,8 +1406,11 @@ void AEchoesTerrainView::SyncDressingWith(
             else
             {
                 EEchoesCampaignMissionId Mission;
-                if (ActiveOperationMode.has_value() &&
-                    UEchoesSimulationSubsystem::GetMissionIdForOperation(*ActiveOperationMode, Mission))
+                const bool bHasMission = ActiveOperationMode.has_value() &&
+                    (*ActiveOperationMode == EEchoesOperationMode::TrainingReadiness
+                        ? (Mission = EEchoesCampaignMissionId::WhatTheLedgerKeeps, true)
+                        : UEchoesSimulationSubsystem::GetMissionIdForOperation(*ActiveOperationMode, Mission));
+                if (bHasMission)
                 {
                     const int32 Ordinal = static_cast<int32>(Mission);
                     bAuthoredBlocked = true;

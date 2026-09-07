@@ -5,6 +5,7 @@
 #include "EchoesTestSaveEnvironment.h"
 
 #include "EchoesCampaignTerrainBinding.h"
+#include "EchoesPlayerController.h"
 #include "EchoesMatchReplay.h"
 #include "EchoesNetworkSession.h"
 #include "EchoesSimulationSubsystem.h"
@@ -584,6 +585,45 @@ bool FEchoesTrainingReadinessOperationTest::RunTest(const FString& Parameters)
             Bridge->Simulation->PendingCommands(),
             UEchoesSimulationSubsystem::OpponentPlayerId));
 
+    Bridge->StopPrototypeScenario();
+    // Exercise the controller commit boundary after a deliberate skip. This is an
+    // integration regression, not evidence that a player performed the lesson.
+    auto* TutorialController = World->SpawnActor<AEchoesPlayerController>();
+    if (!TestNotNull(TEXT("Skip progression controller exists"), TutorialController)) return false;
+    if (!TestTrue(TEXT("Skip progression training prerequisites start"),
+        Bridge->SelectOperationMode(EEchoesOperationMode::TrainingReadiness, Feedback) &&
+        Bridge->StartPrototypeScenario()))
+    {
+        TutorialController->Destroy();
+        return false;
+    }
+    TutorialController->bTutorialOperationAuthorized = true;
+    TutorialController->bPlayerProfileAvailable = true;
+    TutorialController->PlayerProfile.TutorialVerifiedMask = 0;
+    TutorialController->TutorialPresentedLessonBit = 1;
+    TutorialController->OpenTutorialSkipModal();
+    TutorialController->SkipTutorialCurrentStep();
+    TestEqual(TEXT("Survey skip records only Survey"), TutorialController->GetTutorialSkippedMask(), uint16(1));
+    TutorialController->TutorialPresentedLessonBit = 2;
+    TestTrue(TEXT("Genuine Roster completion after Survey skip is accepted"),
+        TutorialController->CommitTutorialLesson(2, TEXT("roster")));
+    TestFalse(TEXT("Duplicate genuine completion after a skip is rejected"),
+        TutorialController->CommitTutorialLesson(2, TEXT("roster")));
+    TutorialController->TutorialPresentedLessonBit = 4;
+    TestTrue(TEXT("Roster completion after a skip unlocks the next genuine lesson"),
+        TutorialController->CommitTutorialLesson(4, TEXT("muster")));
+    TestEqual(TEXT("Completed lessons are not falsely recorded as skipped"),
+        TutorialController->GetTutorialSkippedMask(), uint16(1));
+    TestEqual(TEXT("Skip route cannot forge durable mastery"),
+        TutorialController->PlayerProfile.TutorialVerifiedMask, uint16(0));
+    TestEqual(TEXT("Guidance progress includes skip and genuine subsequent completions"),
+        TutorialController->GetTutorialProgressMask(), uint16(7));
+    TestEqual(TEXT("Session completion records only genuinely completed lessons"),
+        TutorialController->TutorialSessionVerifiedMask, uint16(6));
+    TutorialController->ResetTutorialObservation();
+    TestEqual(TEXT("Observer reset preserves current-session guidance progress"),
+        TutorialController->GetTutorialProgressMask(), uint16(7));
+    TutorialController->Destroy();
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);
     return true;

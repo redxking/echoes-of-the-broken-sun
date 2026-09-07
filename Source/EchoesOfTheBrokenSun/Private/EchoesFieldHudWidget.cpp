@@ -2287,6 +2287,37 @@ int32 UEchoesFieldHudWidget::NativePaint(
                 SpotlightColor);
         }
 
+        // Action prompt badge directly beneath spotlight (SPEC-TUT-005)
+        if (!View.TutorialSpotlight.ActionPrompt.IsEmpty())
+        {
+            const FSlateFontInfo ActionFont = FCoreStyle::GetDefaultFontStyle("Bold", 10);
+            const FString ActionText = View.TutorialSpotlight.ActionPrompt.ToString();
+            const float BadgeWidth = FMath::Clamp(static_cast<float>(ActionText.Len()) * 7.5f + 20.0f, 160.0f, 340.0f);
+            const float BadgeHeight = 24.0f;
+            const FVector2D BadgePos(LocalCenter.X - BadgeWidth * 0.5f, FMath::Min(LocalSize.Y - 28.0f, MaxY + 6.0f));
+
+            DrawBox(OutDrawElements, MaxLayer + 3, AllottedGeometry,
+                BadgePos, FVector2D(BadgeWidth, BadgeHeight),
+                FLinearColor(0.02f, 0.04f, 0.08f, 0.92f));
+
+            DrawLine(OutDrawElements, MaxLayer + 4, AllottedGeometry,
+                { BadgePos, BadgePos + FVector2D(BadgeWidth, 0.0f),
+                  BadgePos + FVector2D(BadgeWidth, BadgeHeight),
+                  BadgePos + FVector2D(0.0f, BadgeHeight) },
+                SpotlightColor, 1.2f, true);
+
+            FSlateDrawElement::MakeText(
+                OutDrawElements,
+                MaxLayer + 5,
+                AllottedGeometry.ToPaintGeometry(
+                    FVector2D(BadgeWidth - 8.0f, BadgeHeight),
+                    FSlateLayoutTransform(BadgePos + FVector2D(8.0f, 4.0f))),
+                ActionText,
+                ActionFont,
+                ESlateDrawEffect::None,
+                View.bHighContrast ? FLinearColor::White : FLinearColor(0.98f, 0.94f, 0.85f, 1.0f));
+        }
+
         // Ghost indicator pointing towards spotlight center (SPEC-TUT-005)
         const UWorld* World = GetWorld();
         const float TimeSeconds = World != nullptr ? World->GetTimeSeconds() : 0.0f;
@@ -2302,6 +2333,19 @@ int32 UEchoesFieldHudWidget::NativePaint(
         };
         DrawLine(OutDrawElements, MaxLayer + 3, AllottedGeometry,
             ArrowPoints, SpotlightColor, 2.5f, false);
+
+        // Animated input indicator (click pulse, static when reduced motion)
+        const float PulseTime = View.bReducedMotion ? 0.0f : FMath::Fmod(TimeSeconds * 2.0f, 1.0f);
+        const float ClickRadius = View.bReducedMotion ? 18.0f : 12.0f + PulseTime * 14.0f;
+        const float ClickAlpha = View.bReducedMotion ? 0.8f : (1.0f - PulseTime) * 0.9f;
+        TArray<FVector2D> ClickRing;
+        for (int32 i = 0; i <= 16; ++i)
+        {
+            const float Angle = static_cast<float>(i) / 16.0f * 2.0f * PI;
+            ClickRing.Add(LocalCenter + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * ClickRadius);
+        }
+        DrawLine(OutDrawElements, MaxLayer + 3, AllottedGeometry,
+            ClickRing, SpotlightColor.CopyWithNewOpacity(ClickAlpha), 1.8f, true);
     }
 
     // 2. Top-right low-emphasis "Hold to skip" control with circular meter (SPEC-TUT-006)
@@ -2380,7 +2424,66 @@ int32 UEchoesFieldHudWidget::NativePaint(
         }
     }
 
-    return MaxLayer + 5;
+    // 3. Top-Center Tutorial Instruction Banner (SPEC-TUT-005)
+    if (!View.TutorialSkipModal.bVisible && !View.TutorialInstruction.IsEmpty())
+    {
+        const FString InstructionStr = View.TutorialInstruction.ToString();
+        const FString TitleStr = !View.TutorialLessonTitle.IsEmpty()
+            ? View.TutorialLessonTitle.ToString()
+            : TEXT("TUTORIAL OBJECTIVE");
+
+        const float BannerWidth = FMath::Clamp(LocalSize.X * 0.52f, 460.0f, 680.0f);
+        const float BannerHeight = 52.0f;
+        const FVector2D BannerPos((LocalSize.X - BannerWidth) * 0.5f, 12.0f);
+
+        // Dark high-contrast background
+        const FLinearColor BannerBg = View.bHighContrast
+            ? FLinearColor(0.0f, 0.0f, 0.0f, 0.94f)
+            : FLinearColor(0.02f, 0.04f, 0.08f, 0.90f);
+        DrawBox(OutDrawElements, MaxLayer + 3, AllottedGeometry,
+            BannerPos, FVector2D(BannerWidth, BannerHeight), BannerBg);
+
+        // Amber accent border
+        const FLinearColor BannerBorder = View.bHighContrast
+            ? FLinearColor(1.0f, 0.85f, 0.1f, 1.0f)
+            : FLinearColor(0.96f, 0.68f, 0.18f, 0.95f);
+        DrawLine(OutDrawElements, MaxLayer + 4, AllottedGeometry,
+            { BannerPos, BannerPos + FVector2D(BannerWidth, 0.0f),
+              BannerPos + FVector2D(BannerWidth, BannerHeight),
+              BannerPos + FVector2D(0.0f, BannerHeight) },
+            BannerBorder, 1.5f, true);
+
+        // Header: Lesson title
+        const FSlateFontInfo HeaderFont = FCoreStyle::GetDefaultFontStyle("Bold", 10);
+        FSlateDrawElement::MakeText(
+            OutDrawElements,
+            MaxLayer + 5,
+            AllottedGeometry.ToPaintGeometry(
+                FVector2D(BannerWidth - 24.0f, 16.0f),
+                FSlateLayoutTransform(BannerPos + FVector2D(12.0f, 6.0f))),
+            TitleStr,
+            HeaderFont,
+            ESlateDrawEffect::None,
+            BannerBorder);
+
+        // Body: Active instruction
+        const FSlateFontInfo BodyFont = FCoreStyle::GetDefaultFontStyle("Bold", 11);
+        const FLinearColor BodyColor = View.bHighContrast
+            ? FLinearColor::White
+            : FLinearColor(0.95f, 0.97f, 1.0f, 1.0f);
+        FSlateDrawElement::MakeText(
+            OutDrawElements,
+            MaxLayer + 5,
+            AllottedGeometry.ToPaintGeometry(
+                FVector2D(BannerWidth - 24.0f, 24.0f),
+                FSlateLayoutTransform(BannerPos + FVector2D(12.0f, 24.0f))),
+            InstructionStr,
+            BodyFont,
+            ESlateDrawEffect::None,
+            BodyColor);
+    }
+
+    return MaxLayer + 6;
 }
 
 FReply UEchoesFieldHudWidget::NativeOnMouseButtonDown(

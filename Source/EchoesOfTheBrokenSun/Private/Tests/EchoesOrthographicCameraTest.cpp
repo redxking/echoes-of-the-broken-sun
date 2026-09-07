@@ -107,6 +107,22 @@ bool FEchoesOrthographicCameraTest::RunTest(const FString& Parameters)
     TestTrue(
         TEXT("Default orthographic width is finite and positive"),
         FMath::IsFinite(Camera->OrthoWidth) && Camera->OrthoWidth > 0.0f);
+    TestTrue(TEXT("Deployment frames the live owned base"), Pawn->CenterOnLocalBase());
+    TArray<FVector> BaseFrame;
+    if (!TestTrue(TEXT("Base framing produces a usable ground footprint"),
+        Pawn->GetBattlefieldFootprint(FVector2D(1280, 720), BaseFrame)) ||
+        !TestEqual(TEXT("Base framing has four corners"), BaseFrame.Num(), 4))
+    {
+        Pawn->Destroy(); Bridge->StopPrototypeScenario(); return false;
+    }
+    const FVector BaseScreenCenter = (BaseFrame[0] + BaseFrame[1] + BaseFrame[2] + BaseFrame[3]) * 0.25f;
+    bool bFoundCenteredBase = false;
+    for (const auto& Entity : Bridge->GetSimulation()->Entities())
+        if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId && Entity.type == echoes::sim::EntityType::CommandCore)
+            bFoundCenteredBase |= BaseScreenCenter.Equals(Bridge->SimToWorld(Entity.position), 0.1f);
+    TestTrue(TEXT("Actual ground projection centers an owned base, not a fixed map coordinate"), bFoundCenteredBase);
+    TestFalse(TEXT("Deployment framing cannot grant player navigation credit"), Pawn->WasLastNavigationPlayerDriven());
+    TestFalse(TEXT("Direct RTS camera does not trail the navigation target"), SpringArm->bEnableCameraLag);
     FMinimalViewInfo CameraView;
     Camera->GetCameraView(0.0f, CameraView);
     FSceneViewProjectionData Projection;
@@ -237,6 +253,29 @@ bool FEchoesOrthographicCameraTest::RunTest(const FString& Parameters)
         TEXT("Camera pan does not alter the simulation checksum"),
         Simulation != nullptr ? Simulation->StateChecksum() : 0,
         ChecksumBeforePan);
+
+    // Equal input time must yield equal displacement across render rates, and
+    // diagonal input must not gain speed. These checks do not measure GPU FPS.
+    Pawn->SetActorLocation(FVector::ZeroVector);
+    Pawn->SetForwardInput(1.0f); Pawn->SetRightInput(0.0f);
+    for (int32 Frame = 0; Frame < 60; ++Frame) Pawn->Tick(1.0f / 60.0f);
+    const FVector SixtyHzPosition = Pawn->GetActorLocation();
+    Pawn->SetActorLocation(FVector::ZeroVector);
+    for (int32 Frame = 0; Frame < 30; ++Frame) Pawn->Tick(1.0f / 30.0f);
+    TestTrue(TEXT("Pan distance is frame-rate independent at 30 and 60 Hz"),
+        Pawn->GetActorLocation().Equals(SixtyHzPosition, 0.1f));
+    Pawn->SetActorLocation(FVector::ZeroVector);
+    Pawn->SetRightInput(1.0f);
+    for (int32 Frame = 0; Frame < 60; ++Frame) Pawn->Tick(1.0f / 60.0f);
+    TestTrue(TEXT("Diagonal scrolling has the same speed as straight scrolling"),
+        FMath::IsNearlyEqual(Pawn->GetActorLocation().Size(), SixtyHzPosition.Size(), 0.1f));
+    Pawn->SetForwardInput(0.0f); Pawn->SetRightInput(0.0f);
+    const FVector StoppedPosition = Pawn->GetActorLocation();
+    Pawn->Tick(0.25f);
+    TestTrue(TEXT("Releasing camera input stops movement without drift"),
+        Pawn->GetActorLocation().Equals(StoppedPosition, 0.01f));
+    TestTrue(TEXT("Tactical camera pitch stays locked while scrolling"),
+        FMath::IsNearlyEqual(SpringArm->GetRelativeRotation().Pitch, -60.0f, 0.01f));
 
     const FVector EvacuationSite = Bridge->SimToWorld(
         echoes::sim::Vec2::FromTiles(6, 17));

@@ -643,6 +643,28 @@ FString UEchoesNarrativeSubsystem::ResolveInputTokens(const FString& Text)
     Resolved.ReplaceInline(TEXT("{recenter_key}"), *FText::Format(
         NSLOCTEXT("EchoesNarrative", "AnchorRecenterControl", "{0} (with your Anchor selected)"),
         FText::FromString(Binding(TEXT("SnapKeyboardTargetToSelection")))).ToString());
+    // The same active mappings drive both narrative and guided HUD instructions.
+    Resolved.ReplaceInline(TEXT("{select_key}"), *Binding(TEXT("Select")));
+    Resolved.ReplaceInline(TEXT("{zoom_in_key}"), *Binding(TEXT("CameraZoomIn")));
+    Resolved.ReplaceInline(TEXT("{zoom_out_key}"), *Binding(TEXT("CameraZoomOut")));
+    Resolved.ReplaceInline(TEXT("{assign_group_key}"), *Binding(TEXT("ArmControlGroupAssignment")));
+    Resolved.ReplaceInline(TEXT("{recall_group_key}"), *Binding(TEXT("RecallControlGroup1")));
+    if (Resolved.Contains(TEXT("{pan_keys}")))
+    {
+        TArray<FString> Labels;
+        for (const FName Axis : {FName(TEXT("CameraForward")), FName(TEXT("CameraRight"))})
+        {
+            TArray<FInputAxisKeyMapping> Mappings;
+            GetDefault<UInputSettings>()->GetAxisMappingByName(Axis, Mappings);
+            for (const auto& Mapping : Mappings)
+                if (Mapping.Key.IsValid() && !Mapping.Key.IsGamepadKey() && Mapping.Scale != 0.0f)
+                    Labels.AddUnique(Mapping.Key.GetDisplayName().ToString());
+        }
+        const FString Pan = Labels.IsEmpty()
+            ? NSLOCTEXT("EchoesNarrative", "ControlUnassigned", "unassigned control").ToString()
+            : FString::Join(Labels, TEXT(" / "));
+        Resolved.ReplaceInline(TEXT("{pan_keys}"), *Pan);
+    }
     Resolved.ReplaceInline(TEXT("{guard_key}"), *Binding(TEXT("GuardAtCursor")));
     Resolved.ReplaceInline(TEXT("{alert_key}"), *Binding(TEXT("JumpToLatestAlert")));
     return Resolved.Contains(TEXT("{")) || Resolved.Contains(TEXT("}")) ? FString() : Resolved;

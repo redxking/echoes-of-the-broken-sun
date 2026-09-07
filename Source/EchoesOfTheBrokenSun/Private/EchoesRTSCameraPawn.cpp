@@ -75,9 +75,11 @@ AEchoesRTSCameraPawn::AEchoesRTSCameraPawn()
 
     SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
     SpringArm->SetupAttachment(SceneRoot);
-    SpringArm->SetRelativeRotation(FRotator(-48.0f, -45.0f, 0.0f));
+    SpringArm->SetRelativeRotation(FRotator(-60.0f, -45.0f, 0.0f));
     SpringArm->bDoCollisionTest = false;
-    SpringArm->bEnableCameraLag = true;
+    // An RTS camera is the targeting reference itself, not a follower. Trailing
+    // the navigation target makes pointer dragging and stopping appear to drift.
+    SpringArm->bEnableCameraLag = false;
     SpringArm->CameraLagSpeed = 12.0f;
 
     Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -464,7 +466,8 @@ void AEchoesRTSCameraPawn::BeginPlay()
         return;
     }
 #endif
-    SetActorLocation(FVector(-3000.0f, -3000.0f, 100.0f));
+    SetActorLocation(FVector(0.0f, 0.0f, 100.0f));
+    CenterOnLocalBase();
 }
 
 void AEchoesRTSCameraPawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -727,8 +730,9 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
     const bool bEdgePanEnabled = Settings == nullptr || Settings->IsEdgePanEnabled();
     const float PanSpeedScale =
         Settings != nullptr ? Settings->GetCameraPanSpeedScale() : 1.0f;
-    SpringArm->bEnableCameraLag =
-        Settings == nullptr || !Settings->IsReducedMotionEnabled();
+    // Keep direct navigation stationary as soon as input stops. Zoom already
+    // preserves the cursor's ground point and must not acquire follower lag.
+    SpringArm->bEnableCameraLag = false;
 
     FVector2D EdgeInput = FVector2D::ZeroVector;
     APlayerController* Controller = Cast<APlayerController>(GetController());
@@ -780,7 +784,9 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
         float MouseY = 0.0f;
         Controller->GetViewportSize(ViewportWidth, ViewportHeight);
         if (ViewportWidth > 0 && ViewportHeight > 0 &&
-            Controller->GetMousePosition(MouseX, MouseY))
+            Controller->GetMousePosition(MouseX, MouseY) &&
+            MouseX >= 0.0f && MouseY >= 0.0f &&
+            MouseX < ViewportWidth && MouseY < ViewportHeight)
         {
             const bool bMouseInsideHorizontalEdges =
                 MouseX > EdgePanPixels &&
@@ -823,9 +829,11 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
         0.0f);
     const FVector ViewForward = HorizontalViewRotation.Vector();
     const FVector ViewRight = FRotationMatrix(HorizontalViewRotation).GetUnitAxis(EAxis::Y);
-    const FVector PanDelta =
-        (ViewForward * AppliedForward + ViewRight * AppliedRight) *
-        PanSpeed * PanSpeedScale * DeltaSeconds;
+    // Bound combined axes so diagonals and keyboard+edge input cannot outrun
+    // straight scrolling. Integration stays proportional to real frame time.
+    const FVector Direction = (ViewForward * AppliedForward + ViewRight * AppliedRight).GetClampedToMaxSize(1.0f);
+    const FVector PanDelta = Direction * PanSpeed * PanSpeedScale *
+        (FMath::IsFinite(DeltaSeconds) ? FMath::Max(0.0f, DeltaSeconds) : 0.0f);
     const FVector PriorLocation = GetActorLocation();
     AddActorWorldOffset(PanDelta, false, nullptr, ETeleportType::None);
     ClampToBattlefield();
@@ -860,6 +868,39 @@ void AEchoesRTSCameraPawn::PanToWorld(const FVector& WorldPosition)
         ++NavigationRevision;
         bLastNavigationPlayerDriven = false;
     }
+}
+
+bool AEchoesRTSCameraPawn::CenterOnLocalBase()
+{
+    auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    const auto* Simulation = Bridge ? Bridge->GetSimulation() : nullptr;
+    const auto Player = Simulation
+        ? Simulation->CreatePlayerView(UEchoesSimulationSubsystem::LocalPlayerId) : std::nullopt;
+    if (!Player || !SpringArm || !Camera) return false;
+    for (const auto& Entity : Player->Entities())
+    {
+        if (Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId ||
+            Entity.type != echoes::sim::EntityType::CommandCore || Entity.hitPoints <= 0) continue;
+        const FVector Base = Bridge->SimToWorld(Entity.position);
+        ForwardInput = RightInput = 0.0f;
+        bEdgePanArmed = false;
+        CancelPointerPan();
+        PanToWorld(Base);
+        SpringArm->bEnableCameraLag = false;
+        SpringArm->TickComponent(0.0f, LEVELTICK_All, nullptr);
+        // Correct the ground-plane offset introduced by the elevated camera
+        // pivot; its XY location alone is not the projected ground center.
+        TArray<FVector> Corners;
+        if (GetBattlefieldFootprint(FVector2D(1280.0f, 720.0f), Corners) && Corners.Num() == 4)
+        {
+            const FVector GroundCenter = (Corners[0] + Corners[1] + Corners[2] + Corners[3]) * 0.25f;
+            PanToWorld(GetActorLocation() + Base - GroundCenter);
+            SpringArm->TickComponent(0.0f, LEVELTICK_All, nullptr);
+        }
+        bLastNavigationPlayerDriven = false;
+        return true;
+    }
+    return false;
 }
 
 void AEchoesRTSCameraPawn::PanByScreenDelta(const FVector2D& DeltaPixels, float ViewportWidth)

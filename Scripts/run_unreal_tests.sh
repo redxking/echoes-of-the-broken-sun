@@ -137,6 +137,7 @@ expected_tests=(
   "Echoes.Runtime.Campaign.TutorialSurveyObservation"
   "Echoes.Runtime.Campaign.TutorialSelectionObservation"
   "Echoes.Runtime.Campaign.TutorialOrderObservation"
+  "Echoes.Runtime.Campaign.TutorialAnchorSelectionProgression"
   "Echoes.Runtime.Training.ReadinessOperationPersistenceAndReplay"
   "Echoes.Runtime.Controls.ContextOrderBanner"
   "Echoes.Runtime.Controls.ControlGroups"

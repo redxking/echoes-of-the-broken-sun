@@ -467,6 +467,10 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
             Fail(LOCTEXT("TrainingStartFailed", "The readiness check could not start. Return to the title menu and try again.").ToString());
             return;
         }
+        // A successful explicit start is a new learning attempt. Ordinary observer
+        // resets (including load/authority changes) must not erase session progress.
+        TutorialSkippedMask = 0;
+        TutorialSessionVerifiedMask = 0;
         bTutorialOperationAuthorized = true;
         ResetTutorialObservation();
         PlayerFlow.ClearOverlays();

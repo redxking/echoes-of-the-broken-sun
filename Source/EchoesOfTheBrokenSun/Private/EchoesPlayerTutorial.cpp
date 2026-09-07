@@ -1,4 +1,5 @@
 #include "EchoesPlayerController.h"
+#include "EchoesOfTheBrokenSun.h"
 #include "EchoesRTSCameraPawn.h"
 #include "EchoesCinematicSubsystem.h"
 #include "EchoesNarrativeSubsystem.h"
@@ -10,6 +11,16 @@
 #include "UnrealClient.h"
 
 #define LOCTEXT_NAMESPACE "EchoesTutorial"
+
+namespace
+{
+// Resolve on presentation so remapping never leaves stale default key hints.
+FText BoundTutorialText(const FText& Pattern)
+{
+    return FText::FromString(UEchoesNarrativeSubsystem::ResolveInputTokens(Pattern.ToString()));
+}
+}
+
 
 void AEchoesPlayerController::ResetTutorialObservation()
 {
@@ -37,11 +48,28 @@ void AEchoesPlayerController::ResetTutorialObservation()
     TutorialWorkerId = 0;
 }
 
+void AEchoesPlayerController::TraceTutorialObservation(const FString& State)
+{
+    if (State == TutorialObservationTrace) return;
+    TutorialObservationTrace = State;
+    UE_LOG(LogEchoes, Display, TEXT("[ECHOES_TUTORIAL_OBSERVATION] %s"), *State);
+}
+
 void AEchoesPlayerController::ObserveTutorialSelection(uint32 ClickedEntity, bool bGroundClick)
 {
     if (!bTutorialOperationAuthorized || IsModalOverlayVisible() || IsReplayInputActive()) return;
-    if (ClickedEntity != 0 && ClickedEntity == TutorialCoreId) bTutorialCoreSelected = true;
-    if ((PlayerProfile.TutorialVerifiedMask & 1) == 0) return;
+    if (ClickedEntity != 0 && ClickedEntity == TutorialCoreId)
+    {
+        bTutorialCoreSelected = true;
+        TraceTutorialObservation(FString::Printf(TEXT("anchor_selected core=%u session=%llu"),
+            ClickedEntity, static_cast<unsigned long long>(TutorialSession)));
+    }
+    else if (ClickedEntity != 0 && TutorialCoreId != 0)
+    {
+        TraceTutorialObservation(FString::Printf(TEXT("click_not_anchor entity=%u core=%u"),
+            ClickedEntity, TutorialCoreId));
+    }
+    if ((GetTutorialProgressMask() & 1) == 0) return;
     if (ClickedEntity != 0 && ClickedEntity == TutorialWorkerId) bTutorialWorkerSelected = true;
     // Further lesson predicates are connected separately; a click never awards a mask bit.
     (void)bGroundClick;
@@ -59,8 +87,8 @@ bool AEchoesPlayerController::CommitTutorialLesson(uint16 Bit, const TCHAR* Less
     {
         if (TutorialPractice.TargetLessonBit() != Bit) return false;
     }
-    else if (((PlayerProfile.TutorialVerifiedMask | TutorialSkippedMask) & (Bit - 1)) != Bit - 1 ||
-             (PlayerProfile.TutorialVerifiedMask & Bit) != 0 ||
+    else if ((GetTutorialProgressMask() & (Bit - 1)) != Bit - 1 ||
+             (GetTutorialProgressMask() & Bit) != 0 ||
              bTutorialProgressSaveFailed)
     {
         return false;
@@ -84,8 +112,10 @@ bool AEchoesPlayerController::CommitTutorialLesson(uint16 Bit, const TCHAR* Less
     }
     if ((TutorialSkippedMask & (Bit - 1)) != 0)
     {
-        // An earlier lesson was skipped in this session. Do not append non-contiguous bit to durable profile,
-        // which preserves IsOrderedTutorialMask integrity, but advance the current lesson in session.
+        // Retain this genuinely observed completion separately from skips. The
+        // saved profile requires an ordered prefix, so it cannot contain this bit
+        // across the earlier gap. All guidance consumers share the session union.
+        TutorialSessionVerifiedMask |= Bit;
         TutorialActiveLessonBit = 0;
         if (auto* Narrative = GetGameInstance() ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>() : nullptr)
         {
@@ -208,9 +238,18 @@ void AEchoesPlayerController::TickTutorialObservation()
         TutorialInstruction = FText::GetEmpty();
         return;
     }
-    if (IsModalOverlayVisible() || Bridge->IsScenarioPaused() || bTutorialProgressSaveFailed) return;
+    if (IsModalOverlayVisible() || Bridge->IsScenarioPaused() || bTutorialProgressSaveFailed)
+    {
+        TraceTutorialObservation(FString::Printf(TEXT("held modal=%d paused=%d saveFailed=%d"),
+            IsModalOverlayVisible(), Bridge->IsScenarioPaused(), bTutorialProgressSaveFailed));
+        return;
+    }
+    // A background window withholds camera credit only. Instruction delivery
+    // and the Anchor-selection gate stay live, otherwise a pointer click the
+    // controller already recorded leaves the HUD frozen on a stale demand.
     const auto* Viewport = World->GetGameViewport();
-    if (Viewport && Viewport->Viewport && !Viewport->Viewport->IsForegroundWindow()) return;
+    const bool bForegroundWindow =
+        !(Viewport && Viewport->Viewport && !Viewport->Viewport->IsForegroundWindow());
     const auto* Simulation = Bridge->GetSimulation();
     if (!Simulation) return;
     const auto Player = Simulation->CreatePlayerView(UEchoesSimulationSubsystem::LocalPlayerId);
@@ -238,6 +277,12 @@ void AEchoesPlayerController::TickTutorialObservation()
             if (!TutorialWorkerId && Entity.type == echoes::sim::EntityType::Worker) TutorialWorkerId = Entity.id;
         }
         if (!Core) return;
+        // The camera observer restarts after teleports, cinematics or restores.
+        // The Anchor-selection gate is separate evidence: keep it while the same
+        // owned Core remains bound, so a camera restart never re-demands a click
+        // the player already made. Authority changes and rollbacks still clear
+        // it through ResetTutorialObservation.
+        const bool bSameCore = TutorialCoreId == Core->id;
         TutorialCoreId = Core->id;
         FEchoesTutorialSurveySetup Setup;
         Setup.InitialCenter = Center;
@@ -253,16 +298,25 @@ void AEchoesPlayerController::TickTutorialObservation()
             Setup.Waypoints.Add(FVector2D(Position.X, Position.Y));
         }
         ++TutorialSession;
-        bTutorialCoreSelected = false;
-        if (!TutorialSurvey.Begin(TutorialSession, Setup)) return;
+        if (!bSameCore) bTutorialCoreSelected = false;
+        if (!TutorialSurvey.Begin(TutorialSession, Setup))
+        {
+            TraceTutorialObservation(FString::Printf(TEXT("survey_begin_rejected core=%u zoom=%.0f"),
+                TutorialCoreId, Setup.InitialZoom));
+            return;
+        }
         TutorialInitialNavigationRevision = Camera->GetNavigationRevision();
+        TraceTutorialObservation(FString::Printf(
+            TEXT("survey_begin core=%u session=%llu restart=%d anchorSelected=%d tick=%llu"),
+            TutorialCoreId, static_cast<unsigned long long>(TutorialSession), bSameCore,
+            bTutorialCoreSelected, static_cast<unsigned long long>(Tick)));
 
     }
     const uint16 PracticeTarget = TutorialPractice.TargetLessonBit();
     const uint16 ProgressMask = PracticeTarget != 0
         ? static_cast<uint16>(FEchoesTutorialPracticeState::ImplementedLessonMask &
             ~PracticeTarget)
-        : static_cast<uint16>(PlayerProfile.TutorialVerifiedMask | TutorialSkippedMask);
+        : GetTutorialProgressMask();
     static const TCHAR* LessonNames[] = {
         TEXT("survey"), TEXT("roster"), TEXT("muster"),
         TEXT("route"), TEXT("reserve")};
@@ -283,10 +337,21 @@ void AEchoesPlayerController::TickTutorialObservation()
     if ((ProgressMask & 1) == 0)
     {
         const int32 Waypoint = TutorialSurvey.CompletedWaypoints();
-        if (Waypoint == 0)
+        if (!bTutorialCoreSelected)
         {
-            TutorialInstruction = LOCTEXT("SurveySite0",
-                "Survey: pan and zoom fully in and out, then return to your starting view. Select your Anchor and keep the camera centered over it for 1.5 seconds.");
+            TutorialInstruction = BoundTutorialText(LOCTEXT("SurveySelectAnchor", "Survey: use {select_key} on your Anchor to begin."));
+        }
+        else if (!TutorialSurvey.HasPanned())
+        {
+            TutorialInstruction = BoundTutorialText(LOCTEXT("SurveyPan", "Survey: pan the camera across the map using {pan_keys}."));
+        }
+        else if (!(TutorialSurvey.HasZoomedMin() && TutorialSurvey.HasZoomedMax()))
+        {
+            TutorialInstruction = BoundTutorialText(LOCTEXT("SurveyZoom", "Survey: use {zoom_in_key} and {zoom_out_key} to zoom fully in and out."));
+        }
+        else if (!TutorialSurvey.HasRecentered() || Waypoint == 0)
+        {
+            TutorialInstruction = BoundTutorialText(LOCTEXT("SurveyRecenter", "Survey: use {recenter_key} and keep the camera centered over it for 1.5 seconds."));
         }
         else if (Waypoint == 1)
         {
@@ -303,7 +368,12 @@ void AEchoesPlayerController::TickTutorialObservation()
             TutorialInstruction = LOCTEXT("SurveySiteComplete",
                 "All survey sites verified: Anchor, Archive Recovery Site, and Evacuation Site. Select your Anchor to complete the survey.");
         }
-        if (Camera->GetNavigationRevision() != TutorialInitialNavigationRevision)
+        if (!bForegroundWindow)
+        {
+            TraceTutorialObservation(FString::Printf(
+                TEXT("camera_credit_held background_window=1 anchorSelected=%d"), bTutorialCoreSelected));
+        }
+        else if (Camera->GetNavigationRevision() != TutorialInitialNavigationRevision)
         {
             FEchoesTutorialSurveySample Sample;
             Sample.Session = TutorialSession;
@@ -313,6 +383,13 @@ void AEchoesPlayerController::TickTutorialObservation()
             Sample.Source = Camera->WasLastNavigationPlayerDriven()
                 ? EEchoesSurveyCameraSource::PlayerNavigation : EEchoesSurveyCameraSource::Programmatic;
             TutorialSurvey.Observe(Sample);
+            if (!TutorialSurvey.IsActive())
+            {
+                TraceTutorialObservation(FString::Printf(
+                    TEXT("survey_reset source=%s zoom=%.0f tick=%llu anchorSelected=%d"),
+                    Sample.Source == EEchoesSurveyCameraSource::PlayerNavigation ? TEXT("player") : TEXT("programmatic"),
+                    Sample.Zoom, static_cast<unsigned long long>(Tick), bTutorialCoreSelected));
+            }
         }
         if (TutorialSurvey.CameraPredicateSatisfied() && bTutorialCoreSelected &&
             SelectedEntityIds.Num() == 1 && SelectedEntityIds[0] == TutorialCoreId)

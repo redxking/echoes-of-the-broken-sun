@@ -5,11 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Echoes of the Broken Sun | Science-Fantasy RTS</title>
   <meta name="description" content="Explore the world, factions, characters, units, and planned campaign of Echoes of the Broken Sun, a science-fantasy real-time strategy game in development.">
-  <link rel="stylesheet" href="styles.css?v=20260904a">
-  <link rel="stylesheet" href="contrast.css?v=20260904a">
+  <link rel="stylesheet" href="styles.css?v=20260907a">
+  <link rel="stylesheet" href="contrast.css?v=20260907a">
 </head>
 <body class="home-page">
   <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <!-- Tactical HUD Bar -->
+  <div class="tactical-hud-bar">
+    <div class="status-indicator">
+      <span class="pulse-dot"></span>
+      <span>SORYN TACTICAL NETWORK // SECTOR: S01-GLASS-SCAR // PROTOCOL: READY</span>
+    </div>
+    <button id="audio-toggle-btn" class="audio-toggle-btn" aria-pressed="false" title="Toggle Tactical Audio">
+      <span class="audio-icon">🔇</span>
+      <span class="audio-text">Audio: OFF</span>
+    </button>
+  </div>
+
   <nav class="site-nav" aria-label="Primary navigation">
     <a href="index.html" class="brand" aria-current="page"><b>✦</b> Echoes <i>of the</i> Broken Sun</a>
     <div class="nav-links">
@@ -26,13 +39,14 @@
   </nav>
 
   <header class="hero" id="top">
+    <canvas id="broken-sun-canvas" aria-hidden="true"></canvas>
     <div class="hero-shade" aria-hidden="true"></div>
     <section class="hero-content">
       <span class="eyebrow">A science-fantasy RTS in development</span>
       <h1>Every future<br><em>has a cost.</em></h1>
       <p class="hero-lede">Soryn is a broken world where lost possibilities still burn beneath the ground. Build a force, lead people through a war of survival, and decide what deserves to remain real.</p>
       <a class="button" href="story.html">Enter the world archive ↗</a>
-      <aside class="hero-note">
+      <aside class="hero-note tac-panel">
         <strong>DEVELOPMENT STATUS</strong>
         There is no public playable release. Every current Meridian, Kharuun, and Hollow Choir unit and structure now has a distinct first-pass Unreal mesh. The Future Well and seven Glass Scar world pieces are also visible in the development build. Characters, animation, production terrain, detailed textures, effects, and audio remain unfinished. Every concept figure on this site carries a “Concept target” label, and the painted backdrop behind this text is concept art too; none of it is a screenshot.
       </aside>
@@ -40,168 +54,342 @@
   </header>
 
   <main id="main-content">
-    <section id="target" class="dark">
-      <span class="section-kicker">01 / What it will look like</span>
+    <!-- Interactive Tactical Atlas -->
+    <section id="tactical-atlas-terminal" class="atlas-terminal dark">
+      <span class="section-kicker">01 / The Theater of War</span>
       <div class="cols">
-        <h2>The world we are building.<br><em>Not yet the world you can play.</em></h2>
-        <p>This is the visual target for the Glass Scar vertical slice: a dark vitrified basin under a broken golden sun, a Future Well at the center, and two armies whose shapes read before their colors do. It is concept direction, not a screenshot. The accepted in-engine capture is simpler, and it is shown beside the target so nobody has to guess which is which.</p>
+        <h2>Planetary<br><em>Tactical Atlas.</em></h2>
+        <p>Survey the scarred surface of Soryn. Interactive command telemetry tracks elevated threat sectors, control zones, and operational briefs.</p>
       </div>
-      <div class="frame-pair">
-        <figure class="evidence-figure" data-evidence="concept-target" data-register="CONCEPT-004">
-          <span class="evidence-badge" aria-hidden="true">Concept target · not gameplay</span>
-          <picture>
-            <source type="image/webp" srcset="assets/concepts/target-render-vertical-slice.webp?v=20260904a">
-            <img src="assets/concepts/target-render-vertical-slice.jpg?v=20260904a" width="1376" height="768" loading="eager" decoding="async" alt="Concept target, not gameplay: a three-quarter view of the Glass Scar at dusk. A Future Well of concentric stone rings around a dark suspended shard stands on a causeway over a black chasm veined with gold. Meridian Compact machines in ivory and graphite, rifle-armed Lancers alongside Bulwark Teams carrying hexagonal cyan shield walls, gather on the left below a hovering Relay Skiff. Kharuun Assemblies warforms in ivory and basalt, a heavy Cairnback, quadruped Riftstalkers, and a tall spindly Resonant, stand on the right among cyan Matter crystals. The shattered golden Broken Sun hangs in an indigo sky.">
-          </picture>
-          <figcaption><b>Glass Scar vertical-slice visual target</b><span>Concept target · not gameplay · no interface shown</span></figcaption>
-        </figure>
-        <figure class="evidence-figure" data-evidence="engine-capture" data-register="CAPTURE-003">
-          <picture>
-            <source type="image/webp" srcset="assets/engine/glass-scar-overview-in-engine.webp?v=20260829i">
-            <img src="assets/engine/glass-scar-overview-in-engine.png?v=20260829i" width="1600" height="900" loading="lazy" decoding="async" alt="Current in-engine capture, not final art: top-down Unreal view of the Glass Scar with three shape-distinct crossings, a central Future Well, two opposed base shelves, and pale Matter deposits.">
-          </picture>
-          <figcaption><b>Glass Scar overview</b><span>Current in-engine art-review capture · UI hidden</span></figcaption>
-        </figure>
-      </div>
-      <p class="frame-note"><b>Left:</b> concept direction for surfaces, lighting, and silhouettes. <b>Right:</b> the accepted 29 August 2026 art-review capture from the development build, interface hidden. The shelves, ridge, three crossings, and the Well’s position come from the deterministic map shown on the right; the render is not the map. Neither image is a screenshot of play.</p>
-      <a class="archive-link" href="vision.html">See the target beside the current build, subject by subject →</a>
-    </section>
-
-    <section id="world" class="light">
-      <span class="section-kicker">02 / The world</span>
-      <div class="cols">
-        <h2>The sun broke.<br><em>The future stayed.</em></h2>
-        <div>
-          <p>When the Crownfall tore across Soryn, it left behind <b>Dawnshards</b>—mineral-organic remnants holding technologies, cities, and lives that never happened.</p>
-          <p>A Future Well can power a city, open a lost road, or erase an entire branch of history. Three factions now struggle over the same impossible resource, each with a reason that makes sense to the people living through the war.</p>
-          <a class="quiet-link" href="story.html">Read the history of Soryn →</a>
+      
+      <div class="tac-panel">
+        <div class="atlas-sector-nav">
+          <button class="atlas-sector-btn active" data-sector="glass-scar" aria-pressed="true">Glass Scar</button>
+          <button class="atlas-sector-btn" data-sector="shivergrass" aria-pressed="false">Shivergrass Basin</button>
+          <button class="atlas-sector-btn" data-sector="unburied-road" aria-pressed="false">Unburied Road</button>
+          <button class="atlas-sector-btn" data-sector="ark-city" aria-pressed="false">Ark-City Sector 9</button>
+          <button class="atlas-sector-btn" data-sector="solar-dais" aria-pressed="false">Solar Fall Dais</button>
+        </div>
+        
+        <div class="atlas-view-grid">
+          <figure class="evidence-figure" id="atlas-concept-figure" data-evidence="concept-target" data-register="CONCEPT-004">
+            <span class="evidence-badge" aria-hidden="true">Concept target · not gameplay</span>
+            <picture>
+              <source type="image/webp" srcset="assets/concepts/target-render-vertical-slice.webp?v=20260907a">
+              <img src="assets/concepts/target-render-vertical-slice.jpg?v=20260907a" width="1376" height="768" loading="eager" decoding="async" alt="Concept target: Glass Scar vertical slice at dusk with Future Well center.">
+            </picture>
+            <figcaption><b>The Glass Scar Visual Target</b><span>Concept target · not gameplay</span></figcaption>
+          </figure>
+          
+          <div class="atlas-brief-card">
+            <div class="atlas-brief-header">
+              <small id="atlas-coords-text">34°12′N, 118°04′E // ELEV: -120m VITRIFIED SECTOR</small>
+              <h3 id="atlas-region-name">The Glass Scar</h3>
+            </div>
+            <div class="atlas-metrics-list">
+              <div class="atlas-metric-item">
+                <span>OPERATION:</span> <strong id="atlas-operation-title">Mission 01: What the Ledger Keeps</strong>
+              </div>
+              <div class="atlas-metric-item">
+                <span>BIOME:</span> <strong id="atlas-biome-desc">Vitrified Chasm & Ash Flats</strong>
+              </div>
+              <div class="atlas-metric-item">
+                <span>THREAT:</span> <strong id="atlas-threat-level">ELEVATED // MIGRATION CONFLICT</strong>
+              </div>
+              <div class="atlas-metric-item">
+                <span>CONTROL:</span> <strong id="atlas-control-status">Contested (Meridian Evacuation vs Kharuun Vanguard)</strong>
+              </div>
+            </div>
+            <p id="atlas-briefing-text" class="atlas-brief-text">A fractured obsidian transit span outside Lume Reach. As civic reserves collapse, Commander Mara Vey coordinates civilian evacuation while Talar Venn attempts to recover missing archive canisters from the census void.</p>
+          </div>
         </div>
       </div>
-      <blockquote>“A choice is not clean because the alternative disappears.”<small>Fragment from the Lume Reach ledger</small></blockquote>
     </section>
 
-    <section id="factions" class="dark">
-      <span class="section-kicker">03 / The factions</span>
+    <!-- Interactive Faction War Room -->
+    <section id="faction-war-room" class="faction-terminal light" data-active-faction="meridian">
+      <span class="section-kicker">02 / Strategic War Room</span>
       <div class="cols">
-        <h2>Three answers<br>to one question.</h2>
+        <h2>Three factions.<br><em>One broken sun.</em></h2>
         <p>No faction is simply good or evil. The Meridian Compact trusts systems that can be measured. The Kharuun Assemblies protect a living chain of memory. The Hollow Choir speaks for futures that were erased.</p>
       </div>
-      <div class="cards">
-        <article>
-          <em>Build. Connect. Endure.</em>
-          <h3>Meridian Compact</h3>
-          <p>Engineering, logistics, and precision fire turn a connected position into a fortress. Break the network, and its strength can become isolation.</p>
-          <small>Surveyor · Lancer · Bulwark Team · Relay Skiff</small>
-        </article>
-        <article>
-          <em>Move. Adapt. Remember.</em>
-          <h3>Kharuun Assemblies</h3>
-          <p>Mobile infrastructure and mineral-grown warforms change the geometry of a fight. Their oldest advantage—shared memory—is also the source of a dangerous secret.</p>
-          <small>Tender · Riftstalker · Cairnback · Resonant</small>
-        </article>
-        <article>
-          <em>The future is not empty.</em>
-          <h3>Hollow Choir</h3>
-          <p>The Choir is formed from linked consciousness within erased possibilities. Its current prototype playstyle centers on temporary states, declared choices, and forced resolution.</p>
-          <small>Threadkeeper · Intervalist · Lacuna Warden · Afterimage</small>
-        </article>
+
+      <div class="tac-panel">
+        <div class="faction-tab-nav" role="tablist">
+          <button class="faction-tab active" data-faction="meridian" role="tab" aria-selected="true">
+            <b>Meridian Compact</b>
+            <span>Build. Connect. Endure.</span>
+          </button>
+          <button class="faction-tab" data-faction="kharuun" role="tab" aria-selected="false">
+            <b>Kharuun Assemblies</b>
+            <span>Move. Adapt. Remember.</span>
+          </button>
+          <button class="faction-tab" data-faction="choir" role="tab" aria-selected="false">
+            <b>Hollow Choir</b>
+            <span>The future is not empty.</span>
+          </button>
+        </div>
+
+        <div class="faction-war-room-grid">
+          <div class="faction-intel-panel">
+            <div class="doctrine-card">
+              <h3 id="faction-doctrine-title">Logistics Grid & Precision Defense</h3>
+              <p id="faction-doctrine-body">A culturally plural alliance joined by Dawnshard accounting, civic engineering, and collective defense. Anchors and Power Links generate an interconnected energy web that powers defensive Aegis posts, rapid repair hubs, and long-range rail rifles.</p>
+              <div class="doctrine-quote" id="faction-quote-text">“A choice is not clean because the alternative disappears.” — Lume Reach Ledger</div>
+            </div>
+            
+            <h4>Arsenal Targets</h4>
+            <div id="faction-units-grid" class="roster-grid"></div>
+            <div id="faction-structures-grid" class="roster-grid"></div>
+          </div>
+
+          <div class="faction-display-panel">
+            <figure class="evidence-figure" id="faction-structures-figure" data-evidence="concept-target" data-register="CONCEPT-017">
+              <span class="evidence-badge" aria-hidden="true">Concept target · not gameplay</span>
+              <picture>
+                <source type="image/webp" srcset="assets/concepts/echoes-meridian-structures.webp?v=20260907a">
+                <img src="assets/concepts/echoes-meridian-structures.jpg?v=20260907a" width="1376" height="768" loading="lazy" decoding="async" alt="Concept target: Architecture Sheet">
+              </picture>
+              <figcaption><b>Architecture Target</b><span>Concept target · not gameplay</span></figcaption>
+            </figure>
+          </div>
+        </div>
       </div>
-      <a class="archive-link" href="factions.html">Explore the factions and their beliefs →</a>
     </section>
 
-    <section id="play" class="light">
-      <span class="section-kicker">04 / How it plays</span>
+    <!-- Interactive Future Well Tactical Simulator -->
+    <section id="well-simulator" class="well-sim-wrapper dark">
+      <div class="well-sim-header">
+        <div>
+          <span class="section-kicker">03 / Tactical Core Simulator</span>
+          <h2>The Future Well</h2>
+        </div>
+        <div class="well-ctrl-group" role="group" aria-label="Future Well Protocols">
+          <button class="well-ctrl-btn active" data-well-state="dormant" aria-pressed="true">Dormant</button>
+          <button class="well-ctrl-btn" data-well-state="harvest" aria-pressed="false">Harvest</button>
+          <button class="well-ctrl-btn" data-well-state="preserve" aria-pressed="false">Preserve</button>
+          <button class="well-ctrl-btn" data-well-state="reshape" aria-pressed="false">Reshape</button>
+        </div>
+      </div>
+
+      <div class="well-sim-body">
+        <div class="well-visualizer">
+          <div class="well-ring well-ring-outer"></div>
+          <div class="well-ring well-ring-mid"></div>
+          <div class="well-ring well-ring-inner"></div>
+          <div id="well-visual-core"></div>
+        </div>
+        
+        <div class="well-telemetry-panel">
+          <div>
+            <div class="telemetry-tag" id="well-state-kicker">State 00 // Unresolved Possibility</div>
+            <h3 id="well-state-title">Dormant Alignment</h3>
+          </div>
+          
+          <div class="telemetry-row">
+            <div class="telemetry-metric">
+              <small>Resource Yield</small>
+              <strong id="well-yield-value">0 Dawn/sec (Neutral)</strong>
+            </div>
+            <div class="telemetry-metric">
+              <small>Tactical Reality Effect</small>
+              <strong id="well-tactical-effect">Latent landmark. Perimeter contested. No faction holds causal authority.</strong>
+            </div>
+          </div>
+          
+          <div class="well-lore-box" id="well-lore-note">
+            Concentric stone rings revolve around a suspended obsidian shard. The possibility is asleep.
+          </div>
+        </div>
+      </div>
+      
+      <div class="well-compare-grid">
+        <figure class="evidence-figure" data-evidence="concept-target" data-register="CONCEPT-002">
+          <span class="evidence-badge" aria-hidden="true">Concept target</span>
+          <picture>
+            <source type="image/webp" srcset="assets/concepts/echoes-future-well-landmark.webp?v=20260907a">
+            <img id="well-concept-capture-img" src="assets/concepts/echoes-future-well-landmark.jpg?v=20260907a" loading="lazy" decoding="async" alt="Concept target: Future Well">
+          </picture>
+          <figcaption><b>Target Appearance</b><span>Concept target</span></figcaption>
+        </figure>
+        <figure class="evidence-figure" data-evidence="engine-capture" data-register="ENGINE-WIP">
+          <picture>
+            <source type="image/webp" srcset="assets/engine/future-well-dormant-in-engine.webp?v=20260907a">
+            <img id="well-engine-capture-img" src="assets/engine/future-well-dormant-in-engine.png?v=20260907a" loading="lazy" decoding="async" alt="Current in-engine capture">
+          </picture>
+          <figcaption><b>Current In-Engine</b><span>Engine Capture · UI hidden</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Interactive Character Command Dossiers -->
+    <section id="character-dossier-terminal" class="character-terminal light">
+      <span class="section-kicker">04 / The Command Roster</span>
       <div class="cols">
-        <h2>Strategy with<br><em>consequences.</em></h2>
-        <p>Classic RTS foundations—workers, scouting, bases, soft counters, combat, and territory—meet a world that remembers what you chose not to save. Future Wells are contested places, never passive resource piles.</p>
+        <h2>Five lives.<br><em>No complete truth.</em></h2>
+        <p>The war is fought by commanders, scholars, and survivors making defensible choices under existential collapse—discovering that survival often justifies control, concealment, or erasure.</p>
       </div>
-      <div class="wells">
-        <article>
-          <b>01 / IMMEDIATE</b>
-          <h3>Harvest</h3>
-          <small>Take the power now.</small>
-          <p>Gain a large amount of Dawn, but collapse the Well and permanently remove the possibility inside it. The battlefield changes with the loss.</p>
-        </article>
-        <article>
-          <b>02 / ENDURING</b>
-          <h3>Preserve</h3>
-          <small>Keep the question alive.</small>
-          <p>Earn Dawn over time and gain intelligence around the Well. The reward lasts only while you can hold the ground.</p>
-        </article>
-        <article>
-          <b>03 / TEMPORARY</b>
-          <h3>Reshape</h3>
-          <small>Change the battlefield.</small>
-          <p>Spend Dawn to bring a possible bridge, cover line, or route into the present for a limited time. Both sides see the warning and can react.</p>
-        </article>
+
+      <div class="tac-panel">
+        <div class="character-tab-nav" role="tablist">
+          <button class="character-tab active" data-hero="mara-vey" role="tab" aria-selected="true">
+            <b>Mara Vey</b>
+            <span>Meridian Commander</span>
+          </button>
+          <button class="character-tab" data-hero="oruun" role="tab" aria-selected="false">
+            <b>Oruun-of-Seven-Stones</b>
+            <span>Kharuun Custodian</span>
+          </button>
+          <button class="character-tab" data-hero="talar-venn" role="tab" aria-selected="false">
+            <b>Talar Venn</b>
+            <span>Archive Keeper</span>
+          </button>
+          <button class="character-tab" data-hero="cael-rhyse" role="tab" aria-selected="false">
+            <b>Cael Rhyse</b>
+            <span>Civic Chancellor</span>
+          </button>
+          <button class="character-tab" data-hero="neme" role="tab" aria-selected="false">
+            <b>Neme</b>
+            <span>Possible Selves</span>
+          </button>
+        </div>
+
+        <div class="dossier-card">
+          <div class="dossier-header">
+            <div class="dossier-crest" id="hero-crest-code">MV</div>
+            <div class="dossier-meta">
+              <h3 id="hero-dossier-name">Commander Mara Vey</h3>
+              <div>
+                <span class="faction-tag" id="hero-dossier-faction" style="color: #00f2ff;">Meridian Compact</span>
+                <span class="role-tag" id="hero-dossier-role">Field Commander & Operations Authority</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="dossier-specs-grid">
+            <div class="spec-box">
+              <small>Tactical Profile (Wants)</small>
+              <p id="hero-wants-spec">A survivable, predictable future for Soryn through disciplined preparation, fortified logistics, and clear accountability.</p>
+            </div>
+            <div class="spec-box">
+              <small>Ideological Conflict (Must Face)</small>
+              <p id="hero-mustface-spec">Turning every moral question into a control problem risks making erasure of inconvenient people feel like administrative necessity.</p>
+            </div>
+            <div class="spec-box">
+              <small>Visual Target</small>
+              <p id="hero-visual-spec">Mid-30s commander in pale ceramic and graphite field armor with exposed brass load joints and glowing cyan conduit diagnostics.</p>
+            </div>
+            <div class="spec-box">
+              <small>Voice Profile Analysis</small>
+              <p id="hero-voice-spec">Measured pace, clipped sentence ends under combat load; anxiety registers as razor-sharp procedural precision.</p>
+            </div>
+          </div>
+          
+          <div class="dossier-quote-box" id="hero-quote-text">
+            “If we cannot measure the reserve, we cannot guarantee the evacuation. Order is not pride—it is the difference between survival and slaughter.”
+          </div>
+        </div>
       </div>
     </section>
 
-    <section id="interface" class="dark">
-      <span class="section-kicker">05 / The modern RTS interface</span>
+    <!-- Interactive Interface Lab -->
+    <section id="interface-comparison-lab" class="interface-lab-container dark">
+      <span class="section-kicker">05 / Tactical Architecture</span>
       <div class="cols">
         <h2>Beyond the clone trap.<br><em>Tactical clarity for a modern RTS.</em></h2>
-        <p>StarCraft II proved the power of high contrast and razor-sharp unit silhouettes. But copying its 1998 three-box bottom console robs an RTS of screen space and originality. Echoes of the Broken Sun replaces the bottom shelf with an elegant floating contextual command arc, vector contour radar, and diegetic command bridges.</p>
+        <p>StarCraft II proved the power of high contrast. But copying its 1998 three-box bottom console robs an RTS of screen space. Echoes replaces the bottom shelf with an elegant floating contextual command arc, vector contour radar, and diegetic command bridges.</p>
       </div>
-      <div class="frame-pair">
-        <figure class="evidence-figure" data-evidence="concept-target" data-register="CONCEPT-011">
-          <span class="evidence-badge" aria-hidden="true">Concept target · not gameplay</span>
-          <picture>
-            <source type="image/webp" srcset="assets/concepts/echoes-hud-modern-arc.webp?v=20260905a">
-            <img src="assets/concepts/echoes-hud-modern-arc.jpg?v=20260905a" width="1376" height="768" loading="lazy" decoding="async" alt="Concept target, not gameplay: original modern floating contextual command arc HUD for Echoes of the Broken Sun, showing a clean top-left vector contour minimap, top-right Matter, Dawn, and Logistics telemetry, and an elegant floating bottom-center command arc that leaves the battlefield unobstructed.">
-          </picture>
-          <figcaption><b>Original Modern Tactical HUD</b><span>Concept target · floating contextual command arc</span></figcaption>
-        </figure>
-        <figure class="evidence-figure" data-evidence="concept-target" data-register="CONCEPT-013">
-          <span class="evidence-badge" aria-hidden="true">Concept target · not gameplay</span>
-          <picture>
-            <source type="image/webp" srcset="assets/concepts/echoes-main-menu-bridge.webp?v=20260905a">
-            <img src="assets/concepts/echoes-main-menu-bridge.jpg?v=20260905a" width="1376" height="768" loading="lazy" decoding="async" alt="Concept target, not gameplay: original diegetic main menu showing Commander Mara Vey standing at a glowing holographic war-table inside an Ark-City command bridge with the Broken Sun outside the observation window.">
-          </picture>
-          <figcaption><b>Diegetic Command Bridge Menu</b><span>Concept target · Mara Vey and holographic war table</span></figcaption>
-        </figure>
+
+      <div class="tac-panel">
+        <div class="lab-toggle-row">
+          <button class="lab-btn lab-hud-toggle active" data-hud-target="modern" aria-pressed="true">Modern Arc HUD (Echoes)</button>
+          <button class="lab-btn lab-hud-toggle" data-hud-target="classic" aria-pressed="false">Classic 3-Box Console (1998 Baseline)</button>
+        </div>
+        
+        <div id="lab-hud-modern">
+          <figure class="evidence-figure" data-evidence="concept-target" data-register="CONCEPT-011">
+            <span class="evidence-badge" aria-hidden="true">Concept target</span>
+            <picture>
+              <source type="image/webp" srcset="assets/concepts/echoes-hud-modern-arc.webp?v=20260907a">
+              <img src="assets/concepts/echoes-hud-modern-arc.jpg?v=20260907a" width="1376" height="768" loading="lazy" decoding="async" alt="Modern floating arc HUD">
+            </picture>
+            <figcaption><b>Original Modern Tactical HUD</b><span>Concept target</span></figcaption>
+          </figure>
+          <div class="lab-features-list">
+            <div class="lab-feature-item">
+              <b>Floating Contextual Arc</b>
+              <p>Leaves the battlefield unobstructed at the bottom center. Abilities appear conditionally based on selection.</p>
+            </div>
+            <div class="lab-feature-item">
+              <b>Vector Contour Radar</b>
+              <p>Top-left minimalist topology scan rather than a muddy raster minimap.</p>
+            </div>
+            <div class="lab-feature-item">
+              <b>Live Telemetry</b>
+              <p>Top-right Matter, Dawn, and Logistics flow instantly readable.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div id="lab-hud-classic" style="display: none;">
+          <figure class="evidence-figure" data-evidence="concept-target" data-register="CONCEPT-012">
+            <span class="evidence-badge" aria-hidden="true">Baseline Reference</span>
+            <picture>
+              <source type="image/webp" srcset="assets/concepts/echoes-hud-traditional-console.webp?v=20260907a">
+              <img src="assets/concepts/echoes-hud-traditional-console.jpg?v=20260907a" width="1376" height="768" loading="lazy" decoding="async" alt="Traditional 3-box HUD">
+            </picture>
+            <figcaption><b>Traditional 3-Box Command Console</b><span>Baseline Reference</span></figcaption>
+          </figure>
+          <div class="lab-features-list">
+            <div class="lab-feature-item">
+              <b>Screen Occlusion</b>
+              <p>Consumes the bottom 25% of the screen, hiding crucial lower-flank combat information.</p>
+            </div>
+            <div class="lab-feature-item">
+              <b>Rigid Grid</b>
+              <p>Forces abilities into an arbitrary 3x4 layout regardless of context.</p>
+            </div>
+          </div>
+        </div>
+        
+        <hr style="border-color: rgba(255,255,255,0.1); margin: 36px 0;">
+        
+        <div class="lab-toggle-row">
+          <button class="lab-btn lab-menu-toggle active" data-menu-target="bridge" aria-pressed="true">Diegetic Command Bridge</button>
+          <button class="lab-btn lab-menu-toggle" data-menu-target="classic" aria-pressed="false">Classic Shell Menu</button>
+        </div>
+        
+        <div id="lab-menu-bridge">
+          <figure class="evidence-figure" data-evidence="concept-target" data-register="CONCEPT-013">
+            <span class="evidence-badge" aria-hidden="true">Concept target</span>
+            <picture>
+              <source type="image/webp" srcset="assets/concepts/echoes-main-menu-bridge.webp?v=20260907a">
+              <img src="assets/concepts/echoes-main-menu-bridge.jpg?v=20260907a" width="1376" height="768" loading="lazy" decoding="async" alt="Diegetic main menu">
+            </picture>
+            <figcaption><b>Diegetic Ark-City Command Bridge</b><span>Concept target</span></figcaption>
+          </figure>
+        </div>
+        
+        <div id="lab-menu-classic" style="display: none;">
+          <figure class="evidence-figure" data-evidence="concept-target" data-register="CONCEPT-014">
+            <span class="evidence-badge" aria-hidden="true">Baseline Reference</span>
+            <picture>
+              <source type="image/webp" srcset="assets/concepts/echoes-main-menu-traditional.webp?v=20260907a">
+              <img src="assets/concepts/echoes-main-menu-traditional.jpg?v=20260907a" width="1376" height="768" loading="lazy" decoding="async" alt="Traditional shell menu">
+            </picture>
+            <figcaption><b>Traditional Left-Stacked Shell Menu</b><span>Baseline Reference</span></figcaption>
+          </figure>
+        </div>
       </div>
-      <a class="archive-link" href="vision.html">Explore all 14 visual concept targets, faction architectures, and VFX grammar →</a>
     </section>
 
-    <section class="story-feature">
-      <div>
-        <span class="section-kicker">06 / The first operation</span>
-        <h2>The Glass Scar</h2>
-        <p>A fractured transit span. A failing city reserve. A Future Well that might save Lume Reach—or destroy the only possibility in which it survives.</p>
-        <a class="button outline" href="glass-scar.html">Explore the battlefield ↗</a>
-      </div>
-      <div class="story-copy">
-        <b>Prologue / What the Ledger Keeps</b>
-        <p>Commander Mara Vey leads an evacuation outside Lume Reach. Talar Venn asks her to recover a displaced archive convoy. Oruun-of-Seven-Stones arrives to stop the Well’s collapse from reaching a Kharuun birthing cavern.</p>
-        <p>Victory is not total destruction. The mission ends when the archive, the Well, and the withdrawal are resolved—and when the player accepts who paid for that resolution.</p>
-      </div>
-    </section>
-
+    <!-- Development Path -->
     <section id="roadmap" class="light">
-      <span class="section-kicker">07 / Development path</span>
+      <span class="section-kicker">06 / Development path</span>
       <div class="cols">
         <h2>A foundation first.<br><em>A living world next.</em></h2>
         <p>The project is building deterministic strategy systems and a bounded campaign arc before claiming finished presentation. Fifteen linked campaign operations, first-pass meshes for the current roster, a four-state Future Well, and seven authored Glass Scar world assets now exist; production terrain, textures, effects, animation, audio, and a public release are still ahead.</p>
       </div>
-      <div class="timeline">
-        <article>
-          <b>NOW / SYSTEMS PROTOTYPE</b>
-          <h3>The rules underneath</h3>
-          <p>Economy, combat, fog, faction mechanics, Future Wells, skirmish behavior, and fifteen linked missions exist in development form. Missions 14 and 15 add a bounded Hollow Choir command perspective and one explicit final-resolution contract.</p>
-        </article>
-        <article>
-          <b>NEXT / VERTICAL SLICE</b>
-          <h3>A world players can read</h3>
-          <p>Refine the authored roster and Glass Scar candidates into production-quality silhouettes, terrain, animation, effects, sound, and a polished opening-act experience. The <a class="quiet-link" href="vision.html">Vision page</a> shows the target this step is aiming for.</p>
-        </article>
-        <article>
-          <b>LATER / FULL CAMPAIGN EXPERIENCE</b>
-          <h3>Turn the prototype chain into a journey</h3>
-          <p>Qualify alternate routes and endings, then add final dialogue, cinematics, art, audio, accessibility, balance, and ordinary-player completion evidence.</p>
-        </article>
-      </div>
-
       <div class="portal-grid" aria-label="Explore the game archive">
         <a href="atlas.html"><small>Planetary Atlas</small><strong>The Tactical Atlas</strong><span>Inspect the continental map, 6 biomes, 15 battlefields, and 64×64 radar topologies.</span></a>
         <a href="characters.html"><small>People of Soryn</small><strong>Meet the characters</strong><span>Five lives caught between survival, memory, and possibility.</span></a>
@@ -214,7 +402,12 @@
 
   <footer class="site-footer">
     <a class="brand" href="index.html"><b>✦</b> Echoes <i>of the</i> Broken Sun</a>
-    <div class="footer-meta"><span>Independent game concept · Systems prototype · No public release</span><span>Copyright © 2026 Angelis Pseftis. All rights reserved.</span></div>
+    <div class="footer-meta">
+      <span>Independent game concept · Systems prototype · No public release</span>
+      <span>Copyright © 2026 Angelis Pseftis. All rights reserved.</span>
+    </div>
   </footer>
+
+  <script src="interactive.js"></script>
 </body>
 </html>

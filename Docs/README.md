@@ -2,7 +2,7 @@
 
 **Author and owner:** Angelis Pseftis
 **Created:** 2026-09-03
-**Maintained:** 2026-09-05
+**Maintained:** 2026-09-06
 
 Start with [AGENTS.md](../AGENTS.md) for shared agent rules. This index routes work to the controlling
 sources; it creates no game requirement and accepts no result. Current owner instructions and the host's
@@ -28,8 +28,9 @@ explicit owner decision, not permission to silently rewrite either. Record affec
 |---|---|
 | Simulation, movement, combat, economy, AI, save/replay | [TechnicalArchitecture.md](Archive/TechnicalArchitecture.md), applicable source contracts and domain skills. |
 | Campaign, story, character, tutorial | [DevelopmentBible.md](Archive/DevelopmentBible.md), [OpeningAndTutorialScript.md](OpeningAndTutorialScript.md), [CharacterVoiceIdentityBible.md](CharacterVoiceIdentityBible.md), and affected narrative source contracts. [NarrativeCoherenceReview.md](NarrativeCoherenceReview.md) is a dated assessment; verify adoption of its recommendations. |
+| Campaign and tutorial player journey planning | [CampaignAndTutorialJourneyPlan.md](CampaignAndTutorialJourneyPlan.md): source-grounded analysis and detailed proposals for all guided lessons, independent readiness, M01–M15, purposeful deployments/objectives, automation, and the approved Conquest workstream. Supports DeliveryPlan; does not replace mission contracts or confer gameplay acceptance. |
 | World, map, terrain, visual composition | [ArtDirection.md](ArtDirection.md), [VisualTargetSpecification.md](VisualTargetSpecification.md), [ComponentDesignCatalog.md](ComponentDesignCatalog.md), [MapConcepts.md](MapConcepts.md), [MapTechnicalBlueprint.md](MapTechnicalBlueprint.md), and affected world source. Map concepts/blueprints are subordinate design references, not a second requirements master. [WorldMapWorkLog.md](WorldMapWorkLog.md) records the current author's bounded work and owner direction; it cannot independently accept requirements. |
-| Voice, music, ambience, mix | [AudioDirection.md](AudioDirection.md), character/script references above, [AssetRegister.md](Archive/AssetRegister.md), and source/generator contracts. Numeric gates come from the master. |
+| Voice, music, ambience, mix | [AudioDirection.md](AudioDirection.md), character/script references above, [AssetRegister.md](Archive/AssetRegister.md), and source/generator contracts. Owner-provided music candidates: [source inventory](../Content/Audio/Source/Music/OwnerProvided/manifest.json); begin future music integration there. Numeric gates come from the master. |
 | Build, package, performance, runtime inspection | [SetupAndBuild.md](Archive/SetupAndBuild.md), live scripts/configuration, and specific build/verification skills. Recheck mounts, tool versions, processes, and storage before execution. |
 | AI integration with Unreal Editor | [UnrealEditorIntegrationResearch.md](UnrealEditorIntegrationResearch.md): dated local connection audit, primary-source research, and a proposed efficiency pilot. Recommendations are not implemented integration or measured productivity results. |
 | Asset generation, import, rights | [AssetRegister.md](Archive/AssetRegister.md), applicable direction and provenance skills. This register owns provenance, not human acceptance. |

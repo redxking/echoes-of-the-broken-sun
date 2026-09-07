@@ -1010,3 +1010,36 @@ The runtime source binds the verified mapping to the Dialogue bus and subtitle q
 source has not yet passed the integrated build or playback test at this entry. Directed
 listening, pronunciation, mix loudness, subtitle synchronization, packaged coverage and owner
 acceptance remain open. Import does not promote these candidates to final audio.
+
+
+## Owner-provided music intake — 2026-09-07
+
+**Register ID:** `MUSIC-OWNER-20260907`
+**Project direction and document authorship:** Angelis Pseftis
+
+The owner requested moving all Desktop audio into the project for later music integration.
+The 13 original MP3 files are retained, without transcoding or renaming, under
+[`Content/Audio/Source/Music/OwnerProvided`](../../Content/Audio/Source/Music/OwnerProvided/).
+The [inventory manifest](../../Content/Audio/Source/Music/OwnerProvided/manifest.json) records each
+original Desktop path, project path, byte count, SHA-256 checksum, and assignment status.
+This register and that manifest are the intake authority; do not create competing inventories.
+
+Provenance context: the owner describes creating music through Gemini in this conversation.
+Per-file model/version, generation receipts, prompt association, and applicable distribution rights
+are not established by file presence or names. Intake is authorized; runtime integration and
+distribution qualification have not been performed. The owner's expressed liking for the shared
+main theme does not establish a checksum-bound acceptance of every imported candidate.
+
+Future integration work must start with this folder and manifest. Preserve these original bytes;
+do not overwrite them with the procedural generator or replace them with newly generated music
+without owner direction. Confirm each cue assignment by listening and owner direction rather than
+inferring roles from filenames or prompt order. This includes determining whether any file contains
+multiple cues. Decode approved candidates into derived working audio, determine loop/transition
+points, measure loudness and peaks, and integrate through the existing source/import and music-state
+pipeline. Record resulting assets and bindings here and evidence in RequirementsState.md.
+
+These external generation candidates are separate from the existing deterministic synthesis family.
+Before shipping, reconcile their production provenance with AudioDirection section 9 and applicable
+master requirements; preservation alone does not establish a general production-policy exception.
+No listening quality, loop suitability, cue completeness, Unreal import, runtime binding, or mix
+acceptance is claimed by this intake.

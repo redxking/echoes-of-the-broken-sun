@@ -1,4 +1,5 @@
 #include "EchoesPlayerController.h"
+#include "EchoesRTSCameraPawn.h"
 #include "EchoesCinematicSubsystem.h"
 #include "EchoesShellWidget.h"
 #include "EchoesFieldHudWidget.h"
@@ -5830,6 +5831,10 @@ void AEchoesPlayerController::FinishMissionDeployment()
 {
     auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
     if (!Bridge || !Bridge->IsScenarioReady()) return;
+    // Cinematic/menu camera positions are presentation history, not deployment
+    // framing. Begin every local deployment at the actual owned base.
+    if (auto* CameraPawn = Cast<AEchoesRTSCameraPawn>(GetPawn()))
+        CameraPawn->CenterOnLocalBase();
     Bridge->SetScenarioPaused(false);
     SetNarrativePlaybackPausedOutsideCinematic(false);
     PresentDeploymentAudio();
@@ -7135,7 +7140,17 @@ void AEchoesPlayerController::SnapKeyboardTargetToSelection()
     FVector CameraLocation = CameraPawn->GetActorLocation();
     CameraLocation.X = Centroid.X;
     CameraLocation.Y = Centroid.Y;
-    CameraPawn->SetActorLocation(CameraLocation);
+    if (auto* RTSCamera = Cast<AEchoesRTSCameraPawn>(CameraPawn))
+    {
+        // An explicit recenter key is player navigation: it must carry the
+        // same provenance and battlefield clamp as scrolling and minimap use,
+        // so the guided survey can observe it instead of a silent teleport.
+        RTSCamera->PanFromPlayerInput(CameraLocation);
+    }
+    else
+    {
+        CameraPawn->SetActorLocation(CameraLocation);
+    }
     KeyboardTargetOffset = FVector2D::ZeroVector;
     bKeyboardTargetingEnabled = true;
     SetStatusMessage(
@@ -9951,7 +9966,7 @@ void AEchoesPlayerController::IssueContextOrder(
         SetStatusMessage(TEXT("[SIM_NOT_READY] Orders cannot be issued."));
         return;
     }
-    if (bTutorialOperationAuthorized && ((PlayerProfile.TutorialVerifiedMask | TutorialSkippedMask) & 2) == 0)
+    if (bTutorialOperationAuthorized && (GetTutorialProgressMask() & 2) == 0)
     {
         SetStatusMessage(TEXT("[TUTORIAL] Follow the active tutorial step before issuing orders."));
         return;

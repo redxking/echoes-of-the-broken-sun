@@ -46,6 +46,10 @@ public:
     [[nodiscard]] bool CameraPredicateSatisfied() const;
     [[nodiscard]] int32 CompletedWaypoints() const { return WaypointIndex; }
     [[nodiscard]] int32 ConsecutiveDwellTicks() const { return DwellTicks; }
+    [[nodiscard]] bool HasPanned() const { return bPanned; }
+    [[nodiscard]] bool HasZoomedMin() const { return bMinimumZoomSeen; }
+    [[nodiscard]] bool HasZoomedMax() const { return bMaximumZoomSeen; }
+    [[nodiscard]] bool HasRecentered() const { return bRecentered; }
 
 private:
     FEchoesTutorialSurveySetup Setup;

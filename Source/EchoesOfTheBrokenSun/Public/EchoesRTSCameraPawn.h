@@ -30,6 +30,8 @@ public:
     void SetCameraFraming(float LegacyArmLength, float LegacyFieldOfViewDegrees = 55.0f);
     /** Presentation-only navigation used by minimap and grab panning. */
     void PanToWorld(const FVector& WorldPosition);
+    /** Frames the owned base at deployment without selecting it or crediting a lesson. */
+    bool CenterOnLocalBase();
     void PanByScreenDelta(const FVector2D& DeltaPixels, float ViewportWidth);
     void CancelPointerPan();
     /** Four ground-plane corners of the current orthographic viewport. */
@@ -49,6 +51,7 @@ public:
 private:
     friend class AEchoesPlayerController;
     friend class FEchoesOrthographicCameraTest;
+    friend class FEchoesTutorialAnchorSelectionTest;
     void ApplyZoomAtViewportPoint(float Direction, const FVector2D& Point, const FVector2D& ViewportSize);
     void PanFromPlayerInput(const FVector& WorldPosition);
     uint64 NavigationRevision = 0;

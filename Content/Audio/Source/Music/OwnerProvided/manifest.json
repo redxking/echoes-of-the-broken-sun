@@ -1,0 +1,126 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "recorded_utc": "2026-09-07T13:40:39.156616+00:00",
+  "source_context": "Owner-directed Desktop audio intake; conversation describes Gemini music generation. Per-file generation model, prompts and rights documentation not supplied.",
+  "integration_status": "source preservation only",
+  "files": [
+    {
+      "original_path": "/Users/angelispseftis/Desktop/Game theme.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/Game theme.mp3",
+      "filename": "Game theme.mp3",
+      "bytes": 4164561,
+      "sha256": "0ad11cfc9b197003aba27e7da83c822d4a3821615a2958e7d89b9a237b6282e1",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    },
+    {
+      "original_path": "/Users/angelispseftis/Desktop/Meridian Compact.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/Meridian Compact.mp3",
+      "filename": "Meridian Compact.mp3",
+      "bytes": 4183996,
+      "sha256": "8cd2f5848a1eab5bd7d1b62a122659c697e46c1ecc39b32c310f8b649bb469c0",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    },
+    {
+      "original_path": "/Users/angelispseftis/Desktop/a_future_chosen.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/a_future_chosen.mp3",
+      "filename": "a_future_chosen.mp3",
+      "bytes": 4123183,
+      "sha256": "ad77cada091b3903170e4de95bf80f4486fcf8b6be0085ee808ce9e38c8ca5e3",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    },
+    {
+      "original_path": "/Users/angelispseftis/Desktop/beneath_the_glass_sky.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/beneath_the_glass_sky.mp3",
+      "filename": "beneath_the_glass_sky.mp3",
+      "bytes": 4224120,
+      "sha256": "7a3b717e98c1ba0098bd4b4acf4fd5d03d712da112fa3eebcd0e5e9b3538ebc5",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    },
+    {
+      "original_path": "/Users/angelispseftis/Desktop/breath_and_stone.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/breath_and_stone.mp3",
+      "filename": "breath_and_stone.mp3",
+      "bytes": 4217223,
+      "sha256": "7ced2ab852422fec85c285de12576f6e0ad04596fb8920c37b6af277750f968a",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    },
+    {
+      "original_path": "/Users/angelispseftis/Desktop/gravity_of_the_pale_star.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/gravity_of_the_pale_star.mp3",
+      "filename": "gravity_of_the_pale_star.mp3",
+      "bytes": 4192773,
+      "sha256": "74852300e4763e972c8a7f42e3ef8cfe1e5c113bdeb2e573a35789a4a67f8f73",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    },
+    {
+      "original_path": "/Users/angelispseftis/Desktop/planning_under_open_skies.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/planning_under_open_skies.mp3",
+      "filename": "planning_under_open_skies.mp3",
+      "bytes": 4205312,
+      "sha256": "257db3ff9d0caf552c02b6c4929874fc6717c6f4cb65f19fe2bf8fbb3ce21fc3",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    },
+    {
+      "original_path": "/Users/angelispseftis/Desktop/stone_paths_to_morning.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/stone_paths_to_morning.mp3",
+      "filename": "stone_paths_to_morning.mp3",
+      "bytes": 4252332,
+      "sha256": "5955bd3a2a7a02ab97fe01ad8a1a34665664aea358e6a239f10bed893b3ec53e",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    },
+    {
+      "original_path": "/Users/angelispseftis/Desktop/the_architect_s_resolve.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/the_architect_s_resolve.mp3",
+      "filename": "the_architect_s_resolve.mp3",
+      "bytes": 4223493,
+      "sha256": "e3f193065def3e78ea138726bbdd4808c85e85db0b9d9b6125a8ae5302fdcb2f",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    },
+    {
+      "original_path": "/Users/angelispseftis/Desktop/the_memory_of_stone.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/the_memory_of_stone.mp3",
+      "filename": "the_memory_of_stone.mp3",
+      "bytes": 4232897,
+      "sha256": "e56fe7af42b9efad0f827dd5275a133a6c63165ff29a818b1fab9fd2203e8fd8",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    },
+    {
+      "original_path": "/Users/angelispseftis/Desktop/three_ways_home.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/three_ways_home.mp3",
+      "filename": "three_ways_home.mp3",
+      "bytes": 4140737,
+      "sha256": "24317636c8ed66740e6cd1cbab15afcd10a1177928667f0a854d23ed15512622",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    },
+    {
+      "original_path": "/Users/angelispseftis/Desktop/where_the_path_opens.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/where_the_path_opens.mp3",
+      "filename": "where_the_path_opens.mp3",
+      "bytes": 4251705,
+      "sha256": "4f4f838f8207d8889d038c890888846bc1692fd323b9d1d419066b6e21f6c7f7",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    },
+    {
+      "original_path": "/Users/angelispseftis/Desktop/where_the_sun_returns.mp3",
+      "path": "Content/Audio/Source/Music/OwnerProvided/where_the_sun_returns.mp3",
+      "filename": "where_the_sun_returns.mp3",
+      "bytes": 4137602,
+      "sha256": "35242b2a94fdef1a9d7c6401e6b0d172ed2408c10ebd28dda2cb4666ead163fe",
+      "cue_assignment": "unassigned; confirm by listening and owner direction",
+      "status": "retained source candidate; not imported or runtime bound"
+    }
+  ]
+}

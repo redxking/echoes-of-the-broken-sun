@@ -316,6 +316,8 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesTutorialSpotlightView final
     FVector2D ScreenCenter = FVector2D::ZeroVector;
     FVector2D ScreenSize = FVector2D::ZeroVector;
     FText TargetName;
+    FText ActionPrompt;
+    FText InputBinding;
 };
 
 /** SPEC-TUT-006 tutorial skip modal data. */
@@ -340,6 +342,8 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudView final
     bool bReducedFlashing = false;
     float HudScale = 1.0f;
     bool bTutorialActive = false;
+    FText TutorialLessonTitle;
+    FText TutorialInstruction;
     FEchoesTutorialSpotlightView TutorialSpotlight;
     FEchoesTutorialSkipModalView TutorialSkipModal;
     FEchoesFieldHudResourceView Resources;

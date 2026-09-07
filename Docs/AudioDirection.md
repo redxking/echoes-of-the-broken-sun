@@ -208,3 +208,15 @@ recovery should describe the same event at the right scale. Record intentional s
 or unavailable evidence separately. A unit/building sound must reinforce its purpose and state rather than
 supply arbitrary spectacle. Repeated sounds, abrupt cuts, unclear spatial sources, and timing/material
 mismatches are defects to investigate. Programmatic loudness and listening remain separate checks.
+
+
+## Owner-provided music sources — 2026-09-07
+
+For future music integration, first inspect
+[`Content/Audio/Source/Music/OwnerProvided`](../Content/Audio/Source/Music/OwnerProvided/) and its
+[manifest](../Content/Audio/Source/Music/OwnerProvided/manifest.json). This owner-authorized intake
+preserves 13 original Desktop MP3 candidates. Provenance, assignment limits, preservation rules,
+and integration next steps are recorded under `MUSIC-OWNER-20260907` in the
+[Asset Register](Archive/AssetRegister.md#owner-provided-music-intake--2026-09-07).
+These files are retained sources, not generated runtime assets or accepted in-game music.
+The existing synthesis pipeline must not overwrite these originals.
