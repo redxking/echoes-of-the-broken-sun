@@ -562,6 +562,12 @@
      "date": "2026-09-07",
      "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-UNT-002/ (receipt.json, renders/concept-compare/, import/)",
      "result": "Lean QUADRUPED skirmisher: 201 cm standing, 295 cm long (1.47 of the height against the traced 1.46), on four long three-segment legs with high outboard knees, under overlapping carapace shells that step down toward a forward prow. Shoulder-mounted shard-caster on a two-bone mount that aims independently of the gait; a test requires the leg tracks of move and fire_on_the_move to be identical so the two never fight. Three states with visible molt geometry. LOD0 542 baseline / 602 heaviest molt / LOD1 346 against the provisional card's 6,000 / 2,600; amber 3.1% against REL-ART-029's 15% ceiling. 18 tests, 6 comparison sheets. Import clean: 0 errors, 0 warnings, 22 bones, 5 sockets exact, all 6 clips."
+    },
+    {
+     "stage": "BLOCKOUT (gait phase fix, ebs-kha-unt-002-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-UNT-002/ (receipt.json, import/UnrealEditor-Cmd-import-run-gaitfix.log)",
+     "result": "Defect found while building the Cairnback: the gait's key time and swing phase were derived from the same value, so all four legs moved in unison and the diagonal gait was a hop. Fixed; the diagonal pairing is now real (fl with rr, fr with rl). Rebuilt, 18 tests passing, re-imported clean at 0 errors and 0 warnings. Geometry, budgets and every other clip unchanged."
     }
    ],
    "next": "Close the open items above, then textures, in-engine capture, gate reviews, incorporation of the provisional card into the authoritative requirements, owner acceptance.",
@@ -570,9 +576,39 @@
     "Death pose leaves one leg raised: OPEN BLOCKOUT DEFECT; resolve both it and the preferred fold through a supported collapse pose. Not final animation acceptance.",
     "Simultaneous locomotion and firing unverified: identical leg tracks are a regression check only. Verify through turns, stops, targeting changes and animation transitions.",
     "Silhouette, joint and carapace detail not judged: the low counts are headroom, not sufficiency. Judge against the concept at gameplay distance.",
-    "Monochrome separation from the Cairnback not yet comparable: baseline monochrome passes rendered here; the comparison waits on that package."
+    "Monochrome separation from the Cairnback not yet comparable: baseline monochrome passes rendered here; the comparison waits on that package.",
+    "Gait was a hop until 2026-09-07; the fix is in this package's second stage receipt."
    ],
    "acceptance_note": "Owner 2026-09-07: remains BLOCKOUT. Animation NOT_ACCEPTED. Import and test results are reported evidence, not independently inspected."
+  },
+  {
+   "package_id": "EBS-PKG-KA-CAIRNBACK",
+   "production_asset_id": "EBS-KHA-UNT-003",
+   "subject": "Cairnback",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-kha-unt-003-concept-v1",
+   "asset_name": "SK_EBS_KHA_UNT_003",
+   "planned_unreal_folder": "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_003/",
+   "canon_status": "CANDIDATE (cairnback candidate against canon SPEC-UNIT-007); not owner acceptance",
+   "source_root": "ArtSource/EBS-KHA-UNT-003/",
+   "authoritative_document": "ArtSource/EBS-KHA-UNT-003/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-KHA-UNT-003/concept-fidelity.md",
+   "asset_card": "REL-FAC-025.KA.CAIRNBACK.ASSET (PROVISIONAL, ArtSource/kharuun-asset-cards.json)",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-kha-unt-003-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-UNT-003/ (receipt.json, renders/concept-compare/ including two silhouette reports, import/)",
+     "result": "Silhouette built FIRST per the owner's ruling: a domed shell of six stepped strata courses, 228 cm standing and 323 long and 240 wide, on four short thick limbs with 54 cm of clearance, head tucked behind the shell's front edge. Contrast against the Riftstalker is asserted by test (leg share 0.24 against 0.69, width over length 0.74 against 0.26) and MEASURED by a new silhouette tool: monochrome intersection over union 0.469 side and 0.540 tactical. Lateral-sequence gait at 270 cm/s against the Riftstalker's diagonal 410. LOD0 908 / LOD1 288 against the provisional card's 8,000 / 3,500; amber 10.7% against REL-ART-029's 15%. 21 tests, 7 sheets. Import clean: 0 errors, 0 warnings, 22 bones, 5 sockets, 6 clips."
+    }
+   ],
+   "next": "The shell's stepped read against the candidate's smoother dome, the walk's floating feet, textures, a detail judgement at gameplay distance, in-engine capture, gate reviews, card incorporation, owner acceptance.",
+   "open_owner_questions": [],
+   "open_items": [
+    "The shell reads as stepped courses rather than the candidate's smoother overlapping dome.",
+    "Feet float up to 2.6 cm during the walk, the price of the constant 6.33 cm body lift that keeps them out of the ground.",
+    "Detail sufficiency not judged: the low counts are headroom (owner ruling 2026-09-07)."
+   ]
   }
  ],
  "tools": {
@@ -613,6 +649,19 @@
    "detail": "On EBS-KHA-UNT-002 every leg stride, body pitch and caster pitch was authored into index 1 (yaw) instead of index 0 (pitch). Nothing errors: the clips build, import and play, and the legs simply swing sideways instead of stepping. It was only visible in a rendered pose.",
    "resolution": "Corrected in the generator and guarded by a test that requires a stride to be pure pitch with zero yaw and roll. Worth checking in every future creature generator before the first render.",
    "related": "The same package found that bone heads must sit at the PROXIMAL end of each segment; heads at the distal end make a limb pivot about its far joint and tear away from the body under rotation."
+  },
+  {
+   "date": "2026-09-07",
+   "finding": "A gait whose key time and swing phase are derived from the same value gives every limb an identical curve",
+   "detail": "Both quadruped generators wrote `t = (phase + step) * duration` and `swing = sin(2*pi*(phase + step))`. Because the key time IS the phase argument, each limb received the same set of (time, value) pairs and all four legs moved in unison. The Riftstalker shipped in commit 000e99d with a hop instead of a diagonal gait. Nothing errors, the clips import and play, and it is invisible unless the limbs are compared to each other.",
+   "resolution": "The key time now walks the cycle and the swing is read at that time PLUS the limb's phase. Both generators fixed; the Riftstalker rebuilt, re-tested and re-imported. The Cairnback carries a test that samples each limb's swing and requires four distinct phases, which is what caught it.",
+   "found_by": "writing the Cairnback's gait-separation test, which asserted the two animals walk differently"
+  },
+  {
+   "date": "2026-09-07",
+   "finding": "AnimationClip.key APPENDS, so a second key at the same time is never read",
+   "detail": "The sampler takes the first key matching a time. A correction pass that adds a key at an existing time therefore does nothing at all, while looking as though it worked. This silently defeated two rounds of foot-planting corrections on EBS-KHA-UNT-003.",
+   "resolution": "Replace keys by time rather than appending. The Cairnback generator carries a set_key helper that does this."
   }
  ],
  "owner_rulings": [

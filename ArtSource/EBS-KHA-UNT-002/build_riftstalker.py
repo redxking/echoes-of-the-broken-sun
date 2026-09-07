@@ -277,8 +277,12 @@ def build_clips(skeleton: skel.Skeleton) -> list:
         for tag in LEG_TAGS:
             phase = phase_of[tag]
             for step in range(5):
-                t = ((phase + step / 4.0) % 1.0) * clip.duration_s
-                swing = math.sin(2.0 * math.pi * (phase + step / 4.0))
+                # the key TIME walks the cycle; the swing is read at that time PLUS this limb's phase.
+                # Deriving both from (phase + step) gave every limb an identical curve, so the four
+                # legs moved in unison and the diagonal gait was a hop. Found on 2026-09-07 while
+                # testing the Cairnback's gait separation.
+                t = step / 4.0 * clip.duration_s
+                swing = math.sin(2.0 * math.pi * (step / 4.0 + phase))
                 # (pitch, yaw, roll): a leg's stride is PITCH. Writing it into the yaw slot swung the
                 # legs sideways instead of stepping, which is how this was wrong in the first pass.
                 clip.key(f"{tag}_upper", t, (-amount * swing, 0.0, 0.0))
@@ -640,6 +644,22 @@ def write_scenes(evidence_dir: str) -> list:
     for name, fraction, _state in POSE_SAMPLES:
         stem = f"pose_{name}_{int(fraction * 100):03d}"
         dump(stem, [{"obj": f"../review/{stem}.obj"}], [ortho[0], views[0]])
+    # A dedicated silhouette scene: NO ground and NO reference figure, so a mask sees the animal and
+    # nothing else. Measuring the tactical pass with the ground in frame compared the ground.
+    sil = dict(base)
+    sil.pop("ground", None)
+    sil.pop("reference_figure", None)
+    sil["background"] = [1.0, 1.0, 1.0]
+    sil["meshes"] = [{"obj": "../review/SK_EBS_KHA_UNT_002_baseline_LOD0.obj"}]
+    sil["views"] = [
+        {"name": "sil_side", "type": "ortho", "from": "+Y", "edges": False, "margin": 1.06,
+         "target": [0, 0, 110], "grayscale": True},
+        {"name": "sil_tactical", "type": "persp", "pitch_deg": -60, "yaw_deg": -45, "arm_cm": 1400,
+         "fov_deg": 55, "target": [0, 0, 60], "grayscale": True}]
+    sp = os.path.join(scenes, "silhouette.json")
+    with open(sp, "w", encoding="utf-8") as handle:
+        json.dump(sil, handle, indent=1)
+    written.append(sp)
     return written
 
 

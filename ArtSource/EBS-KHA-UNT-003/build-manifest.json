@@ -1,0 +1,858 @@
+{
+ "acceptance": {
+  "animation": "NOT_EVALUATED",
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "PENDING \u2014 built against the provisional card; final technical acceptance waits on that card being incorporated into the authoritative requirements and its checks passing"
+ },
+ "asset_name": "SK_EBS_KHA_UNT_003",
+ "author": "Angelis Pseftis",
+ "bind_counts": {
+  "body": 12,
+  "fl_foot": 12,
+  "fl_lower": 20,
+  "fl_upper": 20,
+  "fr_foot": 12,
+  "fr_lower": 20,
+  "fr_upper": 20,
+  "head": 24,
+  "neck": 20,
+  "rl_foot": 12,
+  "rl_lower": 20,
+  "rl_upper": 20,
+  "rr_foot": 12,
+  "rr_lower": 20,
+  "rr_upper": 20,
+  "slab_lower": 250,
+  "slab_upper": 394
+ },
+ "budgets": {
+  "amber_area_fraction_lod0": 0.10665,
+  "amber_cap": 0.15,
+  "amber_within_cap": true,
+  "cap_scope": "the complete assembly; the mineral cover is a separate asset",
+  "cap_source": "REL-FAC-025.KA.CAIRNBACK.ASSET (PROVISIONAL)",
+  "chipped_state_triangles": 944,
+  "headroom_note": "Owner ruling 2026-09-07: sitting below the ceiling is HEADROOM, not sufficiency. Silhouette, joint and carapace detail are judged against the concept at gameplay distance and have not been judged here.",
+  "lod0_cap": 8000,
+  "lod0_triangles": 908,
+  "lod0_within_cap": true,
+  "lod1_cap": 3500,
+  "lod1_triangles": 288,
+  "lod1_within_cap": true,
+  "worst_state_triangles": 944
+ },
+ "clips": [
+  {
+   "bones": [
+    "body",
+    "fl_foot",
+    "fr_foot",
+    "rl_foot",
+    "rr_foot"
+   ],
+   "duration_s": 5.0,
+   "loop": true,
+   "name": "idle",
+   "purpose": "settled: the shell rides steady and the limbs hold",
+   "ticks": 100
+  },
+  {
+   "bones": [
+    "body",
+    "fl_foot",
+    "fl_upper",
+    "fr_foot",
+    "fr_upper",
+    "rl_foot",
+    "rl_upper",
+    "rr_foot",
+    "rr_upper"
+   ],
+   "duration_s": 2.0,
+   "loop": true,
+   "name": "move",
+   "purpose": "270 cm/s: heavy stone footfalls, one limb at a time",
+   "ticks": 40
+  },
+  {
+   "bones": [
+    "body",
+    "fl_foot",
+    "fr_foot",
+    "neck",
+    "rl_foot",
+    "rr_foot"
+   ],
+   "duration_s": 1.4,
+   "loop": false,
+   "name": "attack",
+   "purpose": "a short heavy strike at 200 cm: the body lunges, the shell stays level",
+   "ticks": 28
+  },
+  {
+   "bones": [
+    "body",
+    "fl_foot",
+    "fl_upper",
+    "fr_foot",
+    "fr_upper",
+    "rl_foot",
+    "rr_foot",
+    "slab_lower",
+    "slab_upper"
+   ],
+   "duration_s": 3.0,
+   "loop": false,
+   "name": "heave",
+   "purpose": "canon's heave: the shell rears, the forelimbs drive down, and a grown barrier is left behind it. The barrier is a SEPARATE asset; this clip only produces the motion and the cast origin the runtime places it from",
+   "ticks": 60
+  },
+  {
+   "bones": [
+    "fl_foot",
+    "fr_foot",
+    "rl_foot",
+    "rr_foot",
+    "slab_upper"
+   ],
+   "duration_s": 0.8,
+   "loop": false,
+   "name": "damage_chip",
+   "purpose": "a hit lands: the shell shrugs and settles",
+   "ticks": 16
+  },
+  {
+   "bones": [
+    "body",
+    "fl_foot",
+    "fl_lower",
+    "fl_upper",
+    "fr_foot",
+    "fr_lower",
+    "fr_upper",
+    "rl_foot",
+    "rl_lower",
+    "rl_upper",
+    "rr_foot",
+    "rr_lower",
+    "rr_upper"
+   ],
+   "duration_s": 2.5,
+   "loop": false,
+   "name": "death",
+   "purpose": "canon's ceramic slump: the limbs give and the shell settles onto the ground",
+   "ticks": 50
+  }
+ ],
+ "component_inventory": {
+  "bones": {
+   "built": 22,
+   "contract": "22: root, body, a two-bone back slab, a short neck and head, four limb chains",
+   "names": [
+    "root",
+    "body",
+    "slab_lower",
+    "slab_upper",
+    "neck",
+    "head",
+    "fl_hip",
+    "fl_upper",
+    "fl_lower",
+    "fl_foot",
+    "fr_hip",
+    "fr_upper",
+    "fr_lower",
+    "fr_foot",
+    "rl_hip",
+    "rl_upper",
+    "rl_lower",
+    "rl_foot",
+    "rr_hip",
+    "rr_upper",
+    "rr_lower",
+    "rr_foot"
+   ]
+  },
+  "domed_shell": {
+   "contract": 6,
+   "courses": 6,
+   "seams": 5
+  },
+  "low_protected_head": {
+   "built": true,
+   "contract": "tucked behind the shell's front edge",
+   "head_front_x": 129.0,
+   "shell_front_x": 150.0
+  },
+  "mineral_cover": {
+   "built_here": false,
+   "cast_origin_socket": "Cover_Cast_Origin",
+   "contract": "a SEPARATE asset with its own budget"
+  },
+  "short_thick_limbs": {
+   "clearance_cm": 54.0,
+   "contract": 4,
+   "legs": 4
+  },
+  "sockets": {
+   "built": [
+    "Back_Slab_Center",
+    "Cover_Cast_Origin",
+    "Foot_Contact_FL",
+    "Foot_Contact_FR",
+    "Target_Anchor_Center"
+   ],
+   "contract": [
+    "Back_Slab_Center",
+    "Cover_Cast_Origin",
+    "Foot_Contact_FL",
+    "Foot_Contact_FR",
+    "Target_Anchor_Center"
+   ]
+  },
+  "states": {
+   "built": [
+    "intact",
+    "chipped"
+   ],
+   "contract": [
+    "intact",
+    "chipped"
+   ]
+  },
+  "tracks": {
+   "built": [
+    "idle",
+    "move",
+    "attack",
+    "heave",
+    "damage_chip",
+    "death"
+   ],
+   "contract": [
+    "idle",
+    "move",
+    "attack",
+    "heave",
+    "damage_chip",
+    "death"
+   ]
+  }
+ },
+ "concept_measurements": {
+  "body_length_cm": 322.53,
+  "body_width_cm": 240.0,
+  "bounds_cm": [
+   [
+    -170.53,
+    -120.0,
+    0.0
+   ],
+   [
+    152.0,
+    120.0,
+    228.0
+   ]
+  ],
+  "contrast_with_riftstalker": {
+   "leg_share": {
+    "cairnback": 0.2368,
+    "riftstalker": 0.69,
+    "separation": 0.4532
+   },
+   "requirement": "distinguishable in MONOCHROME at tactical distance (owner ruling 2026-09-07)",
+   "width_over_length": {
+    "cairnback": 0.7441,
+    "riftstalker": 0.26,
+    "separation": 0.4841
+   }
+  },
+  "feet_on_the_ground": true,
+  "head_is_tucked_behind_the_shell": true,
+  "leg_share_of_height": 0.2368,
+  "length_over_height": 1.4146,
+  "standing_height_cm": 228.0,
+  "width_over_length": 0.7441
+ },
+ "creator": "Angelis Pseftis",
+ "excluded_from_this_asset": {
+  "mineral_cover": "The barrier the heave creates is a SEPARATE asset with its own budget (card .MESH_PROP). It is not built here and not counted in these triangles. This asset provides only the motion and the Cover_Cast_Origin socket the runtime places it from."
+ },
+ "foot_planting": {
+  "body_lift_cm": {
+   "attack": 0.0,
+   "damage_chip": 0.0,
+   "death": 0.0,
+   "heave": 0.0,
+   "idle": 0.0,
+   "move": 6.33
+  },
+  "why": "Stubby vertical legs on flat foot plates: any rotation in the chain swings a plate corner underground. Each foot is counter-rotated by the negation of everything above it, and the residual is removed by raising the body. These lifts are MEASURED on the posed mesh, not dialled in by eye."
+ },
+ "gait_separation": {
+  "cairnback": "lateral sequence, one limb at a time, 270 cm/s",
+  "riftstalker": "diagonal pairs, 410 cm/s",
+  "why": "the owner asked for a different stance AND gait, so the phase pattern differs deliberately"
+ },
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Two slots: layered strata for the shell, limbs and head, and amber restricted to the seams between shell courses. The back is armour, not a lamp.",
+ "material_slots": [
+  "MI_EBS_KHA_Strata",
+  "MI_EBS_KHA_Amber"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -170.53061348298476,
+     -120.0,
+     0.0
+    ],
+    [
+     152.0,
+     120.0,
+     228.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Amber": 480,
+    "MI_EBS_KHA_Strata": 428
+   },
+   "clips": [
+    "idle",
+    "move",
+    "attack",
+    "heave",
+    "damage_chip",
+    "death"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_UNT_003",
+   "path": "export/SK_EBS_KHA_UNT_003_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "66e80b96fe19749a8ea501ae5cc322ccb4c2f685dc4fb4b3b4fc5f5963a627a2",
+   "sockets": [
+    {
+     "bone": "head",
+     "name": "Cover_Cast_Origin",
+     "position_cm": [
+      132.0,
+      0.0,
+      74.0
+     ],
+     "purpose": "where the heave throws its barrier from: ahead of the head, on the ground line",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "slab_upper",
+     "name": "Back_Slab_Center",
+     "position_cm": [
+      -23.0,
+      0.0,
+      216.0
+     ],
+     "purpose": "the shell's crown: the 'absorbs fire, becomes cover' anchor",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "body",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      114.0
+     ],
+     "purpose": "targeting and selection anchor",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "fl_foot",
+     "name": "Foot_Contact_FL",
+     "position_cm": [
+      102.0,
+      -86.92,
+      0.0
+     ],
+     "purpose": "front-left ground contact",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "fr_foot",
+     "name": "Foot_Contact_FR",
+     "position_cm": [
+      102.0,
+      86.92,
+      0.0
+     ],
+     "purpose": "front-right ground contact",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 908
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_UNT_003",
+   "path": "export/SK_EBS_KHA_UNT_003_LOD0.obj",
+   "sha256": "9a46e76138e3cb475e32acd860ac5db4b94b281d2e80f5d4cf7510bfd61356b9"
+  },
+  {
+   "bounds_cm": [
+    [
+     -168.54552117970212,
+     -118.0,
+     0.0
+    ],
+    [
+     150.0,
+     118.0,
+     228.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Strata": 288
+   },
+   "clips": [
+    "idle",
+    "move",
+    "attack",
+    "heave",
+    "damage_chip",
+    "death"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_UNT_003",
+   "path": "export/SK_EBS_KHA_UNT_003_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "617e327a13746e41b90562d9e8e500b8326b1bc6b6c6d290243eae13a6f21098",
+   "sockets": [
+    {
+     "bone": "head",
+     "name": "Cover_Cast_Origin",
+     "position_cm": [
+      132.0,
+      0.0,
+      74.0
+     ],
+     "purpose": "where the heave throws its barrier from: ahead of the head, on the ground line",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "slab_upper",
+     "name": "Back_Slab_Center",
+     "position_cm": [
+      -23.0,
+      0.0,
+      216.0
+     ],
+     "purpose": "the shell's crown: the 'absorbs fire, becomes cover' anchor",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "body",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      114.0
+     ],
+     "purpose": "targeting and selection anchor",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "fl_foot",
+     "name": "Foot_Contact_FL",
+     "position_cm": [
+      102.0,
+      -86.92,
+      0.0
+     ],
+     "purpose": "front-left ground contact",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "fr_foot",
+     "name": "Foot_Contact_FR",
+     "position_cm": [
+      102.0,
+      86.92,
+      0.0
+     ],
+     "purpose": "front-right ground contact",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 288
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_UNT_003",
+   "path": "export/SK_EBS_KHA_UNT_003_LOD1.obj",
+   "sha256": "893f7706a053a76ef937c45505ea7f3e94def19a0c0f28f6f9ee5ba6a4b386b7"
+  }
+ ],
+ "package_id": "EBS-PKG-KA-CAIRNBACK",
+ "planned_unreal_folder": "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_003/",
+ "production_asset_id": "EBS-KHA-UNT-003",
+ "provisional_contract": {
+  "bounds": {
+   "basis": "the faction default",
+   "lod0_triangles": 8000,
+   "lod1_triangles": 3500
+  },
+  "card": "REL-FAC-025.KA.CAIRNBACK.ASSET in ArtSource/kharuun-asset-cards.json (rendered to kharuun-asset-cards.md)",
+  "status": "PROVISIONAL. Authored in this worktree under the owner ruling of 2026-09-07; NOT incorporated into Docs/Requirements.md and not an existing authoritative per-asset requirement."
+ },
+ "review": {
+  "scenes": [
+   "scenes/intact.json",
+   "scenes/chipped.json",
+   "scenes/lod1.json",
+   "scenes/pose_move_025.json",
+   "scenes/pose_attack_030.json",
+   "scenes/pose_heave_030.json",
+   "scenes/pose_heave_060.json",
+   "scenes/pose_death_100.json",
+   "scenes/silhouette.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "name": "intact",
+   "path": "review/SK_EBS_KHA_UNT_003_intact_LOD0.obj",
+   "sha256": "dc99dc3fa57e117f70325a0013552aa99abaa7f25d6e83b8effbaa9317fb17b1",
+   "triangles": 908
+  },
+  {
+   "name": "chipped",
+   "path": "review/SK_EBS_KHA_UNT_003_chipped_LOD0.obj",
+   "sha256": "8de19fae8929cab34e8efc59da045d153d41c53126704c48562b2b08f6b57574",
+   "triangles": 944
+  },
+  {
+   "name": "intact_lod1",
+   "path": "review/SK_EBS_KHA_UNT_003_intact_LOD1.obj",
+   "sha256": "d3a62556ce62352f4ac04ec97cdd38c2fc688e9bb426cd83a4befb454f02f246",
+   "triangles": 288
+  },
+  {
+   "lowest_z_cm": 4.43,
+   "name": "pose_move_025",
+   "path": "review/pose_move_025.obj",
+   "sha256": "af6e4b9ef2529d876629a4ff522957fb9d4d0d41d68edbf181ac61fc7bf55c6b"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_attack_030",
+   "path": "review/pose_attack_030.obj",
+   "sha256": "89a4e022dea259fe672e8509d1cd5c5b6e4f516d0b19184b06bc6aa9011914d1"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_heave_030",
+   "path": "review/pose_heave_030.obj",
+   "sha256": "ff6c5e495f0c164b6f337a07c2898fcc9f7a00ece769abdd1129b743d83ca704"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_heave_060",
+   "path": "review/pose_heave_060.obj",
+   "sha256": "1c4d48dddcad6a34bee1f348e0693b71a67329bdc3c6f712c98c3e299b26e5a5"
+  },
+  {
+   "lowest_z_cm": 3.76,
+   "name": "pose_death_100",
+   "path": "review/pose_death_100.obj",
+   "sha256": "0dbbe67bdba17b4e1fab7ba4bb88a4cfdcad26c62a0d125ec84cf8f7f20e57c3"
+  }
+ ],
+ "revision": "ebs-kha-unt-003-concept-v1",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "ground-contact centre between the feet; the runtime owns translation"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     72.0
+    ],
+    "name": "body",
+    "parent": "root",
+    "purpose": "the low body the shell and limbs hang from"
+   },
+   {
+    "head_cm": [
+     -20.0,
+     0.0,
+     116.0
+    ],
+    "name": "slab_lower",
+    "parent": "body",
+    "purpose": "back-slab chain 1: the shell flexes here on the heave"
+   },
+   {
+    "head_cm": [
+     -40.0,
+     0.0,
+     172.0
+    ],
+    "name": "slab_upper",
+    "parent": "slab_lower",
+    "purpose": "back-slab chain 2: the crown of the shell"
+   },
+   {
+    "head_cm": [
+     46.0,
+     0.0,
+     84.0
+    ],
+    "name": "neck",
+    "parent": "body",
+    "purpose": "a SHORT protected neck; the head never leads the shell"
+   },
+   {
+    "head_cm": [
+     92.0,
+     0.0,
+     74.0
+    ],
+    "name": "head",
+    "parent": "neck",
+    "purpose": "the low head, tucked under the shell's front edge"
+   },
+   {
+    "head_cm": [
+     96.0,
+     -82.0,
+     64.0
+    ],
+    "name": "fl_hip",
+    "parent": "body",
+    "purpose": "fl limb: attachment at the body"
+   },
+   {
+    "head_cm": [
+     96.0,
+     -82.0,
+     64.0
+    ],
+    "name": "fl_upper",
+    "parent": "fl_hip",
+    "purpose": "fl limb: thick upper segment, pivoting at the hip"
+   },
+   {
+    "head_cm": [
+     96.0,
+     -86.92,
+     27.0
+    ],
+    "name": "fl_lower",
+    "parent": "fl_upper",
+    "purpose": "fl limb: short lower segment, pivoting at the knee"
+   },
+   {
+    "head_cm": [
+     96.0,
+     -86.92,
+     16.0
+    ],
+    "name": "fl_foot",
+    "parent": "fl_lower",
+    "purpose": "fl limb: the broad foot"
+   },
+   {
+    "head_cm": [
+     96.0,
+     82.0,
+     64.0
+    ],
+    "name": "fr_hip",
+    "parent": "body",
+    "purpose": "fr limb: attachment at the body"
+   },
+   {
+    "head_cm": [
+     96.0,
+     82.0,
+     64.0
+    ],
+    "name": "fr_upper",
+    "parent": "fr_hip",
+    "purpose": "fr limb: thick upper segment, pivoting at the hip"
+   },
+   {
+    "head_cm": [
+     96.0,
+     86.92,
+     27.0
+    ],
+    "name": "fr_lower",
+    "parent": "fr_upper",
+    "purpose": "fr limb: short lower segment, pivoting at the knee"
+   },
+   {
+    "head_cm": [
+     96.0,
+     86.92,
+     16.0
+    ],
+    "name": "fr_foot",
+    "parent": "fr_lower",
+    "purpose": "fr limb: the broad foot"
+   },
+   {
+    "head_cm": [
+     -96.0,
+     -82.0,
+     64.0
+    ],
+    "name": "rl_hip",
+    "parent": "body",
+    "purpose": "rl limb: attachment at the body"
+   },
+   {
+    "head_cm": [
+     -96.0,
+     -82.0,
+     64.0
+    ],
+    "name": "rl_upper",
+    "parent": "rl_hip",
+    "purpose": "rl limb: thick upper segment, pivoting at the hip"
+   },
+   {
+    "head_cm": [
+     -96.0,
+     -86.92,
+     27.0
+    ],
+    "name": "rl_lower",
+    "parent": "rl_upper",
+    "purpose": "rl limb: short lower segment, pivoting at the knee"
+   },
+   {
+    "head_cm": [
+     -96.0,
+     -86.92,
+     16.0
+    ],
+    "name": "rl_foot",
+    "parent": "rl_lower",
+    "purpose": "rl limb: the broad foot"
+   },
+   {
+    "head_cm": [
+     -96.0,
+     82.0,
+     64.0
+    ],
+    "name": "rr_hip",
+    "parent": "body",
+    "purpose": "rr limb: attachment at the body"
+   },
+   {
+    "head_cm": [
+     -96.0,
+     82.0,
+     64.0
+    ],
+    "name": "rr_upper",
+    "parent": "rr_hip",
+    "purpose": "rr limb: thick upper segment, pivoting at the hip"
+   },
+   {
+    "head_cm": [
+     -96.0,
+     86.92,
+     27.0
+    ],
+    "name": "rr_lower",
+    "parent": "rr_upper",
+    "purpose": "rr limb: short lower segment, pivoting at the knee"
+   },
+   {
+    "head_cm": [
+     -96.0,
+     86.92,
+     16.0
+    ],
+    "name": "rr_foot",
+    "parent": "rr_lower",
+    "purpose": "rr limb: the broad foot"
+   }
+  ],
+  "policy": "The card's heavy low-slung plan: four thick limb chains, a short protected neck, and a back-slab chain that flexes on the heave. Weighted toward the limbs and the back, the inverse of the Resonant's plan and unlike the Riftstalker's long-limbed one. No root motion."
+ },
+ "scale_basis": {
+  "basis": "larger than the Riftstalker's 201 x 295, as a population-3 assault unit against a population-2 skirmisher",
+  "body_length_cm": 330.0,
+  "canon": "SPEC-UNIT-007: a broad, low assault warform whose back is a slab of layered heat-holding strata; thick forelimbs; head low and protected",
+  "gameplay": "Content/Data/Source/units.json ka_cairnback",
+  "standing_height_cm": 228.0
+ },
+ "silhouette_first": {
+  "directive": "Owner ruling 2026-09-07: establish a contrasting silhouette BEFORE detailing.",
+  "how": "The shell profile was defined first and everything else was fitted under it. The two contrast measures below are asserted by test, and a monochrome tactical comparison against the Riftstalker's rendered baseline is produced as evidence rather than asserted.",
+  "measures": {
+   "leg_share": {
+    "cairnback": 0.2368,
+    "riftstalker": 0.69,
+    "separation": 0.4532
+   },
+   "requirement": "distinguishable in MONOCHROME at tactical distance (owner ruling 2026-09-07)",
+   "width_over_length": {
+    "cairnback": 0.7441,
+    "riftstalker": 0.26,
+    "separation": 0.4841
+   }
+  }
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/cairnback-review/cairnback-candidate.png",
+  "canon": "DevelopmentBible.md SPEC-UNIT-007",
+  "concepts": [
+   "EBS-CON-KHA-UNT-003"
+  ],
+  "gameplay": "Content/Data/Source/units.json ka_cairnback"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "states": {
+  "chipped": "strata visibly broken, per canon's 'damage chips strata'",
+  "intact": "the shell whole"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py",
+  "silhouette": "ArtSource/tools/ebs_silhouette.py",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py"
+ },
+ "units": {
+  "axes": "+X forward, +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "ground-contact centre between the feet"
+ }
+}

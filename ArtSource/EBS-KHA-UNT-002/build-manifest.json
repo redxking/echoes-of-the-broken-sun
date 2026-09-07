@@ -343,7 +343,7 @@
     "MI_EBS_KHA_Strata",
     "MI_EBS_KHA_Amber"
    ],
-   "sha256": "e072ec43e3ee9c4d10a5f6bed1f345da45bd22a1122c077b2d7457512df6c4da",
+   "sha256": "0f224f73b675e8523abf54115ece6b10fe492e41d4899453b00ebfcbaf33d076",
    "sockets": [
     {
      "bone": "caster_pitch",
@@ -443,7 +443,7 @@
     "MI_EBS_KHA_Strata",
     "MI_EBS_KHA_Amber"
    ],
-   "sha256": "4236f61a7d2f60ae5df94bd06df517c974422a5197ab923a9a549d138790008c",
+   "sha256": "31a870e53a15336a3031ce27f789b2caa7830ba20ef26c704d998435744e6333",
    "sockets": [
     {
      "bone": "caster_pitch",
@@ -534,7 +534,8 @@
    "scenes/pose_fire_on_the_move_025.json",
    "scenes/pose_sidestep_044.json",
    "scenes/pose_molt_050.json",
-   "scenes/pose_death_100.json"
+   "scenes/pose_death_100.json",
+   "scenes/silhouette.json"
   ]
  },
  "review_assemblies": [
@@ -563,10 +564,10 @@
    "triangles": 346
   },
   {
-   "lowest_z_cm": 13.59,
+   "lowest_z_cm": 1.66,
    "name": "pose_move_025",
    "path": "review/pose_move_025.obj",
-   "sha256": "6810084fe2d4f0c26235a8c38439dc9a3c29aba50187b0f3164f4d7faad92e60"
+   "sha256": "7d11033c41b1a00ff0e11a75ede2b467ba3f28aa0d54a92dc3b7eacdb6b9ccb5"
   },
   {
    "lowest_z_cm": 8.28,
@@ -575,10 +576,10 @@
    "sha256": "929b0a115b0a15632dcf34774a61be496624c34bd329f104c7ea04d237794b7a"
   },
   {
-   "lowest_z_cm": 13.59,
+   "lowest_z_cm": 1.66,
    "name": "pose_fire_on_the_move_025",
    "path": "review/pose_fire_on_the_move_025.obj",
-   "sha256": "3ff981b04bc299c962b6bcd70fd78d97478f77151f0b3b17da502e9d29c72089"
+   "sha256": "fae4cbad237488e3d9d93cc9ec5506c00b1ed5ea5da90ac3fc02187b0a7daf37"
   },
   {
    "lowest_z_cm": 1.09,
