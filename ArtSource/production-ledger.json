@@ -920,6 +920,13 @@
    "package": "EBS-PKG-KHA-RIFTSTALKER",
    "finding": "In a headless -RenderOffScreen run texture streaming leaves only the 32x32 mips resident: the four 2048^2 maps read back as 32x32 at capture time although they imported at 2048. A capture through them would show a blurred low mip and pass as 'textured'.",
    "rule": "Set never_stream on textures imported for a headless capture, and record the resident size in the capture report."
+  },
+  {
+   "id": "PF-020",
+   "date": "2026-09-07",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "Three captures of the textured Riftstalker reported a 'lifted, greenish body' at 0.8-0.9x the ground's brightness. A lit-shading bisection (flat 0.045 albedo -> baked base -> +normal -> +MRE -> +specular 0) rendered the body dark and warm in every variant (0.18-0.29x the ground), and a bisection of the ART graph itself (base+normal+MRE, +team lerp, +window lerp, +emissive) showed the team lerp driven by StateMask.B was the single step that lifted it. StateMask.B was correct: shell_01, the crest, was a whole-shell team carrier and rendered the team colour BY DESIGN - and the fixed probe region sat on it. Off the crest the body measured 0.33-0.42x the ground; the crest 1.9x.",
+   "rule": "Bisect by WIRING, not only by parameters: instance-parameter variants (team black, emissive 0) could not isolate a lerp whose alpha is a texture channel. Place probes on surfaces that are not state or ownership carriers, or read the carrier deliberately. And a whole-shell team carrier deletes the surface identity on the most visible face: carry ownership on a BAND (shell_01 middle 40%) plus the prow."
   }
  ],
  "owner_rulings": [

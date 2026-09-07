@@ -1703,7 +1703,7 @@
    "striker_molt:LOD0"
   ],
   "path": "bake-manifest.json",
-  "sha256": "805350a68a8b7f64287cfd40f66920c2e44861634041ea4b966417b2d76fb97c",
+  "sha256": "35ed01b1901eb81b95338989545703bdd3d24b309b0e9491a343989b3541a60a",
   "size": 2048,
   "used_fraction": 0.8102,
   "uv1": "per-polygon lightmap cells (unchanged)"

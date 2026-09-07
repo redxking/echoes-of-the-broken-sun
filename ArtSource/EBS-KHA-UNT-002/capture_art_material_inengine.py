@@ -61,6 +61,23 @@ for key, (fname, srgb, is_normal) in maps.items():
 
 # --- art material ---------------------------------------------------------------------------
 lib = unreal.MaterialEditingLibrary
+report["connections"] = {"ok": 0, "failed": []}
+
+def connect(src, src_pin, dst, dst_pin):
+    ok = lib.connect_material_expressions(src, src_pin, dst, dst_pin)
+    if ok:
+        report["connections"]["ok"] += 1
+    else:
+        report["connections"]["failed"].append(f"{src.get_name()}.{src_pin or 'out'} -> {dst.get_name()}.{dst_pin}")
+    return ok
+
+def connect_prop(src, src_pin, prop):
+    ok = lib.connect_material_property(src, src_pin, prop)
+    if ok:
+        report["connections"]["ok"] += 1
+    else:
+        report["connections"]["failed"].append(f"{src.get_name()}.{src_pin or 'out'} -> {prop}")
+    return ok
 full = f"{MAT_DIR}/M_EBS_KHA_UNT_002_Art"
 if unreal.EditorAssetLibrary.does_asset_exist(full):
     unreal.EditorAssetLibrary.delete_asset(full)
@@ -89,76 +106,78 @@ span.set_editor_property("r", SWEEP_HIGH - SWEEP_LOW)
 high = lib.create_material_expression(mat, unreal.MaterialExpressionConstant, -1400, 1180)
 high.set_editor_property("r", SWEEP_HIGH)
 scaled = lib.create_material_expression(mat, unreal.MaterialExpressionMultiply, -1150, 1050)
-lib.connect_material_expressions(progress, "", scaled, "A")
-lib.connect_material_expressions(span, "", scaled, "B")
+connect(progress, "", scaled, "A")
+connect(span, "", scaled, "B")
 threshold = lib.create_material_expression(mat, unreal.MaterialExpressionSubtract, -950, 1080)
-lib.connect_material_expressions(high, "", threshold, "A")
-lib.connect_material_expressions(scaled, "", threshold, "B")
+connect(high, "", threshold, "A")
+connect(scaled, "", threshold, "B")
 one = lib.create_material_expression(mat, unreal.MaterialExpressionConstant, -950, 850)
 one.set_editor_property("r", 1.0)
 zero = lib.create_material_expression(mat, unreal.MaterialExpressionConstant, -950, 920)
 swept = lib.create_material_expression(mat, unreal.MaterialExpressionIf, -700, 900)
-lib.connect_material_expressions(vc, "R", swept, "A")
-lib.connect_material_expressions(threshold, "", swept, "B")
-lib.connect_material_expressions(one, "", swept, "A > B")
-lib.connect_material_expressions(one, "", swept, "A == B")
-lib.connect_material_expressions(zero, "", swept, "A < B")
+connect(vc, "R", swept, "A")
+connect(threshold, "", swept, "B")
+connect(one, "", swept, "A > B")
+connect(one, "", swept, "A == B")
+connect(zero, "", swept, "A < B")
 
 # team tint: lerp(base, TeamColor, StateMask.B)
 team = lib.create_material_expression(mat, unreal.MaterialExpressionVectorParameter, -1150, 350)
 team.set_editor_property("parameter_name", "TeamColor")
 team.set_editor_property("default_value", unreal.LinearColor(0.16, 0.86, 0.96, 1.0))
 teamed = lib.create_material_expression(mat, unreal.MaterialExpressionLinearInterpolate, -900, -350)
-lib.connect_material_expressions(base, "", teamed, "A")
-lib.connect_material_expressions(team, "", teamed, "B")
-lib.connect_material_expressions(state, "B", teamed, "Alpha")
+connect(base, "", teamed, "A")
+connect(team, "", teamed, "B")
+connect(state, "B", teamed, "Alpha")
 
 # molt-window skin: while swept AND progress < 1, TINT the base toward the translucent core tone
 core_tone = lib.create_material_expression(mat, unreal.MaterialExpressionConstant3Vector, -900, -200)
 core_tone.set_editor_property("constant", unreal.LinearColor(0.55, 0.28, 0.10, 1.0))
 window = lib.create_material_expression(mat, unreal.MaterialExpressionMultiply, -700, 700)
 inv_p = lib.create_material_expression(mat, unreal.MaterialExpressionOneMinus, -950, 1250)
-lib.connect_material_expressions(progress, "", inv_p, "")
-lib.connect_material_expressions(swept, "", window, "A")
-lib.connect_material_expressions(inv_p, "", window, "B")
+connect(progress, "", inv_p, "")
+connect(swept, "", window, "A")
+connect(inv_p, "", window, "B")
 half = lib.create_material_expression(mat, unreal.MaterialExpressionConstant, -700, 780)
 half.set_editor_property("r", 0.45)
 window_soft = lib.create_material_expression(mat, unreal.MaterialExpressionMultiply, -550, 720)
-lib.connect_material_expressions(window, "", window_soft, "A")
-lib.connect_material_expressions(half, "", window_soft, "B")
+connect(window, "", window_soft, "A")
+connect(half, "", window_soft, "B")
 skinned = lib.create_material_expression(mat, unreal.MaterialExpressionLinearInterpolate, -450, -300)
-lib.connect_material_expressions(teamed, "", skinned, "A")
-lib.connect_material_expressions(core_tone, "", skinned, "B")
-lib.connect_material_expressions(window_soft, "", skinned, "Alpha")
-lib.connect_material_property(skinned, "", unreal.MaterialProperty.MP_BASE_COLOR)
+connect(teamed, "", skinned, "A")
+connect(core_tone, "", skinned, "B")
+connect(window_soft, "", skinned, "Alpha")
+connect_prop(skinned, "", unreal.MaterialProperty.MP_BASE_COLOR)
 
 # normal, roughness, metallic straight from the stack
-lib.connect_material_property(normal, "", unreal.MaterialProperty.MP_NORMAL)
-lib.connect_material_property(mre, "G", unreal.MaterialProperty.MP_ROUGHNESS)
-lib.connect_material_property(mre, "R", unreal.MaterialProperty.MP_METALLIC)
+connect_prop(normal, "", unreal.MaterialProperty.MP_NORMAL)
+connect_prop(mre, "G", unreal.MaterialProperty.MP_ROUGHNESS)
+connect_prop(mre, "R", unreal.MaterialProperty.MP_METALLIC)
 
 # emissive: MRE.B x Broken-Sun Amber x strength; brighter through the window (swept x (1-p))
 amber = lib.create_material_expression(mat, unreal.MaterialExpressionConstant3Vector, -900, 150)
 amber.set_editor_property("constant", unreal.LinearColor(AMBER[0], AMBER[1], AMBER[2], 1.0))
 strength = lib.create_material_expression(mat, unreal.MaterialExpressionScalarParameter, -900, 250)
 strength.set_editor_property("parameter_name", "EmissiveStrength")
-strength.set_editor_property("default_value", 4.0)
+strength.set_editor_property("default_value", 0.5)  # 4.0 and 1.2 both clipped the seams to white under EV+11; they must read amber
 e1 = lib.create_material_expression(mat, unreal.MaterialExpressionMultiply, -650, 180)
-lib.connect_material_expressions(mre, "B", e1, "A")
-lib.connect_material_expressions(amber, "", e1, "B")
+connect(mre, "B", e1, "A")
+connect(amber, "", e1, "B")
 e2 = lib.create_material_expression(mat, unreal.MaterialExpressionMultiply, -450, 200)
-lib.connect_material_expressions(e1, "", e2, "A")
-lib.connect_material_expressions(strength, "", e2, "B")
+connect(e1, "", e2, "A")
+connect(strength, "", e2, "B")
 boost = lib.create_material_expression(mat, unreal.MaterialExpressionAdd, -450, 500)
-lib.connect_material_expressions(one, "", boost, "A")
-lib.connect_material_expressions(window, "", boost, "B")
+connect(one, "", boost, "A")
+connect(window, "", boost, "B")
 e3 = lib.create_material_expression(mat, unreal.MaterialExpressionMultiply, -250, 250)
-lib.connect_material_expressions(e2, "", e3, "A")
-lib.connect_material_expressions(boost, "", e3, "B")
-lib.connect_material_property(e3, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+connect(e2, "", e3, "A")
+connect(boost, "", e3, "B")
+connect_prop(e3, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 lib.recompile_material(mat)
 unreal.EditorAssetLibrary.save_loaded_asset(mat)
 report["material"] = mat.get_path_name()
+if report["connections"]["failed"]:
+    report["errors"].append("material connections failed: " + "; ".join(report["connections"]["failed"]))
 report["parameters"] = {"scalar": [str(p) for p in lib.get_scalar_parameter_names(mat)],
                         "vector": [str(p) for p in lib.get_vector_parameter_names(mat)]}
 
@@ -231,7 +250,11 @@ def sample(x_frac, y_frac):
     return (px.r, px.g, px.b)
 
 def creature_and_ground():
-    pts = [sample(0.45 + 0.05 * i, 0.40 + 0.04 * j) for i in range(3) for j in range(3)]
+    # Probe the crest ABOVE the team band (shell_01, sweep order 0.60): it is charcoal at tick 0 and
+    # takes the window tint at mid-progress, so it is the one region that both reads the body and
+    # changes between the t000 and t040 instances. The band itself reads the team colour by design;
+    # the lower shells and legs have sweep orders the mid-window threshold never reaches.
+    pts = [sample(0.57 + 0.04 * i, 0.225 + 0.015 * j) for i in range(4) for j in range(3)]
     lum = sum(0.2126 * r + 0.7152 * g + 0.0722 * b for r, g, b in pts) / len(pts)
     return lum, sample(0.06, 0.06), pts
 
@@ -275,12 +298,14 @@ def bracket_exposure():
     return {"bracket": rows, "chosen_bias_ev": chosen}
 
 def ready():
-    """Gate on the property the capture exists to show: the t000 and t080 instances must render
-    DIFFERENTLY on the creature, and the charcoal body must read darker than the ground. A material
-    whose textures are still compiling renders the default material - identical across instances and
-    as bright as the ground - which an exposure-dependent colour window let through."""
+    """Gate on the property the capture exists to show: the t000 and t040 instances must render
+    DIFFERENTLY on the creature. NOT t000 vs t080: the window term swept x (1 - progress) is zero at
+    BOTH ends by design, so those two are identical in material and differ only in geometry; a gate
+    on them waited out its full timeout once. A material whose textures are still compiling renders
+    the default material - identical across instances - which an exposure-dependent colour window
+    let through."""
     aim(520.0, -18.0)
-    deadline = time.time() + 480.0
+    deadline = time.time() + 240.0
     polls = 0
     history = []
     while time.time() < deadline:
@@ -288,21 +313,21 @@ def ready():
         for _ in range(2):
             comp.capture_scene(); time.sleep(0.1)
         l0, g0, p0 = creature_and_ground()
-        show("baseline", 80)
+        show("baseline", 40)
         for _ in range(2):
             comp.capture_scene(); time.sleep(0.1)
-        l80, g80, p80 = creature_and_ground()
+        l80, g80, p80 = creature_and_ground()  # the mid-window instance
         glum = 0.2126 * g0[0] + 0.7152 * g0[1] + 0.0722 * g0[2]
         polls += 1
         differs = abs(l80 - l0) > 6.0
-        dark_body = l0 < 0.6 * glum
         history.append([round(l0, 1), round(l80, 1), round(glum, 1)])
-        if differs and dark_body:
-            return {"ready": True, "polls": polls, "t000_creature": round(l0, 1), "t080_creature": round(l80, 1),
-                    "ground": round(glum, 1), "seconds": round(time.time() - (deadline - 480.0), 1)}
+        if differs:
+            return {"ready": True, "polls": polls, "t000_creature": round(l0, 1), "t040_creature": round(l80, 1),
+                    "ground": round(glum, 1), "body_over_ground": round(l0 / max(glum, 1.0), 2),
+                    "seconds": round(time.time() - (deadline - 480.0), 1)}
         time.sleep(3.0)
     return {"ready": False, "polls": polls, "history_tail": history[-5:],
-            "note": "instances never diverged or the body never read darker than the ground"}
+            "note": "the t000 and t040 instances never rendered differently"}
 
 report["texture_resident_size_before_capture"] = {k: [t.blueprint_get_size_x(), t.blueprint_get_size_y()] for k, t in textures.items()}
 report["exposure"] = bracket_exposure()

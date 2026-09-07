@@ -58,7 +58,7 @@ import zlib
 
 AUTHOR = "Angelis Pseftis"
 TOOL_NAME = "ebs_texbake.py"
-TOOL_REVISION = "ebs-texbake-v2"  # v2: kharuun_obsidian / kharuun_amber families, unit StateMask, MoltBlend map, emissive-area accounting
+TOOL_REVISION = "ebs-texbake-v3"  # v3: ember-dark amber base (glow on the emissive), team_band rule; v2: kharuun families, unit StateMask, MoltBlend, emissive-area accounting
 
 ALL_MAPS = ("basecolor", "normal", "mre", "statemask", "debug")
 MAP_SUFFIX = {
@@ -324,12 +324,13 @@ class ChartJob:
     __slots__ = (
         "id", "component", "slot", "family", "rx", "ry", "rw", "rh", "cell_w", "cell_h",
         "cells", "origin", "u_dir", "v_dir", "normal", "size_cm", "poly_px", "edges",
-        "rules", "collar_k", "bbox", "n_offset", "meshes", "vertex_color", "team",
+        "rules", "collar_k", "bbox", "n_offset", "meshes", "vertex_color", "team", "team_band",
     )
 
     def __init__(self) -> None:
         self.vertex_color = None
         self.team = False
+        self.team_band = None
         self.rules: list[str] = []
         self.collar_k = 0
         self.n_offset = 0.0
@@ -456,8 +457,13 @@ def prepare_charts(manifest: dict, size: int) -> tuple[list[ChartJob], float, in
         vc = chart.get("vertex_color")
         job.vertex_color = tuple(float(c) for c in vc) if vc else None
         job.team = job.component in set(manifest.get("team_components", []))
+        # Optional band: {component: [v_start, v_end]} in 0..1 of the chart's v extent. A whole shell
+        # as a carrier replaced the obsidian identity on the most visible surface; a band keeps the
+        # ownership read and the surface.
+        band = manifest.get("team_band", {}).get(job.component)
+        job.team_band = (float(band[0]), float(band[1])) if band else None
         if job.team:
-            job.rules.append("team_carrier")
+            job.rules.append("team_band" if band else "team_carrier")
         xs = [p[0] for p in job.poly_px]
         ys = [p[1] for p in job.poly_px]
         if xs:
@@ -858,9 +864,13 @@ def _bake_chart(job: ChartJob, res: BakeResult, density: float, gutter: int, ext
                     core = 0.0
                 flicker = fbm_(u * 40.0, v * 40.0, seed_k + 9, 3)
                 glow = 0.55 + 0.45 * core
-                cr = AMBER_KEY[0] * glow * (0.85 + 0.15 * flicker)
-                cg = AMBER_KEY[1] * glow * (0.85 + 0.15 * flicker)
-                cb = AMBER_KEY[2] * glow * 0.9
+                # The BASE is ember-dark (the Art Direction vein weighting, 0.50/0.22/0.06, scaled): a pale
+                # amber base rendered near-white under the amber key at any emissive strength. The glow
+                # itself rides the emissive mask, not the albedo.
+                ember_scale = 0.35 + 0.35 * core
+                cr = AMBER_EMBER[0] * ember_scale * (0.85 + 0.15 * flicker)
+                cg = AMBER_EMBER[1] * ember_scale * (0.85 + 0.15 * flicker)
+                cb = AMBER_EMBER[2] * ember_scale
                 metallic = 0.0
                 rough = 0.26 + (1.0 - core) * 0.2
                 emissive = 0.55 + 0.45 * core
@@ -907,7 +917,11 @@ def _bake_chart(job: ChartJob, res: BakeResult, density: float, gutter: int, ext
                     if sg < 0.0:
                         sg = 0.0
             if job.team:
-                sb = 1.0
+                if job.team_band is None:
+                    sb = 1.0
+                else:
+                    tv = lv_cm / size_h if size_h > 1e-9 else 0.0
+                    sb = 1.0 if job.team_band[0] <= tv <= job.team_band[1] else 0.0
 
             if extra_height is not None:
                 height += extra_height(job, px, py, lu_cm, lv_cm, (Px, Py, Pz))

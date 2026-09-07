@@ -325,7 +325,8 @@ def kharuun_charts():
 def kharuun_manifest(charts, blend=0):
     m = make_manifest(charts)
     m["slot_families"] = KHA_SLOTS
-    m["team_components"] = ["prow"]
+    m["team_components"] = ["prow", "shell_02"]
+    m["team_band"] = {"shell_02": [0.35, 0.65]}
     if blend:
         m["molt_blend_size"] = blend
     return m
@@ -347,6 +348,7 @@ class KharuunBake(unittest.TestCase):
         self.assertEqual(rc.get("kharuun_seam"), 1)
         self.assertEqual(rc.get("kharuun_caster_heat"), 1)
         self.assertEqual(rc.get("team_carrier"), 1)
+        self.assertEqual(rc.get("team_band"), 1)
 
     def test_obsidian_is_a_charcoal_body_with_no_emissive(self):
         # Charcoal anchor: 0.02-0.07 linear. Sample the plate away from its gutters.
@@ -413,11 +415,13 @@ class KharuunBake(unittest.TestCase):
         for rect, comp, r_expect in ((SHELL, "shell_02", 0.525), (PROW, "prow", 0.85), (FOOT, "rl_foot", 0.0)):
             x, y, w, h = rect
             self.assertAlmostEqual(px(self.res.state, x + w // 2, y + h // 2)[0] / 255.0, r_expect, delta=0.004, msg=comp)
-        # team carrier only on the prow
+        # team carrier: the prow in full, the shell only in a band across its middle
         x, y, w, h = PROW
         self.assertEqual(px(self.res.state, x + w // 2, y + h // 2)[2], 255)
         x, y, w, h = SHELL
-        self.assertEqual(px(self.res.state, x + w // 2, y + h // 2)[2], 0)
+        self.assertEqual(px(self.res.state, x + w // 2, y + h // 2)[2], 255, "inside the band")
+        self.assertEqual(px(self.res.state, x + w // 2, y + 4)[2], 0, "above the band")
+        self.assertEqual(px(self.res.state, x + w // 2, y + h - 5)[2], 0, "below the band")
         # core blend only on new growth, peaking at the chart centre
         x, y, w, h = PLATE_MOLT
         self.assertGreater(px(self.res.state, x + w // 2, y + h // 2)[1], 230)

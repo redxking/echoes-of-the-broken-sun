@@ -40266,9 +40266,10 @@
   "caster_slot": "kharuun_amber with StateMask G heat gradient breech -> muzzle",
   "every chart": "StateMask R mirrors the authored COLOR_0.R (molt sweep order); COLOR_0 stays authoritative",
   "molt_plate_*|molt_striker_vane_*": "kharuun_fresh_growth: fewer fractures, lighter, smoother; StateMask G core blend",
-  "prow|shell_01": "team_carrier: StateMask B = 1 (TeamColor mechanism, disjoint from COLOR_0)",
+  "prow": "team_carrier: StateMask B = 1 on the whole face (TeamColor mechanism, disjoint from COLOR_0)",
   "seam_*|prow_seam": "kharuun_amber: the ONLY emissive (Broken-Sun Amber), brightest on the centre line",
-  "shell_*|underbody|prow|caster_housing|legs": "kharuun_obsidian: opaque volcanic value mask over a charcoal body, warped strata bands, fractured cell field, NO emissive"
+  "shell_*|underbody|prow|caster_housing|legs": "kharuun_obsidian: opaque volcanic value mask over a charcoal body, warped strata bands, fractured cell field, NO emissive",
+  "shell_01": "team_band: StateMask B = 1 across the crest's middle 40% only"
  },
  "emissive_ceiling": {
   "fraction": 0.15,
@@ -40283,6 +40284,12 @@
  "slot_families": {
   "MI_EBS_KHA_Amber": "kharuun_amber",
   "MI_EBS_KHA_Strata": "kharuun_obsidian"
+ },
+ "team_band": {
+  "shell_01": [
+   0.3,
+   0.7
+  ]
  },
  "team_components": [
   "prow",

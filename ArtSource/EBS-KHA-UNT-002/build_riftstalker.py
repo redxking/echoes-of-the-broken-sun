@@ -532,6 +532,10 @@ def pack_uv_atlas(meshes_by_key: dict, bake_manifest_path: str) -> tuple:
         "card": CARD,
         "slot_families": {STRATA: "kharuun_obsidian", AMBER: "kharuun_amber"},
         "team_components": list(TEAM_COMPONENTS),
+        # the crest carries ownership as a BAND across its middle 40%, not as a whole shell: the first
+        # in-engine capture showed a whole-crest carrier deleting the obsidian identity on the most
+        # visible surface, while a band keeps the tactical read (SPEC-ART-001) and the surface
+        "team_band": {"shell_01": [0.30, 0.70]},
         "molt_blend_size": MOLT_BLEND_SIZE,
         "decal_rules": {
             "shell_*|underbody|prow|caster_housing|legs": ("kharuun_obsidian: opaque volcanic value mask over a charcoal "
@@ -540,7 +544,8 @@ def pack_uv_atlas(meshes_by_key: dict, bake_manifest_path: str) -> tuple:
             "*_foot|*_lower": "kharuun_foot_wear: ground dust in the bottom 25 cm",
             "seam_*|prow_seam": "kharuun_amber: the ONLY emissive (Broken-Sun Amber), brightest on the centre line",
             "caster_slot": "kharuun_amber with StateMask G heat gradient breech -> muzzle",
-            "prow|shell_01": "team_carrier: StateMask B = 1 (TeamColor mechanism, disjoint from COLOR_0)",
+            "prow": "team_carrier: StateMask B = 1 on the whole face (TeamColor mechanism, disjoint from COLOR_0)",
+            "shell_01": "team_band: StateMask B = 1 across the crest's middle 40% only",
             "every chart": "StateMask R mirrors the authored COLOR_0.R (molt sweep order); COLOR_0 stays authoritative"},
         "emissive_ceiling": {"fraction": 0.15, "source": f"{CARD} .MAT_RULE and REL-ART-029",
                              "measured_on": "the baked MRE.B mask by painted polygon area (bake-report.json emissive)"}})
