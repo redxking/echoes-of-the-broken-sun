@@ -1,0 +1,746 @@
+{
+ "acceptance": {
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "PENDING \u2014 built against the provisional card; final technical acceptance waits on that card being incorporated into the authoritative requirements and its checks passing, and on the niche count gap being resolved"
+ },
+ "asset_name": "SK_EBS_KHA_BLD_003",
+ "author": "Angelis Pseftis",
+ "bind_counts": {
+  "niche_01": 56,
+  "niche_02": 56,
+  "niche_03": 56,
+  "niche_04": 56,
+  "niche_05": 56,
+  "niche_06": 56,
+  "root": 826
+ },
+ "budgets": {
+  "amber_area_fraction_lod0": 0.11159,
+  "amber_cap": 0.15,
+  "amber_measure": "surface area, per REL-ART-029; the cap is a ceiling, not a target",
+  "amber_within_cap": true,
+  "cap_scope": "the complete assembly including every niche",
+  "cap_source": "REL-BLD-016.KA.BASIN.ASSET (PROVISIONAL)",
+  "lod0_cap": 8000,
+  "lod0_triangles": 1162,
+  "lod0_within_cap": true,
+  "lod1_cap": 3500,
+  "lod1_triangles": 784,
+  "lod1_within_cap": true,
+  "molting_state_triangles": 1250
+ },
+ "clips": [
+  {
+   "bones": [
+    "niche_01",
+    "niche_02",
+    "niche_03",
+    "niche_04",
+    "niche_05",
+    "niche_06"
+   ],
+   "duration_s": 4.0,
+   "loop": true,
+   "name": "idle",
+   "purpose": "resting: the niches are still and the pool holds its low glow",
+   "ticks": 80
+  },
+  {
+   "bones": [
+    "niche_01",
+    "niche_02",
+    "niche_03",
+    "niche_04",
+    "niche_05",
+    "niche_06"
+   ],
+   "duration_s": 4.0,
+   "loop": true,
+   "name": "growing",
+   "purpose": "growing: the niche stone is still. What changes in this state is the POOL'S EMISSIVE, which is a material parameter and not geometry; the clip exists so the runtime has a named state to play",
+   "ticks": 80
+  },
+  {
+   "bones": [
+    "niche_01",
+    "niche_02",
+    "niche_03",
+    "niche_04",
+    "niche_05",
+    "niche_06"
+   ],
+   "duration_s": 1.0,
+   "loop": false,
+   "name": "molt_start",
+   "purpose": "a warform steps into a niche: that niche's stone takes the weight and settles a little",
+   "ticks": 20
+  },
+  {
+   "bones": [
+    "niche_01",
+    "niche_02",
+    "niche_03",
+    "niche_04",
+    "niche_05",
+    "niche_06"
+   ],
+   "duration_s": 1.0,
+   "loop": false,
+   "name": "molt_complete",
+   "purpose": "canon's crack-and-settle at completion: the niche stone drops sharply, then recovers",
+   "ticks": 20
+  },
+  {
+   "bones": [
+    "niche_01",
+    "niche_02",
+    "niche_03",
+    "niche_04",
+    "niche_05",
+    "niche_06"
+   ],
+   "duration_s": 0.0,
+   "loop": false,
+   "name": "restore",
+   "purpose": "single-frame rest pose for reconstruction from saved state",
+   "ticks": 0
+  }
+ ],
+ "component_inventory": {
+  "bones": {
+   "built": 7,
+   "contract": "root plus one bone per niche (6)",
+   "names": [
+    "root",
+    "niche_01",
+    "niche_02",
+    "niche_03",
+    "niche_04",
+    "niche_05",
+    "niche_06"
+   ]
+  },
+  "matrix_pool": {
+   "built": true,
+   "contract": "one amber pool, 0.75 of the bowl across",
+   "diameter_over_basin": 0.75
+  },
+  "molt_niches": {
+   "closes": false,
+   "contract": 6,
+   "floors": 6,
+   "lit_lips": 0,
+   "note": "OPEN alcoves: the candidate shows a warform standing in an open niche",
+   "ring_spurs": 6,
+   "walls": 6
+  },
+  "shallow_bowl": {
+   "contract": "3 rim courses plus a floor",
+   "courses": 3,
+   "floor": true
+  },
+  "sockets": {
+   "built": [
+    "Molt_Niche_01",
+    "Molt_Niche_02",
+    "Molt_Niche_03",
+    "Molt_Niche_04",
+    "Molt_Niche_05",
+    "Molt_Niche_06",
+    "Pool_Center",
+    "Rally_Default",
+    "Target_Anchor_Center"
+   ],
+   "contract": [
+    "Molt_Niche_01",
+    "Molt_Niche_02",
+    "Molt_Niche_03",
+    "Molt_Niche_04",
+    "Molt_Niche_05",
+    "Molt_Niche_06",
+    "Pool_Center",
+    "Rally_Default",
+    "Target_Anchor_Center"
+   ]
+  },
+  "states": {
+   "built": [
+    "idle",
+    "growing",
+    "molting",
+    "damaged",
+    "destroyed"
+   ],
+   "contract": [
+    "idle",
+    "growing",
+    "molting",
+    "damaged",
+    "destroyed"
+   ]
+  },
+  "tracks": {
+   "built": [
+    "idle",
+    "growing",
+    "molt_start",
+    "molt_complete",
+    "restore"
+   ],
+   "contract": [
+    "idle",
+    "growing",
+    "molt_start",
+    "molt_complete",
+    "restore"
+   ]
+  }
+ },
+ "concept_measurements": {
+  "basin_diameter_cm": 760.0,
+  "bounds_cm": [
+   [
+    -394.0,
+    -380.71,
+    0.0
+   ],
+   [
+    394.0,
+    380.71,
+    128.0
+   ]
+  ],
+  "everything_inside_the_footprint": true,
+  "footprint_cm": 800.0,
+  "footprint_tiles": [
+   4,
+   4
+  ],
+  "height_cm": 128.0,
+  "height_over_basin_diameter": 0.1684,
+  "max_extent_cm": 394.0,
+  "niche_count": 6,
+  "pool_diameter_cm": 570.0,
+  "pool_over_basin": 0.75,
+  "rim_diameter_cm": 660.0
+ },
+ "creator": "Angelis Pseftis",
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Two slots: faceted coursed strata for the bowl, rim and niche walls, and amber for the matrix pool and the occupied niche floors, which are the only emissive. The pool is allowed to dominate the amber budget because canon makes it the asset's identity.",
+ "material_slots": [
+  "MI_EBS_KHA_Strata",
+  "MI_EBS_KHA_Amber"
+ ],
+ "occupancy_tell": {
+  "idle_lit": [],
+  "mechanism": "the per-niche floor moves into the amber slot",
+  "molting_lit": [
+   1,
+   4
+  ]
+ },
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -394.0,
+     -380.7140090910689,
+     0.0
+    ],
+    [
+     394.0,
+     380.7140090910689,
+     128.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Amber": 46,
+    "MI_EBS_KHA_Strata": 1116
+   },
+   "clips": [
+    "idle",
+    "growing",
+    "molt_start",
+    "molt_complete",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_BLD_003",
+   "path": "export/SK_EBS_KHA_BLD_003_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "18bf99746fc5fc7855741cc072a7a1778a6742715e45223b8682aa604ee8d2e9",
+   "sockets": [
+    {
+     "bone": "root",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      92.0
+     ],
+     "purpose": "targeting and selection anchor over the pool",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Rally_Default",
+     "position_cm": [
+      -530.0,
+      0.0,
+      0.0
+     ],
+     "purpose": "default rally point, clear of the niches",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "root",
+     "name": "Pool_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      14.0
+     ],
+     "purpose": "the matrix pool surface: the growing effect anchor",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "niche_01",
+     "name": "Molt_Niche_01",
+     "position_cm": [
+      363.0,
+      0.0,
+      28.0
+     ],
+     "purpose": "where a warform stands to molt in niche 1",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "niche_02",
+     "name": "Molt_Niche_02",
+     "position_cm": [
+      181.5,
+      314.37,
+      28.0
+     ],
+     "purpose": "where a warform stands to molt in niche 2",
+     "yaw_deg": 60.0
+    },
+    {
+     "bone": "niche_03",
+     "name": "Molt_Niche_03",
+     "position_cm": [
+      -181.5,
+      314.37,
+      28.0
+     ],
+     "purpose": "where a warform stands to molt in niche 3",
+     "yaw_deg": 120.0
+    },
+    {
+     "bone": "niche_04",
+     "name": "Molt_Niche_04",
+     "position_cm": [
+      -363.0,
+      0.0,
+      28.0
+     ],
+     "purpose": "where a warform stands to molt in niche 4",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "niche_05",
+     "name": "Molt_Niche_05",
+     "position_cm": [
+      -181.5,
+      -314.37,
+      28.0
+     ],
+     "purpose": "where a warform stands to molt in niche 5",
+     "yaw_deg": 240.0
+    },
+    {
+     "bone": "niche_06",
+     "name": "Molt_Niche_06",
+     "position_cm": [
+      181.5,
+      -314.37,
+      28.0
+     ],
+     "purpose": "where a warform stands to molt in niche 6",
+     "yaw_deg": 300.0
+    }
+   ],
+   "triangles": 1162
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_BLD_003",
+   "path": "export/SK_EBS_KHA_BLD_003_LOD0.obj",
+   "sha256": "a29c2c7886fd904e23e96af38bef9e1cecf0e79838df4c10bb4c191984c95dfa"
+  },
+  {
+   "bounds_cm": [
+    [
+     -394.0,
+     -380.7140090910689,
+     0.0
+    ],
+    [
+     394.0,
+     380.7140090910689,
+     128.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Amber": 28,
+    "MI_EBS_KHA_Strata": 756
+   },
+   "clips": [
+    "idle",
+    "growing",
+    "molt_start",
+    "molt_complete",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_BLD_003",
+   "path": "export/SK_EBS_KHA_BLD_003_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "96281827ac73f9d0eb5abcd539f3860ef329072d6f473305b39443ba1dbc714c",
+   "sockets": [
+    {
+     "bone": "root",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      92.0
+     ],
+     "purpose": "targeting and selection anchor over the pool",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Rally_Default",
+     "position_cm": [
+      -530.0,
+      0.0,
+      0.0
+     ],
+     "purpose": "default rally point, clear of the niches",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "root",
+     "name": "Pool_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      14.0
+     ],
+     "purpose": "the matrix pool surface: the growing effect anchor",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "niche_01",
+     "name": "Molt_Niche_01",
+     "position_cm": [
+      363.0,
+      0.0,
+      28.0
+     ],
+     "purpose": "where a warform stands to molt in niche 1",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "niche_02",
+     "name": "Molt_Niche_02",
+     "position_cm": [
+      181.5,
+      314.37,
+      28.0
+     ],
+     "purpose": "where a warform stands to molt in niche 2",
+     "yaw_deg": 60.0
+    },
+    {
+     "bone": "niche_03",
+     "name": "Molt_Niche_03",
+     "position_cm": [
+      -181.5,
+      314.37,
+      28.0
+     ],
+     "purpose": "where a warform stands to molt in niche 3",
+     "yaw_deg": 120.0
+    },
+    {
+     "bone": "niche_04",
+     "name": "Molt_Niche_04",
+     "position_cm": [
+      -363.0,
+      0.0,
+      28.0
+     ],
+     "purpose": "where a warform stands to molt in niche 4",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "niche_05",
+     "name": "Molt_Niche_05",
+     "position_cm": [
+      -181.5,
+      -314.37,
+      28.0
+     ],
+     "purpose": "where a warform stands to molt in niche 5",
+     "yaw_deg": 240.0
+    },
+    {
+     "bone": "niche_06",
+     "name": "Molt_Niche_06",
+     "position_cm": [
+      181.5,
+      -314.37,
+      28.0
+     ],
+     "purpose": "where a warform stands to molt in niche 6",
+     "yaw_deg": 300.0
+    }
+   ],
+   "triangles": 784
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_BLD_003",
+   "path": "export/SK_EBS_KHA_BLD_003_LOD1.obj",
+   "sha256": "5e304956f66e7af1207dc60a732c2ecaac8e88a220561940c1ae1fad513af9ce"
+  }
+ ],
+ "package_id": "EBS-PKG-KA-GROWTH-BASIN",
+ "planned_unreal_folder": "/Game/Echoes/Production/KHA/BLD/EBS_KHA_BLD_003/",
+ "production_asset_id": "EBS-KHA-BLD-003",
+ "provisional_contract": {
+  "bounds": {
+   "basis": "the faction default, no tighter contract applies",
+   "lod0_triangles": 8000,
+   "lod1_triangles": 3500
+  },
+  "card": "REL-BLD-016.KA.BASIN.ASSET in ArtSource/kharuun-asset-cards.json (rendered to kharuun-asset-cards.md)",
+  "status": "PROVISIONAL. Authored in this worktree under the owner ruling of 2026-09-07; NOT incorporated into Docs/Requirements.md and not an existing authoritative per-asset requirement."
+ },
+ "review": {
+  "scenes": [
+   "scenes/idle.json",
+   "scenes/growing.json",
+   "scenes/molting.json",
+   "scenes/damaged.json",
+   "scenes/destroyed.json",
+   "scenes/lod1.json",
+   "scenes/pose_molt_start_100.json",
+   "scenes/pose_molt_complete_015.json",
+   "scenes/pose_molt_complete_050.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "height_cm": 128.0,
+   "lit_niches": [],
+   "name": "idle",
+   "path": "review/SK_EBS_KHA_BLD_003_idle_LOD0.obj",
+   "sha256": "6fd14f7ea3993263763651b8f9458a3ea00015ad2dd6df153bfe1c5855ae0caf",
+   "triangles": 1162
+  },
+  {
+   "height_cm": 128.0,
+   "lit_niches": [],
+   "name": "growing",
+   "path": "review/SK_EBS_KHA_BLD_003_growing_LOD0.obj",
+   "sha256": "c4eb8e79ef1da3ed05c26c43fc96da0d832c16085a7e5e994589c59737e802c9",
+   "triangles": 1162
+  },
+  {
+   "height_cm": 128.0,
+   "lit_niches": [
+    1,
+    4
+   ],
+   "name": "molting",
+   "path": "review/SK_EBS_KHA_BLD_003_molting_LOD0.obj",
+   "sha256": "bb486995b6b3fbf0e0966d529d2e269532a4a72d744c101b511ccd7fc93b3d5a",
+   "triangles": 1250
+  },
+  {
+   "height_cm": 128.0,
+   "lit_niches": [],
+   "name": "damaged",
+   "path": "review/SK_EBS_KHA_BLD_003_damaged_LOD0.obj",
+   "sha256": "ef951658a7a7f90300503f01b80185f0ab541001fb6bd93779e7319e40855f2a",
+   "triangles": 1198
+  },
+  {
+   "height_cm": 52.0,
+   "lit_niches": [],
+   "name": "destroyed",
+   "path": "review/SK_EBS_KHA_BLD_003_destroyed_LOD0.obj",
+   "sha256": "dbd95e7c0db1a03ea41cc8587c06e6a5d470eea3c4f279cbf278d2031ba470ad",
+   "triangles": 562
+  },
+  {
+   "name": "idle_lod1",
+   "path": "review/SK_EBS_KHA_BLD_003_idle_LOD1.obj",
+   "sha256": "7d1d6808b2d771727d74ef77489eb09f040a212db186c035795df7e6077c98ff",
+   "triangles": 784
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "max_extent_cm": 394.0,
+   "name": "pose_molt_start_100",
+   "path": "review/pose_molt_start_100.obj",
+   "sha256": "64cdde09b8c88595ed262624a2ba56304f9efe94544e40e5691022ec4ce3db2b"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "max_extent_cm": 394.0,
+   "name": "pose_molt_complete_015",
+   "path": "review/pose_molt_complete_015.obj",
+   "sha256": "4c21fb77614eb00b722001c7db91b99315157839139c9001b3a1fce04cf6c5d1"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "max_extent_cm": 394.0,
+   "name": "pose_molt_complete_050",
+   "path": "review/pose_molt_complete_050.obj",
+   "sha256": "4929ed367339ed6562070566467d10f6d55b2c1511dc3f7aa9075272b90c242f"
+  }
+ ],
+ "revision": "ebs-kha-bld-003-concept-v1",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "bowl ground-contact centre; the basin never moves"
+   },
+   {
+    "head_cm": [
+     363.0,
+     0.0,
+     0.0
+    ],
+    "name": "niche_01",
+    "parent": "root",
+    "purpose": "molt niche 1: carries canon's crack-and-settle at molt completion; the niche does not close"
+   },
+   {
+    "head_cm": [
+     181.50000000000003,
+     314.36722157375124,
+     0.0
+    ],
+    "name": "niche_02",
+    "parent": "root",
+    "purpose": "molt niche 2: carries canon's crack-and-settle at molt completion; the niche does not close"
+   },
+   {
+    "head_cm": [
+     -181.49999999999994,
+     314.36722157375124,
+     0.0
+    ],
+    "name": "niche_03",
+    "parent": "root",
+    "purpose": "molt niche 3: carries canon's crack-and-settle at molt completion; the niche does not close"
+   },
+   {
+    "head_cm": [
+     -363.0,
+     4.445467880904892e-14,
+     0.0
+    ],
+    "name": "niche_04",
+    "parent": "root",
+    "purpose": "molt niche 4: carries canon's crack-and-settle at molt completion; the niche does not close"
+   },
+   {
+    "head_cm": [
+     -181.50000000000017,
+     -314.3672215737511,
+     0.0
+    ],
+    "name": "niche_05",
+    "parent": "root",
+    "purpose": "molt niche 5: carries canon's crack-and-settle at molt completion; the niche does not close"
+   },
+   {
+    "head_cm": [
+     181.50000000000003,
+     -314.36722157375124,
+     0.0
+    ],
+    "name": "niche_06",
+    "parent": "root",
+    "purpose": "molt niche 6: carries canon's crack-and-settle at molt completion; the niche does not close"
+   }
+  ],
+  "policy": "Root plus one bone per niche. The niches DO NOT close \u2014 the candidate shows a warform standing in an open alcove \u2014 so each niche bone carries canon's crack-and-settle at molt completion instead. No root motion; the basin never moves."
+ },
+ "scale_basis": {
+  "canon": "SPEC-BLD-016 Growth Basin row: a shallow bowl of grown strata with an amber-lit matrix pool at its centre, ringed by visible molt niches",
+  "footprint_cm": 800.0,
+  "footprint_tiles": [
+   4,
+   4
+  ],
+  "source": "Content/Data/Source/buildings.json ka_growth_basin.footprint_cells",
+  "tick_rate": "20 ticks per second; molt_ticks 80 = 4.0 s"
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/growth-basin-review/growth-basin-candidate.png",
+  "canon": "DevelopmentBible.md SPEC-BLD-016 Growth Basin row",
+  "gameplay": "Content/Data/Source/buildings.json ka_growth_basin"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "states": {
+  "damaged": "the bowl cracked and the pool moved out of the amber slot",
+  "destroyed": "the bowl broken, the pool dark, and a rubble ring where the rim came down",
+  "growing": "the pool brightens; that change is the pool's EMISSIVE, a material parameter, not geometry",
+  "idle": "the pool holds a low steady glow and every niche floor is dark",
+  "molting": "the occupied niches' floors are lit and the rest stay dark (review assembly lights niches [1, 4])"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py"
+ },
+ "units": {
+  "axes": "+X forward, +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "bowl ground-contact centre"
+ },
+ "unresolved_contract_gap": {
+  "detail": "The card requires the niche count to match the authoritative adaptation contract. No such number exists: buildings.json ka_growth_basin.adaptation carries site_radius_cm, molt_ticks, dawn_cost and the stat deltas, and nothing that states how many warforms may molt at once. This build uses SIX, counted off the candidate's GROWING view. That is a reading of a concept image, NOT a gameplay claim.",
+  "field": "niche count",
+  "raised_as": "README section 8, OWNER-QUESTION A"
+ }
+}
