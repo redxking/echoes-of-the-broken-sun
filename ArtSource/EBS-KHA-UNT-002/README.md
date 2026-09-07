@@ -207,6 +207,62 @@ not the game's.
 Evidence: `…/EBS-KHA-UNT-002/vertex-id-route/` — `channel-verification.json`, `material-response.json`,
 `route-report.json`, `sweep/`.
 
+## 9. Textures (BLOCKOUT bake, revision concept-v2, `ebs-texbake-v2`)
+
+Built against the authoritative card's `.TEX_MAPS` / `.MAT_RULE` and `REL-ART-029`, read **provisionally**:
+the card names the maps and the ceiling; the surface recipes are this pipeline's, not an authored
+requirement.
+
+### 9.1 UV atlas
+
+`concept-v2` changes **only UV0**: `pack_atlas` gives every polygon of the baseline LOD0/LOD1 and both
+molt-state LOD0 meshes its own chart in one 2048² atlas — 448 charts at 2.03 px/cm, 81% used, molt parts
+included, identical polygons sharing one chart. Triangle counts, bounds, sockets, rig, clips and
+`COLOR_0` are unchanged; `test_v2_changed_only_uv0` pins v1's numbers. Each chart carries its authored
+vertex colour so the baker's StateMask can mirror it. Recorded in
+[bake-manifest.json](bake-manifest.json) and in `--check`; re-imported clean (22 bones, 5 sockets,
+1056 / 696 vertices).
+
+### 9.2 Surface families (added to the shared baker)
+
+| Family | Slot | What it is |
+|---|---|---|
+| `kharuun_obsidian` | `MI_EBS_KHA_Strata` | Opaque volcanic value mask over a charcoal body, warped strata bands every 48 cm, a fractured cell field for the card's high-frequency detail normal, micro-noise grit. **No emissive**: the crack bottoms carry only an ember-dim, matte amber tint. |
+| `kharuun_amber` | `MI_EBS_KHA_Amber` | Broken-Sun Amber seams and the caster slot — **the only emissive**, brightest on the seam's centre line. |
+
+Unit rules: molt plates and striker vanes bake as fresh growth (fewer fractures, lighter, smoother);
+feet and lower legs take ground dust in the bottom 25 cm; the caster slot carries a breech-to-muzzle
+heat gradient; the prow and crest are team-colour carriers.
+
+**The obsidian body sits inside the Charcoal anchor.** `Docs/ArtDirection.md` anchors charcoal at
+0.02–0.07 linear. The first bake put the median plate at 0.070 with half the charts above it — the
+strata band and an over-strong ember tint (+0.175 R at full strength) lifted it. With the body lowered
+and the ember cut to "ember-dim", the painted plates measure 0.029 / 0.043 / 0.065 linear
+(min / median / max), **311 of 311 obsidian charts inside the anchor**; amber charts 0.60–0.74.
+
+### 9.3 The stack
+
+| Map | Channels |
+|---|---|
+| `T_EBS_KHA_UNT_002_BaseColor` (2048², sRGB) | charcoal obsidian with strata and ember-tinted fractures; amber seams |
+| `T_EBS_KHA_UNT_002_Normal` (2048²) | tangent-space, Unreal/DirectX green-down: strata, fracture cells, grit |
+| `T_EBS_KHA_UNT_002_MRE` (2048²) | R metallic 0 · G roughness (obsidian ~0.52, amber ~0.35) · **B emissive mask: seams and caster slot only** |
+| `T_EBS_KHA_UNT_002_StateMask` (2048²) | R molt sweep order **mirrored from `COLOR_0.R`** (`COLOR_0` stays authoritative) · G translucent core blend on new growth · B team carrier |
+| `T_EBS_KHA_UNT_002_MoltBlend` (512²) | the card's secondary translucent core blending skin mask: the StateMask box-filtered |
+| `T_EBS_KHA_UNT_002_AtlasDebug` | chart rectangles by family; UV verification only |
+
+**The amber ceiling is measured on the baked mask, by area.** The report counts painted polygon texels
+whose `MRE.B` is non-zero: **3.8% of painted area** against the card's ≤15%, agreeing with the slot
+geometry's 3.1% within a gutter. 448 of 448 charts painted, none unmatched or skipped, deterministic;
+bake 104 s. Seven texture tests (`test_riftstalker_textures.py`) check the report against this manifest
+and revision, the full stack with recorded hashes, the ceiling, emissive living only on amber charts
+(sampled at every chart centre), StateMask.R mirroring `COLOR_0.R` within 8-bit at every chart centre,
+team carriers, and determinism.
+
+### 9.4 Material and in-engine capture
+
+Recorded in §9.5 below once the capture lands; the pipeline findings it produced are in the ledger.
+
 ## 9. Decisions and open items
 
 1. **It is a quadruped, and I corrected my card rather than the model.** The provisional card first

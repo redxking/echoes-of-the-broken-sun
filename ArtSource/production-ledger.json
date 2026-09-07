@@ -548,7 +548,7 @@
    "production_asset_id": "EBS-KHA-UNT-002",
    "subject": "Riftstalker",
    "production_maturity": "BLOCKOUT",
-   "current_revision": "ebs-kha-unt-002-concept-v1",
+   "current_revision": "ebs-kha-unt-002-concept-v2",
    "asset_name": "SK_EBS_KHA_UNT_002",
    "planned_unreal_folder": "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_002/",
    "canon_status": "CANDIDATE (riftstalker candidate against canon SPEC-UNIT-006); not owner acceptance",
@@ -568,6 +568,13 @@
      "date": "2026-09-07",
      "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-UNT-002/ (receipt.json, import/UnrealEditor-Cmd-import-run-gaitfix.log)",
      "result": "Defect found while building the Cairnback: the gait's key time and swing phase were derived from the same value, so all four legs moved in unison and the diagonal gait was a hop. Fixed; the diagonal pairing is now real (fl with rr, fr with rl). Rebuilt, 18 tests passing, re-imported clean at 0 errors and 0 warnings. Geometry, budgets and every other clip unchanged."
+    },
+    {
+     "stage": "BLOCKOUT (texture bake, ebs-kha-unt-002-concept-v2 atlas, ebs-texbake-v2)",
+     "date": "2026-09-07",
+     "evidence": "BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-UNT-002/textures/ (bake-report.json, the six maps)",
+     "result": "2048^2 stack + 512^2 MoltBlend baked from a unique UV0 atlas (448 charts, 2.03 px/cm, 81% used, molt parts included) with two Kharuun families added to the shared baker: kharuun_obsidian (charcoal body inside the Art Direction anchor, 311/311 charts at 0.029-0.065 linear, strata, fractured cell field, grit, NO emissive) and kharuun_amber (the only emissive). Amber emissive measured on the BAKED mask by painted area: 3.8% against the card's <=15%. Unit StateMask R mirrors COLOR_0.R (COLOR_0 authoritative), G core blend, B team carrier. 448/448 painted, none unmatched, deterministic, 104 s. concept-v2 changes only UV0; a test pins v1's counts and bounds; re-imported clean. 22 texbake, 31 build, 7 texture tests pass; the other 20 packages export byte-identical.",
+     "provisional": "The card's .TEX_MAPS/.MAT_RULE are read PROVISIONALLY: the maps and the ceiling are the card's, the surface recipes are this pipeline's. Not technical acceptance."
     }
    ],
    "next": "Close the open items above, then textures, in-engine capture, gate reviews, incorporation of the provisional card into the authoritative requirements, owner acceptance.",
@@ -899,6 +906,20 @@
    "package": "EBS-PKG-KHA-RIFTSTALKER",
    "finding": "create_dynamic_material_instance reported correctly through get_material but the captures showed the default material. Switching to a MaterialInstanceConstant per parameter value assigned with set_material worked. Both that switch and the -nullrhi fix (PF-016) were made before the first good capture, and the MID path was not re-tested afterwards, so PF-016 is the confirmed cause and the MID behaviour is unresolved.",
    "rule": "Prefer a MaterialInstanceConstant per value for deterministic headless capture, and do not report a MID assignment as working on the strength of get_material alone."
+  },
+  {
+   "id": "PF-018",
+   "date": "2026-09-07",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "A TextureSample whose sampler type does not match the texture's compression (TC_MASKS sampled as LinearColor) is a material COMPILE ERROR, and a material that fails to compile renders the DEFAULT material on a skeletal mesh - with no Python-visible error, the instances assigned, and every frame identical across parameter values. Two textured captures were lost to it. A per-channel unlit diagnostic (emissive = one sampled map, read back as pixels) found it: the MRE and StateMask variants rendered identically at the default material's tone while BaseColor and VertexColor rendered their own values.",
+   "rule": "Match sampler types to compression: Color for sRGB colour, Normal for TC_NORMALMAP, Masks for TC_MASKS. Gate a textured capture on the PROPERTY it exists to show (two instances render differently and the body reads darker than the ground), never on an exposure-dependent colour window."
+  },
+  {
+   "id": "PF-019",
+   "date": "2026-09-07",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "In a headless -RenderOffScreen run texture streaming leaves only the 32x32 mips resident: the four 2048^2 maps read back as 32x32 at capture time although they imported at 2048. A capture through them would show a blurred low mip and pass as 'textured'.",
+   "rule": "Set never_stream on textures imported for a headless capture, and record the resident size in the capture report."
   }
  ],
  "owner_rulings": [

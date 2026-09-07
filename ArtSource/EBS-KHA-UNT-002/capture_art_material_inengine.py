@@ -47,6 +47,8 @@ for key, (fname, srgb, is_normal) in maps.items():
     if tex is None:
         report["errors"].append(f"import failed {fname}"); continue
     tex.set_editor_property("srgb", srgb)
+    # A headless run streams only the 32x32 mips in; the capture must have the full texture resident.
+    tex.set_editor_property("never_stream", True)
     if is_normal:
         tex.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_NORMALMAP)
     else:
@@ -54,8 +56,8 @@ for key, (fname, srgb, is_normal) in maps.items():
                                 unreal.TextureCompressionSettings.TC_DEFAULT if srgb else unreal.TextureCompressionSettings.TC_MASKS)
     unreal.EditorAssetLibrary.save_loaded_asset(tex)
     textures[key] = tex
-    report["textures"][key] = {"asset": tex.get_path_name(), "srgb": srgb,
-                               "size": [tex.blueprint_get_size_x(), tex.blueprint_get_size_y()]}
+    report["textures"][key] = {"asset": tex.get_path_name(), "srgb": srgb, "never_stream": True,
+                               "size_at_import": [tex.blueprint_get_size_x(), tex.blueprint_get_size_y()]}
 
 # --- art material ---------------------------------------------------------------------------
 lib = unreal.MaterialEditingLibrary
@@ -74,8 +76,8 @@ def tex_node(key, x, y, sampler=None):
 
 base = tex_node("BaseColor", -1400, -400, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
 normal = tex_node("Normal", -1400, -100, unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
-mre = tex_node("MRE", -1400, 200, unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
-state = tex_node("StateMask", -1400, 500, unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
+mre = tex_node("MRE", -1400, 200, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+state = tex_node("StateMask", -1400, 500, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
 vc = lib.create_material_expression(mat, unreal.MaterialExpressionVertexColor, -1400, 800)
 
 # molt sweep from COLOR_0.R against authoritative progress (same convention as the debug material)
@@ -246,43 +248,63 @@ def show(state, tick):
         c.set_material(i, instances[tick])
     return c
 
+def creature_lum():
+    lum, _g, _p = creature_and_ground()
+    return lum
+
 def bracket_exposure():
+    # Keyed to the GROUND (the engine's default grid, a known mid albedo), not the creature: a bracket
+    # keyed to the creature lifted a charcoal body to the ground's brightness and hid the problem.
     show("baseline", 0)
     aim(520.0, -18.0)
     rows, chosen = [], None
-    for bias in (2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0):
+    for bias in (6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0):
         set_bias(bias)
         for _ in range(3):
             comp.capture_scene(); time.sleep(0.12)
         lum, ground, pts = creature_and_ground()
-        ok = 45.0 <= lum <= 140.0 and max(ground) < 235
-        rows.append({"bias_ev": bias, "creature_luminance": round(lum, 1), "ground": list(ground), "in_range": ok})
+        glum = 0.2126 * ground[0] + 0.7152 * ground[1] + 0.0722 * ground[2]
+        ok = 95.0 <= glum <= 150.0
+        rows.append({"bias_ev": bias, "ground_luminance": round(glum, 1), "creature_luminance": round(lum, 1), "in_range": ok})
         if ok and chosen is None:
             chosen = bias
     if chosen is None:
-        chosen = min(rows, key=lambda r: abs(r["creature_luminance"] - 90.0))["bias_ev"]
-        rows.append({"note": "no bias landed in range; nearest to luminance 90 chosen"})
+        chosen = min(rows, key=lambda r: abs(r["ground_luminance"] - 120.0))["bias_ev"]
+        rows.append({"note": "no bias landed in range; nearest to ground luminance 120 chosen"})
     set_bias(chosen)
     return {"bracket": rows, "chosen_bias_ev": chosen}
 
 def ready():
-    show("baseline", 0)
+    """Gate on the property the capture exists to show: the t000 and t080 instances must render
+    DIFFERENTLY on the creature, and the charcoal body must read darker than the ground. A material
+    whose textures are still compiling renders the default material - identical across instances and
+    as bright as the ground - which an exposure-dependent colour window let through."""
     aim(520.0, -18.0)
-    deadline = time.time() + 60.0
+    deadline = time.time() + 480.0
     polls = 0
+    history = []
     while time.time() < deadline:
-        comp.capture_scene()
-        lum, ground, pts = creature_and_ground()
-        r, g, b = pts[4]
+        show("baseline", 0)
+        for _ in range(2):
+            comp.capture_scene(); time.sleep(0.1)
+        l0, g0, p0 = creature_and_ground()
+        show("baseline", 80)
+        for _ in range(2):
+            comp.capture_scene(); time.sleep(0.1)
+        l80, g80, p80 = creature_and_ground()
+        glum = 0.2126 * g0[0] + 0.7152 * g0[1] + 0.0722 * g0[2]
         polls += 1
-        beige = 80 < r < 110 and 70 < g < 95 and 55 < b < 75
-        blown = r > 200 and g > 180
-        black = lum < 8.0
-        if not beige and not blown and not black:
-            return {"ready": True, "polls": polls, "centre": [r, g, b], "creature_luminance": round(lum, 1)}
-        time.sleep(1.0)
-    return {"ready": False, "polls": polls, "centre": [r, g, b], "creature_luminance": round(lum, 1)}
+        differs = abs(l80 - l0) > 6.0
+        dark_body = l0 < 0.6 * glum
+        history.append([round(l0, 1), round(l80, 1), round(glum, 1)])
+        if differs and dark_body:
+            return {"ready": True, "polls": polls, "t000_creature": round(l0, 1), "t080_creature": round(l80, 1),
+                    "ground": round(glum, 1), "seconds": round(time.time() - (deadline - 480.0), 1)}
+        time.sleep(3.0)
+    return {"ready": False, "polls": polls, "history_tail": history[-5:],
+            "note": "instances never diverged or the body never read darker than the ground"}
 
+report["texture_resident_size_before_capture"] = {k: [t.blueprint_get_size_x(), t.blueprint_get_size_y()] for k, t in textures.items()}
 report["exposure"] = bracket_exposure()
 report["readiness"] = ready()
 
