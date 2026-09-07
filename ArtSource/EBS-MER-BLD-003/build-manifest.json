@@ -1,0 +1,411 @@
+{
+ "acceptance": {
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "NOT_EVALUATED"
+ },
+ "asset_name": "SM_EBS_MER_BLD_003",
+ "author": "Angelis Pseftis",
+ "budgets": {
+  "cap_source": "REL-BLD-015.MC.FOUNDRY (8,000 / 3,400) governs; REL-ART-028 agrees at LOD0 and is looser at LOD1. Owner ruling 2026-09-07: the ceilings apply to the complete asset including any articulated components, so the whole-asset figures are recorded and tested.",
+  "lod0_cap": 8000,
+  "lod0_triangles": 648,
+  "lod0_within_cap": true,
+  "lod1_cap": 3400,
+  "lod1_triangles": 480,
+  "lod1_within_cap": true,
+  "whole_asset_lod0_triangles": 648,
+  "whole_asset_lod1_triangles": 480
+ },
+ "component_inventory": {
+  "intake": {
+   "contract": 1,
+   "hood": true,
+   "mouth": true,
+   "ramp": true
+  },
+  "long_hall": {
+   "built": 1,
+   "contract": 1
+  },
+  "open_fabrication_bay": {
+   "carriage": true,
+   "contract": 1,
+   "gantry_legs": 6,
+   "rails": 2
+  },
+  "output": {
+   "contract": 1,
+   "door": true,
+   "portal": true,
+   "ramp": true
+  },
+  "research_gantry": {
+   "contract": 1,
+   "instruments": 3,
+   "platform": true
+  },
+  "sockets": {
+   "built": [
+    "Target_Anchor_Center",
+    "Intake_Mouth",
+    "Output_Door",
+    "Rail_Start",
+    "Rail_End",
+    "Research_Gantry"
+   ],
+   "contract": [
+    "Target_Anchor_Center",
+    "Intake_Mouth",
+    "Output_Door",
+    "Rail_Start",
+    "Rail_End",
+    "Research_Gantry"
+   ]
+  },
+  "states": {
+   "built": [
+    "producing",
+    "researching",
+    "interrupted"
+   ],
+   "contract": [
+    "producing",
+    "researching",
+    "interrupted"
+   ]
+  }
+ },
+ "concept_measurements": {
+  "bounds_cm": [
+   [
+    -390.0,
+    -150.0,
+    0.0
+   ],
+   [
+    320.0,
+    150.0,
+    358.0
+   ]
+  ],
+  "everything_inside_the_footprint": true,
+  "footprint_cm": 800.0,
+  "footprint_tiles": [
+   4,
+   4
+  ],
+  "hall_length_over_footprint": 0.65,
+  "hall_length_over_width": 2.0,
+  "hall_width_over_footprint": 0.325,
+  "height_cm": 358.0,
+  "intake_and_output_at_opposite_ends": true,
+  "max_extent_cm": 390.0
+ },
+ "creator": "Angelis Pseftis",
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Pale ceramic, charcoal frame, cyan status. Grit, grease, hazard striping and markings are texture (card .TEX_MAPS).",
+ "material_slots": [
+  "MI_EBS_MER_CeramicCivic",
+  "MI_EBS_MER_CompactFrame",
+  "MI_EBS_MER_StatusCyan"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -390.0,
+     -150.0,
+     0.0
+    ],
+    [
+     320.0,
+     150.0,
+     358.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 96,
+    "MI_EBS_MER_CompactFrame": 468,
+    "MI_EBS_MER_StatusCyan": 84
+   },
+   "collision_boxes": [
+    {
+     "center_cm": [
+      0.0,
+      0.0,
+      125.0
+     ],
+     "name": "hall",
+     "size_cm": [
+      520.0,
+      260.0,
+      202.0
+     ]
+    },
+    {
+     "center_cm": [
+      -285.0,
+      0.0,
+      129.0
+     ],
+     "name": "intake_hood",
+     "size_cm": [
+      70.0,
+      300.0,
+      258.0
+     ]
+    }
+   ],
+   "lod": 0,
+   "mesh": "SM_EBS_MER_BLD_003",
+   "path": "export/SM_EBS_MER_BLD_003_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_MER_CeramicCivic",
+    "MI_EBS_MER_CompactFrame",
+    "MI_EBS_MER_StatusCyan"
+   ],
+   "sha256": "f0bd739e7f2180cf0ba5a9495da4a091f474c9769bf88e1a3d1e54dc34db9933",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      100.0
+     ],
+     "purpose": "targeting and selection anchor at the hall's centre",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Intake_Mouth",
+     "position_cm": [
+      -322.0,
+      0.0,
+      40.0
+     ],
+     "purpose": "worker and Matter intake: the approach faces -X, away from the output",
+     "yaw_deg": 180.0
+    },
+    {
+     "name": "Output_Door",
+     "position_cm": [
+      268.0,
+      0.0,
+      40.0
+     ],
+     "purpose": "finished-unit emergence point; the rally route starts here",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Rail_Start",
+     "position_cm": [
+      -100.0,
+      0.0,
+      224.0
+     ],
+     "purpose": "fabrication rail: intake end of the carriage run",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Rail_End",
+     "position_cm": [
+      120.0,
+      0.0,
+      224.0
+     ],
+     "purpose": "fabrication rail: output end of the carriage run",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Research_Gantry",
+     "position_cm": [
+      170.0,
+      0.0,
+      364.0
+     ],
+     "purpose": "roof research gantry: the research state's light and effect origin",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 648
+  },
+  {
+   "lod": 0,
+   "mesh": "SM_EBS_MER_BLD_003",
+   "path": "export/SM_EBS_MER_BLD_003_LOD0.obj",
+   "sha256": "262da27e8045acf00729398122286989100ffbf3b56d5a5bd3637feff3899e53"
+  },
+  {
+   "bounds_cm": [
+    [
+     -390.0,
+     -150.0,
+     0.0
+    ],
+    [
+     320.0,
+     150.0,
+     358.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 96,
+    "MI_EBS_MER_CompactFrame": 300,
+    "MI_EBS_MER_StatusCyan": 84
+   },
+   "collision_boxes": [],
+   "lod": 1,
+   "mesh": "SM_EBS_MER_BLD_003",
+   "path": "export/SM_EBS_MER_BLD_003_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_MER_CeramicCivic",
+    "MI_EBS_MER_CompactFrame",
+    "MI_EBS_MER_StatusCyan"
+   ],
+   "sha256": "10faadcb76eef03204875cb86fcf3cbe51ea26603c1d1f73d2a1d432433f43a3",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      100.0
+     ],
+     "purpose": "targeting and selection anchor at the hall's centre",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Intake_Mouth",
+     "position_cm": [
+      -322.0,
+      0.0,
+      40.0
+     ],
+     "purpose": "worker and Matter intake: the approach faces -X, away from the output",
+     "yaw_deg": 180.0
+    },
+    {
+     "name": "Output_Door",
+     "position_cm": [
+      268.0,
+      0.0,
+      40.0
+     ],
+     "purpose": "finished-unit emergence point; the rally route starts here",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Rail_Start",
+     "position_cm": [
+      -100.0,
+      0.0,
+      224.0
+     ],
+     "purpose": "fabrication rail: intake end of the carriage run",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Rail_End",
+     "position_cm": [
+      120.0,
+      0.0,
+      224.0
+     ],
+     "purpose": "fabrication rail: output end of the carriage run",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Research_Gantry",
+     "position_cm": [
+      170.0,
+      0.0,
+      364.0
+     ],
+     "purpose": "roof research gantry: the research state's light and effect origin",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 480
+  },
+  {
+   "lod": 1,
+   "mesh": "SM_EBS_MER_BLD_003",
+   "path": "export/SM_EBS_MER_BLD_003_LOD1.obj",
+   "sha256": "60f6d4716f25e55b6acf8ad1f49d3217a4206ff6946affbea1f66adf8a329930"
+  }
+ ],
+ "package_id": "EBS-PKG-MC-ARRAY-FOUNDRY",
+ "planned_unreal_folder": "/Game/Echoes/Production/MER/BLD/EBS_MER_BLD_003/",
+ "production_asset_id": "EBS-MER-BLD-003",
+ "review": {
+  "scenes": [
+   "scenes/producing.json",
+   "scenes/researching.json",
+   "scenes/interrupted.json",
+   "scenes/lod1.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "lod": 0,
+   "path": "review/SM_EBS_MER_BLD_003_assembly_producing_LOD0.obj",
+   "sha256": "f839e6116f7693d05792b71a175e71d4edcb6675f3685582cd22aea8bb33b12b",
+   "state": "producing",
+   "triangles": 648
+  },
+  {
+   "lod": 1,
+   "path": "review/SM_EBS_MER_BLD_003_assembly_producing_LOD1.obj",
+   "sha256": "3803ca9a53c1907b704e5680aee235cc109d83d46aeba8ccfd549d520134ad3f",
+   "state": "producing",
+   "triangles": 480
+  },
+  {
+   "lod": 0,
+   "path": "review/SM_EBS_MER_BLD_003_assembly_researching_LOD0.obj",
+   "sha256": "d2844aa040ce583b7c0f2fd8764118f6ead0ca6066fe5b654ebcdabaf4d4506d",
+   "state": "researching",
+   "triangles": 588
+  },
+  {
+   "lod": 0,
+   "path": "review/SM_EBS_MER_BLD_003_assembly_interrupted_LOD0.obj",
+   "sha256": "5f87ff86554ee741a706337f3d5aa2f9ef99ad60a5ff31a82a328d8c832cecad",
+   "state": "interrupted",
+   "triangles": 636
+  }
+ ],
+ "revision": "ebs-mer-bld-003-concept-v1",
+ "scale_basis": {
+  "concept": "concept-fidelity.md: a long hall with a ramp at each end; the hall is 0.80 of the footprint long and 0.38 wide so both ramps stay inside the square",
+  "footprint": "4x4 tiles = 800 cm (buildings.json mc_array_foundry.footprint_cells)"
+ },
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/array-foundry-review/array-foundry-aligned-output-candidate.png",
+  "canon": "DevelopmentBible.md line 515 (SPEC-BLD-015.MC.FOUNDRY)",
+  "concepts": [
+   "EBS-CON-MER-BLD-003 (KEEP)",
+   "EBS-CON-MER-BLD-007 (REWORK)"
+  ],
+  "gameplay": "Content/Data/Source/buildings.json mc_array_foundry"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "states": {
+  "interrupted": "review assembly",
+  "producing": "review assembly",
+  "researching": "review assembly"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py"
+ },
+ "units": {
+  "axes": "+X intake to output, +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "ground-contact centre of the hall"
+ }
+}

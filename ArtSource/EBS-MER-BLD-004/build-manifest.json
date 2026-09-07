@@ -1,0 +1,506 @@
+{
+ "acceptance": {
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "NOT_EVALUATED"
+ },
+ "asset_name": "SK_EBS_MER_BLD_004",
+ "author": "Angelis Pseftis",
+ "bind_counts": {
+  "root": 280,
+  "turret_pitch": 160,
+  "turret_yaw": 56
+ },
+ "budgets": {
+  "cap_scope": "Owner ruling 2026-09-07: ceilings apply to the complete asset including articulated components",
+  "cap_source": "REL-BLD-015.MC.AEGIS.ASSET (tighter than REL-ART-028, so the card governs)",
+  "lod0_cap": 4000,
+  "lod0_triangles": 496,
+  "lod0_within_cap": true,
+  "lod1_cap": 1600,
+  "lod1_triangles": 352,
+  "lod1_within_cap": true,
+  "status_area_fraction_lod0": 0.03419,
+  "status_measure": "surface area; the cyan band and the muzzle interiors are the only status geometry"
+ },
+ "clips": [
+  {
+   "bones": [
+    "turret_pitch",
+    "turret_yaw"
+   ],
+   "duration_s": 4.0,
+   "loop": true,
+   "name": "powered_idle",
+   "purpose": "supplied and watching: a slow yaw scan with the head level"
+  },
+  {
+   "bones": [
+    "turret_pitch",
+    "turret_yaw"
+   ],
+   "duration_s": 0.6,
+   "loop": false,
+   "name": "aim",
+   "purpose": "swing onto a target: yaw and pitch lead, the runtime supplies the angles (360 deg/s)"
+  },
+  {
+   "bones": [
+    "turret_pitch"
+   ],
+   "duration_s": 0.4,
+   "loop": false,
+   "name": "fire",
+   "purpose": "discharge: a short recoil back through the head, returning to the aim line"
+  },
+  {
+   "bones": [
+    "turret_pitch",
+    "turret_yaw"
+   ],
+   "duration_s": 0.6,
+   "loop": false,
+   "name": "offline",
+   "purpose": "power severed: the head droops nose-down and holds (card: within 1 tick)"
+  },
+  {
+   "bones": [
+    "turret_pitch",
+    "turret_yaw"
+   ],
+   "duration_s": 0.0,
+   "loop": false,
+   "name": "restore",
+   "purpose": "single-frame powered rest pose for reconstruction from saved state"
+  }
+ ],
+ "component_inventory": {
+  "bones": {
+   "built": 3,
+   "contract": "2 aiming bones (card .ANIM_RIG) plus the root",
+   "names": [
+    "root",
+    "turret_yaw",
+    "turret_pitch"
+   ]
+  },
+  "power_coupling": {
+   "built": 1,
+   "cables": 2,
+   "contract": 1
+  },
+  "rotating_head": {
+   "built": 1,
+   "contract": 1
+  },
+  "sockets": {
+   "built": [
+    "Muzzle_Left",
+    "Muzzle_Right",
+    "Target_Anchor_Center",
+    "Power_Coupling"
+   ],
+   "contract": [
+    "Muzzle_Left",
+    "Muzzle_Right",
+    "Power_Coupling",
+    "Target_Anchor_Center"
+   ]
+  },
+  "states": {
+   "built": [
+    "powered",
+    "offline"
+   ],
+   "contract": [
+    "powered",
+    "offline"
+   ]
+  },
+  "supply_band": {
+   "built": 3,
+   "contract": "one band circling the head, lit only while supplied"
+  },
+  "three_legged_mount": {
+   "built": 3,
+   "contract": 3,
+   "knees": 3,
+   "note": "three legs, not four and not a pedestal (canon and both review decisions)"
+  },
+  "tracks": {
+   "built": [
+    "powered_idle",
+    "aim",
+    "fire",
+    "offline",
+    "restore"
+   ],
+   "contract": [
+    "powered_idle",
+    "aim",
+    "fire",
+    "offline",
+    "restore"
+   ]
+  },
+  "twin_emitters": {
+   "built": 2,
+   "contract": 2,
+   "lit_muzzle_cores": 2,
+   "muzzles": 2
+  }
+ },
+ "concept_measurements": {
+  "_overall_span_cm": 340.0,
+  "bounds_cm": [
+   [
+    -170.0,
+    -162.22,
+    0.0
+   ],
+   [
+    116.0,
+    162.22,
+    298.52
+   ]
+  ],
+  "everything_inside_the_footprint": true,
+  "footprint_cm": 400.0,
+  "footprint_tiles": [
+   2,
+   2
+  ],
+  "head_width_over_leg_spread": 0.6,
+  "height_cm": 298.52,
+  "height_over_leg_spread": 0.878,
+  "hub_top_over_height": 0.8542,
+  "leg_spread_cm": 340.0,
+  "max_extent_cm": 170.0
+ },
+ "creator": "Angelis Pseftis",
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Pale ceramic plate, charcoal compact frame, and the cyan status slot that carries the supply band and muzzle interiors ONLY while powered. Offline moves the band and muzzles into the frame slot, so loss of power is visible in the asset itself, not only in a material parameter.",
+ "material_slots": [
+  "MI_EBS_MER_CeramicCivic",
+  "MI_EBS_MER_CompactFrame",
+  "MI_EBS_MER_StatusCyan"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -170.0,
+     -162.22431864335456,
+     0.0
+    ],
+    [
+     116.0,
+     162.22431864335456,
+     298.5166604983954
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 176,
+    "MI_EBS_MER_CompactFrame": 260,
+    "MI_EBS_MER_StatusCyan": 60
+   },
+   "clips": [
+    "powered_idle",
+    "aim",
+    "fire",
+    "offline",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_BLD_004",
+   "path": "export/SK_EBS_MER_BLD_004_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_MER_CeramicCivic",
+    "MI_EBS_MER_CompactFrame",
+    "MI_EBS_MER_StatusCyan"
+   ],
+   "sha256": "e42bc99e32b60e15514cbab878b158dbc1f1542d25fbc81df6396d2077e7765e",
+   "sockets": [
+    {
+     "bone": "turret_pitch",
+     "name": "Muzzle_Left",
+     "position_cm": [
+      115.0,
+      -52.0,
+      276.0
+     ],
+     "purpose": "left emitter mouth: tracer origin",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "turret_pitch",
+     "name": "Muzzle_Right",
+     "position_cm": [
+      115.0,
+      52.0,
+      276.0
+     ],
+     "purpose": "right emitter mouth: tracer origin",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "turret_yaw",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      255.0
+     ],
+     "purpose": "targeting and selection anchor at the hub",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Power_Coupling",
+     "position_cm": [
+      -94.0,
+      0.0,
+      203.0
+     ],
+     "purpose": "heavy supply coupling: the network cable lands here and the offline state follows it",
+     "yaw_deg": 180.0
+    }
+   ],
+   "triangles": 496
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_BLD_004",
+   "path": "export/SK_EBS_MER_BLD_004_LOD0.obj",
+   "sha256": "1f1af177588a1b9c8d3be9c1ddf02954b5aa2199c138ae08fd1c77131323adb3"
+  },
+  {
+   "bounds_cm": [
+    [
+     -170.0,
+     -162.22431864335456,
+     0.0
+    ],
+    [
+     116.0,
+     162.22431864335456,
+     302.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_MER_CeramicCivic": 128,
+    "MI_EBS_MER_CompactFrame": 164,
+    "MI_EBS_MER_StatusCyan": 60
+   },
+   "clips": [
+    "powered_idle",
+    "aim",
+    "fire",
+    "offline",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_BLD_004",
+   "path": "export/SK_EBS_MER_BLD_004_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_MER_CeramicCivic",
+    "MI_EBS_MER_CompactFrame",
+    "MI_EBS_MER_StatusCyan"
+   ],
+   "sha256": "e8a670405394f3852eb516ad21eb4e31d770d7dbac9880091787781af59dc2d4",
+   "sockets": [
+    {
+     "bone": "turret_pitch",
+     "name": "Muzzle_Left",
+     "position_cm": [
+      115.0,
+      -52.0,
+      276.0
+     ],
+     "purpose": "left emitter mouth: tracer origin",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "turret_pitch",
+     "name": "Muzzle_Right",
+     "position_cm": [
+      115.0,
+      52.0,
+      276.0
+     ],
+     "purpose": "right emitter mouth: tracer origin",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "turret_yaw",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      255.0
+     ],
+     "purpose": "targeting and selection anchor at the hub",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Power_Coupling",
+     "position_cm": [
+      -94.0,
+      0.0,
+      203.0
+     ],
+     "purpose": "heavy supply coupling: the network cable lands here and the offline state follows it",
+     "yaw_deg": 180.0
+    }
+   ],
+   "triangles": 352
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_BLD_004",
+   "path": "export/SK_EBS_MER_BLD_004_LOD1.obj",
+   "sha256": "2659d0a1325c2c329141163a5734c4e3cab28533fb593e76fb0317c48749c1f7"
+  }
+ ],
+ "package_id": "EBS-PKG-MC-AEGIS-POST",
+ "planned_unreal_folder": "/Game/Echoes/Production/MER/BLD/EBS_MER_BLD_004/",
+ "production_asset_id": "EBS-MER-BLD-004",
+ "recorded_card_conflict": "REL-BLD-015.MC.AEGIS.ASSET .MESH_PROP describes 'a vertical heavy turret barrel mounted onto an elevated orthogonal protective concrete pillbox carriage'. That contradicts the canon row, both review decisions and the selected candidate, all of which call for a three-legged ceramic mount with twin emitters; decision B explicitly replaces the bunker. This build follows canon and the concept. Raised as OWNER-QUESTION A in the README; unresolved.",
+ "review": {
+  "scenes": [
+   "scenes/powered.json",
+   "scenes/offline.json",
+   "scenes/lod1.json",
+   "scenes/pose_powered_idle_050.json",
+   "scenes/pose_aim_100.json",
+   "scenes/pose_fire_025.json",
+   "scenes/pose_offline_100.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "name": "powered",
+   "path": "review/SK_EBS_MER_BLD_004_powered_LOD0.obj",
+   "sha256": "b26ad82e8e2918973fd01031176a532bb4d0a78c799691c34ee95430038acd2b",
+   "triangles": 496
+  },
+  {
+   "name": "offline",
+   "path": "review/SK_EBS_MER_BLD_004_offline_LOD0.obj",
+   "sha256": "038cabe770b7c884fc71deb537bb5fd89e258bdc1abb03437381db9de0f01160",
+   "triangles": 496
+  },
+  {
+   "name": "powered_lod1",
+   "path": "review/SK_EBS_MER_BLD_004_powered_LOD1.obj",
+   "sha256": "57c8b392f52885b55261555cfed8eec49cd911ccbdb168c295e24171943f7181",
+   "triangles": 352
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "max_extent_cm": 170.0,
+   "name": "pose_powered_idle_050",
+   "path": "review/pose_powered_idle_050.obj",
+   "sha256": "7f0d5a8503f6f8136655be834fff86938e602969af28e41cb119064b9290c73a"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "max_extent_cm": 170.0,
+   "name": "pose_aim_100",
+   "path": "review/pose_aim_100.obj",
+   "sha256": "45c3581eab55d526e066c15f404809cd40b805d774de4205024f9ea2f618a7eb"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "max_extent_cm": 170.0,
+   "name": "pose_fire_025",
+   "path": "review/pose_fire_025.obj",
+   "sha256": "a7ba7819db0baa2fefff04525d76c23ea00513b4505cbd4fb0e97c37ef86f5bc"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "max_extent_cm": 170.0,
+   "name": "pose_offline_100",
+   "path": "review/pose_offline_100.obj",
+   "sha256": "7dbd23b758ae6f51b39b05ffe12fc73148c49ca08a2eb71100ac259cc5c2f73c"
+  }
+ ],
+ "revision": "ebs-mer-bld-004-concept-v1",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "ground contact centre between the pads; the post never moves"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     229.0
+    ],
+    "name": "turret_yaw",
+    "parent": "root",
+    "purpose": "card .ANIM_RIG aiming bone 1: yaw on the hub, 360 deg/s sweep"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     276.0
+    ],
+    "name": "turret_pitch",
+    "parent": "turret_yaw",
+    "purpose": "card .ANIM_RIG aiming bone 2: pitch at the head trunnion"
+   }
+  ],
+  "policy": "The card fixes a 2-bone pitch-and-yaw aiming rig; those two bones plus the root are the whole skeleton. No root motion \u2014 the post never moves. Yaw sweeps at 360 deg/s and snaps under Reduced Motion."
+ },
+ "scale_basis": {
+  "canon": "SPEC-BLD-015.MC.AEGIS (Bible line 516): a three-legged ceramic mount with a rotating twin-emitter head",
+  "footprint_cm": 400.0,
+  "footprint_tiles": [
+   2,
+   2
+  ],
+  "source": "Content/Data/Source/buildings.json mc_aegis_post.footprint_cells"
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/aegis-post-review/aegis-post-candidate.png",
+  "canon": "DevelopmentBible.md line 516 (SPEC-BLD-015.MC.AEGIS)",
+  "concepts": [
+   "EBS-CON-MER-BLD-004 (REWORK)",
+   "EBS-CON-MER-BLD-008 (REWORK)"
+  ],
+  "gameplay": "Content/Data/Source/buildings.json mc_aegis_post"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "states": {
+  "offline": "the head droops 34 deg nose-down and every status surface goes dark, within 1 tick of losing supply",
+  "powered": "head level and scanning, the cyan band and muzzle interiors lit"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py"
+ },
+ "units": {
+  "axes": "+X forward (the head's rest facing), +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "ground-contact centre between the pads"
+ }
+}

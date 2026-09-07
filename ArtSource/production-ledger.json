@@ -50,14 +50,14 @@
     {
      "stage": "BLOCKOUT (texture bake, ebs-mer-bld-002-blockout-v3 atlas, ebs-texbake-v1)",
      "date": "2026-09-06",
-     "evidence": "ArtSource/EBS-MER-BLD-002/textures/ (bake-report.json) and the package README §4.2/§6.3",
+     "evidence": "ArtSource/EBS-MER-BLD-002/textures/ (bake-report.json) and the package README \u00a74.2/\u00a76.3",
      "result": "Five 1024^2 maps (BaseColor, Normal DirectX green-down, MRE, StateMask, AtlasDebug) baked from the v3 atlas by ebs_texbake.py, 722/722 charts painted, deterministic, independently verified against the bake manifest (no blocking or major defects; eight minor defects recorded for the ART_ALPHA bake). Not yet: Material instances, in-engine textured capture, 2048^2 stack, gate reviews, owner acceptance."
     },
     {
      "stage": "BLOCKOUT (concept rework, ebs-mer-bld-002-concept-v3)",
      "date": "2026-09-07",
      "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/ (receipt.json, renders/concept-compare/, import/)",
-     "result": "Concept rework to the candidate proportions: octagonal tower 780 cm at W 200 (3.9 W, measured on the candidate pixels), single load collar at 0.72 H, four near-square numbered panels, two-step plinth with outboard couplings, Ø 0.16 W segmented conduit stubs; re-baked 1024^2 maps on the new atlas; 42 tests; comparison sheets 01-09 against concepts A/B and the candidate; two independent verification lenses (fidelity, rules) and a fix pass; headless import run 10: 3 meshes, all checks pass. Not yet: Hanging-conduit part (OWNER-QUESTION OQ-2), owner ruling on the pixel-measured proportion amendment (OQ-1), textures rebake at 2048^2, in-engine capture, gates, owner acceptance."
+     "result": "Concept rework to the candidate proportions: octagonal tower 780 cm at W 200 (3.9 W, measured on the candidate pixels), single load collar at 0.72 H, four near-square numbered panels, two-step plinth with outboard couplings, \u00d8 0.16 W segmented conduit stubs; re-baked 1024^2 maps on the new atlas; 42 tests; comparison sheets 01-09 against concepts A/B and the candidate; two independent verification lenses (fidelity, rules) and a fix pass; headless import run 10: 3 meshes, all checks pass. Not yet: Hanging-conduit part (OWNER-QUESTION OQ-2), owner ruling on the pixel-measured proportion amendment (OQ-1), textures rebake at 2048^2, in-engine capture, gates, owner acceptance."
     }
    ],
    "gates": {
@@ -348,7 +348,7 @@
    "gates": {
     "art": "NOT_EVALUATED",
     "gameplay": "NOT_EVALUATED",
-    "technical": "BLOCKED — the card's 4-bone articulated assembly is pending (owner ruling 2026-09-07)"
+    "technical": "BLOCKED \u2014 the card's 4-bone articulated assembly is pending (owner ruling 2026-09-07)"
    },
    "owner_acceptance": "NOT_ACCEPTED"
   },
@@ -385,6 +385,56 @@
     "technical": "NOT_EVALUATED"
    },
    "owner_acceptance": "NOT_ACCEPTED"
+  },
+  {
+   "package_id": "EBS-PKG-MC-ARRAY-FOUNDRY",
+   "production_asset_id": "EBS-MER-BLD-003",
+   "subject": "Array Foundry",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-mer-bld-003-concept-v1",
+   "asset_name": "SM_EBS_MER_BLD_003",
+   "planned_unreal_folder": "/Game/Echoes/Production/MER/BLD/EBS_MER_BLD_003/",
+   "canon_status": "CANDIDATE (EBS-CON-MER-BLD-003 KEEP and EBS-CON-MER-BLD-007 REWORK reconciled by the array-foundry candidate); not owner acceptance",
+   "source_root": "ArtSource/EBS-MER-BLD-003/",
+   "authoritative_document": "ArtSource/EBS-MER-BLD-003/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-MER-BLD-003/concept-fidelity.md",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-mer-bld-003-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-003/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Long pale fabrication hall on a charcoal plinth: intake hood and ramp at -X, an open middle bay with two gantry rails carrying a frame carriage, a framed output door and ramp at +X, and a research gantry on the roof. Three states (producing, researching, interrupted) differ in geometry and slot assignment, each asserted by test. LOD0 648 / LOD1 480 against the card's 8,000 / 3,400; height 358 cm; everything inside the 4x4 footprint; ramps carry no collision. 15 tests, 6 comparison sheets. Import: 0 errors, LOD0 648 and LOD1 480 at 3 sections each, 6 sockets exact, 2 UBX boxes, Nanite off."
+    }
+   ],
+   "next": "Textures (2048 grit/grease stack, hazard striping), the card's interior assembly lights, in-engine capture, gate reviews, owner acceptance.",
+   "open_owner_questions": [
+    "A - the 4x4 footprint with a ramp at each end caps the hall at 2:1 while the candidate reads roughly 3:1 (README section 8.1)."
+   ]
+  },
+  {
+   "package_id": "EBS-PKG-MC-AEGIS-POST",
+   "production_asset_id": "EBS-MER-BLD-004",
+   "subject": "Aegis Post",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-mer-bld-004-concept-v1",
+   "asset_name": "SK_EBS_MER_BLD_004",
+   "planned_unreal_folder": "/Game/Echoes/Production/MER/BLD/EBS_MER_BLD_004/",
+   "canon_status": "CANDIDATE (EBS-CON-MER-BLD-004 and EBS-CON-MER-BLD-008, both REWORK, reconciled by the aegis-post candidate); not owner acceptance",
+   "source_root": "ArtSource/EBS-MER-BLD-004/",
+   "authoritative_document": "ArtSource/EBS-MER-BLD-004/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-MER-BLD-004/concept-fidelity.md",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-mer-bld-004-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-004/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Three-legged ceramic mount, two legs forward at +/-60 deg and one to the rear, carrying a compact wide flat head with twin emitters and a cyan supply band, plus a heavy coupling and two cables on the hub's rear. Built to a silhouette trace of the candidate's main POWERED view: height 0.87 of the 340 cm leg spread, head 0.60 of it wide and 0.14 of the height tall, hub top at 0.85 of the height. My first fidelity numbers (1.02 / 0.74 / 0.62) were measured off a region that included the card's caption and an inset view; they were wrong and are struck through in place. Rig: root plus the card's two aiming bones. Powered and offline states; offline darkens every status surface and the offline clip droops the head 34 deg nose-down. LOD0 496 / LOD1 352 against the card's 4,000 / 1,600. 17 tests, 6 comparison sheets. Import: 0 errors, 0 warnings, 3 bones, 4 sockets exact on the right bones, all 5 clips present at 18/12/18/120/1 frames."
+    }
+   ],
+   "next": "Textures (2048 PBR, brass trim, pad chevrons), in-engine capture, gate reviews, owner acceptance.",
+   "open_owner_questions": [
+    "A - the asset card's .MESH_PROP pillbox wording contradicts canon, both review decisions and the candidate (README section 8.2)."
+   ]
   }
  ],
  "tools": {
@@ -402,7 +452,7 @@
   "concept_crops": "ArtSource/tools/ebs_concept_crops.py (hash-verified crops of every registered concept input)",
   "import_job_generator": "ArtSource/tools/ebs_make_import_job.py (derives the isolated-import job and its expectations from a package build manifest) (separates skinned sub-objects from the unit's LODs)"
  },
- "authority_note_2026_09_06": "Owner ruling: the registered concept images define what every production asset looks like; each package carries concept-fidelity.md as its authoritative visual target, and forced deviations are recorded in the README §8 with the rule cited.",
+ "authority_note_2026_09_06": "Owner ruling: the registered concept images define what every production asset looks like; each package carries concept-fidelity.md as its authoritative visual target, and forced deviations are recorded in the README \u00a78 with the rule cited.",
  "pipeline_findings": [
   {
    "date": "2026-09-07",
