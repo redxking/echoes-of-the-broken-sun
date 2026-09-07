@@ -641,6 +641,33 @@
    "open_items": [
     "The collapse rides 17.3 cm higher than rest to keep the feet planted; recorded in the manifest."
    ]
+  },
+  {
+   "package_id": "EBS-PKG-HC-CONCORDANCE",
+   "production_asset_id": "EBS-HOL-BLD-001",
+   "subject": "Concordance",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-hol-bld-001-concept-v1",
+   "asset_name": "SK_EBS_HOL_BLD_001",
+   "planned_unreal_folder": "/Game/Echoes/Production/HOL/BLD/EBS_HOL_BLD_001/",
+   "canon_status": "CANDIDATE (concordance candidate against canon SPEC-BLD-017.HC.CONCORDANCE); not owner acceptance",
+   "source_root": "ArtSource/EBS-HOL-BLD-001/",
+   "authoritative_document": "ArtSource/EBS-HOL-BLD-001/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-HOL-BLD-001/concept-fidelity.md",
+   "asset_card": "REL-BLD-017.HC.CONCORDANCE.ASSET (PROVISIONAL, ArtSource/hollow-choir-asset-cards.json, authored AFTER the trace)",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-hol-bld-001-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-HOL-BLD-001/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "A low 940 cm disc carrying fourteen slab pairs, each a 226 cm vitrified slab with a duplicate offset 3 cm behind it, magenta fracture edging on both borders of every slab, and a ground intake apron at the front. Traced BEFORE the card was authored, per the owner ruling: ring 952 px, slab height 0.24 of it, 14 pairs. The 3 cm offset and the 12% magenta ceiling are recorded as INFERENCES from the HC unit cards, not requirements any authoritative card places on a building. The centre filament is a light effect and is not built as geometry. LOD0 1,144 / LOD1 392 against the provisional 8,000 / 3,500; magenta 8.8% against 12%. 20 tests, 5 sheets. Import clean: 0 errors, 0 warnings, 15 bones, 5 sockets, 3 clips."
+    }
+   ],
+   "next": "Textures, a detail judgement at gameplay distance, in-engine capture, gate reviews, card incorporation, owner acceptance.",
+   "open_owner_questions": [],
+   "open_items": [
+    "The articulated-component requirement stays pending; the pair drift is a presentation device, not a role-required assembly."
+   ]
   }
  ],
  "tools": {
@@ -913,14 +940,12 @@
   "as_of": "2026-09-07",
   "counting_authority": "Docs/VisualAssetPipeline/reference-packages.json, audited 2026-09-07",
   "total_packages": 21,
-  "at_blockout": 17,
-  "remaining": 4,
+  "at_blockout": 18,
+  "remaining": 3,
   "remaining_packages": [
-   "EBS-PKG-HC-CONCORDANCE",
    "EBS-PKG-HC-INTERVAL-LOOM",
    "EBS-PKG-HC-CHORUS-LOOM",
    "EBS-PKG-HC-PHASE-ANCHOR"
-  ],
-  "note": "Earlier reports of 26 packages and of nine remaining were mine and were wrong."
+  ]
  }
 }

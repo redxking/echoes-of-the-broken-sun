@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the Kharuun provisional asset cards from their JSON source.
+"""Render a faction's provisional asset cards from their JSON source.
 
 Author: Angelis Pseftis.
 
@@ -17,8 +17,7 @@ import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-SOURCE = os.path.join(ROOT, "kharuun-asset-cards.json")
-TARGET = os.path.join(ROOT, "kharuun-asset-cards.md")
+DEFAULT_STEM = "kharuun-asset-cards"
 
 
 def _bullets(items) -> list:
@@ -52,8 +51,15 @@ def render(data: dict) -> str:
         "",
     ]
     out += _bullets(a["what_this_is_not"])
-    out += ["", "**Requirements that bind above these cards.**", ""]
-    out += _bullets(a["binding_requirements_above_these_cards"])
+    if a.get("binding_requirements_above_these_cards"):
+        out += ["", "**Requirements that bind above these cards.**", ""]
+        out += _bullets(a["binding_requirements_above_these_cards"])
+    if a.get("coverage_basis"):
+        cb = a["coverage_basis"]
+        out += ["", "**Coverage basis.**", "",
+                f"Audited {cb['audited']}.", "",
+                "Hollow Choir cards that exist: " + ", ".join(f"`{c}`" for c in cb["hollow_choir_cards_that_exist"]) + ".",
+                "", f"{cb['what_they_cover']} {cb['explicit_non_match']}"]
     out += ["", "## Faction rules", "", "| Rule | Value |", "|---|---|"]
     for key, value in a["faction_rules"].items():
         out.append(f"| `{key}` | {value} |")
@@ -125,19 +131,23 @@ def render(data: dict) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--stem", default=DEFAULT_STEM,
+                        help="file stem under ArtSource/, e.g. hollow-choir-asset-cards")
     args = parser.parse_args()
-    with open(SOURCE, encoding="utf-8") as handle:
+    source = os.path.join(ROOT, args.stem + ".json")
+    target = os.path.join(ROOT, args.stem + ".md")
+    with open(source, encoding="utf-8") as handle:
         data = json.load(handle)
     text = render(data)
     if args.check:
-        current = open(TARGET, encoding="utf-8").read() if os.path.exists(TARGET) else ""
+        current = open(target, encoding="utf-8").read() if os.path.exists(target) else ""
         ok = current == text
-        print(json.dumps({"check": "ok" if ok else "drift", "target": os.path.basename(TARGET),
+        print(json.dumps({"check": "ok" if ok else "drift", "target": os.path.basename(target),
                           "cards": len(data["cards"])}))
         return 0 if ok else 1
-    with open(TARGET, "w", encoding="utf-8") as handle:
+    with open(target, "w", encoding="utf-8") as handle:
         handle.write(text)
-    print(json.dumps({"written": os.path.basename(TARGET), "cards": len(data["cards"]),
+    print(json.dumps({"written": os.path.basename(target), "cards": len(data["cards"]),
                       "bytes": len(text)}))
     return 0
 

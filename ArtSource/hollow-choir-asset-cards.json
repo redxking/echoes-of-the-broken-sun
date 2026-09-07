@@ -1,0 +1,80 @@
+{
+ "author": "Angelis Pseftis",
+ "creator": "Angelis Pseftis",
+ "schema_version": 1,
+ "title": "Hollow Choir provisional building asset cards",
+ "created": "2026-09-07",
+ "authority": {
+  "status": "PROVISIONAL PRODUCTION CONTRACTS for the four Hollow Choir BUILDING packages, authored in the isolated production worktree",
+  "source": "Owner ruling 2026-09-07: retain provisional cards only for genuinely uncovered assets, and trace each selected concept BEFORE authoring its card.",
+  "what_this_is_not": [
+   "NOT an amendment to Docs/Requirements.md.",
+   "NOT existing authoritative per-asset requirements.",
+   "NOT owner acceptance of any asset built against them.",
+   "NOT a licence to mark any asset technically compliant."
+  ],
+  "coverage_basis": {
+   "audited": "2026-09-07, every '#### [Asset Card: ...]' heading in Docs/Requirements.md matched against all 21 packages",
+   "hollow_choir_cards_that_exist": ["REL-FAC-027.HC.THREADKEEPER.ASSET", "REL-FAC-027.HC.INTERVALIST.ASSET", "REL-FAC-027.HC.WARDEN.ASSET", "REL-FAC-027.HC.AFTERIMAGE.ASSET"],
+   "what_they_cover": "UNITS only. None of the four remaining packages is a unit.",
+   "explicit_non_match": "REL-FAC-027.HC.INTERVALIST.ASSET is the Intervalist unit and does NOT govern the Interval Loom building, despite the shared word."
+  },
+  "faction_rules": {
+   "trace_before_card": "Owner ruling 2026-09-07. Each card below was authored only AFTER its candidate concept was traced. Three Kharuun cards written the other way round described the wrong asset.",
+   "reality_bleed": "The existing HC unit cards specify an offset duplicate mesh layer at 3 cm with a fluctuating transparency profile to visualise reality bleed. The building cards adopt the same device as faction language. This is an INFERENCE from the unit cards, not a requirement any authoritative card places on buildings.",
+   "magenta_fracture": "The HC unit cards bind luminous edges to the Magenta Fracture colour space and restrict them to <= 12% of visible surface footprint. The building cards adopt 12% as their provisional ceiling, by the same inference.",
+   "budget_headroom": "Sitting below a triangle ceiling does not establish sufficient detail; detail is judged against the concept at gameplay distance.",
+   "monochrome_separation": "Roster members sharing a silhouette family must remain distinguishable in monochrome at tactical distance."
+  }
+ },
+ "cards": [
+  {
+   "card_id": "REL-BLD-017.HC.CONCORDANCE.ASSET",
+   "status": "PROVISIONAL",
+   "package_id": "EBS-PKG-HC-CONCORDANCE",
+   "production_asset_id": "EBS-HOL-BLD-001",
+   "subject": "Concordance",
+   "canon": "SPEC-BLD-017.HC.CONCORDANCE",
+   "function": "Headquarters drop-off: 1,250 HP, 900 cm sight, 400 construction ticks, +12 logistics, 5x5 footprint; produces Threadkeepers; exempt from ordinary non-Core coherence upkeep",
+   "traced_from": "BuildArtifacts/Evidence/concept-discovery-20260906/concordance-review/concordance-candidate.png (WORKING, RING / INTAKE, DAMAGED PAIR), traced 2026-09-07 before this card was written",
+   "mesh_prop": {
+    "lod0_triangles": 8000,
+    "lod1_triangles": 3500,
+    "scope": "the complete assembly including every slab pair and its offset duplicate",
+    "footprint_tiles": [5, 5],
+    "nanite": false,
+    "pivot": "disc ground-contact centre",
+    "budget_note": "the faction default; a ring of flat slabs is cheap, so the ceiling is headroom for the plinth and intake detail"
+   },
+   "tex_maps": "2048x2048 packed PBR (albedo, normal, packed roughness/metallic, superposition mask), following the HC unit cards' stack. The slabs carry a vitrified glass core value under a stone face.",
+   "mat_rule": {
+    "construction": "Flat vitrified slabs standing on a low disc. No mineral growth, no plating, no machinery: the Choir builds with placed geometry, not grown or engineered mass.",
+    "emissive": "Magenta Fracture edges on the slabs, <= 12% of visible surface footprint as a CEILING not a target.",
+    "forbidden": "No Kharuun strata banding, no Meridian plate seams or conduits, no amber and no cyan."
+   },
+   "components": [
+    "A low circular disc plinth",
+    "A ring of fourteen slab PAIRS: each a main vitrified slab with an offset duplicate 3 cm behind it, the pair reading as one object that has not decided where it is",
+    "A ground intake apron at the front of the ring where matter is delivered",
+    "Magenta fracture edging on the slab borders"
+   ],
+   "motion": {
+    "rig": "Static primary structure. Provisional plan is root plus one bone per slab pair so pairs can drift independently; that drift is the faction's reality-bleed device and is NOT a canon motion clause for this building.",
+    "articulated_requirement": "PENDING, not waived: the pipeline expects a static primary structure with role-required articulated components.",
+    "root_motion": "None. The Concordance never moves and is the faction's Command Core."
+   },
+   "sockets": ["Target_Anchor_Center", "Unit_Emergence", "Rally_Default", "Matter_Dropoff", "Choir_Thread_Center"],
+   "states": {
+    "working": "every pair whole, the fracture edging lit, the intake apron clear",
+    "damaged": "one pair cracked, as the candidate's DAMAGED PAIR panel draws it",
+    "destroyed": "the ring broken: slabs down, the disc scarred"
+   },
+   "readability": [
+    "The ring must read as a ring at gameplay distance, and the intake apron must read as the place matter goes.",
+    "LOD1 shall preserve the ring, the pair count and the intake apron.",
+    "The offset duplicate must remain visible as a duplicate; if it merges into its parent slab the reality-bleed read is lost.",
+    "Triangle counts under the ceiling are headroom, not sufficiency."
+   ]
+  }
+ ]
+}

@@ -1,0 +1,703 @@
+{
+ "acceptance": {
+  "animation": "NOT_EVALUATED",
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "PENDING \u2014 built against a provisional card that is not in the authoritative requirements"
+ },
+ "asset_name": "SK_EBS_HOL_BLD_001",
+ "author": "Angelis Pseftis",
+ "bind_counts": {
+  "pair_01": 72,
+  "pair_02": 72,
+  "pair_03": 72,
+  "pair_04": 72,
+  "pair_05": 72,
+  "pair_06": 72,
+  "pair_07": 72,
+  "pair_08": 72,
+  "pair_09": 72,
+  "pair_10": 72,
+  "pair_11": 72,
+  "pair_12": 72,
+  "pair_13": 72,
+  "pair_14": 72,
+  "root": 136
+ },
+ "budgets": {
+  "cap_source": "REL-BLD-017.HC.CONCORDANCE.ASSET (PROVISIONAL)",
+  "damaged_state_triangles": 1156,
+  "headroom_note": "Under the ceiling is HEADROOM, not sufficiency (owner ruling 2026-09-07).",
+  "lod0_cap": 8000,
+  "lod0_triangles": 1144,
+  "lod0_within_cap": true,
+  "lod1_cap": 3500,
+  "lod1_triangles": 392,
+  "lod1_within_cap": true,
+  "magenta_area_fraction_lod0": 0.08771,
+  "magenta_cap": 0.12,
+  "magenta_within_cap": true,
+  "worst_state_triangles": 1156
+ },
+ "clips": [
+  {
+   "bones": [
+    "pair_01",
+    "pair_02",
+    "pair_03",
+    "pair_04",
+    "pair_05",
+    "pair_06",
+    "pair_07",
+    "pair_08",
+    "pair_09",
+    "pair_10",
+    "pair_11",
+    "pair_12",
+    "pair_13",
+    "pair_14"
+   ],
+   "duration_s": 6.0,
+   "loop": true,
+   "name": "working_idle",
+   "purpose": "the ring at work: each pair drifts a little on its own phase, so the assembly never quite agrees with itself. Faction reality-bleed device, NOT a canon motion clause",
+   "ticks": 120
+  },
+  {
+   "bones": [
+    "pair_01",
+    "pair_02",
+    "pair_03",
+    "pair_04",
+    "pair_05",
+    "pair_06",
+    "pair_07",
+    "pair_08",
+    "pair_09",
+    "pair_10",
+    "pair_11",
+    "pair_12",
+    "pair_13",
+    "pair_14"
+   ],
+   "duration_s": 3.0,
+   "loop": true,
+   "name": "damaged",
+   "purpose": "a cracked pair falls out of step: it drifts further than the rest",
+   "ticks": 60
+  },
+  {
+   "bones": [
+    "pair_01",
+    "pair_02",
+    "pair_03",
+    "pair_04",
+    "pair_05",
+    "pair_06",
+    "pair_07",
+    "pair_08",
+    "pair_09",
+    "pair_10",
+    "pair_11",
+    "pair_12",
+    "pair_13",
+    "pair_14"
+   ],
+   "duration_s": 0.0,
+   "loop": false,
+   "name": "restore",
+   "purpose": "single-frame rest pose for reconstruction from saved state",
+   "ticks": 0
+  }
+ ],
+ "component_inventory": {
+  "bones": {
+   "built": 15,
+   "contract": "root plus one bone per pair (14)",
+   "names": [
+    "root",
+    "pair_01",
+    "pair_02",
+    "pair_03",
+    "pair_04",
+    "pair_05",
+    "pair_06",
+    "pair_07",
+    "pair_08",
+    "pair_09",
+    "pair_10",
+    "pair_11",
+    "pair_12",
+    "pair_13",
+    "pair_14"
+   ]
+  },
+  "centre_thread": {
+   "built_as_geometry": false,
+   "contract": "a LIGHT EFFECT, not geometry",
+   "socket": "Choir_Thread_Center"
+  },
+  "disc": {
+   "built": true,
+   "contract": "one low circular plinth"
+  },
+  "fracture_edging": {
+   "built": 56,
+   "contract": "two vertical edges per slab"
+  },
+  "intake_apron": {
+   "built": true,
+   "contract": "one apron at the front of the ring",
+   "delivered_matter": 4
+  },
+  "slab_pairs": {
+   "built": 14,
+   "contract": 14,
+   "note": "each pair is a slab plus a duplicate offset 3 cm behind it",
+   "offset_cm": 3.0,
+   "slabs": 28
+  },
+  "sockets": {
+   "built": [
+    "Choir_Thread_Center",
+    "Matter_Dropoff",
+    "Rally_Default",
+    "Target_Anchor_Center",
+    "Unit_Emergence"
+   ],
+   "contract": [
+    "Choir_Thread_Center",
+    "Matter_Dropoff",
+    "Rally_Default",
+    "Target_Anchor_Center",
+    "Unit_Emergence"
+   ]
+  },
+  "states": {
+   "built": [
+    "working",
+    "damaged",
+    "destroyed"
+   ],
+   "contract": [
+    "working",
+    "damaged",
+    "destroyed"
+   ]
+  },
+  "tracks": {
+   "built": [
+    "working_idle",
+    "damaged",
+    "restore"
+   ],
+   "contract": [
+    "working_idle",
+    "damaged",
+    "restore"
+   ]
+  }
+ },
+ "concept_measurements": {
+  "bounds_cm": [
+   [
+    -492.0,
+    -470.0,
+    0.0
+   ],
+   [
+    470.0,
+    470.0,
+    248.0
+   ]
+  ],
+  "everything_inside_the_footprint": true,
+  "footprint_cm": 1000.0,
+  "footprint_tiles": [
+   5,
+   5
+  ],
+  "height_cm": 248.0,
+  "max_extent_cm": 492.0,
+  "pair_count": 14,
+  "reality_bleed_offset_cm": 3.0,
+  "ring_diameter_cm": 940.0,
+  "slab_height_cm": 226.0,
+  "slab_height_over_ring_diameter": 0.2404
+ },
+ "creator": "Angelis Pseftis",
+ "faction_language_inference": {
+  "source": "the four REL-FAC-027.HC.* UNIT cards, which specify both for Hollow Choir units",
+  "status": "INFERENCE, not a requirement. No authoritative card places either on a Hollow Choir BUILDING. Recorded so the provenance is visible rather than implied.",
+  "what": "the 3 cm offset duplicate and the 12% Magenta Fracture ceiling"
+ },
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Three slots: vitrified stone for the disc and every slab, a worn apron stone for the intake, and Magenta Fracture for the slab edging, which is the only emissive. No Kharuun strata banding, no Meridian plate seams or conduits, no amber and no cyan.",
+ "material_slots": [
+  "MI_EBS_HOL_Vitrified",
+  "MI_EBS_HOL_ApronStone",
+  "MI_EBS_HOL_Magenta"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -492.0,
+     -470.0,
+     0.0
+    ],
+    [
+     470.0,
+     470.0,
+     248.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_HOL_ApronStone": 12,
+    "MI_EBS_HOL_Magenta": 672,
+    "MI_EBS_HOL_Vitrified": 460
+   },
+   "clips": [
+    "working_idle",
+    "damaged",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_HOL_BLD_001",
+   "path": "export/SK_EBS_HOL_BLD_001_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_HOL_Vitrified",
+    "MI_EBS_HOL_ApronStone",
+    "MI_EBS_HOL_Magenta"
+   ],
+   "sha256": "e23615ab62704bf9e69a42ffabbf3d76757ecf4e5a80505452b64c7385c9d24c",
+   "sockets": [
+    {
+     "bone": "root",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      157.6
+     ],
+     "purpose": "targeting and selection anchor inside the ring",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Unit_Emergence",
+     "position_cm": [
+      -193.0,
+      0.0,
+      22.0
+     ],
+     "purpose": "Threadkeepers emerge inside the ring and leave past the apron",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "root",
+     "name": "Rally_Default",
+     "position_cm": [
+      -620.0,
+      0.0,
+      0.0
+     ],
+     "purpose": "default emergence rally point, clear of the apron",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "root",
+     "name": "Matter_Dropoff",
+     "position_cm": [
+      -448.0,
+      0.0,
+      32.0
+     ],
+     "purpose": "the intake apron: where workers deliver Matter",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "root",
+     "name": "Choir_Thread_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      22.0
+     ],
+     "purpose": "the centre filament the candidate draws is a LIGHT EFFECT, not geometry; this socket is all the mesh provides for it",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 1144
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_HOL_BLD_001",
+   "path": "export/SK_EBS_HOL_BLD_001_LOD0.obj",
+   "sha256": "4a2a1458c8c32438b3d76e5ae1b79dd94759d50ec653c1a9a8d83cb02e137690"
+  },
+  {
+   "bounds_cm": [
+    [
+     -492.0,
+     -470.0,
+     0.0
+    ],
+    [
+     470.0,
+     470.0,
+     248.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_HOL_ApronStone": 12,
+    "MI_EBS_HOL_Vitrified": 380
+   },
+   "clips": [
+    "working_idle",
+    "damaged",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_HOL_BLD_001",
+   "path": "export/SK_EBS_HOL_BLD_001_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_HOL_Vitrified",
+    "MI_EBS_HOL_ApronStone",
+    "MI_EBS_HOL_Magenta"
+   ],
+   "sha256": "9dcc415ecdf37919728e9e520f71bdee26a7e81bd080d15fd58976f59279a4a7",
+   "sockets": [
+    {
+     "bone": "root",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      157.6
+     ],
+     "purpose": "targeting and selection anchor inside the ring",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Unit_Emergence",
+     "position_cm": [
+      -193.0,
+      0.0,
+      22.0
+     ],
+     "purpose": "Threadkeepers emerge inside the ring and leave past the apron",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "root",
+     "name": "Rally_Default",
+     "position_cm": [
+      -620.0,
+      0.0,
+      0.0
+     ],
+     "purpose": "default emergence rally point, clear of the apron",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "root",
+     "name": "Matter_Dropoff",
+     "position_cm": [
+      -448.0,
+      0.0,
+      32.0
+     ],
+     "purpose": "the intake apron: where workers deliver Matter",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "root",
+     "name": "Choir_Thread_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      22.0
+     ],
+     "purpose": "the centre filament the candidate draws is a LIGHT EFFECT, not geometry; this socket is all the mesh provides for it",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 392
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_HOL_BLD_001",
+   "path": "export/SK_EBS_HOL_BLD_001_LOD1.obj",
+   "sha256": "492036c40d245b2b93d629950a140e1003896ebec0485d823366d970a7214107"
+  }
+ ],
+ "package_id": "EBS-PKG-HC-CONCORDANCE",
+ "pending_requirements": [
+  {
+   "detail": "The pair drift is a presentation device, not a role-required articulated assembly. Do not mark this asset compliant until the requirement is implemented or the card is amended.",
+   "requirement": "Articulated components for a structure of this role",
+   "status": "PENDING, not waived"
+  }
+ ],
+ "planned_unreal_folder": "/Game/Echoes/Production/HOL/BLD/EBS_HOL_BLD_001/",
+ "production_asset_id": "EBS-HOL-BLD-001",
+ "provisional_contract": {
+  "bounds": {
+   "lod0_triangles": 8000,
+   "lod1_triangles": 3500
+  },
+  "card": "REL-BLD-017.HC.CONCORDANCE.ASSET in ArtSource/hollow-choir-asset-cards.json (rendered to hollow-choir-asset-cards.md)",
+  "status": "PROVISIONAL. Authored in this worktree after the trace; NOT incorporated into Docs/Requirements.md and not an existing authoritative per-asset requirement. The four REL-FAC-027.HC.* cards cover UNITS and none of them governs this building."
+ },
+ "review": {
+  "scenes": [
+   "scenes/working.json",
+   "scenes/damaged.json",
+   "scenes/destroyed.json",
+   "scenes/lod1.json",
+   "scenes/pose_working_idle_025.json",
+   "scenes/pose_damaged_025.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "name": "working",
+   "path": "review/SK_EBS_HOL_BLD_001_working_LOD0.obj",
+   "sha256": "9682172f1525eda17b7e966b9984adc88ab7f2d69396a1ca0cc56d4ed1056074",
+   "triangles": 1144
+  },
+  {
+   "name": "damaged",
+   "path": "review/SK_EBS_HOL_BLD_001_damaged_LOD0.obj",
+   "sha256": "64030efddec8700dc3542e779122d9b6aa2079f0ce8eab62f0bc31fb2b23bbd5",
+   "triangles": 1156
+  },
+  {
+   "name": "destroyed",
+   "path": "review/SK_EBS_HOL_BLD_001_destroyed_LOD0.obj",
+   "sha256": "b3b42ca9a0c577d08aa54c86495c014f5b843223eaca0170b9af395e63084b1f",
+   "triangles": 256
+  },
+  {
+   "name": "working_lod1",
+   "path": "review/SK_EBS_HOL_BLD_001_working_LOD1.obj",
+   "sha256": "4e0799f681aa122db2566177c700568b982b9cd88781f8e7f415d0499abb6089",
+   "triangles": 392
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "max_extent_cm": 492.0,
+   "name": "pose_working_idle_025",
+   "path": "review/pose_working_idle_025.obj",
+   "sha256": "0b53fcdef565944216468450309d05af61a4e0bf79b57bbdc3aa6b2e4b8ee92f"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "max_extent_cm": 492.0,
+   "name": "pose_damaged_025",
+   "path": "review/pose_damaged_025.obj",
+   "sha256": "8e693c260a90c568b4b189ced25970e5e5030d0a018d4938dec2e2eced32acac"
+  }
+ ],
+ "revision": "ebs-hol-bld-001-concept-v1",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "disc ground-contact centre; the Concordance never moves"
+   },
+   {
+    "head_cm": [
+     386.0,
+     0.0,
+     22.0
+    ],
+    "name": "pair_01",
+    "parent": "root",
+    "purpose": "slab pair 1: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     347.7739830103338,
+     167.47912329937745,
+     22.0
+    ],
+    "name": "pair_02",
+    "parent": "root",
+    "purpose": "slab pair 2: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     240.66706351747118,
+     301.78695223265953,
+     22.0
+    ],
+    "name": "pair_03",
+    "parent": "root",
+    "purpose": "slab pair 3: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     85.89308050713738,
+     376.3221741021839,
+     22.0
+    ],
+    "name": "pair_04",
+    "parent": "root",
+    "purpose": "slab pair 4: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     -85.89308050713734,
+     376.3221741021839,
+     22.0
+    ],
+    "name": "pair_05",
+    "parent": "root",
+    "purpose": "slab pair 5: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     -240.66706351747126,
+     301.7869522326594,
+     22.0
+    ],
+    "name": "pair_06",
+    "parent": "root",
+    "purpose": "slab pair 6: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     -347.7739830103337,
+     167.47912329937748,
+     22.0
+    ],
+    "name": "pair_07",
+    "parent": "root",
+    "purpose": "slab pair 7: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     -386.0,
+     4.7271366447087837e-14,
+     22.0
+    ],
+    "name": "pair_08",
+    "parent": "root",
+    "purpose": "slab pair 8: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     -347.7739830103338,
+     -167.4791232993774,
+     22.0
+    ],
+    "name": "pair_09",
+    "parent": "root",
+    "purpose": "slab pair 9: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     -240.66706351747118,
+     -301.7869522326595,
+     22.0
+    ],
+    "name": "pair_10",
+    "parent": "root",
+    "purpose": "slab pair 10: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     -85.89308050713709,
+     -376.32217410218396,
+     22.0
+    ],
+    "name": "pair_11",
+    "parent": "root",
+    "purpose": "slab pair 11: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     85.89308050713728,
+     -376.3221741021839,
+     22.0
+    ],
+    "name": "pair_12",
+    "parent": "root",
+    "purpose": "slab pair 12: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     240.6670635174711,
+     -301.78695223265953,
+     22.0
+    ],
+    "name": "pair_13",
+    "parent": "root",
+    "purpose": "slab pair 13: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     347.7739830103337,
+     -167.47912329937753,
+     22.0
+    ],
+    "name": "pair_14",
+    "parent": "root",
+    "purpose": "slab pair 14: lets the pair drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   }
+  ],
+  "policy": "Root plus one bone per slab pair so pairs drift independently. That drift is the faction's reality-bleed device, NOT a canon motion clause for this building. No root motion."
+ },
+ "scale_basis": {
+  "canon": "SPEC-BLD-017.HC.CONCORDANCE: the Choir Command Core and Matter drop-off",
+  "footprint_cm": 1000.0,
+  "footprint_tiles": [
+   5,
+   5
+  ],
+  "source": "Content/Data/Source/buildings.json hc_concordance.footprint_cells"
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/concordance-review/concordance-candidate.png",
+  "canon": "DevelopmentBible.md / Requirements SPEC-BLD-017.HC.CONCORDANCE",
+  "gameplay": "Content/Data/Source/buildings.json hc_concordance"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "states": {
+  "damaged": "pair 4 cracked and drifting further than the rest",
+  "destroyed": "the ring broken: slabs down on a scarred disc",
+  "working": "every pair whole, edging lit, apron clear"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py"
+ },
+ "traced_before_the_card": {
+  "card_written_after": true,
+  "directive": "Owner ruling 2026-09-07: trace each selected concept BEFORE authoring its provisional card.",
+  "trace": "the candidate's WORKING view, dark-pixel row spans; ring 952 px across, slab height 0.24 of it, 14 pairs counted on the RING / INTAKE view"
+ },
+ "units": {
+  "axes": "+X forward, +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "disc ground-contact centre"
+ }
+}
