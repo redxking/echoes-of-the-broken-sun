@@ -1,0 +1,606 @@
+{
+ "acceptance": {
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "PENDING \u2014 built against the provisional card; final technical acceptance waits on that card being incorporated into the authoritative requirements and its checks passing"
+ },
+ "asset_name": "SK_EBS_KHA_BLD_002",
+ "author": "Angelis Pseftis",
+ "bind_counts": {
+  "carriage_lift": 612,
+  "ring_sink": 360
+ },
+ "budgets": {
+  "amber_area_fraction_lod0": 0.08721,
+  "amber_cap": 0.15,
+  "amber_measure": "surface area, per REL-ART-029; the cap is a ceiling, not a target",
+  "amber_within_cap": true,
+  "cap_scope": "the complete assembly including the root ring and the grown carriage",
+  "cap_source": "REL-BLD-016.KA.WAYSTONE.ASSET (PROVISIONAL)",
+  "lod0_cap": 5000,
+  "lod0_triangles": 972,
+  "lod0_within_cap": true,
+  "lod1_cap": 2200,
+  "lod1_triangles": 544,
+  "lod1_within_cap": true,
+  "mobile_state_triangles": 1096
+ },
+ "clips": [
+  {
+   "bones": [
+    "carriage_lift",
+    "ring_sink"
+   ],
+   "duration_s": 4.0,
+   "loop": true,
+   "name": "rooted_idle",
+   "purpose": "rooted and supplying: the body is still; the seams carry the life",
+   "ticks": 80
+  },
+  {
+   "bones": [
+    "carriage_lift",
+    "foot_01",
+    "foot_02",
+    "foot_03",
+    "foot_04",
+    "ring_sink"
+   ],
+   "duration_s": 2.0,
+   "loop": false,
+   "name": "uproot",
+   "purpose": "40 ticks: the ring pulls out of the ground and the body rises onto the carriage",
+   "ticks": 40
+  },
+  {
+   "bones": [
+    "carriage_lift",
+    "foot_01",
+    "foot_02",
+    "foot_03",
+    "foot_04",
+    "ring_sink"
+   ],
+   "duration_s": 1.5,
+   "loop": true,
+   "name": "mobile_move",
+   "purpose": "migrating at 120 cm/s: the feet take the load in turn under a steady body",
+   "ticks": 30
+  },
+  {
+   "bones": [
+    "carriage_lift",
+    "foot_01",
+    "foot_02",
+    "foot_03",
+    "foot_04",
+    "ring_sink"
+   ],
+   "duration_s": 3.0,
+   "loop": false,
+   "name": "root",
+   "purpose": "60 ticks in canon's four beats: preparation, contact, settling, release",
+   "ticks": 60
+  },
+  {
+   "bones": [
+    "carriage_lift",
+    "foot_01",
+    "foot_02",
+    "foot_03",
+    "foot_04",
+    "ring_sink"
+   ],
+   "duration_s": 0.0,
+   "loop": false,
+   "name": "restore",
+   "purpose": "single-frame rooted rest pose for reconstruction from saved state",
+   "ticks": 0
+  }
+ ],
+ "component_inventory": {
+  "amber_seams": {
+   "built": 6,
+   "contract": 6
+  },
+  "bones": {
+   "built": 7,
+   "contract": "root, ring_sink, carriage_lift and four feet (card REL-BLD-016.KA.WAYSTONE.ASSET)",
+   "names": [
+    "root",
+    "ring_sink",
+    "carriage_lift",
+    "foot_01",
+    "foot_02",
+    "foot_03",
+    "foot_04"
+   ]
+  },
+  "carriage": {
+   "contract": "a plate on FOUR stubby legs, present only while migrating",
+   "legs": 0,
+   "plate": false
+  },
+  "monolith_courses": {
+   "built": 7,
+   "contract": 7
+  },
+  "root_plinth": {
+   "built": 3,
+   "contract": 3,
+   "flare_tiers": 2
+  },
+  "roots": {
+   "built": 12,
+   "contract": "splayed flat when rooted, braided upright when mobile"
+  },
+  "sockets": {
+   "built": [
+    "Carriage_Front",
+    "Matter_Dropoff",
+    "Root_Ring_Center",
+    "Target_Anchor_Center"
+   ],
+   "contract": [
+    "Carriage_Front",
+    "Matter_Dropoff",
+    "Root_Ring_Center",
+    "Target_Anchor_Center"
+   ]
+  },
+  "states": {
+   "built": [
+    "rooted",
+    "uprooted_mobile",
+    "damaged",
+    "destroyed"
+   ],
+   "contract": [
+    "rooted",
+    "uprooted_mobile",
+    "damaged",
+    "destroyed"
+   ]
+  },
+  "tracks": {
+   "built": [
+    "rooted_idle",
+    "uproot",
+    "mobile_move",
+    "root",
+    "restore"
+   ],
+   "contract": [
+    "rooted_idle",
+    "uproot",
+    "mobile_move",
+    "root",
+    "restore"
+   ]
+  }
+ },
+ "concept_measurements": {
+  "bounds_cm": [
+   [
+    -190.7,
+    -190.7,
+    0.0
+   ],
+   [
+    190.7,
+    190.7,
+    414.0
+   ]
+  ],
+  "everything_inside_the_footprint": true,
+  "flat_root_top_cm": 20.0,
+  "flat_roots_under_ground_clutter_ceiling": true,
+  "footprint_cm": 400.0,
+  "footprint_tiles": [
+   2,
+   2
+  ],
+  "height_cm": 414.0,
+  "max_extent_cm": 190.7,
+  "mobile_span_cm": 350.0,
+  "mobile_span_over_rooted": 0.9177,
+  "rooted_root_spread_cm": 381.41,
+  "shaft_share_of_height": 0.5604,
+  "shaft_width_over_root_spread": 0.2491,
+  "total_height_over_root_spread": 1.0855
+ },
+ "creator": "Angelis Pseftis",
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Two slots: faceted dark strata for the shaft courses, plinth, roots and carriage, and amber for the seam bands and nodules, which are the only emissive. No wheels, tracks, treads, pistons or machined carriage anywhere (card .MAT_RULE).",
+ "material_slots": [
+  "MI_EBS_KHA_Strata",
+  "MI_EBS_KHA_Amber"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -190.70268602547645,
+     -190.70268602547645,
+     0.0
+    ],
+    [
+     190.70268602547645,
+     190.70268602547645,
+     414.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Amber": 432,
+    "MI_EBS_KHA_Strata": 540
+   },
+   "clips": [
+    "rooted_idle",
+    "uproot",
+    "mobile_move",
+    "root",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_BLD_002",
+   "path": "export/SK_EBS_KHA_BLD_002_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "a463e3576a2521c0321fc0d20543f6fe1a955697b6861ab0b97a8615ca36f344",
+   "sockets": [
+    {
+     "bone": "carriage_lift",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      272.0
+     ],
+     "purpose": "targeting and selection anchor on the shaft",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Matter_Dropoff",
+     "position_cm": [
+      -198.0,
+      0.0,
+      12.0
+     ],
+     "purpose": "where workers deliver matter while the node is rooted",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "ring_sink",
+     "name": "Root_Ring_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "purpose": "the root ring's own centre: the rooted/uprooted tell hangs off this",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "carriage_lift",
+     "name": "Carriage_Front",
+     "position_cm": [
+      148.0,
+      0.0,
+      74.0
+     ],
+     "purpose": "front of the grown carriage, for migration facing",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 972
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_BLD_002",
+   "path": "export/SK_EBS_KHA_BLD_002_LOD0.obj",
+   "sha256": "af5a2f00ff5cb6d218c38116c50bf29888094ced13549c433051fa895c19da9d"
+  },
+  {
+   "bounds_cm": [
+    [
+     -146.39950093555115,
+     -130.43970895252804,
+     0.0
+    ],
+    [
+     146.39950093555115,
+     130.43970895252804,
+     414.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Amber": 288,
+    "MI_EBS_KHA_Strata": 256
+   },
+   "clips": [
+    "rooted_idle",
+    "uproot",
+    "mobile_move",
+    "root",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_BLD_002",
+   "path": "export/SK_EBS_KHA_BLD_002_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "d83fdc029f4cbc07a84e2c65283f3a0cec491c9153096012af729209b1be49ae",
+   "sockets": [
+    {
+     "bone": "carriage_lift",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      272.0
+     ],
+     "purpose": "targeting and selection anchor on the shaft",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Matter_Dropoff",
+     "position_cm": [
+      -198.0,
+      0.0,
+      12.0
+     ],
+     "purpose": "where workers deliver matter while the node is rooted",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "ring_sink",
+     "name": "Root_Ring_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "purpose": "the root ring's own centre: the rooted/uprooted tell hangs off this",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "carriage_lift",
+     "name": "Carriage_Front",
+     "position_cm": [
+      148.0,
+      0.0,
+      74.0
+     ],
+     "purpose": "front of the grown carriage, for migration facing",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 544
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_BLD_002",
+   "path": "export/SK_EBS_KHA_BLD_002_LOD1.obj",
+   "sha256": "89bce8d504d8e1954b6297d05d92f5fd6d57d061e2bb7cde70379da503d8c948"
+  }
+ ],
+ "package_id": "EBS-PKG-KA-WAYSTONE",
+ "planned_unreal_folder": "/Game/Echoes/Production/KHA/BLD/EBS_KHA_BLD_002/",
+ "production_asset_id": "EBS-KHA-BLD-002",
+ "provisional_contract": {
+  "bounds": {
+   "basis": "tighter than the faction default of 8,000/3,500 because a 2x2 monolith that must also move pays a cost the static structures do not",
+   "lod0_triangles": 5000,
+   "lod1_triangles": 2200
+  },
+  "card": "REL-BLD-016.KA.WAYSTONE.ASSET in ArtSource/kharuun-asset-cards.json (rendered to kharuun-asset-cards.md)",
+  "status": "PROVISIONAL. Authored in this worktree under the owner ruling of 2026-09-07; NOT incorporated into Docs/Requirements.md and not an existing authoritative per-asset requirement."
+ },
+ "review": {
+  "scenes": [
+   "scenes/rooted.json",
+   "scenes/uprooted_mobile.json",
+   "scenes/damaged.json",
+   "scenes/destroyed.json",
+   "scenes/lod1.json",
+   "scenes/pose_uproot_050.json",
+   "scenes/pose_uproot_100.json",
+   "scenes/pose_mobile_move_025.json",
+   "scenes/pose_root_060.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "height_cm": 414.0,
+   "name": "rooted",
+   "path": "review/SK_EBS_KHA_BLD_002_rooted_LOD0.obj",
+   "sha256": "ff15ee889754ba4fdd5e55b0f03269ac84a14edece6aff344be96be4f146aae4",
+   "span_cm": 381.41,
+   "triangles": 972
+  },
+  {
+   "height_cm": 460.0,
+   "name": "uprooted_mobile",
+   "path": "review/SK_EBS_KHA_BLD_002_uprooted_mobile_LOD0.obj",
+   "sha256": "908de989773753b8ad8124a533c847e233686d604c6c8885cf1ccaa99a0b54ac",
+   "span_cm": 350.0,
+   "triangles": 1096
+  },
+  {
+   "height_cm": 414.0,
+   "name": "damaged",
+   "path": "review/SK_EBS_KHA_BLD_002_damaged_LOD0.obj",
+   "sha256": "64b649bc675bbeb2b00bf9c72181f97705681a90ccd447d3feb217c92d2815f2",
+   "span_cm": 381.41,
+   "triangles": 996
+  },
+  {
+   "height_cm": 52.0,
+   "name": "destroyed",
+   "path": "review/SK_EBS_KHA_BLD_002_destroyed_LOD0.obj",
+   "sha256": "4215b3c73ff3a73eb41189342a1c769245a16726f68615168b606fc386f0a766",
+   "span_cm": 339.36,
+   "triangles": 248
+  },
+  {
+   "name": "rooted_lod1",
+   "path": "review/SK_EBS_KHA_BLD_002_rooted_LOD1.obj",
+   "sha256": "9b733b132b48b0413afc5681d29d5825a0bb2cde8de5ecc458590391d55de4ef",
+   "triangles": 544
+  },
+  {
+   "lowest_z_cm": 17.43,
+   "max_extent_cm": 190.7,
+   "name": "pose_uproot_050",
+   "path": "review/pose_uproot_050.obj",
+   "sha256": "f20359e99ac771a5ba7ae0ba6d7253bfa78f358e20d3b9f383e780148bb6edf8"
+  },
+  {
+   "lowest_z_cm": 46.0,
+   "max_extent_cm": 175.0,
+   "name": "pose_uproot_100",
+   "path": "review/pose_uproot_100.obj",
+   "sha256": "638bf6c9ef0220abd4cd814c1febb117fe9ec881cbb284ce30d6740b145b913d"
+  },
+  {
+   "lowest_z_cm": 46.0,
+   "max_extent_cm": 175.0,
+   "name": "pose_mobile_move_025",
+   "path": "review/pose_mobile_move_025.obj",
+   "sha256": "eacafd92ba7795d8ff76d179c284352467455480b1d23c9690fd4d9703caa15c"
+  },
+  {
+   "lowest_z_cm": 40.58,
+   "max_extent_cm": 175.0,
+   "name": "pose_root_060",
+   "path": "review/pose_root_060.obj",
+   "sha256": "1d6ff387dad6621f984d128461fd47119226c226fd24563330c3d137aba90f40"
+  }
+ ],
+ "revision": "ebs-kha-bld-002-concept-v1",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "ground-contact centre under the monolith; the runtime owns translation"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     60.0
+    ],
+    "name": "ring_sink",
+    "parent": "root",
+    "purpose": "the root plinth and every root ride this bone: it sinks on root and rises on uproot"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     120.0
+    ],
+    "name": "carriage_lift",
+    "parent": "root",
+    "purpose": "the monolith shaft rides this bone: it lifts the body onto the carriage"
+   },
+   {
+    "head_cm": [
+     128.0,
+     128.0,
+     74.0
+    ],
+    "name": "foot_01",
+    "parent": "carriage_lift",
+    "purpose": "carriage foot, forward right"
+   },
+   {
+    "head_cm": [
+     128.0,
+     -128.0,
+     74.0
+    ],
+    "name": "foot_02",
+    "parent": "carriage_lift",
+    "purpose": "carriage foot, forward left"
+   },
+   {
+    "head_cm": [
+     -128.0,
+     -128.0,
+     74.0
+    ],
+    "name": "foot_03",
+    "parent": "carriage_lift",
+    "purpose": "carriage foot, rear left"
+   },
+   {
+    "head_cm": [
+     -128.0,
+     128.0,
+     74.0
+    ],
+    "name": "foot_04",
+    "parent": "carriage_lift",
+    "purpose": "carriage foot, rear right"
+   }
+  ],
+  "policy": "The card's own rig: root, ring_sink, carriage_lift and four feet. The roots' splay-versus-braid is a STATE and not a bone pose, because a braid is not a rotation of a splay. No root motion; the runtime owns translation while mobile."
+ },
+ "scale_basis": {
+  "canon": "SPEC-BLD-016 Waystone row: a tall faceted monolith of dark strata with amber seams; rooted it sinks a visible ring of root-strata, uprooted it lifts on a grown carriage",
+  "footprint_cm": 400.0,
+  "footprint_tiles": [
+   2,
+   2
+  ],
+  "source": "Content/Data/Source/buildings.json ka_waystone.footprint_cells",
+  "tick_rate": "20 ticks per second, from the Waystone's own 100-tick / 5.0 s construction figure"
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/waystone-review/waystone-candidate.png",
+  "canon": "DevelopmentBible.md SPEC-BLD-016 Waystone row",
+  "concepts": [
+   "EBS-CON-KHA-BLD-002",
+   "EBS-CON-KHA-BLD-006"
+  ],
+  "gameplay": "Content/Data/Source/buildings.json ka_waystone"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "states": {
+  "damaged": "seams broken and courses chipped",
+  "destroyed": "the monolith falls and canon's ring is left in the ground",
+  "rooted": "the ring is sunk, the roots splay flat across the ground, no carriage",
+  "uprooted_mobile": "the roots retract into braided bundles, the carriage plate and four legs carry the body clear of the ground"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py"
+ },
+ "units": {
+  "axes": "+X forward, +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "ground-contact centre under the monolith"
+ }
+}
