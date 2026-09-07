@@ -165,13 +165,37 @@ for s in baseline carapace_molt striker_molt lod1 pose_move_025 pose_move_050 \
    | Amber ≤15% of surface area | 3.1% — within |
    | Hard-faceted, no smoothed topology | faceted throughout — within |
    | Sockets `VFX_Muzzle_Shard_01`, `VFX_Molt_Origin_Base`, `Target_Hitbox_Center` | **now emitted**; the build's earlier names are kept as aliases |
-   | 14-bone kinematic rig | **conflict**: 22 bones, 16 of them limb bones alone. OWNER-QUESTION A |
-   | 3 vertex ID channels for molt phases | **not implemented** |
+   | 14-bone kinematic rig | **non-compliant as written**: 22 bones, selected by the owner. Amendment proposed |
+   | 3 vertex ID channels for molt phases | **not implemented, not waived** — see §8.8 |
    | 512² translucent core blend for molts | pending at the texture stage |
 
-> **OWNER-QUESTION A — the card's 14-bone rig against a four-legged animal.** `REL-ART-005.KA.RIFTSTALKER`
-> specifies a 14-bone kinematic layout. The selected concept is a quadruped with three-segment limbs,
-> which costs 16 bones in the limbs alone before a body, prow or caster mount. The card's figure is
-> consistent with the biped my provisional card first described and inconsistent with the concept the
-> owner's standing ruling makes authoritative. Confirm the quadruped and amend the card's bone count,
-> or direct a 14-bone rig — which means dropping a limb segment or the caster's independent aim.
+> **OWNER-QUESTION A — RESOLVED 2026-09-07.** Asked: confirm the quadruped and amend the card's bone
+> count, or direct a 14-bone rig. Owner ruling: **keep the quadruped and select the existing 22-bone
+> rig as the production direction**, with no limb segment or independent caster aim removed merely to
+> reach 14. A targeted amendment is prepared in
+> [card-amendment-REL-ART-005.KA.RIFTSTALKER.md](card-amendment-REL-ART-005.KA.RIFTSTALKER.md),
+> generated from the generator's own bone table so it cannot drift, and carrying the full hierarchy and
+> each bone's purpose. **`Docs/Requirements.md` is not amended**, so this asset remains non-compliant
+> with the `.ANIM_RIG` clause as written until it is, and the manifest says so.
+
+**Retraction.** I earlier wrote that the card's 14-bone figure was "consistent with the biped my
+provisional card first described". That was an inference about the card's provenance, not something I
+established, and the owner directed that it not be claimed. It is withdrawn. What is established: the
+card says 14, the selected concept is four-legged, and the owner has selected the 22-bone rig.
+
+8. **The three vertex ID channels are required work, and the export path cannot carry them yet.**
+   The card's `.MESH_PROP` requires three vertex ID colouring channels for public molting phase
+   transitions. Neither the rig decision nor a clean import waives them. The mapping is now defined:
+
+   | Channel | Meaning | Present in |
+   |---|---|---|
+   | R | baseline chassis, in every phase | `baseline`, `carapace_molt`, `striker_molt` |
+   | G | carapace-molt geometry | `carapace_molt` |
+   | B | striker-molt geometry | `striker_molt` |
+
+   The blocker is real and stated: `ArtSource/tools/ebs_meshkit.py` emits `POSITION`, `NORMAL`,
+   `TEXCOORD_0` and `TEXCOORD_1` only. There is no `COLOR_0` attribute in the export path, so the
+   channels cannot reach a GLB, an import or a material. Adding `COLOR_0` to the kit is the
+   prerequisite, and three verifications remain after it: the channel present in the export, surviving
+   the import into vertex colours, and read by a molt-phase material with visibly distinct phases. A
+   test asserts the mapping exists and that `verified` is false, so this cannot quietly become "done".

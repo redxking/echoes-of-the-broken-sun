@@ -585,9 +585,33 @@ def manifest(exported: dict) -> dict:
                 "emissive": "WITHIN: 3.1% against 15%",
                 "faceted_no_smoothed_topology": "WITHIN",
                 "sockets": "NOW COMPLIANT: the card's three names are emitted; the build's previous names are aliases",
-                "rig": "CONFLICT: the card says 14 bones; this quadruped has 22, of which 16 are limb bones alone. OWNER-QUESTION A.",
-                "vertex_id_channels": "NOT IMPLEMENTED: three channels for public molting phase transitions are required.",
+                "rig": ("NON-COMPLIANT with the clause as written: the card says 14 bones, this quadruped has 22. The owner "
+                        "selected the 22-bone rig as the production direction on 2026-09-07 and directed that no limb segment "
+                        "or independent caster aim be removed to reach 14. A targeted amendment is proposed in "
+                        "card-amendment-REL-ART-005.KA.RIFTSTALKER.md. Docs/Requirements.md is NOT amended, so this asset "
+                        "remains non-compliant with the clause until it is."),
+                "vertex_id_channels": ("NOT IMPLEMENTED and NOT WAIVED. Required work; neither the rig decision nor a passing "
+                                       "import affects it. The mapping is defined below; the export path cannot yet carry it."),
                 "molt_texture": "PENDING: a 512^2 translucent core blend mask is required at the texture stage."}},
+        "vertex_id_channels": {
+            "requirement": "card .MESH_PROP: 3 vertex ID coloring channels for public molting phase transitions",
+            "status": "DEFINED, NOT IMPLEMENTED",
+            "mapping": {
+                "channel_r": {"meaning": "baseline chassis: geometry present in every molt phase",
+                              "components": "shells, seams, underbody, prow, legs, caster housing and slot"},
+                "channel_g": {"meaning": "carapace-molt geometry: present only after a carapace molt",
+                              "components": "molt_plate_* and the thickened shell profile"},
+                "channel_b": {"meaning": "striker-molt geometry: present only after a striker molt",
+                              "components": "molt_striker_vane_* and the lengthened caster housing"}},
+            "state_to_channels": {"baseline": ["R"], "carapace_molt": ["R", "G"], "striker_molt": ["R", "B"]},
+            "blocked_by": ("ArtSource/tools/ebs_meshkit.py emits POSITION, NORMAL, TEXCOORD_0 and TEXCOORD_1 only. There is no "
+                           "COLOR_0 attribute in the export path, so the channels cannot reach a GLB, an import or a material "
+                           "yet. Adding COLOR_0 to the kit is the prerequisite."),
+            "verification_required": [
+                "export: COLOR_0 present in the GLB with the mapping above",
+                "import: the channel survives Interchange into the SkeletalMesh's vertex colours",
+                "material: a molt-phase material reads the channel and the phases are visibly distinct"],
+            "verified": False},
         "provisional_contract": {
             "card": f"{PROVISIONAL_CARD} in ArtSource/kharuun-asset-cards.json — SUPERSEDED for this asset by {CARD}",
             "status": ("PROVISIONAL. Authored in this worktree under the owner ruling of 2026-09-07; NOT incorporated into "

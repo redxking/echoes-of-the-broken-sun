@@ -125,8 +125,41 @@ class RiftstalkerBlockout(unittest.TestCase):
             self.assertIn(required, rs.SOCKETS, "a card-required socket name is missing")
         self.assertEqual(self.socks["Molt_Striker_Anchor"], "caster_pitch")
         self.assertEqual(self.socks["VFX_Molt_Origin_Base"], "body")
+        # verify the alias bindings: every alias must resolve to a socket that exists, must not shadow
+        # a real socket name, and must land on the same bone the card's socket does
+        emitted = {s.name: s for s in self.m0.sockets}
         for old, new in rs.SOCKET_ALIASES.items():
             self.assertIn(new, rs.SOCKETS, f"alias {old} points at a socket that does not exist")
+            self.assertNotIn(old, rs.SOCKETS, f"alias {old} must not also be an emitted socket")
+            self.assertIn(new, emitted, f"alias target {new} is not emitted on the mesh")
+            self.assertIn(self.socks[new], {b.name for b in self.s.bones},
+                          f"alias target {new} is bound to a bone that does not exist")
+
+    def test_the_vertex_id_channels_are_defined_and_openly_unimplemented(self):
+        # the card requires three; neither the rig decision nor a passing import waives them
+        path = os.path.join(HERE, "build-manifest.json")
+        if not os.path.exists(path):
+            self.skipTest("no manifest")
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        v = data["vertex_id_channels"]
+        self.assertEqual(v["status"], "DEFINED, NOT IMPLEMENTED")
+        self.assertFalse(v["verified"])
+        self.assertEqual(sorted(v["state_to_channels"]), sorted(rs.STATES))
+        self.assertEqual(v["state_to_channels"]["baseline"], ["R"])
+        self.assertIn("COLOR_0", v["blocked_by"])
+        self.assertEqual(len(v["verification_required"]), 3)
+
+    def test_the_rig_discrepancy_is_recorded_not_resolved(self):
+        path = os.path.join(HERE, "build-manifest.json")
+        if not os.path.exists(path):
+            self.skipTest("no manifest")
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        rig = data["authoritative_card"]["compliance"]["rig"]
+        self.assertIn("NON-COMPLIANT", rig)
+        self.assertIn("NOT amended", rig)
+        self.assertEqual(len(self.s.bones), 22)
 
     def test_provisional_card_budget(self):
         path = os.path.join(HERE, "build-manifest.json")
@@ -135,7 +168,7 @@ class RiftstalkerBlockout(unittest.TestCase):
             with open(path, encoding="utf-8") as handle:
                 data = json.load(handle)
             self.assertIn("REL-ART-005.KA.RIFTSTALKER", data["authoritative_card"]["card"])
-            self.assertIn("CONFLICT", data["authoritative_card"]["compliance"]["rig"])
+            self.assertIn("NON-COMPLIANT", data["authoritative_card"]["compliance"]["rig"])
             self.assertIn("PENDING", data["acceptance"]["technical"])
             self.assertIn("FOUR legs", data["anatomy_correction"]["why_wrong"])
             for row in data.get("outputs", []):

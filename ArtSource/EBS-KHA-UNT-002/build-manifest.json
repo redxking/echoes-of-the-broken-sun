@@ -37,10 +37,10 @@
    "emissive": "WITHIN: 3.1% against 15%",
    "faceted_no_smoothed_topology": "WITHIN",
    "molt_texture": "PENDING: a 512^2 translucent core blend mask is required at the texture stage.",
-   "rig": "CONFLICT: the card says 14 bones; this quadruped has 22, of which 16 are limb bones alone. OWNER-QUESTION A.",
+   "rig": "NON-COMPLIANT with the clause as written: the card says 14 bones, this quadruped has 22. The owner selected the 22-bone rig as the production direction on 2026-09-07 and directed that no limb segment or independent caster aim be removed to reach 14. A targeted amendment is proposed in card-amendment-REL-ART-005.KA.RIFTSTALKER.md. Docs/Requirements.md is NOT amended, so this asset remains non-compliant with the clause until it is.",
    "sockets": "NOW COMPLIANT: the card's three names are emitted; the build's previous names are aliases",
    "triangles": "WITHIN: 602 LOD0 and 346 LOD1 against 7,500 / 3,200",
-   "vertex_id_channels": "NOT IMPLEMENTED: three channels for public molting phase transitions are required."
+   "vertex_id_channels": "NOT IMPLEMENTED and NOT WAIVED. Required work; neither the rig decision nor a passing import affects it. The mapping is defined below; the export path cannot yet carry it."
   },
   "found": "2026-09-07, during a full audit of every asset-card heading in Docs/Requirements.md. I had reported that no Kharuun asset card existed; that was wrong for this asset, and the owner's ruling to author a provisional Kharuun set was given on that false premise."
  },
@@ -907,5 +907,43 @@
    "detail": "The two share a quadruped anatomy and must be distinguishable in monochrome at tactical distance. A monochrome tactical render is produced here as the baseline for that comparison; the comparison itself waits on the Cairnback package.",
    "item": "monochrome separation from the Cairnback"
   }
- ]
+ ],
+ "vertex_id_channels": {
+  "blocked_by": "ArtSource/tools/ebs_meshkit.py emits POSITION, NORMAL, TEXCOORD_0 and TEXCOORD_1 only. There is no COLOR_0 attribute in the export path, so the channels cannot reach a GLB, an import or a material yet. Adding COLOR_0 to the kit is the prerequisite.",
+  "mapping": {
+   "channel_b": {
+    "components": "molt_striker_vane_* and the lengthened caster housing",
+    "meaning": "striker-molt geometry: present only after a striker molt"
+   },
+   "channel_g": {
+    "components": "molt_plate_* and the thickened shell profile",
+    "meaning": "carapace-molt geometry: present only after a carapace molt"
+   },
+   "channel_r": {
+    "components": "shells, seams, underbody, prow, legs, caster housing and slot",
+    "meaning": "baseline chassis: geometry present in every molt phase"
+   }
+  },
+  "requirement": "card .MESH_PROP: 3 vertex ID coloring channels for public molting phase transitions",
+  "state_to_channels": {
+   "baseline": [
+    "R"
+   ],
+   "carapace_molt": [
+    "R",
+    "G"
+   ],
+   "striker_molt": [
+    "R",
+    "B"
+   ]
+  },
+  "status": "DEFINED, NOT IMPLEMENTED",
+  "verification_required": [
+   "export: COLOR_0 present in the GLB with the mapping above",
+   "import: the channel survives Interchange into the SkeletalMesh's vertex colours",
+   "material: a molt-phase material reads the channel and the phases are visibly distinct"
+  ],
+  "verified": false
+ }
 }
