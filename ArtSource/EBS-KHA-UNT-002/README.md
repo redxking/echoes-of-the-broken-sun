@@ -259,9 +259,54 @@ and revision, the full stack with recorded hashes, the ceiling, emissive living 
 (sampled at every chart centre), StateMask.R mirroring `COLOR_0.R` within 8-bit at every chart centre,
 team carriers, and determinism.
 
-### 9.4 Material and in-engine capture
+### 9.4 Material
 
-Recorded in §9.5 below once the capture lands; the pipeline findings it produced are in the ledger.
+`M_EBS_KHA_UNT_002_Art` (built in the capture run, not yet a production master): BaseColor →
+`lerp(TeamColor, StateMask.B)` → `lerp(core tone, 0.45 × swept × (1 − MoltProgress))` → base colour;
+Normal and MRE.G/MRE.R straight to normal, roughness and metallic; emissive = `MRE.B × Broken-Sun Amber ×
+EmissiveStrength × (1 + swept × (1 − MoltProgress))`; `swept = COLOR_0.R ≥ 1.02 − 1.04 × MoltProgress`
+(the vertex-ID convention, §8). Parameters: `MoltProgress` (authoritative, written from outside; the
+graph has no clock), `TeamColor` (default cyan is a **placeholder**, not a Kharuun team colour),
+`EmissiveStrength` (0.5). Every connection is checked and any failure is recorded by pin name.
+
+### 9.5 In-engine capture (final: `textures/inengine/`)
+
+Unreal rendered the textured unit offscreen: ticks 0/40/80 for all three variants at tactical
+(1400 cm, −55°) and close (520 cm, −18°) framing, 18 frames, exposure chosen by a bracket keyed to the
+ground (EV +11: ground 104, body 71). Readiness was gated on the property the capture exists to show —
+the tick-0 and tick-40 instances rendering differently on the crest above the team band (67 → 100) —
+and passed on the first poll. Measured on the close frames against the ground: foreleg 0.40×, lower
+shells 0.32–0.37×, the team band 1.6–1.7×, the crest above the band 0.68× at tick 0 and 0.98× at tick
+40 (the window tint) and 0.30× on the carapace variant's fresh plates; the brightest seam pixels
+221/187/154 — amber, not clipped. At the tactical camera all three variants read as a dark silhouette
+with the ownership band legible at once; the carapace variant is distinguishable by its heavier back,
+the striker's vanes only faintly (`sheet_tactical_t080_three_variants.png`).
+
+**Seven captures were needed, and each taught something now in the ledger.** (1) A key light at the
+Art Direction's intensity 10 into an LDR SceneCapture with no eye adaptation rendered a uniform tan.
+(2) A guessed fixed exposure rendered black. (3) A bracket keyed to the *creature* lifted a charcoal
+body to the ground's brightness and hid the next fault. (4) `TC_MASKS` textures sampled as
+`LinearColor` are a compile error that renders the **default material** with no visible error and
+every instance identical — found by a per-channel unlit diagnostic (PF-018); textures also streamed in
+at 32² until `never_stream` was set (PF-019). (5) With those fixed the body still read 0.8× the
+ground: a lit-shading bisection rendered every input combination dark, and a bisection of the art
+graph by *wiring* showed the team lerp was the one lifting step — because the probe sat on the crest,
+a whole-shell team carrier rendering the team colour by design (PF-020). (6) The crest carrier became
+a **band** across its middle 40%; the seams still clipped white at emissive 4, 1.2 and 0.5 alike —
+the baked amber *base* was a pale 0.55–1.0 linear that the amber key drove to white regardless of
+emissive. (7) The base is now the Art Direction ember weighting; the glow rides the emissive mask
+(`ebs-texbake-v3`), and the seams read amber.
+
+**Two decisions taken here, recorded for gate review, not accepted:** ownership rides a band across
+the crest plus the prow rather than the whole crest (readability kept, obsidian identity kept); the
+amber seams are ember-dark in albedo and glow through the emissive.
+
+**Outstanding.** Integration with a running simulation driving `MoltProgress`; a production master
+material and a real Kharuun `TeamColor`; gate-review judgements at gameplay distance on the fracture
+cell frequency (12 cm cells read as bold plates at close range, as intended "faceted crystalline",
+but that is a judgement), on seam visibility at tactical distance (they are faint by design under the
+≤15% ceiling), and on the striker variant's distinction at tactical distance; and the provisional
+card reading. Superseded bakes and their captures are retained as `textures_v1..v3_superseded/`.
 
 ## 9. Decisions and open items
 

@@ -547,7 +547,7 @@
    "package_id": "EBS-PKG-KA-RIFTSTALKER",
    "production_asset_id": "EBS-KHA-UNT-002",
    "subject": "Riftstalker",
-   "production_maturity": "BLOCKOUT",
+   "production_maturity": "BLOCKOUT (textured)",
    "current_revision": "ebs-kha-unt-002-concept-v2",
    "asset_name": "SK_EBS_KHA_UNT_002",
    "planned_unreal_folder": "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_002/",
@@ -575,6 +575,22 @@
      "evidence": "BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-UNT-002/textures/ (bake-report.json, the six maps)",
      "result": "2048^2 stack + 512^2 MoltBlend baked from a unique UV0 atlas (448 charts, 2.03 px/cm, 81% used, molt parts included) with two Kharuun families added to the shared baker: kharuun_obsidian (charcoal body inside the Art Direction anchor, 311/311 charts at 0.029-0.065 linear, strata, fractured cell field, grit, NO emissive) and kharuun_amber (the only emissive). Amber emissive measured on the BAKED mask by painted area: 3.8% against the card's <=15%. Unit StateMask R mirrors COLOR_0.R (COLOR_0 authoritative), G core blend, B team carrier. 448/448 painted, none unmatched, deterministic, 104 s. concept-v2 changes only UV0; a test pins v1's counts and bounds; re-imported clean. 22 texbake, 31 build, 7 texture tests pass; the other 20 packages export byte-identical.",
      "provisional": "The card's .TEX_MAPS/.MAT_RULE are read PROVISIONALLY: the maps and the ceiling are the card's, the surface recipes are this pipeline's. Not technical acceptance."
+    },
+    {
+     "stage": "BLOCKOUT (textured; art material rendered in engine; ebs-texbake-v3)",
+     "date": "2026-09-07",
+     "evidence": "BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-UNT-002/textures/ (bake-report.json, six maps, inengine/ with art-capture-report.json, region-statistics.json, contact sheets)",
+     "result": "Unreal rendered the textured Riftstalker with the art material: ticks 0/40/80, three variants, tactical and close framing, 18 frames, exposure by a ground-keyed bracket (EV+11), readiness gated on the tick-0 and tick-40 instances rendering differently (67 -> 100) and passed on the first poll. Against the ground: body 0.32-0.40x, team band 1.6-1.7x, crest above the band 0.68x -> 0.98x through the window, seams 221/187/154 amber not clipped. Seven captures were needed; findings PF-016..PF-020 record what each taught.",
+     "decisions_for_gate_review": [
+      "Ownership rides a BAND across the crest's middle 40% plus the prow, not the whole crest: a whole-shell carrier deleted the obsidian identity on the most visible surface.",
+      "The amber seams are ember-dark in albedo (Art Direction vein weighting) and glow through the emissive mask; a pale amber base rendered white under the amber key at any emissive strength."
+     ],
+     "outstanding": [
+      "Integration with a running simulation driving MoltProgress.",
+      "A production master material and a real Kharuun TeamColor (the capture's cyan default is a placeholder).",
+      "Gate-review judgements at gameplay distance: fracture cell frequency, seam visibility at tactical distance, the striker variant's distinction at tactical distance.",
+      "The card's .TEX_MAPS/.MAT_RULE remain a PROVISIONAL reading; not technical acceptance."
+     ]
     }
    ],
    "next": "Close the open items above, then textures, in-engine capture, gate reviews, incorporation of the provisional card into the authoritative requirements, owner acceptance.",
@@ -586,7 +602,7 @@
     "Monochrome separation from the Cairnback not yet comparable: baseline monochrome passes rendered here; the comparison waits on that package.",
     "Gait was a hop until 2026-09-07; the fix is in this package's second stage receipt.",
     "A 512x512 translucent core blend mask for molt transitions is required at the texture stage.",
-    "Vertex ID channels: defined, exported, and verified through import for baseline, carapace_molt and striker_molt by reading COLOR_0 back out of Unreal as values. R is the molt sweep order, G Carapace membership, B Striker membership, A reserved; team ownership is in no channel. The molt material compiles and is assigned; an in-engine capture under a real RHI is outstanding."
+    "Textured at BLOCKOUT (ebs-texbake-v3, art material rendered in engine). Not accepted; see the stage receipt's outstanding list."
    ],
    "acceptance_note": "Owner 2026-09-07: remains BLOCKOUT. Animation NOT_ACCEPTED. Import and test results are reported evidence, not independently inspected.",
    "resolved_owner_questions": [
@@ -1229,14 +1245,14 @@
    "Reconcile the Riftstalker rig amendment (REL-ART-005.KA.RIFTSTALKER, 22 bones against the card's 14) with Docs/Requirements.md."
   ],
   "may_proceed_independently": [
-   "The Riftstalker texture/material pass, now that the vertex-ID export dependency is cleared: masks, molt-state mapping and material response can be checked together.",
    "Texture and material work, against contracts named explicitly as PROVISIONAL in every artefact it produces. Provisional status must not be dropped from a filename, manifest or receipt because textures now exist."
   ],
   "also_open": [
    "Phase Anchor versus Chorus Loom separability, in representative terrain, lighting, team colour treatment and tactical camera views.",
    "Riftstalker vertex ID channels: CLEARED through export and import for all three molt states. Outstanding only: an in-engine capture of M_EBS_KHA_UNT_002_MoltPhase under a real RHI.",
    "Runtime verification of simultaneous locomotion and firing.",
-   "Detail judgements at gameplay distance, in-engine capture, gate reviews, owner acceptance."
+   "Detail judgements at gameplay distance, in-engine capture, gate reviews, owner acceptance.",
+   "Riftstalker: textured and rendered in engine at BLOCKOUT; simulation integration, a production master material, a real TeamColor, and gate-review judgements at gameplay distance remain."
   ]
  },
  "write_coordination": {
