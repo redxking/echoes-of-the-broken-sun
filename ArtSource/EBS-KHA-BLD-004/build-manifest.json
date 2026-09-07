@@ -1,0 +1,547 @@
+{
+ "acceptance": {
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "PENDING \u2014 built against the provisional card; final technical acceptance waits on that card being incorporated into the authoritative requirements and its checks passing"
+ },
+ "asset_name": "SK_EBS_KHA_BLD_004",
+ "author": "Angelis Pseftis",
+ "bind_counts": {
+  "socket": 312,
+  "spine_lower": 130,
+  "spine_upper": 160
+ },
+ "budgets": {
+  "amber_area_fraction_contact": 0.08409,
+  "amber_cap": 0.15,
+  "amber_measure": "surface area in the fully lit contact state, per REL-ART-029; the cap is a ceiling, not a target",
+  "amber_within_cap": true,
+  "cap_scope": "the complete assembly including the rooted socket",
+  "cap_source": "REL-BLD-016.KA.SPINE.ASSET (PROVISIONAL)",
+  "contact_state_triangles": 602,
+  "lod0_cap": 3000,
+  "lod0_triangles": 602,
+  "lod0_within_cap": true,
+  "lod1_cap": 1200,
+  "lod1_triangles": 292,
+  "lod1_within_cap": true
+ },
+ "clips": [
+  {
+   "bones": [
+    "spine_lower",
+    "spine_upper"
+   ],
+   "duration_s": 6.0,
+   "loop": true,
+   "name": "idle_pulse",
+   "purpose": "listening: a slow lean cycle, the visual partner of canon's slow pulse. The pulse itself is carried by the nodules' material, which the runtime drives",
+   "ticks": 120
+  },
+  {
+   "bones": [
+    "spine_lower",
+    "spine_upper"
+   ],
+   "duration_s": 2.0,
+   "loop": false,
+   "name": "detect_sweep",
+   "purpose": "a contact: the rib LEANS toward the source while the nodules run their sequence. The runtime supplies the bearing; this clip carries the lean, not an aim",
+   "ticks": 40
+  },
+  {
+   "bones": [
+    "spine_lower",
+    "spine_upper"
+   ],
+   "duration_s": 1.5,
+   "loop": false,
+   "name": "offline",
+   "purpose": "power or structure lost: the rib slumps off its lean and holds",
+   "ticks": 30
+  },
+  {
+   "bones": [
+    "spine_lower",
+    "spine_upper"
+   ],
+   "duration_s": 0.0,
+   "loop": false,
+   "name": "restore",
+   "purpose": "single-frame listening rest pose for reconstruction from saved state",
+   "ticks": 0
+  }
+ ],
+ "component_inventory": {
+  "bones": {
+   "built": 4,
+   "contract": "root, socket and a two-bone leaning rib (card REL-BLD-016.KA.SPINE.ASSET)",
+   "names": [
+    "root",
+    "socket",
+    "spine_lower",
+    "spine_upper"
+   ]
+  },
+  "not_a_weapon": {
+   "contract": "no dish, antenna, radar, mast, turret ring, trunnion or muzzle",
+   "violations": []
+  },
+  "rooted_socket": {
+   "contract": 3,
+   "roots": 10,
+   "steps": 3
+  },
+  "sensor_nodules": {
+   "built": 11,
+   "contract": 11,
+   "individually_addressable": true,
+   "note": "one component per nodule so the runtime can light them in sequence"
+  },
+  "single_rib": {
+   "contract": "one rib, curved and tapering",
+   "courses": 9,
+   "tip": true
+  },
+  "sockets": {
+   "built": [
+    "Nodule_Base",
+    "Nodule_Tip",
+    "Socket_Root",
+    "Target_Anchor_Center"
+   ],
+   "contract": [
+    "Nodule_Base",
+    "Nodule_Tip",
+    "Socket_Root",
+    "Target_Anchor_Center"
+   ]
+  },
+  "states": {
+   "built": [
+    "listening",
+    "contact",
+    "damaged",
+    "destroyed"
+   ],
+   "contract": [
+    "listening",
+    "contact",
+    "damaged",
+    "destroyed"
+   ]
+  },
+  "tracks": {
+   "built": [
+    "idle_pulse",
+    "detect_sweep",
+    "offline",
+    "restore"
+   ],
+   "contract": [
+    "idle_pulse",
+    "detect_sweep",
+    "offline",
+    "restore"
+   ]
+  }
+ },
+ "concept_measurements": {
+  "bounds_cm": [
+   [
+    -190.84,
+    -191.47,
+    0.0
+   ],
+   [
+    190.84,
+    191.47,
+    711.0
+   ]
+  ],
+  "everything_inside_the_footprint": true,
+  "flat_root_top_cm": 20.0,
+  "flat_roots_under_ground_clutter_ceiling": true,
+  "footprint_cm": 400.0,
+  "footprint_tiles": [
+   2,
+   2
+  ],
+  "height_cm": 711.0,
+  "height_over_root_disc": 1.8567,
+  "max_extent_cm": 191.47,
+  "nodule_count": 11,
+  "rib_base_width_over_height": 0.1758,
+  "root_disc_cm": 382.94,
+  "tip_offset_over_height": 0.1252
+ },
+ "creator": "Angelis Pseftis",
+ "detection_readout": {
+  "addressing": "one component per nodule, ordered base to tip, so the runtime can light them in sequence",
+  "nodule_count": 11,
+  "note": "The state assemblies show all-dark and all-lit only. The ordered sequence toward a source direction is a material animation over these components and is not represented in geometry."
+ },
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Two slots: plated faceted strata for the rib, collar and roots, and amber for the sensor nodules, which are the only emissive. No dish, antenna, radar or mast language anywhere \u2014 canon says a spine, not a weapon, and a test asserts no component is named like one.",
+ "material_slots": [
+  "MI_EBS_KHA_Strata",
+  "MI_EBS_KHA_Amber"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -190.84296672807685,
+     -191.4685044087531,
+     0.0
+    ],
+    [
+     190.84296672807685,
+     191.4685044087531,
+     711.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Strata": 602
+   },
+   "clips": [
+    "idle_pulse",
+    "detect_sweep",
+    "offline",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_BLD_004",
+   "path": "export/SK_EBS_KHA_BLD_004_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "4868f5aa228b4724d46544eee26849d8a04f91f3242306d92b71663192edf4cf",
+   "sockets": [
+    {
+     "bone": "spine_lower",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      10.9,
+      0.0,
+      317.85
+     ],
+     "purpose": "targeting and selection anchor on the lower rib",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "spine_lower",
+     "name": "Nodule_Base",
+     "position_cm": [
+      -39.68,
+      0.0,
+      152.26
+     ],
+     "purpose": "the first nodule in the sequence: where a detection run starts",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "spine_upper",
+     "name": "Nodule_Tip",
+     "position_cm": [
+      54.09,
+      0.0,
+      631.9
+     ],
+     "purpose": "the last nodule in the sequence",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Socket_Root",
+     "position_cm": [
+      0.0,
+      0.0,
+      8.0
+     ],
+     "purpose": "the rooted socket's ground contact",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 602
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_KHA_BLD_004",
+   "path": "export/SK_EBS_KHA_BLD_004_LOD0.obj",
+   "sha256": "19ae210d0b4493415c75a25f2b479168f1b10240f17f08921133fa00e562d740"
+  },
+  {
+   "bounds_cm": [
+    [
+     -130.90893314083158,
+     -150.83695249704354,
+     0.0
+    ],
+    [
+     156.5321520841902,
+     150.8369524970435,
+     711.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_KHA_Strata": 292
+   },
+   "clips": [
+    "idle_pulse",
+    "detect_sweep",
+    "offline",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_BLD_004",
+   "path": "export/SK_EBS_KHA_BLD_004_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_KHA_Strata",
+    "MI_EBS_KHA_Amber"
+   ],
+   "sha256": "55668928ad0b7e70ed08022d888884d2021895abd400181cfb7ec8177fa92666",
+   "sockets": [
+    {
+     "bone": "spine_lower",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      10.9,
+      0.0,
+      317.85
+     ],
+     "purpose": "targeting and selection anchor on the lower rib",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "spine_lower",
+     "name": "Nodule_Base",
+     "position_cm": [
+      -39.68,
+      0.0,
+      152.26
+     ],
+     "purpose": "the first nodule in the sequence: where a detection run starts",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "spine_upper",
+     "name": "Nodule_Tip",
+     "position_cm": [
+      54.09,
+      0.0,
+      631.9
+     ],
+     "purpose": "the last nodule in the sequence",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Socket_Root",
+     "position_cm": [
+      0.0,
+      0.0,
+      8.0
+     ],
+     "purpose": "the rooted socket's ground contact",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 292
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_KHA_BLD_004",
+   "path": "export/SK_EBS_KHA_BLD_004_LOD1.obj",
+   "sha256": "88a13b110f7a0b26d9bfb9e37ffdd36ec31d591cdfdfac5eb01239c760c64c02"
+  }
+ ],
+ "package_id": "EBS-PKG-KA-LISTENING-SPINE",
+ "planned_unreal_folder": "/Game/Echoes/Production/KHA/BLD/EBS_KHA_BLD_004/",
+ "production_asset_id": "EBS-KHA-BLD-004",
+ "provisional_contract": {
+  "bounds": {
+   "basis": "well under the faction default because canon specifies one rib in a socket",
+   "lod0_triangles": 3000,
+   "lod1_triangles": 1200
+  },
+  "card": "REL-BLD-016.KA.SPINE.ASSET in ArtSource/kharuun-asset-cards.json (rendered to kharuun-asset-cards.md)",
+  "status": "PROVISIONAL. Authored in this worktree under the owner ruling of 2026-09-07; NOT incorporated into Docs/Requirements.md and not an existing authoritative per-asset requirement."
+ },
+ "review": {
+  "scenes": [
+   "scenes/listening.json",
+   "scenes/contact.json",
+   "scenes/damaged.json",
+   "scenes/destroyed.json",
+   "scenes/lod1.json",
+   "scenes/pose_detect_sweep_040.json",
+   "scenes/pose_detect_sweep_100.json",
+   "scenes/pose_offline_100.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "height_cm": 711.0,
+   "lit_nodules": [],
+   "name": "listening",
+   "path": "review/SK_EBS_KHA_BLD_004_listening_LOD0.obj",
+   "sha256": "d247fbb1520920b3d58cacf8cbf6e90dfa08c3426273f22193e4bea5230f4af8",
+   "triangles": 602
+  },
+  {
+   "height_cm": 711.0,
+   "lit_nodules": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+   ],
+   "name": "contact",
+   "path": "review/SK_EBS_KHA_BLD_004_contact_LOD0.obj",
+   "sha256": "96cee2757e5fe028c5673f7f32bc6480eb717912ed66fa48f9ce90ee9b98654b",
+   "triangles": 602
+  },
+  {
+   "height_cm": 711.0,
+   "lit_nodules": [],
+   "name": "damaged",
+   "path": "review/SK_EBS_KHA_BLD_004_damaged_LOD0.obj",
+   "sha256": "51daee30cba7f311110927bef5c8e3102405e4256adca6b406ee3cfc4621b1ca",
+   "triangles": 626
+  },
+  {
+   "height_cm": 70.8,
+   "lit_nodules": [],
+   "name": "destroyed",
+   "path": "review/SK_EBS_KHA_BLD_004_destroyed_LOD0.obj",
+   "sha256": "95030be2e63ee3d283dcab93fa4ffa09b8105bacbd010e9787950044d9da7037",
+   "triangles": 348
+  },
+  {
+   "name": "listening_lod1",
+   "path": "review/SK_EBS_KHA_BLD_004_listening_LOD1.obj",
+   "sha256": "e2c4c516fd190f8a3bd91dc868b7a64370475b68362732108aaa10b78f9fb165",
+   "triangles": 292
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "max_extent_cm": 191.47,
+   "name": "pose_detect_sweep_040",
+   "path": "review/pose_detect_sweep_040.obj",
+   "sha256": "c496a0508028064e6c365bf2bc6d607ec5df63f9fb3efc723bfd44c1b0905e4b"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "max_extent_cm": 191.47,
+   "name": "pose_detect_sweep_100",
+   "path": "review/pose_detect_sweep_100.obj",
+   "sha256": "9426e2c9481d8a6ed1927457df3c3f6872c7ac684b9bb9d1940a194cbb753844"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "max_extent_cm": 191.47,
+   "name": "pose_offline_100",
+   "path": "review/pose_offline_100.obj",
+   "sha256": "d8c74a8ae1584d02abde452b73ebca40f903006c690d8acfc1972a0f495c6fb9"
+  }
+ ],
+ "revision": "ebs-kha-bld-004-concept-v1",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "socket ground-contact centre; the spine never moves"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     59.0
+    ],
+    "name": "socket",
+    "parent": "root",
+    "purpose": "the rooted collar: fixed, and the rib's foundation"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     118.0
+    ],
+    "name": "spine_lower",
+    "parent": "socket",
+    "purpose": "card .ANIM_RIG lean bone 1: the rib's lower bend"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     380.66
+    ],
+    "name": "spine_upper",
+    "parent": "spine_lower",
+    "purpose": "card .ANIM_RIG lean bone 2: the rib's upper bend. The rib LEANS; it does not aim"
+   }
+  ],
+  "policy": "The card's own rig: root, socket and a two-bone rib. It is NOT a turret rig \u2014 the rib LEANS toward a contact, it does not aim, and there is no yaw ring, pitch trunnion or muzzle. No root motion."
+ },
+ "scale_basis": {
+  "canon": "SPEC-BLD-016 Listening Spine row: a single tall rib of strata with amber sensor nodules climbing it, set into a rooted socket. A spine, not a weapon",
+  "footprint_cm": 400.0,
+  "footprint_tiles": [
+   2,
+   2
+  ],
+  "source": "Content/Data/Source/buildings.json ka_listening_spine.footprint_cells",
+  "tick_rate": "20 ticks per second"
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/listening-spine-review/listening-spine-candidate.png",
+  "canon": "DevelopmentBible.md SPEC-BLD-016 Listening Spine row",
+  "concepts": [
+   "EBS-CON-KHA-BLD-004",
+   "EBS-CON-KHA-BLD-008"
+  ],
+  "gameplay": "Content/Data/Source/buildings.json ka_listening_spine"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "states": {
+  "contact": "every nodule is in the amber slot; the SEQUENCE toward the source is a per-nodule material animation the runtime drives, not geometry",
+  "damaged": "chips out of the rib's trailing edge",
+  "destroyed": "the rib snapped at the socket: the socket and roots remain, the rib lies broken beside them",
+  "listening": "the nodules sit in the strata slot and the rib stands at rest"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py"
+ },
+ "units": {
+  "axes": "+X forward, +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "socket ground-contact centre"
+ }
+}

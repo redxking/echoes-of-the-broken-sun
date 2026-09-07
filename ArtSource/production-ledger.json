@@ -518,6 +518,30 @@
    "open_items": [
     "Maximum-zoom occupancy readability, held OPEN by owner direction until verified."
    ]
+  },
+  {
+   "package_id": "EBS-PKG-KA-LISTENING-SPINE",
+   "production_asset_id": "EBS-KHA-BLD-004",
+   "subject": "Listening Spine",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-kha-bld-004-concept-v1",
+   "asset_name": "SK_EBS_KHA_BLD_004",
+   "planned_unreal_folder": "/Game/Echoes/Production/KHA/BLD/EBS_KHA_BLD_004/",
+   "canon_status": "CANDIDATE (listening-spine candidate against canon SPEC-BLD-016); not owner acceptance",
+   "source_root": "ArtSource/EBS-KHA-BLD-004/",
+   "authoritative_document": "ArtSource/EBS-KHA-BLD-004/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-KHA-BLD-004/concept-fidelity.md",
+   "asset_card": "REL-BLD-016.KA.SPINE.ASSET (PROVISIONAL, ArtSource/kharuun-asset-cards.json)",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-kha-bld-004-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-KHA-BLD-004/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "One curved tapering rib of plate courses rising 711 cm from a stepped rooted socket, with eleven amber sensor nodules climbing its concave leading edge. Traced proportions: height 1.87 of the 380 cm root disc, rib base 0.176 of the height, tip 0.125 of the height off its base axis. Canon's 'a spine, not a weapon' is asserted, not assumed: a test scans every state and the bone names for dish, antenna, radar, mast, turret, trunnion, muzzle and barrel. The rib LEANS and does not aim \u2014 detect_sweep carries no translation, roll or pitch. The lighting sequence is a per-nodule material animation the runtime drives; the geometry only makes each nodule individually addressable and ordered base to tip. LOD0 602 / LOD1 292 against the provisional card's 3,000 / 1,200; amber 8.4% in the fully lit state against REL-ART-029's 15% ceiling. 21 tests, 6 comparison sheets. Import clean: 0 errors, 0 warnings, 4 bones, 4 sockets exact, all 4 clips."
+    }
+   ],
+   "next": "Textures (2048 packed PBR with micro-noise normals), in-engine capture, gate reviews, incorporation of the provisional card into the authoritative requirements, owner acceptance.",
+   "open_owner_questions": []
   }
  ],
  "tools": {
