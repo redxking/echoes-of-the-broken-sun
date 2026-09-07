@@ -1,0 +1,1317 @@
+{
+ "acceptance": {
+  "art_gate": "NOT_EVALUATED",
+  "gameplay_gate": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical_gate": "NOT_EVALUATED"
+ },
+ "asset_name": "SK_EBS_MER_UNT_002",
+ "author": "Angelis Pseftis",
+ "budgets": {
+  "emissive_area_fraction_lod0": 0.060660295434498294,
+  "emissive_cap": 0.15,
+  "emissive_within_cap": true,
+  "lod0_cap": 8000,
+  "lod0_triangles": 1972,
+  "lod0_within_cap": true,
+  "lod1_cap": 3500,
+  "lod1_cap_note": "REL-ART-005.MC.LANCER prints the LOD1 ceiling as \"3,3500\" (an evident typo). REL-ART-028 (Docs/Requirements.md:2376) states the rule for the whole Meridian roster: \"a maximum LOD0 cap of <=8,000 triangles, transitioning smoothly down to <=3,500 triangles\", so 3,500 is the roster rule, not a guess; the card typo is recorded for correction (README section 8.5), not raised as an owner decision",
+  "lod1_triangles": 1136,
+  "lod1_within_cap": true
+ },
+ "clips": [
+  {
+   "bones": [
+    "body",
+    "cowl",
+    "l_foot",
+    "l_shin",
+    "l_thigh",
+    "l_toe",
+    "lance_barrel",
+    "lance_yaw",
+    "r_foot",
+    "r_shin",
+    "r_thigh",
+    "r_toe",
+    "strut_slide",
+    "strut_upper"
+   ],
+   "duration_s": 2.4,
+   "keys": 70,
+   "loop": true,
+   "name": "idle",
+   "purpose": "braced line-fire stance at rest: a 1 deg settle on the hips, the cowl scanning, the lance level at hip height on the centreline"
+  },
+  {
+   "bones": [
+    "body",
+    "l_foot",
+    "l_shin",
+    "l_thigh",
+    "l_toe",
+    "lance_barrel",
+    "lance_yaw",
+    "r_foot",
+    "r_shin",
+    "r_thigh",
+    "r_toe",
+    "spine",
+    "strut_slide",
+    "strut_upper"
+   ],
+   "duration_s": 0.6,
+   "keys": 350,
+   "loop": true,
+   "name": "move",
+   "purpose": "walk cycle authored for 320 cm/s (two 96 cm strides per 0.6 s); leaves the braced stance for a travel stance, lance carried level and locked; play rate follows the authoritative velocity (REL-ART-009)"
+  },
+  {
+   "bones": [
+    "body",
+    "l_foot",
+    "l_shin",
+    "l_thigh",
+    "l_toe",
+    "lance_yaw",
+    "r_foot",
+    "r_shin",
+    "r_thigh",
+    "r_toe",
+    "strut_slide",
+    "strut_upper"
+   ],
+   "duration_s": 0.6,
+   "keys": 60,
+   "loop": true,
+   "name": "turn",
+   "purpose": "stationary shuffle inside the brace while the runtime sweeps heading (SPEC-MOV-010); no root yaw in the clip"
+  },
+  {
+   "bones": [
+    "body",
+    "l_foot",
+    "l_shin",
+    "l_thigh",
+    "l_toe",
+    "lance_barrel",
+    "r_foot",
+    "r_shin",
+    "r_thigh",
+    "r_toe",
+    "strut_slide",
+    "strut_upper"
+   ],
+   "duration_s": 0.4,
+   "keys": 132,
+   "loop": false,
+   "name": "stop",
+   "purpose": "settle out of travel into the braced stance: the feet spread fore-and-aft, the trailing knee rolls into the kickstand brace and the strut retracts (Bible: halts, plants, aims)"
+  },
+  {
+   "bones": [
+    "body",
+    "cowl",
+    "l_foot",
+    "l_shin",
+    "l_thigh",
+    "l_toe",
+    "lance_barrel",
+    "lance_yaw",
+    "r_foot",
+    "r_shin",
+    "r_thigh",
+    "r_toe",
+    "spine",
+    "strut_slide",
+    "strut_upper"
+   ],
+   "duration_s": 2.2,
+   "keys": 675,
+   "loop": false,
+   "name": "fire",
+   "purpose": "halt, plant the strut, aim, fire with the lance recoiling along its own axis and the strut slide working, recover; canon SPEC-UNIT-002 line: never fires while moving"
+  },
+  {
+   "bones": [
+    "body",
+    "cowl",
+    "l_foot",
+    "l_shin",
+    "l_thigh",
+    "l_toe",
+    "lance_barrel",
+    "lance_yaw",
+    "r_foot",
+    "r_shin",
+    "r_thigh",
+    "r_toe",
+    "strut_slide",
+    "strut_upper"
+   ],
+   "duration_s": 0.36666666666666664,
+   "keys": 168,
+   "loop": false,
+   "name": "damage",
+   "purpose": "flinch on authoritative damage: the frame rocks back on the brace and the lance lifts; no displacement, the planted feet hold"
+  },
+  {
+   "bones": [
+    "body",
+    "cowl",
+    "l_foot",
+    "l_shin",
+    "l_thigh",
+    "l_toe",
+    "lance_barrel",
+    "lance_yaw",
+    "r_foot",
+    "r_shin",
+    "r_thigh",
+    "r_toe",
+    "spine",
+    "strut_slide",
+    "strut_upper"
+   ],
+   "duration_s": 1.4,
+   "keys": 435,
+   "loop": false,
+   "name": "death",
+   "purpose": "engineered collapse: the braced legs fold, the frame drops forward and the rail-lance drops nose-down toward the ground; the final pose is held (cosmetic debris <= 200 ticks)"
+  },
+  {
+   "bones": [
+    "body",
+    "cowl",
+    "l_foot",
+    "l_shin",
+    "l_thigh",
+    "l_toe",
+    "lance_barrel",
+    "lance_yaw",
+    "r_foot",
+    "r_shin",
+    "r_thigh",
+    "r_toe",
+    "strut_slide",
+    "strut_upper"
+   ],
+   "duration_s": 0.4,
+   "keys": 126,
+   "loop": false,
+   "name": "cancel",
+   "purpose": "order cancelled mid-aim: the lance returns to the carry angle, the strut slide retracts and the frame relaxes back onto the brace"
+  },
+  {
+   "bones": [
+    "body",
+    "cowl",
+    "l_foot",
+    "l_pod",
+    "l_shin",
+    "l_thigh",
+    "l_toe",
+    "lance_barrel",
+    "lance_yaw",
+    "r_foot",
+    "r_pod",
+    "r_shin",
+    "r_thigh",
+    "r_toe",
+    "spine",
+    "strut_slide",
+    "strut_upper"
+   ],
+   "duration_s": 0.0,
+   "keys": 17,
+   "loop": false,
+   "name": "restore",
+   "purpose": "single-frame rest pose used when reconstructing presentation from saved state; never replays a one-shot"
+  }
+ ],
+ "component_inventory": {
+  "antennas": {
+   "built": 2,
+   "contract": 2
+  },
+  "bones": {
+   "built": 18,
+   "contract": 18,
+   "names": [
+    "root",
+    "body",
+    "spine",
+    "cowl",
+    "r_pod",
+    "l_pod",
+    "lance_yaw",
+    "lance_barrel",
+    "r_thigh",
+    "r_shin",
+    "r_foot",
+    "r_toe",
+    "l_thigh",
+    "l_shin",
+    "l_foot",
+    "l_toe",
+    "strut_upper",
+    "strut_slide"
+   ]
+  },
+  "ceramic_skirt": {
+   "built": 0,
+   "contract": 0,
+   "note": "concept item 5: the flanks stay open charcoal frame"
+  },
+  "exposed_flank_struts": {
+   "built": 4,
+   "contract": 4
+  },
+  "feet": {
+   "built": 2,
+   "contract": 2
+  },
+  "hip_mount": {
+   "built": 1,
+   "contract": 1
+  },
+  "knee_hubs": {
+   "built": 2,
+   "contract": 2
+  },
+  "legs": {
+   "built": 2,
+   "contract": 2
+  },
+  "rail_lance": {
+   "breech": 1,
+   "built": 1,
+   "channel": 1,
+   "clamps": 3,
+   "contract": 1,
+   "muzzle_head": 1,
+   "rails": 2
+  },
+  "recoil_strut": {
+   "built": 1,
+   "contract": 1,
+   "slide_section": 1
+  },
+  "sensor_cowl": {
+   "built": 1,
+   "contract": 1,
+   "visor": 1
+  },
+  "shoulder_pods": {
+   "built": 2,
+   "contract": 2
+  },
+  "sockets": {
+   "built": [
+    "Left_Tread_Vector",
+    "Muzzle_Flash_01",
+    "Target_Anchor_Center"
+   ],
+   "contract": [
+    "Muzzle_Flash_01",
+    "Target_Anchor_Center",
+    "Left_Tread_Vector"
+   ]
+  },
+  "sub_objects": {
+   "built": {
+    "Barrel_X": "lance_barrel",
+    "Turret_Y": "lance_yaw"
+   },
+   "contract": [
+    "Turret_Y",
+    "Barrel_X"
+   ]
+  },
+  "toe_plates": {
+   "built": 2,
+   "contract": 2
+  },
+  "tracks": {
+   "built": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "fire",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "contract": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "fire",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ]
+  }
+ },
+ "concept_measurements": {
+  "H_pod_top_cm": 200.0,
+  "antenna_tip_over_H": 1.0654808092758825,
+  "body_pitch_deg": -8.0,
+  "bounds_cm": [
+   [
+    -89.0,
+    -48.6,
+    0.0
+   ],
+   [
+    194.5,
+    48.6,
+    213.09616185517652
+   ]
+  ],
+  "ceramic_front_facing_fraction": 0.3268630849220104,
+  "ceramic_rear_facing_fraction": 0.14904679376083188,
+  "ceramic_rear_over_front": 0.4559915164369035,
+  "collar_clamps": 3,
+  "core_width_cm": 34.0,
+  "cowl_below_pod_top_cm": 3.045751859100335,
+  "cowl_top_cm": 196.95424814089967,
+  "cowl_visor_over_H": 0.8915147025274572,
+  "cowl_visor_z_cm": 178.30294050549145,
+  "cyan_channel_full_length_fraction": 0.9576470588235294,
+  "cyan_side_profile_longest_run_cm": 140.0,
+  "cyan_side_profile_runs": 1,
+  "cyan_side_profile_span_cm": 250.0,
+  "emissive_area_fraction": 0.060660295434498294,
+  "feet_apart_across_Y_cm": 70.0,
+  "feet_apart_across_Y_over_H": 0.35,
+  "foot_centres_apart_cm": 128.0,
+  "foot_centres_apart_over_H": 0.64,
+  "foot_length_cm": 44.0,
+  "foot_length_over_H": 0.22,
+  "heel_to_toe_span_cm": 172.0,
+  "heel_to_toe_span_over_H": 0.86,
+  "integration_play_rate": 0.625,
+  "knee_disc_diameter_over_H": 0.08,
+  "lance_axis_over_H": 0.66,
+  "lance_axis_z_cm": 132.0,
+  "lance_clamp_envelope_cm": [
+   30.0,
+   22.0
+  ],
+  "lance_collar_depth_over_H": 0.11,
+  "lance_length_cm": 212.5,
+  "lance_length_over_H": 1.0625,
+  "lance_max_depth_over_H": 0.15,
+  "lance_muzzle_head_depth_over_H": 0.095,
+  "lance_muzzle_head_length_cm": 18.0,
+  "lance_on_centreline": true,
+  "lance_rail_section_diameter_cm": 20.0,
+  "lance_rail_section_diameter_over_H": 0.1,
+  "lance_rails": 2,
+  "lance_shaft_depth_over_H": 0.095,
+  "lead_ankle": [
+   58.0,
+   35.0,
+   27.000000000000007
+  ],
+  "lead_knee": [
+   40.208388593330575,
+   35.0,
+   73.7274925879195
+  ],
+  "lead_side": "right (+Y) leads; left (-Y) trails and carries the recoil strut",
+  "mirror_brace": true,
+  "move_authored_speed_cm_s": 320.0,
+  "move_cycle_s": 0.6,
+  "move_stride_cm": 96.0,
+  "move_world_speed_at_draw_scale_cm_s": 512.0,
+  "muzzle_ahead_of_lead_foot_centre_over_H": 0.66,
+  "muzzle_ahead_of_lead_toe_cm": 110.0,
+  "muzzle_ahead_of_lead_toe_over_H": 0.55,
+  "no_ceramic_skirt": true,
+  "overall_height_cm": 213.09616185517652,
+  "pod_centres_apart_cm": 60.0,
+  "pod_centres_apart_over_H": 0.3,
+  "pod_height_over_H": 0.13,
+  "pod_length_over_H": 0.22,
+  "pod_span_cm": 88.0,
+  "pod_span_over_H": 0.44,
+  "pods_are_widest_upper": true,
+  "presentation_scale": 1.6,
+  "shin_over_H": 0.25,
+  "spine_origin_x_cm": -42.0,
+  "strut_bounds_cm": [
+   [
+    -66.62386208199942,
+    -30.423905534814033,
+    67.96886554324513
+   ],
+   [
+    -43.81281530870338,
+    -17.167667508416528,
+    111.56620663211872
+   ]
+  ],
+  "strut_end_cm": [
+   -80.0,
+   -34.0,
+   30.0
+  ],
+  "strut_is_slim": true,
+  "strut_length_cm": 89.86656775464388,
+  "strut_radius_cm": 3.4,
+  "strut_reaches_trailing_ankle_cm": 10.488088481701515,
+  "strut_slide_fraction": 0.52,
+  "strut_stow_retraction_cm": 38.0,
+  "strut_top_cm": [
+   -46.0,
+   -20.0,
+   112.0
+  ],
+  "thigh_over_H": 0.3,
+  "trail_ankle": [
+   -70.0,
+   -35.0,
+   27.0
+  ],
+  "trail_knee": [
+   -52.208388593330554,
+   -35.0,
+   73.72749258791947
+  ],
+  "upper_assembly_band_centroid_x_cm": -28.41312971043237,
+  "upper_assembly_band_over_H": -0.14206564855216183,
+  "upper_assembly_band_x_cm": [
+   -75.0,
+   18.0
+  ]
+ },
+ "creator": "Angelis Pseftis",
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "2 export slots; the cyan lance channel, visor, pod strips and status strips plus the brass trim are texture channels of the ceramic slot. The review OBJ keeps a third pseudo slot so the renders show the cyan and the emissive share can be measured as a geometry proxy.",
+ "material_slots": [
+  "MI_EBS_MER_UnitFrame",
+  "MI_EBS_MER_UnitCeramic"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -89.0,
+     -48.6,
+     0.0
+    ],
+    [
+     194.5,
+     48.6,
+     213.09616185517652
+    ]
+   ],
+   "by_bone": {
+    "body": 304,
+    "cowl": 72,
+    "l_foot": 132,
+    "l_pod": 128,
+    "l_shin": 144,
+    "l_thigh": 100,
+    "l_toe": 48,
+    "lance_barrel": 244,
+    "lance_yaw": 96,
+    "r_foot": 132,
+    "r_pod": 128,
+    "r_shin": 144,
+    "r_thigh": 100,
+    "r_toe": 48,
+    "spine": 60,
+    "strut_slide": 40,
+    "strut_upper": 52
+   },
+   "by_slot": {
+    "MI_EBS_MER_UnitCeramic": 668,
+    "MI_EBS_MER_UnitFrame": 1304
+   },
+   "clips": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "fire",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_002",
+   "path": "export/SK_EBS_MER_UNT_002_LOD0.glb",
+   "sha256": "6bbecc778dea6b487e1cedc83cf950e0371793d2b3b887a3610875a87f84dd8d",
+   "sockets": [
+    {
+     "bone": "body",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      -4.0,
+      0.0,
+      138.0
+     ],
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "lance_barrel",
+     "name": "Muzzle_Flash_01",
+     "position_cm": [
+      194.0,
+      0.0,
+      132.0
+     ],
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "l_foot",
+     "name": "Left_Tread_Vector",
+     "position_cm": [
+      -66.0,
+      -35.0,
+      0.0
+     ],
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 1972
+  },
+  {
+   "kind": "static rest pose",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_002",
+   "path": "export/SK_EBS_MER_UNT_002_LOD0_static.glb",
+   "sha256": "033f8e41b5351061c4456751fc8812c73b473d07083db397d2f6ad9fddf26fe3",
+   "triangles": 1972
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_002",
+   "path": "export/SK_EBS_MER_UNT_002_LOD0.obj",
+   "sha256": "e83ff69f0e671876c04a0f3ab930ec8d85faf018bd53a328dd8e0c62cde442b9"
+  },
+  {
+   "bounds_cm": [
+    [
+     -10.46162167924669,
+     -16.0,
+     -12.0
+    ],
+    [
+     23.0,
+     16.0,
+     14.0
+    ]
+   ],
+   "kind": "sub-object part (Turret_Y)",
+   "lod": 0,
+   "mesh": "SM_EBS_MER_UNT_002_LanceYoke",
+   "path": "export/SM_EBS_MER_UNT_002_LanceYoke_LOD0.glb",
+   "pivot_cm": [
+    30.0,
+    0.0,
+    132.0
+   ],
+   "sha256": "e06cdbb6fe6f2dd57a36dda3e6507a51847e99b8d000a78a5349d6a090a20628",
+   "triangles": 96
+  },
+  {
+   "kind": "sub-object part OBJ (Turret_Y)",
+   "lod": 0,
+   "mesh": "SM_EBS_MER_UNT_002_LanceYoke",
+   "path": "export/SM_EBS_MER_UNT_002_LanceYoke_LOD0.obj",
+   "sha256": "48c287876203772cf92f962f021b01703c2ba04f096aac0522a893c9925ff989"
+  },
+  {
+   "bounds_cm": [
+    [
+     -62.0,
+     -11.0,
+     -13.0
+    ],
+    [
+     150.5,
+     11.0,
+     17.0
+    ]
+   ],
+   "kind": "sub-object part (Barrel_X)",
+   "lod": 0,
+   "mesh": "SM_EBS_MER_UNT_002_LanceBarrel",
+   "path": "export/SM_EBS_MER_UNT_002_LanceBarrel_LOD0.glb",
+   "pivot_cm": [
+    44.0,
+    0.0,
+    132.0
+   ],
+   "sha256": "4f1db1f0ce08e8d945c79a1bc5425eeddf6cbf8b6a9c8299f06d3f4c98b36129",
+   "triangles": 244
+  },
+  {
+   "kind": "sub-object part OBJ (Barrel_X)",
+   "lod": 0,
+   "mesh": "SM_EBS_MER_UNT_002_LanceBarrel",
+   "path": "export/SM_EBS_MER_UNT_002_LanceBarrel_LOD0.obj",
+   "sha256": "4735212630e37a977a4a4c729849e5c9ae79d607a33f376cd86688efced99584"
+  },
+  {
+   "bounds_cm": [
+    [
+     -89.0,
+     -48.0,
+     0.0
+    ],
+    [
+     194.0,
+     48.0,
+     213.06632879916822
+    ]
+   ],
+   "by_bone": {
+    "body": 184,
+    "cowl": 72,
+    "l_foot": 68,
+    "l_pod": 80,
+    "l_shin": 56,
+    "l_thigh": 56,
+    "l_toe": 24,
+    "lance_barrel": 168,
+    "lance_yaw": 56,
+    "r_foot": 68,
+    "r_pod": 80,
+    "r_shin": 56,
+    "r_thigh": 56,
+    "r_toe": 24,
+    "spine": 24,
+    "strut_slide": 32,
+    "strut_upper": 32
+   },
+   "by_slot": {
+    "MI_EBS_MER_UnitCeramic": 288,
+    "MI_EBS_MER_UnitFrame": 848
+   },
+   "clips": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "fire",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_002",
+   "path": "export/SK_EBS_MER_UNT_002_LOD1.glb",
+   "sha256": "80778d1d37238e2576d084fc84b773842326c3cbe1a841895e7151c77452d38d",
+   "sockets": [
+    {
+     "bone": "body",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      -4.0,
+      0.0,
+      138.0
+     ],
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "lance_barrel",
+     "name": "Muzzle_Flash_01",
+     "position_cm": [
+      194.0,
+      0.0,
+      132.0
+     ],
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "l_foot",
+     "name": "Left_Tread_Vector",
+     "position_cm": [
+      -66.0,
+      -35.0,
+      0.0
+     ],
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 1136
+  },
+  {
+   "kind": "static rest pose",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_002",
+   "path": "export/SK_EBS_MER_UNT_002_LOD1_static.glb",
+   "sha256": "e88aef6d630668b0c63b9bbd07efdb600f5514f9d042ed4286fd6f42435df1aa",
+   "triangles": 1136
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_002",
+   "path": "export/SK_EBS_MER_UNT_002_LOD1.obj",
+   "sha256": "3549842fc72a5e7ee41061169bdf350fde9006b3bbadfa6c4db3b8d75675146d"
+  },
+  {
+   "bounds_cm": [
+    [
+     -9.526279441628825,
+     -16.0,
+     -12.0
+    ],
+    [
+     23.0,
+     16.0,
+     11.0
+    ]
+   ],
+   "kind": "sub-object part (Turret_Y)",
+   "lod": 1,
+   "mesh": "SM_EBS_MER_UNT_002_LanceYoke",
+   "path": "export/SM_EBS_MER_UNT_002_LanceYoke_LOD1.glb",
+   "pivot_cm": [
+    30.0,
+    0.0,
+    132.0
+   ],
+   "sha256": "c805cffbeef756035cc903fbd5a57d60bffc5eaa8ff7cb20dabfd7b9ff765748",
+   "triangles": 56
+  },
+  {
+   "kind": "sub-object part OBJ (Turret_Y)",
+   "lod": 1,
+   "mesh": "SM_EBS_MER_UNT_002_LanceYoke",
+   "path": "export/SM_EBS_MER_UNT_002_LanceYoke_LOD1.obj",
+   "sha256": "5db07de43af701918517e22b6fbb997168c7b85cb21c99f7fa312265aa9273ea"
+  },
+  {
+   "bounds_cm": [
+    [
+     -60.0,
+     -11.0,
+     -13.0
+    ],
+    [
+     150.0,
+     11.0,
+     13.0
+    ]
+   ],
+   "kind": "sub-object part (Barrel_X)",
+   "lod": 1,
+   "mesh": "SM_EBS_MER_UNT_002_LanceBarrel",
+   "path": "export/SM_EBS_MER_UNT_002_LanceBarrel_LOD1.glb",
+   "pivot_cm": [
+    44.0,
+    0.0,
+    132.0
+   ],
+   "sha256": "2a2956c59bc72fe27e996556de33a0579846d2c73f07868f2571270ad35e8aa5",
+   "triangles": 168
+  },
+  {
+   "kind": "sub-object part OBJ (Barrel_X)",
+   "lod": 1,
+   "mesh": "SM_EBS_MER_UNT_002_LanceBarrel",
+   "path": "export/SM_EBS_MER_UNT_002_LanceBarrel_LOD1.obj",
+   "sha256": "9cd2e88bfbab18e674951936f318c4b9d23b480ebea702db475f54cb1cd488eb"
+  }
+ ],
+ "package_id": "EBS-PKG-MC-LANCER",
+ "parts": [
+  "SK_EBS_MER_UNT_002",
+  "SM_EBS_MER_UNT_002_LanceYoke",
+  "SM_EBS_MER_UNT_002_LanceBarrel"
+ ],
+ "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_002/",
+ "production_asset_id": "EBS-MER-UNT-002",
+ "review": [
+  {
+   "bounds_cm": [
+    [
+     -89.0,
+     -48.6,
+     0.0
+    ],
+    [
+     194.5,
+     48.6,
+     213.09616185517652
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-002/review/SK_EBS_MER_UNT_002_rest_LOD0.obj",
+   "sha256": "8d82b1f1ee7bf1884d5737257c0c95e2dd28bd0c5da695d9f7c2f3249131b1ec",
+   "triangles": 1972
+  },
+  {
+   "bounds_cm": [
+    [
+     -89.0,
+     -48.0,
+     0.0
+    ],
+    [
+     194.0,
+     48.0,
+     213.06632879916822
+    ]
+   ],
+   "lod": 1,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-002/review/SK_EBS_MER_UNT_002_rest_LOD1.obj",
+   "sha256": "89cc4869fbea4e6e0413926fc8ccb42728777d9c69bb55f0f93a0fa6c458f5c1",
+   "triangles": 1136
+  }
+ ],
+ "review_scenes": [
+  "rest.json",
+  "rest_tactical.json",
+  "lod1.json",
+  "scale_vs_surveyor.json",
+  "context.json"
+ ],
+ "revision": "ebs-mer-unt-002-concept-v3",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "ground-contact centre between the braced feet; never carries simulation translation"
+   },
+   {
+    "head_cm": [
+     -6.0,
+     0.0,
+     112.0
+    ],
+    "name": "body",
+    "parent": "root",
+    "purpose": "hip line: open frame, hip hubs and the lance-mount arm"
+   },
+   {
+    "head_cm": [
+     -42.0,
+     0.0,
+     146.2792908100773
+    ],
+    "name": "spine",
+    "parent": "body",
+    "purpose": "upper open frame and the deck carrying the pods and the cowl (pitched 8 deg forward)"
+   },
+   {
+    "head_cm": [
+     -23.55959106795697,
+     0.0,
+     184.08076324725926
+    ],
+    "name": "cowl",
+    "parent": "spine",
+    "purpose": "low sensor cowl; visor pitch"
+   },
+   {
+    "head_cm": [
+     -30.630640650108028,
+     30.0,
+     184.06470688523814
+    ],
+    "name": "r_pod",
+    "parent": "spine",
+    "purpose": "shoulder pod and its antenna rod"
+   },
+   {
+    "head_cm": [
+     -30.630640650108028,
+     -30.0,
+     184.06470688523814
+    ],
+    "name": "l_pod",
+    "parent": "spine",
+    "purpose": "shoulder pod and its antenna rod"
+   },
+   {
+    "head_cm": [
+     30.0,
+     0.0,
+     132.0
+    ],
+    "name": "lance_yaw",
+    "parent": "body",
+    "purpose": "hip-mount yaw ring; card sub-object Turret_Y"
+   },
+   {
+    "head_cm": [
+     44.0,
+     0.0,
+     132.0
+    ],
+    "name": "lance_barrel",
+    "parent": "lance_yaw",
+    "purpose": "rail-lance trunnion: pitch and the recoil slide along its own axis; card sub-object Barrel_X"
+   },
+   {
+    "head_cm": [
+     -6.0,
+     35.0,
+     112.0
+    ],
+    "name": "r_thigh",
+    "parent": "body",
+    "purpose": "hip hinge (pitch) and stance yaw"
+   },
+   {
+    "head_cm": [
+     40.208388593330575,
+     35.0,
+     73.7274925879195
+    ],
+    "name": "r_shin",
+    "parent": "r_thigh",
+    "purpose": "knee hinge (pitch); prominent knee hub"
+   },
+   {
+    "head_cm": [
+     58.0,
+     35.0,
+     27.000000000000007
+    ],
+    "name": "r_foot",
+    "parent": "r_shin",
+    "purpose": "ankle; planted block foot"
+   },
+   {
+    "head_cm": [
+     66.0,
+     35.0,
+     8.000000000000007
+    ],
+    "name": "r_toe",
+    "parent": "r_foot",
+    "purpose": "toe plate hinge; roll-off on the move cycle"
+   },
+   {
+    "head_cm": [
+     -6.0,
+     -35.0,
+     112.0
+    ],
+    "name": "l_thigh",
+    "parent": "body",
+    "purpose": "hip hinge (pitch) and stance yaw"
+   },
+   {
+    "head_cm": [
+     -52.208388593330554,
+     -35.0,
+     73.72749258791947
+    ],
+    "name": "l_shin",
+    "parent": "l_thigh",
+    "purpose": "knee hinge (pitch); prominent knee hub"
+   },
+   {
+    "head_cm": [
+     -70.0,
+     -35.0,
+     27.0
+    ],
+    "name": "l_foot",
+    "parent": "l_shin",
+    "purpose": "ankle; planted block foot"
+   },
+   {
+    "head_cm": [
+     -62.0,
+     -35.0,
+     8.0
+    ],
+    "name": "l_toe",
+    "parent": "l_foot",
+    "purpose": "toe plate hinge; roll-off on the move cycle"
+   },
+   {
+    "head_cm": [
+     -46.0,
+     -20.0,
+     112.0
+    ],
+    "name": "strut_upper",
+    "parent": "body",
+    "purpose": "recoil-strut anchor at the lower rear of the body"
+   },
+   {
+    "head_cm": [
+     -63.68,
+     -27.28,
+     69.36
+    ],
+    "name": "strut_slide",
+    "parent": "strut_upper",
+    "purpose": "strut slide/piston section: extends on plant, works on the shot"
+   }
+  ],
+  "card_sub_objects": {
+   "Barrel_X": "lance_barrel",
+   "Turret_Y": "lance_yaw"
+  },
+  "policy": "identity rest orientation; hinge pitch about +Y at each joint; the recoil runs as a translation of lance_barrel along its own +X axis and the strut slide translates along the strut axis; no decorative bones; no root motion",
+  "rest_stance": {
+   "cowl": [
+    -23.55959106795697,
+    0.0,
+    184.08076324725926
+   ],
+   "l_ankle": [
+    -70.0,
+    -35.0,
+    27.0
+   ],
+   "l_hip": [
+    -6.0,
+    -35.0,
+    112.0
+   ],
+   "l_knee": [
+    -52.208388593330554,
+    -35.0,
+    73.72749258791947
+   ],
+   "l_pod": [
+    -30.630640650108028,
+    -30.0,
+    184.06470688523814
+   ],
+   "l_shin_dir": [
+    -110.84445833634987,
+    -0.0
+   ],
+   "l_thigh_dir": [
+    -140.36644531856246,
+    -0.0
+   ],
+   "l_toe": [
+    -62.0,
+    -35.0,
+    8.0
+   ],
+   "muzzle": [
+    194.0,
+    0.0,
+    132.0
+   ],
+   "r_ankle": [
+    58.0,
+    35.0,
+    27.000000000000007
+   ],
+   "r_hip": [
+    -6.0,
+    35.0,
+    112.0
+   ],
+   "r_knee": [
+    40.208388593330575,
+    35.0,
+    73.7274925879195
+   ],
+   "r_pod": [
+    -30.630640650108028,
+    30.0,
+    184.06470688523814
+   ],
+   "r_shin_dir": [
+    -69.15554166365015,
+    0.0
+   ],
+   "r_thigh_dir": [
+    -39.633554681437516,
+    0.0
+   ],
+   "r_toe": [
+    66.0,
+    35.0,
+    8.000000000000007
+   ],
+   "spine": [
+    -42.0,
+    0.0,
+    146.2792908100773
+   ],
+   "strut_end": [
+    -80.0,
+    -34.0,
+    30.0
+   ],
+   "strut_joint": [
+    -63.68,
+    -27.28,
+    69.36
+   ],
+   "strut_top": [
+    -46.0,
+    -20.0,
+    112.0
+   ]
+  }
+ },
+ "scale_basis": {
+  "canon": "SPEC-UNIT-002 (Bible line 510): a two-legged line-fire frame, slightly taller than the Surveyor and narrow",
+  "concept": "concept-fidelity.md; H = 200 cm at the pod top measured on lancer-derived-turnaround.png LEFT SIDE panel (0.545 cm per source pixel, ground at the sole line)",
+  "footprint_note": "SPEC-UNIT-002 Logistics Footprint 2 is the population cost (units.json population_cost 2). The simulation collision footprint of a unit is a 25 cm square (kFixedScale/8 half extent on a 100 cm tile, EchoesContentSubsystem.cpp:363). The visual envelope overhangs it heavily because the lance is 1.05 H long; recorded as a deviation in README section 8.",
+  "height_cm": 200.0,
+  "overall_height_with_antennas_cm": 213.09616185517652,
+  "status": "CONCEPT-MEASURED BLOCKOUT (concept-v1)",
+  "surveyor_height_cm": 176.0,
+  "taller_than_surveyor": true
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "sockets": [
+  {
+   "bone": "body",
+   "name": "Target_Anchor_Center",
+   "position_cm": [
+    -4.0,
+    0.0,
+    138.0
+   ],
+   "purpose": "body centre; damage acknowledgement, selection and health reference"
+  },
+  {
+   "bone": "lance_barrel",
+   "name": "Muzzle_Flash_01",
+   "position_cm": [
+    194.0,
+    0.0,
+    132.0
+   ],
+   "purpose": "rail-lance muzzle face; the canon clean cyan-white line effect origin (SPEC-UNIT-002)"
+  },
+  {
+   "bone": "l_foot",
+   "name": "Left_Tread_Vector",
+   "position_cm": [
+    -66.0,
+    -35.0,
+    0.0
+   ],
+   "purpose": "card socket name; this frame walks on legs, so it is placed at the LEFT (trailing) foot's ground contact and the naming conflict is recorded in README section 8"
+  }
+ ],
+ "source_bindings": {
+  "book": {
+   "paragraphs": [
+    178,
+    181,
+    1966,
+    3078
+   ]
+  },
+  "canon_row": {
+   "line": 510,
+   "path": "Docs/Archive/DevelopmentBible.md",
+   "spec": "SPEC-UNIT-002"
+  },
+  "contract": {
+   "package_id": "EBS-PKG-MC-LANCER",
+   "path": "Docs/VisualAssetPipeline/reference-packages.json"
+  },
+  "derived_turnaround": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/lancer-review/lancer-derived-turnaround.png",
+   "status": "DERIVED REFERENCE; FRONT and REAR panels are quarter views (the lance leaves the centreline), so only the LEFT SIDE panel was measured"
+  },
+  "fidelity_target": {
+   "amended": "concept-v1: brace span, pod separation and the thigh/shin split corrected on the LEFT SIDE panel pixels; antennas added",
+   "path": "ArtSource/EBS-MER-UNT-002/concept-fidelity.md"
+  },
+  "gameplay_record": {
+   "id": "mc_lancer",
+   "path": "Content/Data/Source/units.json",
+   "values": "145 HP, 320 cm/s, 1,100 cm sight, population cost 2, 18 damage at 650 cm, 30-tick cooldown"
+  },
+  "requirement_card": {
+   "card": "REL-ART-005.MC.LANCER",
+   "line": 2382,
+   "path": "Docs/Requirements.md"
+  },
+  "review_decision": {
+   "choice": "REPLACE",
+   "concept_id": "EBS-CON-MER-UNT-002",
+   "path": "Docs/VisualAssetPipeline/review-selections.json"
+  },
+  "selected_candidate": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/lancer-review/lancer-candidate.png",
+   "status": "SELECTED CANDIDATE - the production direction"
+  },
+  "superseded_concept": {
+   "concept_id": "EBS-CON-MER-UNT-002",
+   "decision": "REPLACE",
+   "path": "Project/site/assets/concepts/meridian-units.png",
+   "region": [
+    0.5,
+    0,
+    1,
+    0.5
+   ],
+   "sha256_prefix": "427e60cd27bd78e9",
+   "use": "RETAINED_HISTORY_ONLY"
+  }
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Concept-matched braced rest geometry, an 18-bone rig and keyframed clip data; skinned export on the verified skeletal kit; no textures, no Unreal import, no gate or owner acceptance.",
+ "team_colour_mask": {
+  "built": "NOT AUTHORED. The exported primitives carry POSITION, NORMAL, TEXCOORD_0, TEXCOORD_1, JOINTS_0 and WEIGHTS_0 only; TEXCOORD_1 is the mesh kit's per-polygon lightmap grid (ebs_meshkit.py:359-377), not a mask. There is no COLOR_0 and no vertex-ID channel.",
+  "card_rule": "REL-ART-005.MC.LANCER .MAT_RULE (Docs/Requirements.md:2384): \"Albedo channel masked by TeamColor vertex data.\"",
+  "roster_rule": "REL-ART-028 (Docs/Requirements.md:2376): \"Team color accent mapping uses exclusive vertex ID masks.\"",
+  "status": "DEVIATION_RECORDED",
+  "why": "The verified skeletal kit (ArtSource/tools/ebs_skelkit.py, whose SKELETAL_ENCODING is verified against UE 5.8.2) writes no vertex-colour accessor and the shared tools are read-only for this package, so the mask cannot be authored here without changing a verified tool. Recorded as a deviation (README section 8.3) and raised as OWNER-QUESTION 4; it is roster-wide, not Lancer-only (EBS-MER-UNT-001 exports the same attribute set)."
+ },
+ "tools": {
+  "builder_sha256": "9a04c838b003bba5732ab791a68618d8d6dbf4fb71056102c01c448210e3ca15",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.7"
+ },
+ "triangles_by_bone_lod0": {
+  "body": 304,
+  "cowl": 72,
+  "l_foot": 132,
+  "l_pod": 128,
+  "l_shin": 144,
+  "l_thigh": 100,
+  "l_toe": 48,
+  "lance_barrel": 244,
+  "lance_yaw": 96,
+  "r_foot": 132,
+  "r_pod": 128,
+  "r_shin": 144,
+  "r_thigh": 100,
+  "r_toe": 48,
+  "spine": 60,
+  "strut_slide": 40,
+  "strut_upper": 52
+ },
+ "units": {
+  "authored": "centimeters at unit scale 1.0",
+  "axes": "+X forward (lance axis), +Y right, +Z up",
+  "nanite": false,
+  "pivot": "ground-contact centre between the braced feet (root)",
+  "presentation_scale_source": "EchoesEntityView.cpp:1809-1812 EntityType::Soldier (mc_lancer maps to Soldier in EchoesContentSubsystem.cpp:309-310); not part of the asset",
+  "runtime_presentation_scale": 1.6
+ }
+}

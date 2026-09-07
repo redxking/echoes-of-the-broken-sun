@@ -221,6 +221,90 @@
   {
    "package_id": "EBS-PKG-HC-PHASE-ANCHOR",
    "production_maturity": "NOT_STARTED"
+  },
+  {
+   "package_id": "EBS-PKG-MC-LANCER",
+   "production_asset_id": "EBS-MER-UNT-002",
+   "subject": "Lancer",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-mer-unt-002-concept-v3",
+   "asset_name": "SK_EBS_MER_UNT_002",
+   "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_002/",
+   "canon_status": "CANDIDATE (EBS-CON-MER-UNT-002 (REPLACE; the lancer-candidate sheet and its derived turnaround are the direction)); not owner acceptance",
+   "source_root": "ArtSource/EBS-MER-UNT-002/",
+   "authoritative_document": "ArtSource/EBS-MER-UNT-002/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-MER-UNT-002/concept-fidelity.md",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-mer-unt-002-concept-v3)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-002/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Braced two-legged line-fire frame built to the candidate: hip-mounted rail-lance with a full-length cyan channel, low sensor cowl between two shoulder pods, exposed charcoal flanks, slim rear-leg recoil strut with a sliding gland. 18-bone rig with the card's lance_yaw/lance_barrel sub-objects and sockets Muzzle_Flash_01, Target_Anchor_Center, Left_Tread_Vector; 9 clips including the halt-plant-aim-fire-recover sequence. LOD0 1,828 / LOD1 968 tris against 8,000 / 3,500. 27 tests, 13 comparison sheets, two verification lenses and a fix pass. Import: 0 errors, 18 AnimSequences, 3 sockets."
+    }
+   ],
+   "next": "Owner ruling on the card's printed LOD1 ceiling typo and the Left_Tread_Vector name on a legged frame; textures (2048^2); emissive measurement; in-engine playback; gates.",
+   "gates": {
+    "art": "NOT_EVALUATED",
+    "gameplay": "NOT_EVALUATED",
+    "technical": "NOT_EVALUATED"
+   },
+   "owner_acceptance": "NOT_ACCEPTED"
+  },
+  {
+   "package_id": "EBS-PKG-MC-BULWARK-TEAM",
+   "production_asset_id": "EBS-MER-UNT-003",
+   "subject": "Bulwark Team",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-mer-unt-003-concept-v3",
+   "asset_name": "SK_EBS_MER_UNT_003",
+   "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_003/",
+   "canon_status": "CANDIDATE (EBS-CON-MER-UNT-003 (KEEP) with the owner-corrected six-cell derived reference); not owner acceptance",
+   "source_root": "ArtSource/EBS-MER-UNT-003/",
+   "authoritative_document": "ArtSource/EBS-MER-UNT-003/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-MER-UNT-003/concept-fidelity.md",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-mer-unt-003-concept-v3)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Wide two-operator chassis on four legs with six hinged barrier cells, three per wing, deploying into one flat frontal face 499 cm across with the 03/04 seam on the operator centreline and the emitter beneath it. Every cell carries an opaque back plate so the rear read is geometry, not a material promise (verified by a depth-sorted visibility census: 0.0% barrier field frontmost from behind). Both wings export as the card's Left_Shield_Panel / Right_Shield_Panel sub-objects. 18-bone rig, 10 clips, LOD0 3,618 / LOD1 1,846 against 8,200 / 3,600. 64 tests, 15 sheets, two lenses and a fix pass. Import: 0 errors, 20 AnimSequences, 9 sockets."
+    }
+   ],
+   "next": "OWNER-QUESTION F: how the barrier leaves the packed silhouette (a third sub-object shown only while deployed, or its own material section) - the packed flanks still carry the pane slabs; textures; in-engine playback; gates.",
+   "gates": {
+    "art": "NOT_EVALUATED",
+    "gameplay": "NOT_EVALUATED",
+    "technical": "NOT_EVALUATED"
+   },
+   "owner_acceptance": "NOT_ACCEPTED"
+  },
+  {
+   "package_id": "EBS-PKG-MC-RELAY-SKIFF",
+   "production_asset_id": "EBS-MER-UNT-004",
+   "subject": "Relay Skiff",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-mer-unt-004-concept-v3",
+   "asset_name": "SK_EBS_MER_UNT_004",
+   "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_004/",
+   "canon_status": "CANDIDATE (EBS-CON-MER-UNT-004 (REPLACE; the relay-skiff-candidate sheet is the direction)); not owner acceptance",
+   "source_root": "ArtSource/EBS-MER-UNT-004/",
+   "authoritative_document": "ArtSource/EBS-MER-UNT-004/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-MER-UNT-004/concept-fidelity.md",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-mer-unt-004-concept-v3)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-004/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Thin-hulled skimmer floating clear of the ground: stretched-hexagon hull, dominant relay mast and dish aft and offset, four lift pods (two per side, measured from the candidate underside), a strapped archive cradle as a separate hideable part, and a small nose emitter. 8-bone hover rig with sockets Scouting_Sensor_Pod and Logistics_Relay_Beam; 14 clips. LOD0 2,088 / LOD1 1,408 against 5,000 / 2,100. 30 tests, two lenses and a fix pass. Import: 0 errors, 28 AnimSequences, 2 sockets."
+    }
+   ],
+   "next": "Book-versus-canon conflict over the secondary weapon (carried, not resolved); dish aim behaviour at the gameplay camera; textures; in-engine playback; gates.",
+   "gates": {
+    "art": "NOT_EVALUATED",
+    "gameplay": "NOT_EVALUATED",
+    "technical": "NOT_EVALUATED"
+   },
+   "owner_acceptance": "NOT_ACCEPTED"
   }
  ],
  "tools": {
@@ -228,14 +312,24 @@
   "review_renderer": "ArtSource/tools/ebs_render.py",
   "evidence_receipt": "ArtSource/tools/make_evidence_receipt.py",
   "dependencies": "Python 3 standard library only; no DCC application is installed on the workstation (Blender absent), which is why editable source is a deterministic generator rather than a native DCC file.",
-  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py (rig binding, posing, skinned glTF with animations; encodings verified against UE 5.8.2 Interchange, see SKELETAL_ENCODING)",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py (rig binding, posing, skinned glTF with animations; encodings verified against UE 5.8.2, see SKELETAL_ENCODING; ebs-skelkit-v2 refuses clip durations that are not a whole 30 fps frame)",
   "skeletal_probe": "ArtSource/tools/skeletal_probe.py (encoding probe asset + check of the inspector report)",
   "texture_baker": "ArtSource/tools/ebs_texbake.py (BaseColor/Normal/MRE/StateMask/AtlasDebug from a bake manifest)",
   "unreal_import_inspector_static": "ArtSource/tools/ue_import_inspect.py (headless Interchange import + StaticMesh inspection in the sandbox project)",
   "unreal_import_inspector_skeletal": "ArtSource/tools/ue_import_inspect_skeletal.py (headless skeletal import into a unique per-run folder + bone/socket/AnimSequence inspection)",
   "tests": "ArtSource/tools/test_ebs_render.py, test_ebs_skelkit.py, test_ebs_texbake.py and each package's test_*.py",
   "comparison_sheet": "ArtSource/tools/ebs_sheet.py (concept crop beside renders)",
-  "concept_crops": "ArtSource/tools/ebs_concept_crops.py (hash-verified crops of every registered concept input)"
+  "concept_crops": "ArtSource/tools/ebs_concept_crops.py (hash-verified crops of every registered concept input)",
+  "import_job_generator": "ArtSource/tools/ebs_make_import_job.py (derives the isolated-import job and its expectations from a package build manifest)"
  },
- "authority_note_2026_09_06": "Owner ruling: the registered concept images define what every production asset looks like; each package carries concept-fidelity.md as its authoritative visual target, and forced deviations are recorded in the README §8 with the rule cited."
+ "authority_note_2026_09_06": "Owner ruling: the registered concept images define what every production asset looks like; each package carries concept-fidelity.md as its authoritative visual target, and forced deviations are recorded in the README §8 with the rule cited.",
+ "pipeline_findings": [
+  {
+   "date": "2026-09-07",
+   "finding": "Interchange skeletal import silently drops a clip whose duration is not a whole frame at 30 fps",
+   "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/skeletal-clip-duration-probe/probe-record.json",
+   "encoded_in": "ArtSource/tools/ebs_skelkit.py (ebs-skelkit-v2): write_skinned_glb refuses unaligned clips; frame_aligned_duration()/retime_clip() snap them",
+   "cost_before_it_was_found": "one clip lost in each of EBS-MER-UNT-002, -003 (two) and -004"
+  }
+ ]
 }

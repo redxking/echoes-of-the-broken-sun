@@ -33,10 +33,19 @@ L = 360 cm reads as a small vehicle beside the 176 cm Surveyor without covering 
    tail. The deck is flat and open, not a canopy; nothing on it reads as a cockpit.
 2. **Hover gap.** The hull floats clear of the ground: underside at ≈ 0.09 L, deck top at ≈ 0.19 L. The
    gap is part of the read (the runtime hovers the view actor; passability is unchanged).
-3. **Lift pods.** Six serviceable pods slung under the hull edges (three per side), each a charcoal
-   cylinder/box ≈ 0.14 L long with a cyan intake strip, hanging below the hull line so they read as
-   removable service items.
-4. **Relay mast and dish.** ONE tall mast rising from the deck at the FRONT-LEFT quarter: a segmented
+3. **Lift pods.** ~~Six serviceable pods slung under the hull edges (three per side)~~ **FOUR
+   serviceable pods, two per side** — corrected 2026-09-07 from the candidate's SIDE VIEW underside
+   trace (per-column luminance scan: the outline reaches the pod line only over two flat runs per side,
+   centred at −0.238 L and +0.262 L, with clear hull between them). The author's "three per side" was
+   an estimate, not a measurement, and is withdrawn. Each pod is a charcoal cylinder/box ≈ 0.14 L long
+   with a cyan intake strip, hanging below the hull line so they read as removable service items.
+4. **Relay mast and dish.** ONE tall mast rising from the deck at the ~~FRONT-LEFT quarter~~ **REAR of
+   the hull, offset to one side of the centreline** — corrected 2026-09-07 by the author against the
+   candidate pixels (crops `skiff_side_2x.png` / `skiff_top_2x.png` of the SIDE VIEW and TACTICAL
+   SILHOUETTE panels): in both panels the hull's chamfered point is at one end and the mast stands at
+   the opposite end, so with +X the prow direction the mast is aft. "Front-left" was the author's
+   misreading of the three-quarter panel and is withdrawn; the build placed the mast aft from the
+   pixels and is correct (dish centre x = −80.3 cm on a hull spanning −196.2…+180.7). The mast is a segmented
    charcoal column to ≈ 0.55 L above the ground (the tallest thing on the asset, roughly 3× the hull
    thickness above the deck), a small parabolic dish ≈ 0.13 L across mounted on its side facing forward,
    two thin whip antennas above it and a slack cable loop from the dish back to the deck. Mast and dish
@@ -70,7 +79,7 @@ hull, so the runtime's hover offset is additive). Record forced deviations in th
 ## Fidelity checks (each shown in a render beside the concept crop)
 
 - [ ] Side view: long thin hull floating clear of the ground, mast and dish dominating, cradle on the deck.
-- [ ] Top view matches the tactical silhouette: stretched hexagon hull, mast at the front-left, cradle centred.
-- [ ] Six lift pods visible under the hull edges; secondary emitter small and forward.
+- [ ] Top view matches the tactical silhouette: stretched hexagon hull, mast aft and offset, cradle centred.
+- [ ] Four lift pods (two per side) visible under the hull edges; secondary emitter small and forward.
 - [ ] Cradle hidden variant renders with an empty strapped deck (loaded/unloaded read).
 - [ ] Tactical framing: reads as a light utility scout, never as a hero body or a gunship.

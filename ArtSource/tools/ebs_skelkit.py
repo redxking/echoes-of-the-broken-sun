@@ -47,7 +47,50 @@ from dataclasses import dataclass, field
 import ebs_meshkit as kit
 
 AUTHOR = "Angelis Pseftis"
-SKEL_REVISION = "ebs-skelkit-v1"  # GLB output unchanged since v1; pose_mesh sockets gained the composed rotation (rotation_deg/quaternion)
+SKEL_REVISION = "ebs-skelkit-v2"  # v2: clip durations must land on a whole 30 fps frame (probe-verified; see clip_duration below)
+
+ANIMATION_FPS = 30.0
+"""Frame rate the Interchange skeletal import samples glTF animation at.
+
+VERIFIED 2026-09-07 against UE 5.8.2 by direct probe (evidence:
+BuildArtifacts/Evidence/asset-production-20260906T221157Z/skeletal-clip-duration-probe/): a clip whose
+duration is NOT an integer number of frames at this rate is SILENTLY DROPPED — no AnimSequence is
+created, no warning is logged, and the import still reports success. Twelve probe clips: 1, 6, 8, 9,
+12, 23, 24 and 30 frames all imported with exact length; 1.5, 7.5, 10.5 and 22.5 frames all vanished.
+Three production packages had each lost a clip this way before the rule was found."""
+
+
+def frames_for(duration_s: float, fps: float = ANIMATION_FPS) -> float:
+    """Frame count of a duration at the import sampling rate (may be fractional)."""
+    return duration_s * fps
+
+
+def is_frame_aligned(duration_s: float, fps: float = ANIMATION_FPS, tolerance: float = 1e-6) -> bool:
+    frames = frames_for(duration_s, fps)
+    return abs(frames - round(frames)) <= tolerance
+
+
+def frame_aligned_duration(duration_s: float, fps: float = ANIMATION_FPS) -> float:
+    """The next whole frame at or after ``duration_s`` (never zero-length unless the input is 0)."""
+    if duration_s <= 0.0:
+        return 0.0
+    return max(1.0, math.ceil(frames_for(duration_s, fps) - 1e-9)) / fps
+
+
+def retime_clip(clip: "AnimationClip", duration_s: float) -> "AnimationClip":
+    """Scale every key time so the clip runs to ``duration_s`` with its shape unchanged.
+
+    Used to snap an authored duration onto a frame boundary: the pose at any normalized time is
+    identical afterwards, so posed review stills and their hashes do not move."""
+    if clip.duration_s <= 0.0 or duration_s <= 0.0:
+        clip.duration_s = duration_s
+        return clip
+    scale = duration_s / clip.duration_s
+    for keys in clip.tracks.values():
+        for k in keys:
+            k.time_s = k.time_s * scale
+    clip.duration_s = duration_s
+    return clip
 
 
 @dataclass
@@ -337,6 +380,13 @@ def write_skinned_glb(mesh: kit.Mesh, skeleton: Skeleton, path: str, animations=
     rotation sampler per keyed bone plus a translation sampler when any key translates,
     LINEAR interpolation, times in seconds."""
     animations = list(animations or [])
+    unaligned = [(c.name, c.duration_s, round(frames_for(c.duration_s), 3)) for c in animations if not is_frame_aligned(c.duration_s)]
+    if unaligned:
+        detail = "; ".join(f"{n} {d:.4f} s = {f} frames" for n, d, f in unaligned)
+        raise ValueError(
+            f"{path}: clip duration is not a whole frame at {ANIMATION_FPS:g} fps and the Interchange skeletal "
+            f"import would drop it without a warning ({detail}). Snap the duration with "
+            f"frame_aligned_duration() and rescale the keys with retime_clip(), or author a whole-frame duration.")
     sockets_on_bones = dict(sockets_on_bones or {})
     if not skeleton.bones:
         raise ValueError("skeleton has no bones")
@@ -620,4 +670,9 @@ SKELETAL_ENCODING = {
                             "AnimSequence <name><clip name> (no separator) and the skeleton <name>_Skeleton",
     "keyframe_timing": "sampler input in seconds, LINEAR; a 0..1 s clip imports as 30 frames / 31 keys, length 1.0 s",
     "collision": "UBX_ nodes are written only when include_collision is True; skeletal imports do not consume them (pass False for skinned exports)",
+    "clip_duration": "VERIFIED 2026-09-07 (UE 5.8.2, skeletal-clip-duration-probe): a clip duration must be an integer "
+                     "number of frames at 30 fps or the import silently creates NO AnimSequence for it and still reports "
+                     "success. Probe: 1/6/8/9/12/23/24/30-frame clips imported with exact length; 1.5/7.5/10.5/22.5-frame "
+                     "clips vanished. write_skinned_glb now refuses to write an unaligned clip; use frame_aligned_duration() "
+                     "and retime_clip() to snap an authored duration without changing the pose at any normalized time.",
 }

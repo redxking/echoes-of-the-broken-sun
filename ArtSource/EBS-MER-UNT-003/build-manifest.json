@@ -1,0 +1,3073 @@
+{
+ "acceptance": {
+  "art_gate": "NOT_EVALUATED",
+  "gameplay_gate": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical_gate": "NOT_EVALUATED"
+ },
+ "asset_name": "SK_EBS_MER_UNT_003",
+ "author": "Angelis Pseftis",
+ "budgets": {
+  "lod0_cap": 8200,
+  "lod0_triangles": 3618,
+  "lod0_within_cap": true,
+  "lod1_cap": 3600,
+  "lod1_over_lod0": 0.51,
+  "lod1_triangles": 1846,
+  "lod1_within_cap": true,
+  "per_part": {
+   "SK_EBS_MER_UNT_003": {
+    "lod0": 3618,
+    "lod1": 1846
+   },
+   "SM_EBS_MER_UNT_003_Left_Shield_Panel": {
+    "lod0": 856,
+    "lod1": 600
+   },
+   "SM_EBS_MER_UNT_003_Right_Shield_Panel": {
+    "lod0": 856,
+    "lod1": 600
+   }
+  },
+  "shield_field_area_fraction_lod0": 0.07029,
+  "status_cyan_area_fraction_lod0": 0.01906
+ },
+ "clips": [
+  {
+   "bones": [
+    "chassis",
+    "wing_root_l",
+    "wing_root_r"
+   ],
+   "duration_s": 2.0,
+   "loop": true,
+   "name": "idle_packed",
+   "purpose": "packed travel profile held; slow hydraulic settle, no root motion",
+   "ticks": 40.0
+  },
+  {
+   "bones": [
+    "chassis",
+    "leg_fl",
+    "leg_fr",
+    "leg_rl",
+    "leg_rr",
+    "wing_root_l",
+    "wing_root_r"
+   ],
+   "duration_s": 1.2,
+   "loop": true,
+   "name": "move_packed",
+   "purpose": "packed movement at 230 cm/s: four-leg crawler shuffle",
+   "ticks": 24.0
+  },
+  {
+   "bones": [
+    "chassis",
+    "wing_root_l",
+    "wing_root_r"
+   ],
+   "duration_s": 1.0,
+   "loop": false,
+   "name": "deploy",
+   "purpose": "Deploy Barrier setup, 20 ticks (SPEC-UNIT-003): anticipation, wing swing, contact, settle",
+   "ticks": 20.0
+  },
+  {
+   "bones": [
+    "cell_01",
+    "cell_02",
+    "cell_03",
+    "cell_04",
+    "cell_05",
+    "cell_06",
+    "chassis",
+    "wing_root_l",
+    "wing_root_r"
+   ],
+   "duration_s": 2.4,
+   "loop": true,
+   "name": "idle_deployed",
+   "purpose": "deployed idle: low field hum, cells breathing on their hinges",
+   "ticks": 48.0
+  },
+  {
+   "bones": [
+    "chassis",
+    "leg_fl",
+    "leg_fr",
+    "leg_rl",
+    "leg_rr",
+    "wing_root_l",
+    "wing_root_r"
+   ],
+   "duration_s": 2.0,
+   "loop": true,
+   "name": "drag_deployed",
+   "purpose": "deployed movement at 35% speed: slow drag, the wall stays flat and frontal",
+   "ticks": 40.0
+  },
+  {
+   "bones": [
+    "chassis",
+    "wing_root_l",
+    "wing_root_r"
+   ],
+   "duration_s": 0.7666666666666667,
+   "loop": false,
+   "name": "pack",
+   "purpose": "Pack, 15 ticks (SPEC-UNIT-003): wings fold to the travel profile, clank on seat",
+   "ticks": 15.3
+  },
+  {
+   "bones": [
+    "chassis",
+    "operator_l",
+    "operator_r",
+    "wing_root_l",
+    "wing_root_r"
+   ],
+   "duration_s": 0.5,
+   "loop": false,
+   "name": "damage",
+   "purpose": "projectile impact on the deployed face: chassis jolt and cell shudder; the cyan ripple is material, not geometry",
+   "ticks": 10.0
+  },
+  {
+   "bones": [
+    "chassis",
+    "leg_fl",
+    "leg_fr",
+    "leg_rl",
+    "leg_rr",
+    "operator_l",
+    "operator_r",
+    "wing_root_l",
+    "wing_root_r"
+   ],
+   "duration_s": 1.6,
+   "loop": false,
+   "name": "death",
+   "purpose": "destruction: the frame tips forward onto the front pads, the wings splay open and drop, the field dies",
+   "ticks": 32.0
+  },
+  {
+   "bones": [
+    "chassis",
+    "wing_root_l",
+    "wing_root_r"
+   ],
+   "duration_s": 0.36666666666666664,
+   "loop": false,
+   "name": "cancel",
+   "purpose": "Deploy interrupted: the wings return to the travel profile without seating",
+   "ticks": 7.3
+  },
+  {
+   "bones": [
+    "chassis",
+    "wing_root_l",
+    "wing_root_r"
+   ],
+   "duration_s": 0.6,
+   "loop": false,
+   "name": "restore",
+   "purpose": "return to the deployed idle after damage: the wall re-seats flat and frontal",
+   "ticks": 12.0
+  }
+ ],
+ "component_inventory": {
+  "barrier_cells": {
+   "built": 6,
+   "contract": 6,
+   "cyan_edge_lines": 6,
+   "fields": 6,
+   "opaque_back_plates": 6,
+   "per_wing": [
+    3,
+    3
+   ]
+  },
+  "barrier_wings": {
+   "built": 2,
+   "contract": 2
+  },
+  "bones": {
+   "built": 18,
+   "contract": 18,
+   "names": [
+    "root",
+    "chassis",
+    "operator_l",
+    "operator_r",
+    "leg_fl",
+    "leg_fr",
+    "leg_rl",
+    "leg_rr",
+    "emitter",
+    "shield_anchor",
+    "wing_root_l",
+    "wing_root_r",
+    "cell_01",
+    "cell_02",
+    "cell_03",
+    "cell_04",
+    "cell_05",
+    "cell_06"
+   ]
+  },
+  "central_emitter": {
+   "built": 1,
+   "contract": 1,
+   "lens": 1
+  },
+  "chassis": {
+   "built": 1,
+   "contract": 1,
+   "open_rear": true
+  },
+  "legs": {
+   "built": 4,
+   "contract": 4
+  },
+  "operator_stations": {
+   "built": 2,
+   "contract": 2,
+   "visors": 2
+  },
+  "sockets": {
+   "built": [
+    "Target_Anchor_Center",
+    "Emitter_Muzzle",
+    "Shield_Face_Center",
+    "Cell_01",
+    "Cell_02",
+    "Cell_03",
+    "Cell_04",
+    "Cell_05",
+    "Cell_06"
+   ],
+   "contract": [
+    "Target_Anchor_Center",
+    "Emitter_Muzzle",
+    "Shield_Face_Center",
+    "Cell_01",
+    "Cell_02",
+    "Cell_03",
+    "Cell_04",
+    "Cell_05",
+    "Cell_06"
+   ]
+  },
+  "sub_objects": {
+   "built": [
+    "SM_EBS_MER_UNT_003_Left_Shield_Panel",
+    "SM_EBS_MER_UNT_003_Right_Shield_Panel"
+   ],
+   "contract": [
+    "Left_Shield_Panel",
+    "Right_Shield_Panel"
+   ]
+  },
+  "tracks": {
+   "built": [
+    "idle_packed",
+    "move_packed",
+    "deploy",
+    "idle_deployed",
+    "drag_deployed",
+    "pack",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "contract": [
+    "idle_packed",
+    "move_packed",
+    "deploy",
+    "idle_deployed",
+    "drag_deployed",
+    "pack",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ]
+  }
+ },
+ "concept_measurements": {
+  "W_cm": 500.0,
+  "cell_height_over_W": 0.56,
+  "cell_width_over_W": 0.164,
+  "chassis_depth_cm": 280.0,
+  "chassis_top_z_cm": 284.8,
+  "chassis_width_cm": 220.0,
+  "chassis_width_over_W": 0.44,
+  "deployed_bounds_cm": [
+   [
+    -150.0,
+    -249.33,
+    0.0
+   ],
+   [
+    200.0,
+    249.33,
+    396.3
+   ]
+  ],
+  "deployed_face": {
+   "cell_height_cm": [
+    280.0,
+    280.0,
+    280.0,
+    280.0,
+    280.0,
+    280.0
+   ],
+   "cell_height_spread_cm": 0.0,
+   "cell_pitch_cm": [
+    83.333,
+    83.333,
+    83.333,
+    83.333,
+    83.333
+   ],
+   "cell_width_cm": [
+    82.0,
+    82.0,
+    82.0,
+    82.0,
+    82.0,
+    82.0
+   ],
+   "cell_width_spread_cm": 0.0,
+   "cells": 6,
+   "left_wing_cells": 3,
+   "right_wing_cells": 3,
+   "seam_y_cm": 0.0,
+   "slab_thickness_cm": 28.0,
+   "slab_x_max": 189.0,
+   "slab_x_min": 161.0,
+   "span_over_W": 0.9973,
+   "span_y_cm": 498.667,
+   "wall_bottom_z_cm": 113.3,
+   "wall_top_z_cm": 393.3
+  },
+  "deployed_height_cm": 396.3,
+  "deployed_height_over_W": 0.7926,
+  "emitter_at_face_base": true,
+  "emitter_on_centreline": true,
+  "emitter_y_cm": 0.0,
+  "emitter_z_cm": 114.0,
+  "foot_centre_y_cm": 131.5,
+  "foot_length_cm": 96.0,
+  "foot_length_over_W": 0.192,
+  "front_visibility": {
+   "by_slot": {
+    "MI_EBS_MER_ShieldField": 13924,
+    "MI_EBS_MER_StatusCyan": 1374,
+    "MI_EBS_MER_UnitCeramic": 1797,
+    "MI_EBS_MER_UnitFrame": 8969
+   },
+   "field_fraction": 0.53422,
+   "frontmost_components": [
+    "cell_01_corner_01",
+    "cell_01_corner_02",
+    "cell_01_corner_03",
+    "cell_01_corner_04",
+    "cell_01_edge",
+    "cell_01_field",
+    "cell_01_frame",
+    "cell_02_corner_01",
+    "cell_02_corner_02",
+    "cell_02_corner_03",
+    "cell_02_corner_04",
+    "cell_02_edge",
+    "cell_02_field",
+    "cell_02_frame",
+    "cell_03_corner_01",
+    "cell_03_corner_02",
+    "cell_03_corner_03",
+    "cell_03_corner_04",
+    "cell_03_edge",
+    "cell_03_field",
+    "cell_03_frame",
+    "cell_04_corner_01",
+    "cell_04_corner_02",
+    "cell_04_corner_03",
+    "cell_04_corner_04",
+    "cell_04_edge",
+    "cell_04_field",
+    "cell_04_frame",
+    "cell_05_corner_01",
+    "cell_05_corner_02",
+    "cell_05_corner_03",
+    "cell_05_corner_04",
+    "cell_05_edge",
+    "cell_05_field",
+    "cell_05_frame",
+    "cell_06_corner_01",
+    "cell_06_corner_02",
+    "cell_06_corner_03",
+    "cell_06_corner_04",
+    "cell_06_edge",
+    "cell_06_field",
+    "cell_06_frame",
+    "chassis_axle",
+    "chassis_axle_cover",
+    "chassis_belly",
+    "chassis_deck",
+    "chassis_frame",
+    "chassis_prow_buttress",
+    "chassis_prow_lower",
+    "emitter_housing",
+    "emitter_lens",
+    "emitter_stalk",
+    "leg_fl_boot",
+    "leg_fl_foot",
+    "leg_fl_mount",
+    "leg_fl_thigh",
+    "leg_fl_thigh_conduit",
+    "leg_fl_thigh_rail",
+    "leg_fl_toe_plate",
+    "leg_fl_tread_03",
+    "leg_fr_boot",
+    "leg_fr_foot",
+    "leg_fr_mount",
+    "leg_fr_thigh",
+    "leg_fr_thigh_conduit",
+    "leg_fr_thigh_rail",
+    "leg_fr_toe_plate",
+    "leg_fr_tread_03",
+    "op_l_arch",
+    "op_l_arch_leg",
+    "op_l_shoulder",
+    "op_r_arch",
+    "op_r_arch_leg",
+    "op_r_shoulder",
+    "wing_l_arm",
+    "wing_l_arm_web",
+    "wing_r_arm",
+    "wing_r_arm_web"
+   ],
+   "grid": [
+    200,
+    159
+   ],
+   "samples": 26064,
+   "slot_fraction": {
+    "MI_EBS_MER_ShieldField": 0.53422,
+    "MI_EBS_MER_StatusCyan": 0.05272,
+    "MI_EBS_MER_UnitCeramic": 0.06895,
+    "MI_EBS_MER_UnitFrame": 0.34411
+   },
+   "status_fraction": 0.05272,
+   "view_from": "+X"
+  },
+  "ground_contact_min_z_cm": 0.0,
+  "leg_centre_y_cm": 123.6,
+  "operator_centre_y_cm": 52.7,
+  "operator_cowl_top_over_W": 0.669,
+  "operator_cowl_top_z_cm": 334.5,
+  "operator_gap_cm": 105.4,
+  "operator_station": {
+   "components": 18,
+   "cowl_top_z_cm": 334.5,
+   "station_top_z_cm": 347.5,
+   "tallest_component": "op_l_arch"
+  },
+  "operator_top_over_W": 0.695,
+  "operator_top_z_cm": 347.5,
+  "px_per_cm_on_reference": 0.60606,
+  "rear_open": {
+   "chassis_rear_face_polygons": 0,
+   "leg_top_z_cm": 118.65,
+   "offenders": [],
+   "polygons_behind_rear_plane_above_legs": 0,
+   "rear_face_open": true,
+   "rear_plane_x_cm": -150.0
+  },
+  "rear_visibility": {
+   "by_slot": {
+    "MI_EBS_MER_ShieldField": 0,
+    "MI_EBS_MER_StatusCyan": 190,
+    "MI_EBS_MER_UnitCeramic": 5637,
+    "MI_EBS_MER_UnitFrame": 20237
+   },
+   "field_fraction": 0.0,
+   "frontmost_components": [
+    "cell_01_backplate",
+    "cell_01_corner_01",
+    "cell_01_corner_02",
+    "cell_01_corner_03",
+    "cell_01_corner_04",
+    "cell_01_frame",
+    "cell_01_hinge_01",
+    "cell_01_hinge_02",
+    "cell_02_backplate",
+    "cell_02_corner_01",
+    "cell_02_corner_02",
+    "cell_02_corner_04",
+    "cell_02_frame",
+    "cell_02_hinge_01",
+    "cell_03_backplate",
+    "cell_03_corner_01",
+    "cell_03_corner_02",
+    "cell_03_frame",
+    "cell_03_hinge_01",
+    "cell_04_backplate",
+    "cell_04_corner_01",
+    "cell_04_corner_02",
+    "cell_04_frame",
+    "cell_04_hinge_01",
+    "cell_05_backplate",
+    "cell_05_corner_01",
+    "cell_05_corner_02",
+    "cell_05_corner_03",
+    "cell_05_frame",
+    "cell_05_hinge_01",
+    "cell_06_backplate",
+    "cell_06_corner_01",
+    "cell_06_corner_02",
+    "cell_06_corner_03",
+    "cell_06_corner_04",
+    "cell_06_frame",
+    "cell_06_hinge_01",
+    "cell_06_hinge_02",
+    "chassis_axle",
+    "chassis_axle_cover",
+    "chassis_bay_01",
+    "chassis_bay_02",
+    "chassis_bay_03",
+    "chassis_bay_core",
+    "chassis_bay_drum",
+    "chassis_bay_duct",
+    "chassis_bay_floor",
+    "chassis_bay_header",
+    "chassis_bay_lintel",
+    "chassis_bay_post",
+    "chassis_bay_rack",
+    "chassis_bay_sill",
+    "chassis_belly",
+    "chassis_deck",
+    "chassis_deck_kerb",
+    "chassis_deck_rear",
+    "chassis_deck_spine",
+    "chassis_flank_hatch_l",
+    "chassis_flank_hatch_r",
+    "chassis_flank_l",
+    "chassis_flank_low_l",
+    "chassis_flank_low_r",
+    "chassis_flank_r",
+    "chassis_flank_rear_l",
+    "chassis_flank_rear_r",
+    "chassis_frame",
+    "chassis_prow_corner",
+    "chassis_prow_upper",
+    "chassis_rail_top_l",
+    "chassis_rail_top_r",
+    "chassis_rib_rear_l",
+    "chassis_rib_rear_r",
+    "chassis_strake_l_01",
+    "chassis_strake_r_01",
+    "leg_rl_boot",
+    "leg_rl_foot",
+    "leg_rl_mount",
+    "leg_rl_thigh",
+    "leg_rl_thigh_conduit",
+    "leg_rl_thigh_rail",
+    "leg_rl_tread_01",
+    "leg_rr_boot",
+    "leg_rr_foot",
+    "leg_rr_mount",
+    "leg_rr_thigh",
+    "leg_rr_thigh_conduit",
+    "leg_rr_thigh_rail",
+    "leg_rr_tread_01",
+    "op_l_arch",
+    "op_l_arch_leg",
+    "op_l_backpack",
+    "op_l_collar",
+    "op_l_cowl",
+    "op_l_shoulder",
+    "op_l_torso",
+    "op_r_arch",
+    "op_r_arch_leg",
+    "op_r_backpack",
+    "op_r_collar",
+    "op_r_cowl",
+    "op_r_shoulder",
+    "op_r_torso",
+    "wing_l_arm",
+    "wing_l_hinge_barrel",
+    "wing_l_strut",
+    "wing_l_strut_cap",
+    "wing_r_arm",
+    "wing_r_hinge_barrel",
+    "wing_r_strut",
+    "wing_r_strut_cap"
+   ],
+   "grid": [
+    200,
+    159
+   ],
+   "samples": 26064,
+   "slot_fraction": {
+    "MI_EBS_MER_ShieldField": 0.0,
+    "MI_EBS_MER_StatusCyan": 0.00729,
+    "MI_EBS_MER_UnitCeramic": 0.21628,
+    "MI_EBS_MER_UnitFrame": 0.77643
+   },
+   "status_fraction": 0.00729,
+   "view_from": "-X"
+  },
+  "shield_field_area_fraction": 0.07029,
+  "stance_width_cm": 339.0,
+  "status_cyan_area_fraction": 0.01906,
+  "wall_bottom_over_W": 0.2266,
+  "wall_height_cm": 280.0,
+  "wall_height_over_W": 0.56,
+  "wall_taller_than_operators": true,
+  "wall_top_above_operator_cm": 45.8,
+  "wall_top_above_operator_cowl_cm": 58.8,
+  "wall_width_cm": 498.667,
+  "wall_width_over_W": 0.9973
+ },
+ "creator": "Angelis Pseftis",
+ "dimensions_cm": {
+  "cell_chamfer": 15.0,
+  "cell_frame_border": 10.0,
+  "cell_pitch": 83.3333,
+  "cell_thickness": 28.0,
+  "cell_width": 82.0,
+  "chassis": [
+   -150.0,
+   130.0,
+   220.0,
+   118.0,
+   284.8
+  ],
+  "emitter": [
+   184.0,
+   0.0,
+   114.0,
+   19.0,
+   8.0
+  ],
+  "foot": [
+   96.0,
+   76.0,
+   42.0
+  ],
+  "foot_centre_y": 131.5,
+  "leg_centre_y": 123.6,
+  "operator_centre_y": 52.7,
+  "operator_top_z": 334.5,
+  "pack_translation_cm": [
+   -119.0,
+   25.0,
+   -80.0
+  ],
+  "pack_yaw_deg": 80.0,
+  "wall_bottom_z": 113.3,
+  "wall_face_x": 175.0,
+  "wall_height": 280.0,
+  "wall_top_z": 393.3,
+  "wall_width": 500.0,
+  "wing_pivot": [
+   128.0,
+   118.0,
+   250.0
+  ]
+ },
+ "ground_contact_min_z_cm": {
+  "cancel@0.00": 0.0,
+  "damage@0.20": -0.0,
+  "death@1.00": 0.127,
+  "deploy@0.15": -0.001,
+  "deploy@0.55": -0.0,
+  "deploy@0.82": -0.0,
+  "drag_deployed@0.25": 0.082,
+  "idle_deployed@0.50": 0.0,
+  "idle_packed@0.00": 0.0,
+  "move_packed@0.25": 0.282,
+  "pack@0.55": -0.0,
+  "restore@0.00": -0.0
+ },
+ "kit_revision": "ebs-meshkit-v3",
+ "material_rules": {
+  "directional_gradient_deg": 120,
+  "note": "the 120 deg directional gradient and the chromatic impact ripple are material work on MI_EBS_MER_ShieldField; no geometry implements them",
+  "roughness_floor": 0.85,
+  "texture_stack": "2048x2048 PBR"
+ },
+ "material_slot_policy": "4 slots. FRAME: charcoal machined frame, hubs, hinges, treads AND the six opaque cell back plates that stop the field and the pane rims ever reading from behind the unit. CERAMIC: pale plates. SHIELD FIELD: the six cell field slabs only. STATUS CYAN (full list, no omissions): two operator visors, the emitter lens, the six cell pane rims, the chassis bay core and the two flank conduit lines - the bay core and the conduits are the reference's own machined-conduit glow and are 26.7 percent of the cyan area. The six pane rims must light and darken WITH the field material, not with the status channel (README section 8 deviation 15). The card sets no slot ceiling; brass edge trim, scuff noise and the team mask are texture channels of the ceramic slot.",
+ "material_slots": [
+  "MI_EBS_MER_UnitFrame",
+  "MI_EBS_MER_UnitCeramic",
+  "MI_EBS_MER_ShieldField",
+  "MI_EBS_MER_StatusCyan"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -249.33333333333331,
+     0.0
+    ],
+    [
+     200.0,
+     249.33333333333331,
+     396.3
+    ]
+   ],
+   "by_bone": {
+    "cell_01": 256,
+    "cell_02": 256,
+    "cell_03": 256,
+    "cell_04": 256,
+    "cell_05": 256,
+    "cell_06": 256,
+    "chassis": 730,
+    "emitter": 96,
+    "leg_fl": 196,
+    "leg_fr": 196,
+    "leg_rl": 196,
+    "leg_rr": 196,
+    "operator_l": 148,
+    "operator_r": 148,
+    "wing_root_l": 88,
+    "wing_root_r": 88
+   },
+   "by_slot": {
+    "MI_EBS_MER_ShieldField": 168,
+    "MI_EBS_MER_StatusCyan": 472,
+    "MI_EBS_MER_UnitCeramic": 676,
+    "MI_EBS_MER_UnitFrame": 2302
+   },
+   "clips": [
+    "idle_packed",
+    "move_packed",
+    "deploy",
+    "idle_deployed",
+    "drag_deployed",
+    "pack",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_003",
+   "path": "export/SK_EBS_MER_UNT_003_LOD0.glb",
+   "sha256": "ad3b2ee200d716d87b1b67b56105a9331df856f6e212c48b3f86a7d25b31ffeb",
+   "sockets": [
+    {
+     "bone": "chassis",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      200.0
+     ]
+    },
+    {
+     "bone": "emitter",
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      198.0,
+      0.0,
+      114.0
+     ]
+    },
+    {
+     "bone": "shield_anchor",
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      189.0,
+      0.0,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_01",
+     "name": "Cell_01",
+     "position_cm": [
+      175.0,
+      -167.33333333333331,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_02",
+     "name": "Cell_02",
+     "position_cm": [
+      175.0,
+      -84.0,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_03",
+     "name": "Cell_03",
+     "position_cm": [
+      175.0,
+      -0.6666666666666643,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_04",
+     "name": "Cell_04",
+     "position_cm": [
+      175.0,
+      0.6666666666666643,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_05",
+     "name": "Cell_05",
+     "position_cm": [
+      175.0,
+      84.0,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_06",
+     "name": "Cell_06",
+     "position_cm": [
+      175.0,
+      167.33333333333331,
+      253.3
+     ]
+    }
+   ],
+   "triangles": 3618
+  },
+  {
+   "collision_boxes": [
+    {
+     "center_cm": [
+      -10.0,
+      0.0,
+      201.4
+     ],
+     "name": "UBX_chassis",
+     "size_cm": [
+      280.0,
+      220.0,
+      166.8
+     ]
+    },
+    {
+     "center_cm": [
+      -11.0,
+      0.0,
+      46.0
+     ],
+     "name": "UBX_stance",
+     "size_cm": [
+      270.0,
+      339.0,
+      92.0
+     ]
+    }
+   ],
+   "kind": "static deployed rest",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_003",
+   "path": "export/SK_EBS_MER_UNT_003_LOD0_static.glb",
+   "sha256": "52c1c47f4333d0791030dd6c89e0f4d9ad93cc8a2a3b9b3c7681eccb2f17c6aa",
+   "triangles": 3618
+  },
+  {
+   "kind": "deployed rest OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_003",
+   "path": "export/SK_EBS_MER_UNT_003_LOD0.obj",
+   "sha256": "8b0dcc688878b0e1b8a500d3be8c6b8bcf88b13714248be53b2fe9ab1acee16b"
+  },
+  {
+   "bounds_cm": [
+    [
+     -32.0,
+     -131.33333333333331,
+     -139.7
+    ],
+    [
+     62.5,
+     117.33333333333334,
+     146.3
+    ]
+   ],
+   "kind": "sub-object (card: physical transformation)",
+   "lod": 0,
+   "mesh": "SM_EBS_MER_UNT_003_Left_Shield_Panel",
+   "path": "export/SM_EBS_MER_UNT_003_Left_Shield_Panel_LOD0.glb",
+   "pivot_world_cm": [
+    128.0,
+    -118.0,
+    250.0
+   ],
+   "sha256": "7caad316c51e59967255e1b7f8cf4f1ff052e1954fe00c28474db549902a498f",
+   "triangles": 856
+  },
+  {
+   "kind": "sub-object OBJ",
+   "lod": 0,
+   "mesh": "SM_EBS_MER_UNT_003_Left_Shield_Panel",
+   "path": "export/SM_EBS_MER_UNT_003_Left_Shield_Panel_LOD0.obj",
+   "sha256": "1adc05720b15edf674b55c2fc7272dee14e9718069429ddee12af3e1e8716f94"
+  },
+  {
+   "bounds_cm": [
+    [
+     -32.0,
+     -117.33333333333334,
+     -139.7
+    ],
+    [
+     62.5,
+     131.33333333333331,
+     146.3
+    ]
+   ],
+   "kind": "sub-object (card: physical transformation)",
+   "lod": 0,
+   "mesh": "SM_EBS_MER_UNT_003_Right_Shield_Panel",
+   "path": "export/SM_EBS_MER_UNT_003_Right_Shield_Panel_LOD0.glb",
+   "pivot_world_cm": [
+    128.0,
+    118.0,
+    250.0
+   ],
+   "sha256": "963575e4a2fea05de37dfbf8a88c4f155993c0c42190033c74a58996ff4bd6b3",
+   "triangles": 856
+  },
+  {
+   "kind": "sub-object OBJ",
+   "lod": 0,
+   "mesh": "SM_EBS_MER_UNT_003_Right_Shield_Panel",
+   "path": "export/SM_EBS_MER_UNT_003_Right_Shield_Panel_LOD0.obj",
+   "sha256": "71fd51765c01c680d401e0cb25820b2b21317ea4fed97ea3f67e746b396e40d8"
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -249.33333333333331,
+     0.0
+    ],
+    [
+     201.0,
+     249.33333333333331,
+     393.3
+    ]
+   ],
+   "by_bone": {
+    "cell_01": 196,
+    "cell_02": 196,
+    "cell_03": 196,
+    "cell_04": 196,
+    "cell_05": 196,
+    "cell_06": 196,
+    "chassis": 178,
+    "emitter": 36,
+    "leg_fl": 72,
+    "leg_fr": 72,
+    "leg_rl": 72,
+    "leg_rr": 72,
+    "operator_l": 72,
+    "operator_r": 72,
+    "wing_root_l": 12,
+    "wing_root_r": 12
+   },
+   "by_slot": {
+    "MI_EBS_MER_ShieldField": 168,
+    "MI_EBS_MER_StatusCyan": 456,
+    "MI_EBS_MER_UnitCeramic": 252,
+    "MI_EBS_MER_UnitFrame": 970
+   },
+   "clips": [
+    "idle_packed",
+    "move_packed",
+    "deploy",
+    "idle_deployed",
+    "drag_deployed",
+    "pack",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_003",
+   "path": "export/SK_EBS_MER_UNT_003_LOD1.glb",
+   "sha256": "9a25f53dd22791ef7bd232fba63d9359a99a13d20c71f7c784bf48c2e575cd1e",
+   "sockets": [
+    {
+     "bone": "chassis",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      200.0
+     ]
+    },
+    {
+     "bone": "emitter",
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      198.0,
+      0.0,
+      114.0
+     ]
+    },
+    {
+     "bone": "shield_anchor",
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      189.0,
+      0.0,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_01",
+     "name": "Cell_01",
+     "position_cm": [
+      175.0,
+      -167.33333333333331,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_02",
+     "name": "Cell_02",
+     "position_cm": [
+      175.0,
+      -84.0,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_03",
+     "name": "Cell_03",
+     "position_cm": [
+      175.0,
+      -0.6666666666666643,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_04",
+     "name": "Cell_04",
+     "position_cm": [
+      175.0,
+      0.6666666666666643,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_05",
+     "name": "Cell_05",
+     "position_cm": [
+      175.0,
+      84.0,
+      253.3
+     ]
+    },
+    {
+     "bone": "cell_06",
+     "name": "Cell_06",
+     "position_cm": [
+      175.0,
+      167.33333333333331,
+      253.3
+     ]
+    }
+   ],
+   "triangles": 1846
+  },
+  {
+   "collision_boxes": [],
+   "kind": "static deployed rest",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_003",
+   "path": "export/SK_EBS_MER_UNT_003_LOD1_static.glb",
+   "sha256": "e05e3cb26473940c42a0bcb91c026c8a3922e865ed5f29b807b053acc8f9d8da",
+   "triangles": 1846
+  },
+  {
+   "kind": "deployed rest OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_003",
+   "path": "export/SK_EBS_MER_UNT_003_LOD1.obj",
+   "sha256": "a123585c50615e2a042ff324ba74061875fffaae06cbcb435a9c4b4025fb629c"
+  },
+  {
+   "bounds_cm": [
+    [
+     -12.261444501042845,
+     -131.33333333333331,
+     -136.7
+    ],
+    [
+     61.0,
+     117.33333333333334,
+     143.3
+    ]
+   ],
+   "kind": "sub-object (card: physical transformation)",
+   "lod": 1,
+   "mesh": "SM_EBS_MER_UNT_003_Left_Shield_Panel",
+   "path": "export/SM_EBS_MER_UNT_003_Left_Shield_Panel_LOD1.glb",
+   "pivot_world_cm": [
+    128.0,
+    -118.0,
+    250.0
+   ],
+   "sha256": "058df11e1bbf222a526762bad6b3ecbe7b8fdf971c195735348839952a29b78a",
+   "triangles": 600
+  },
+  {
+   "kind": "sub-object OBJ",
+   "lod": 1,
+   "mesh": "SM_EBS_MER_UNT_003_Left_Shield_Panel",
+   "path": "export/SM_EBS_MER_UNT_003_Left_Shield_Panel_LOD1.obj",
+   "sha256": "e4b2b458b67a1c533aec18b3c8bb9c7a4f6cbbf092a4c663fa3c049ecad99ac2"
+  },
+  {
+   "bounds_cm": [
+    [
+     -12.261444501042845,
+     -117.33333333333334,
+     -136.7
+    ],
+    [
+     61.0,
+     131.33333333333331,
+     143.3
+    ]
+   ],
+   "kind": "sub-object (card: physical transformation)",
+   "lod": 1,
+   "mesh": "SM_EBS_MER_UNT_003_Right_Shield_Panel",
+   "path": "export/SM_EBS_MER_UNT_003_Right_Shield_Panel_LOD1.glb",
+   "pivot_world_cm": [
+    128.0,
+    118.0,
+    250.0
+   ],
+   "sha256": "6f6aab0178cb4bbcb4a5338bf3c4e5b9d40b8a10ee3bd675627d0bcae454b03f",
+   "triangles": 600
+  },
+  {
+   "kind": "sub-object OBJ",
+   "lod": 1,
+   "mesh": "SM_EBS_MER_UNT_003_Right_Shield_Panel",
+   "path": "export/SM_EBS_MER_UNT_003_Right_Shield_Panel_LOD1.obj",
+   "sha256": "30c26eb3a94318f23f53351d5a1b8b45994de32cf540a7b83257359c41d2b616"
+  }
+ ],
+ "package_id": "EBS-PKG-MC-BULWARK-TEAM",
+ "packed_state": {
+  "cells_clear_of_legs": true,
+  "deployed_bounds_cm": [
+   [
+    -150.0,
+    -249.33,
+    0.0
+   ],
+   [
+    200.0,
+    249.33,
+    396.3
+   ]
+  ],
+  "deployed_height_z_cm": 396.3,
+  "deployed_width_y_cm": 498.67,
+  "frontal_face_lost": true,
+  "leg_hub_outer_y_cm": 150.25,
+  "packed_aspect_w_over_h": 1.309,
+  "packed_bounds_cm": [
+   [
+    -150.0,
+    -227.36,
+    0.0
+   ],
+   [
+    200.0,
+    227.36,
+    347.5
+   ]
+  ],
+  "packed_cell_bottom_z_cm": 33.3,
+  "packed_cell_front_x_cm": [
+   -28.99,
+   53.08,
+   135.14,
+   135.14,
+   53.08,
+   -28.99
+  ],
+  "packed_cell_frontal_span_y_cm": 451.76,
+  "packed_cell_inner_face_y_cm": 155.12,
+  "packed_cell_slab_thickness_cm": 249.75,
+  "packed_cell_top_z_cm": 313.3,
+  "packed_flank_field_note": "The barrier field slab cannot be removed from the packed pose by geometry: the rig is rotation and translation only (ebs_skelkit.Keyframe has no scale track), so a rigid 62 x 260 cm pane is present in every pose, and the packed fold turns each pane's FRONT face outboard, i.e. the flank camera looks straight down the pane normal. The packed read therefore depends on the field material being OFF while packed - the state baked into the packed_field_dark review assembly. README section 8 records the deviation.",
+  "packed_flank_visibility": {
+   "+Y": {
+    "by_slot": {
+     "MI_EBS_MER_ShieldField": 13759,
+     "MI_EBS_MER_StatusCyan": 1269,
+     "MI_EBS_MER_UnitCeramic": 1321,
+     "MI_EBS_MER_UnitFrame": 12876
+    },
+    "field_fraction": 0.4708,
+    "frontmost_components": [
+     "cell_04_corner_01",
+     "cell_04_corner_02",
+     "cell_04_corner_03",
+     "cell_04_corner_04",
+     "cell_04_edge",
+     "cell_04_field",
+     "cell_04_frame",
+     "cell_05_corner_01",
+     "cell_05_corner_02",
+     "cell_05_corner_03",
+     "cell_05_corner_04",
+     "cell_05_edge",
+     "cell_05_field",
+     "cell_05_frame",
+     "cell_06_corner_01",
+     "cell_06_corner_02",
+     "cell_06_corner_03",
+     "cell_06_corner_04",
+     "cell_06_edge",
+     "cell_06_field",
+     "cell_06_frame",
+     "chassis_deck",
+     "chassis_flank_rear_r",
+     "chassis_frame",
+     "chassis_prow_block",
+     "chassis_prow_buttress",
+     "chassis_prow_corner",
+     "chassis_prow_lower",
+     "chassis_prow_rail",
+     "chassis_prow_vent",
+     "emitter_housing",
+     "emitter_lens",
+     "emitter_stalk",
+     "leg_fr_foot",
+     "leg_fr_tread_01",
+     "leg_fr_tread_02",
+     "leg_fr_tread_03",
+     "leg_rr_boot",
+     "leg_rr_foot",
+     "leg_rr_mount",
+     "leg_rr_thigh",
+     "leg_rr_thigh_conduit",
+     "leg_rr_thigh_rail",
+     "leg_rr_tread_01",
+     "leg_rr_tread_02",
+     "leg_rr_tread_03",
+     "op_r_arch",
+     "op_r_arch_leg",
+     "op_r_cowl",
+     "op_r_visor"
+    ],
+    "grid": [
+     200,
+     199
+    ],
+    "samples": 29225,
+    "slot_fraction": {
+     "MI_EBS_MER_ShieldField": 0.4708,
+     "MI_EBS_MER_StatusCyan": 0.04342,
+     "MI_EBS_MER_UnitCeramic": 0.0452,
+     "MI_EBS_MER_UnitFrame": 0.44058
+    },
+    "status_fraction": 0.04342,
+    "view_from": "+Y"
+   },
+   "-Y": {
+    "by_slot": {
+     "MI_EBS_MER_ShieldField": 13759,
+     "MI_EBS_MER_StatusCyan": 1269,
+     "MI_EBS_MER_UnitCeramic": 1321,
+     "MI_EBS_MER_UnitFrame": 12876
+    },
+    "field_fraction": 0.4708,
+    "frontmost_components": [
+     "cell_01_corner_01",
+     "cell_01_corner_02",
+     "cell_01_corner_03",
+     "cell_01_corner_04",
+     "cell_01_edge",
+     "cell_01_field",
+     "cell_01_frame",
+     "cell_02_corner_01",
+     "cell_02_corner_02",
+     "cell_02_corner_03",
+     "cell_02_corner_04",
+     "cell_02_edge",
+     "cell_02_field",
+     "cell_02_frame",
+     "cell_03_corner_01",
+     "cell_03_corner_02",
+     "cell_03_corner_03",
+     "cell_03_corner_04",
+     "cell_03_edge",
+     "cell_03_field",
+     "cell_03_frame",
+     "chassis_deck",
+     "chassis_flank_rear_l",
+     "chassis_frame",
+     "chassis_prow_block",
+     "chassis_prow_buttress",
+     "chassis_prow_corner",
+     "chassis_prow_lower",
+     "chassis_prow_rail",
+     "chassis_prow_vent",
+     "emitter_housing",
+     "emitter_lens",
+     "emitter_stalk",
+     "leg_fl_foot",
+     "leg_fl_tread_01",
+     "leg_fl_tread_02",
+     "leg_fl_tread_03",
+     "leg_rl_boot",
+     "leg_rl_foot",
+     "leg_rl_mount",
+     "leg_rl_thigh",
+     "leg_rl_thigh_conduit",
+     "leg_rl_thigh_rail",
+     "leg_rl_tread_01",
+     "leg_rl_tread_02",
+     "leg_rl_tread_03",
+     "op_l_arch",
+     "op_l_arch_leg",
+     "op_l_cowl",
+     "op_l_visor"
+    ],
+    "grid": [
+     200,
+     199
+    ],
+    "samples": 29225,
+    "slot_fraction": {
+     "MI_EBS_MER_ShieldField": 0.4708,
+     "MI_EBS_MER_StatusCyan": 0.04342,
+     "MI_EBS_MER_UnitCeramic": 0.0452,
+     "MI_EBS_MER_UnitFrame": 0.44058
+    },
+    "status_fraction": 0.04342,
+    "view_from": "-Y"
+   }
+  },
+  "packed_height_z_cm": 347.5,
+  "packed_length_x_cm": 350.0,
+  "packed_narrower_than_deployed_wall": true,
+  "packed_rear_visibility": {
+   "by_slot": {
+    "MI_EBS_MER_ShieldField": 0,
+    "MI_EBS_MER_StatusCyan": 228,
+    "MI_EBS_MER_UnitCeramic": 6564,
+    "MI_EBS_MER_UnitFrame": 16552
+   },
+   "field_fraction": 0.0,
+   "frontmost_components": [
+    "cell_01_backplate",
+    "cell_01_corner_01",
+    "cell_01_corner_02",
+    "cell_01_corner_03",
+    "cell_01_corner_04",
+    "cell_01_frame",
+    "cell_01_hinge_01",
+    "cell_01_hinge_02",
+    "cell_02_backplate",
+    "cell_02_corner_01",
+    "cell_02_corner_02",
+    "cell_02_corner_03",
+    "cell_02_corner_04",
+    "cell_02_frame",
+    "cell_02_hinge_01",
+    "cell_02_hinge_02",
+    "cell_03_backplate",
+    "cell_03_corner_01",
+    "cell_03_corner_02",
+    "cell_03_corner_04",
+    "cell_03_frame",
+    "cell_03_hinge_01",
+    "cell_04_backplate",
+    "cell_04_corner_01",
+    "cell_04_corner_02",
+    "cell_04_corner_03",
+    "cell_04_frame",
+    "cell_04_hinge_01",
+    "cell_05_backplate",
+    "cell_05_corner_01",
+    "cell_05_corner_02",
+    "cell_05_corner_03",
+    "cell_05_corner_04",
+    "cell_05_frame",
+    "cell_05_hinge_01",
+    "cell_05_hinge_02",
+    "cell_06_backplate",
+    "cell_06_corner_01",
+    "cell_06_corner_02",
+    "cell_06_corner_03",
+    "cell_06_corner_04",
+    "cell_06_frame",
+    "cell_06_hinge_01",
+    "cell_06_hinge_02",
+    "chassis_axle",
+    "chassis_axle_cover",
+    "chassis_bay_01",
+    "chassis_bay_02",
+    "chassis_bay_03",
+    "chassis_bay_core",
+    "chassis_bay_drum",
+    "chassis_bay_duct",
+    "chassis_bay_floor",
+    "chassis_bay_header",
+    "chassis_bay_lintel",
+    "chassis_bay_post",
+    "chassis_bay_rack",
+    "chassis_bay_sill",
+    "chassis_belly",
+    "chassis_deck",
+    "chassis_deck_kerb",
+    "chassis_deck_rear",
+    "chassis_deck_spine",
+    "chassis_flank_hatch_l",
+    "chassis_flank_hatch_r",
+    "chassis_flank_l",
+    "chassis_flank_low_l",
+    "chassis_flank_low_r",
+    "chassis_flank_r",
+    "chassis_flank_rear_l",
+    "chassis_flank_rear_r",
+    "chassis_frame",
+    "chassis_prow_corner",
+    "chassis_prow_upper",
+    "chassis_rail_mid_l",
+    "chassis_rail_mid_r",
+    "chassis_rail_top_l",
+    "chassis_rail_top_r",
+    "chassis_rib_rear_l",
+    "chassis_rib_rear_r",
+    "chassis_strake_l_01",
+    "chassis_strake_r_01",
+    "leg_rl_boot",
+    "leg_rl_foot",
+    "leg_rl_mount",
+    "leg_rl_thigh",
+    "leg_rl_thigh_conduit",
+    "leg_rl_thigh_rail",
+    "leg_rl_tread_01",
+    "leg_rr_boot",
+    "leg_rr_foot",
+    "leg_rr_mount",
+    "leg_rr_thigh",
+    "leg_rr_thigh_conduit",
+    "leg_rr_thigh_rail",
+    "leg_rr_tread_01",
+    "op_l_arch",
+    "op_l_arch_leg",
+    "op_l_backpack",
+    "op_l_collar",
+    "op_l_cowl",
+    "op_l_shoulder",
+    "op_l_torso",
+    "op_r_arch",
+    "op_r_arch_leg",
+    "op_r_backpack",
+    "op_r_collar",
+    "op_r_cowl",
+    "op_r_shoulder",
+    "op_r_torso",
+    "wing_l_arm",
+    "wing_l_arm_web",
+    "wing_l_hinge_barrel",
+    "wing_l_strut",
+    "wing_l_strut_cap",
+    "wing_r_arm",
+    "wing_r_arm_web",
+    "wing_r_hinge_barrel",
+    "wing_r_strut",
+    "wing_r_strut_cap"
+   ],
+   "grid": [
+    200,
+    153
+   ],
+   "samples": 23344,
+   "slot_fraction": {
+    "MI_EBS_MER_ShieldField": 0.0,
+    "MI_EBS_MER_StatusCyan": 0.00977,
+    "MI_EBS_MER_UnitCeramic": 0.28119,
+    "MI_EBS_MER_UnitFrame": 0.70905
+   },
+   "status_fraction": 0.00977,
+   "view_from": "-X"
+  },
+  "packed_width_y_cm": 454.71,
+  "reference_aspect_range": [
+   1.176,
+   1.444
+  ],
+  "wider_than_tall": true
+ },
+ "parts": [
+  "SK_EBS_MER_UNT_003",
+  "SM_EBS_MER_UNT_003_Left_Shield_Panel",
+  "SM_EBS_MER_UNT_003_Right_Shield_Panel"
+ ],
+ "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_003/",
+ "production_asset_id": "EBS-MER-UNT-003",
+ "review_assemblies": [
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -249.33333333333331,
+     0.0
+    ],
+    [
+     200.0,
+     249.33333333333331,
+     396.3
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_deployed_LOD0.obj",
+   "sha256": "0c4ce73c76873d17873212b79fa3b26daa52a3fe2acec64cf438219daa82284f",
+   "state": "deployed",
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -227.35627856351985,
+     0.0
+    ],
+    [
+     200.0,
+     227.35627856351985,
+     347.5
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_packed_LOD0.obj",
+   "sha256": "f35c82d60ae5cd4c10a20de22e99a918a782e52521007426afcb815bde51a7c3",
+   "state": "packed",
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -249.33333333333331,
+     0.0
+    ],
+    [
+     200.0,
+     249.33333333333331,
+     396.3
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_deployed_glass_cutaway_LOD0.obj",
+   "sha256": "9ebc735c59a654c5ca5cddeb72a05aa0e93236a7a787b059d33053102fe9b8a7",
+   "state": "deployed_glass_cutaway",
+   "triangles": 3450
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -227.35627856351985,
+     0.0
+    ],
+    [
+     200.0,
+     227.35627856351985,
+     347.5
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_packed_field_dark_LOD0.obj",
+   "sha256": "7c60145e0bef964b0741438c8166c57d8074ac4148edbc34726fbf467387d547",
+   "state": "packed_field_dark",
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -249.33333333333331,
+     0.0
+    ],
+    [
+     201.0,
+     249.33333333333331,
+     393.3
+    ]
+   ],
+   "lod": 1,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_deployed_LOD1.obj",
+   "sha256": "839dd6364238a571145350aab3453a3ad241bbb028d8d1b9ad4469067ffc6da2",
+   "state": "deployed",
+   "triangles": 1846
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -225.87906693400154,
+     0.0
+    ],
+    [
+     201.0,
+     225.87906693400154,
+     347.5
+    ]
+   ],
+   "lod": 1,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/SK_EBS_MER_UNT_003_packed_LOD1.obj",
+   "sha256": "a918108cc30dc0a75809d69599497504fd23b930fe30785c63f1e2a63f739a3f",
+   "state": "packed",
+   "triangles": 1846
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -227.35627856351985,
+     0.0
+    ],
+    [
+     200.0,
+     227.35627856351985,
+     347.5
+    ]
+   ],
+   "clip": "idle_packed",
+   "fraction": 0.0,
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_idle_packed_000.obj",
+   "sha256": "73e29841706417332021582c826f865daf6d56ad19f42c90cbc461615e2cc919",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      200.0
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      198.0,
+      0.0,
+      114.0
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      189.0,
+      0.0,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      -31.42,
+      -197.85,
+      173.3
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      50.64,
+      -183.38,
+      173.3
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      132.71,
+      -168.91,
+      173.3
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      132.71,
+      168.91,
+      173.3
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      50.64,
+      183.38,
+      173.3
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      -31.42,
+      197.85,
+      173.3
+     ]
+    }
+   ],
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -155.3432650017685,
+     -227.35627856351985,
+     0.2819088979244935
+    ],
+    [
+     200.44979237421722,
+     227.35627856351985,
+     354.67983982552477
+    ]
+   ],
+   "clip": "move_packed",
+   "fraction": 0.25,
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_move_packed_025.obj",
+   "sha256": "d6fa4f71dbf5f7b745006998c4ffd4707344ad1bef8141aca05159aa25f97393",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      -0.52,
+      0.0,
+      206.84
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      198.37,
+      0.0,
+      122.92
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      187.91,
+      0.0,
+      262.12
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      -31.66,
+      -197.85,
+      179.81
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      50.4,
+      -183.38,
+      180.67
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      132.46,
+      -168.91,
+      181.53
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      132.46,
+      168.91,
+      181.53
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      50.4,
+      183.38,
+      180.67
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      -31.66,
+      197.85,
+      179.81
+     ]
+    }
+   ],
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -152.4155355635199,
+     -228.09195138741535,
+     -0.0012028312505782957
+    ],
+    [
+     200.76370611746088,
+     228.09195138741535,
+     350.68206881974095
+    ]
+   ],
+   "clip": "deploy",
+   "fraction": 0.15,
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_deploy_015.obj",
+   "sha256": "4f43cd3d903019018629cb9e7e8de273d49135f30470088fe98ae30d3b8650c3",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      -0.91,
+      0.0,
+      202.61
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      198.62,
+      0.0,
+      120.21
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      187.1,
+      0.0,
+      259.32
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      -22.47,
+      -199.89,
+      182.47
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      59.81,
+      -186.78,
+      183.96
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      142.09,
+      -173.67,
+      185.45
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      142.09,
+      173.67,
+      185.45
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      59.81,
+      186.78,
+      183.96
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      -22.47,
+      199.89,
+      182.47
+     ]
+    }
+   ],
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.46962595944072,
+     -272.47729477430204,
+     -2.1255291220434458e-05
+    ],
+    [
+     200.15237019382792,
+     272.47729477430204,
+     363.8881120863154
+    ]
+   ],
+   "clip": "deploy",
+   "fraction": 0.55,
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_deploy_055.obj",
+   "sha256": "ae69f8d6fa9615c0318f6509f0ecce59abdfb631360eb6f70183cbcc1364dfc1",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      -0.17,
+      0.0,
+      200.51
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      198.12,
+      0.0,
+      115.2
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      188.64,
+      0.0,
+      254.47
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      89.62,
+      -195.6,
+      220.52
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      135.74,
+      -126.19,
+      220.68
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      181.85,
+      -56.78,
+      220.84
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      181.85,
+      56.78,
+      220.84
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      135.74,
+      126.19,
+      220.68
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      89.62,
+      195.6,
+      220.52
+     ]
+    }
+   ],
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.73705316806237,
+     -246.76277162227984,
+     -1.3558106452649099e-05
+    ],
+    [
+     207.03203992042097,
+     246.76277162227984,
+     398.15270555008595
+    ]
+   ],
+   "clip": "deploy",
+   "fraction": 0.82,
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_deploy_082.obj",
+   "sha256": "aa3805f267d4448964bf441f66c6b4dd62adbfd9ecdb895c4fe2fd799a3c95b6",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      1.22,
+      0.0,
+      202.97
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      197.06,
+      0.0,
+      112.16
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      191.47,
+      0.0,
+      251.64
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      184.06,
+      -164.1,
+      254.62
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      179.99,
+      -80.87,
+      254.72
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      175.92,
+      2.36,
+      254.82
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      175.92,
+      -2.36,
+      254.82
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      179.99,
+      80.87,
+      254.72
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      184.06,
+      164.1,
+      254.62
+     ]
+    }
+   ],
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -249.4525397239811,
+     0.0
+    ],
+    [
+     200.0,
+     249.4525397239811,
+     396.3
+    ]
+   ],
+   "clip": "idle_deployed",
+   "fraction": 0.5,
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_idle_deployed_050.obj",
+   "sha256": "db0e149e0128ae1fce6549564f010d487ad35713a9d4589ddd07a9803759daf2",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      200.0
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      198.0,
+      0.0,
+      114.0
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      189.0,
+      0.0,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      175.0,
+      -167.33,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      175.0,
+      -84.0,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      175.0,
+      -0.67,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      175.0,
+      0.67,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      175.0,
+      84.0,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      175.0,
+      167.33,
+      253.3
+     ]
+    }
+   ],
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -152.30066999693108,
+     -249.67028294328546,
+     0.08227936986904183
+    ],
+    [
+     200.0,
+     251.47318517724952,
+     403.14623783496666
+    ]
+   ],
+   "clip": "drag_deployed",
+   "fraction": 0.25,
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_drag_deployed_025.obj",
+   "sha256": "cf15d15ca2cc6b144734ffeee3b650a9e27375d4c1738da1b6b923da5f2b8cde",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.44,
+      204.68
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      198.0,
+      -0.31,
+      118.68
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      189.0,
+      0.9,
+      257.98
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      175.0,
+      -166.43,
+      259.44
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      175.0,
+      -83.1,
+      258.71
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      175.0,
+      0.23,
+      257.98
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      175.0,
+      1.57,
+      257.97
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      175.0,
+      84.9,
+      257.24
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      175.0,
+      168.23,
+      256.52
+     ]
+    }
+   ],
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.93741849397443,
+     -266.21589122733724,
+     -8.609311612506332e-06
+    ],
+    [
+     200.30230159418926,
+     266.21589122733724,
+     348.99592618393314
+    ]
+   ],
+   "clip": "pack",
+   "fraction": 0.55,
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_pack_055.obj",
+   "sha256": "7f461b0ef46c911f9ce35c261aff049e88e0e8d13068e2fda2eec001f7373fcd",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      -0.35,
+      0.0,
+      201.01
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      198.25,
+      0.0,
+      116.4
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      188.27,
+      0.0,
+      255.63
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      46.74,
+      -201.27,
+      205.04
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      110.2,
+      -147.26,
+      205.49
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      173.66,
+      -93.25,
+      205.93
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      173.66,
+      93.25,
+      205.93
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      110.2,
+      147.26,
+      205.49
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      46.74,
+      201.27,
+      205.04
+     ]
+    }
+   ],
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -154.93112834535987,
+     -248.40259682217408,
+     -1.8180547664670144e-05
+    ],
+    [
+     195.02181081895873,
+     248.40259682217408,
+     395.24969531892157
+    ]
+   ],
+   "clip": "damage",
+   "fraction": 0.2,
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_damage_020.obj",
+   "sha256": "49f15cd6335d0ac6c038a7a67f94c64ef15bec5993c880f13f317f434e000344",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      -2.43,
+      0.0,
+      203.8
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      192.77,
+      0.0,
+      111.62
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      188.15,
+      0.0,
+      251.13
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      170.52,
+      -166.0,
+      251.69
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      168.19,
+      -82.7,
+      251.76
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      165.87,
+      0.6,
+      251.83
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      165.87,
+      -0.6,
+      251.83
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      168.19,
+      82.7,
+      251.76
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      170.52,
+      166.0,
+      251.69
+     ]
+    }
+   ],
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -190.8130526947412,
+     -287.85518421983346,
+     0.12685540960589137
+    ],
+    [
+     241.3391163275664,
+     292.17813420550067,
+     374.05596244818844
+    ]
+   ],
+   "clip": "death",
+   "fraction": 1.0,
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_death_100.obj",
+   "sha256": "e52bfb489d1e332da77259ed089b3b4c5a0e55e80bc4cc81771a6c1a12dd5dad",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      10.81,
+      2.62,
+      223.68
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      185.53,
+      -1.88,
+      96.97
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      206.85,
+      5.41,
+      234.73
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      91.59,
+      -209.16,
+      208.21
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      145.33,
+      -147.32,
+      192.98
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      199.07,
+      -85.47,
+      177.74
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      197.08,
+      89.79,
+      168.78
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      141.94,
+      151.64,
+      177.68
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      86.8,
+      213.48,
+      186.59
+     ]
+    }
+   ],
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.0,
+     -272.47729477430204,
+     0.0
+    ],
+    [
+     200.0,
+     272.47729477430204,
+     362.7
+    ]
+   ],
+   "clip": "cancel",
+   "fraction": 0.0,
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_cancel_000.obj",
+   "sha256": "df395fdc11edcaa1988a29e47b06750b077e62eeac15efb1011a739dc2e9f73e",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      200.0
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      198.0,
+      0.0,
+      114.0
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      189.0,
+      0.0,
+      253.3
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      89.87,
+      -195.6,
+      219.7
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      135.98,
+      -126.19,
+      219.7
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      182.1,
+      -56.78,
+      219.7
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      182.1,
+      56.78,
+      219.7
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      135.98,
+      126.19,
+      219.7
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      89.87,
+      195.6,
+      219.7
+     ]
+    }
+   ],
+   "triangles": 3618
+  },
+  {
+   "bounds_cm": [
+    [
+     -150.93112834535987,
+     -248.40259682217408,
+     -1.8180547664670144e-05
+    ],
+    [
+     199.02181081895873,
+     248.40259682217408,
+     395.24969531892157
+    ]
+   ],
+   "clip": "restore",
+   "fraction": 0.0,
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-003/review/pose_restore_000.obj",
+   "sha256": "6c25fc3074c0d72817b29cf606e4badfb93bdfe5d05bae3e884b224ca048cba5",
+   "sockets": [
+    {
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      1.57,
+      0.0,
+      203.8
+     ]
+    },
+    {
+     "name": "Emitter_Muzzle",
+     "position_cm": [
+      196.77,
+      0.0,
+      111.62
+     ]
+    },
+    {
+     "name": "Shield_Face_Center",
+     "position_cm": [
+      192.15,
+      0.0,
+      251.13
+     ]
+    },
+    {
+     "name": "Cell_01",
+     "position_cm": [
+      174.52,
+      -166.0,
+      251.69
+     ]
+    },
+    {
+     "name": "Cell_02",
+     "position_cm": [
+      172.19,
+      -82.7,
+      251.76
+     ]
+    },
+    {
+     "name": "Cell_03",
+     "position_cm": [
+      169.87,
+      0.6,
+      251.83
+     ]
+    },
+    {
+     "name": "Cell_04",
+     "position_cm": [
+      169.87,
+      -0.6,
+      251.83
+     ]
+    },
+    {
+     "name": "Cell_05",
+     "position_cm": [
+      172.19,
+      82.7,
+      251.76
+     ]
+    },
+    {
+     "name": "Cell_06",
+     "position_cm": [
+      174.52,
+      166.0,
+      251.69
+     ]
+    }
+   ],
+   "triangles": 3618
+  }
+ ],
+ "revision": "ebs-mer-unt-003-concept-v3",
+ "rig": {
+  "bone_count_note": "the card requires 18; the fidelity file's prose list enumerates 16. The emitter and shield_anchor bones carry the remaining two and each drives a named socket (README section 8).",
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "ground-contact centre; no root motion"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     150.0
+    ],
+    "name": "chassis",
+    "parent": "root",
+    "purpose": "wide low two-operator chassis; carries every other bone"
+   },
+   {
+    "head_cm": [
+     18.0,
+     -52.7,
+     268.0
+    ],
+    "name": "operator_l",
+    "parent": "chassis",
+    "purpose": "left operator station (cowl and visor)"
+   },
+   {
+    "head_cm": [
+     18.0,
+     52.7,
+     268.0
+    ],
+    "name": "operator_r",
+    "parent": "chassis",
+    "purpose": "right operator station (cowl and visor)"
+   },
+   {
+    "head_cm": [
+     76.0,
+     -123.6,
+     92.0
+    ],
+    "name": "leg_fl",
+    "parent": "chassis",
+    "purpose": "front-left block leg (hub pivot)"
+   },
+   {
+    "head_cm": [
+     76.0,
+     123.6,
+     92.0
+    ],
+    "name": "leg_fr",
+    "parent": "chassis",
+    "purpose": "front-right block leg (hub pivot)"
+   },
+   {
+    "head_cm": [
+     -98.0,
+     -123.6,
+     92.0
+    ],
+    "name": "leg_rl",
+    "parent": "chassis",
+    "purpose": "rear-left block leg (hub pivot)"
+   },
+   {
+    "head_cm": [
+     -98.0,
+     123.6,
+     92.0
+    ],
+    "name": "leg_rr",
+    "parent": "chassis",
+    "purpose": "rear-right block leg (hub pivot)"
+   },
+   {
+    "head_cm": [
+     184.0,
+     0.0,
+     114.0
+    ],
+    "name": "emitter",
+    "parent": "chassis",
+    "purpose": "central emitter housing; drives Emitter_Muzzle"
+   },
+   {
+    "head_cm": [
+     175.0,
+     0.0,
+     253.3
+    ],
+    "name": "shield_anchor",
+    "parent": "chassis",
+    "purpose": "deployed face centre; drives Shield_Face_Center, the impact ripple origin and the cover volume"
+   },
+   {
+    "head_cm": [
+     128.0,
+     -118.0,
+     250.0
+    ],
+    "name": "wing_root_l",
+    "parent": "chassis",
+    "purpose": "left barrier wing hinge (cells 01-03)"
+   },
+   {
+    "head_cm": [
+     128.0,
+     118.0,
+     250.0
+    ],
+    "name": "wing_root_r",
+    "parent": "chassis",
+    "purpose": "right barrier wing hinge (cells 04-06)"
+   },
+   {
+    "head_cm": [
+     175.0,
+     -167.33333333333331,
+     253.3
+    ],
+    "name": "cell_01",
+    "parent": "wing_root_l",
+    "purpose": "barrier cell 01 hinge (inboard vertical edge)"
+   },
+   {
+    "head_cm": [
+     175.0,
+     -84.0,
+     253.3
+    ],
+    "name": "cell_02",
+    "parent": "wing_root_l",
+    "purpose": "barrier cell 02 hinge (inboard vertical edge)"
+   },
+   {
+    "head_cm": [
+     175.0,
+     -0.6666666666666643,
+     253.3
+    ],
+    "name": "cell_03",
+    "parent": "wing_root_l",
+    "purpose": "barrier cell 03 hinge (inboard vertical edge)"
+   },
+   {
+    "head_cm": [
+     175.0,
+     0.6666666666666643,
+     253.3
+    ],
+    "name": "cell_04",
+    "parent": "wing_root_r",
+    "purpose": "barrier cell 04 hinge (inboard vertical edge)"
+   },
+   {
+    "head_cm": [
+     175.0,
+     84.0,
+     253.3
+    ],
+    "name": "cell_05",
+    "parent": "wing_root_r",
+    "purpose": "barrier cell 05 hinge (inboard vertical edge)"
+   },
+   {
+    "head_cm": [
+     175.0,
+     167.33333333333331,
+     253.3
+    ],
+    "name": "cell_06",
+    "parent": "wing_root_r",
+    "purpose": "barrier cell 06 hinge (inboard vertical edge)"
+   }
+  ],
+  "policy": "identity rest orientation; the rest pose is DEPLOYED; the packed state is the wing-root yaw+translate pose (PACK_YAW/PACK_T); no root motion; the impact ripple and the 120 deg gradient are material work on the field slot, not geometry"
+ },
+ "scale_basis": {
+  "W_cm": 500.0,
+  "measured_px": {
+   "cell_field_height": 427.0,
+   "cell_field_width": 105.0,
+   "cell_pitch": 135.4,
+   "chassis_top_below_wall_top": 179.0,
+   "emitter_z": 207.0,
+   "foot_centre_y": 217.0,
+   "foot_mass_height": 122.0,
+   "foot_width": 137.0,
+   "leg_centre_y": 204.0,
+   "leg_width": 88.0,
+   "operator_centre_y": 87.0,
+   "operator_top_below_wall_top": 97.0,
+   "packed_cage_over_body_height": 0.8324324324324325,
+   "packed_cage_top_over_body": 0.927027027027027,
+   "packed_rear_aspect": 1.44375,
+   "packed_travel_aspect": 1.1756756756756757,
+   "wall_bottom_above_ground": 187.0,
+   "wall_height": 462.0,
+   "wall_width": 825.0
+  },
+  "reference_measurement": "bulwark-centered-wings-reference.png deployed panel, wall outer frame 825 x 462 px, ground row 882; 1 px = 0.60606 cm.",
+  "source": "concept-fidelity.md: the deployed face is authored at W = 500 cm to match cover_half_width_cm 250 (Content/Data/Source/units.json mc_bulwark_team).",
+  "status": "CONCEPT-MEASURED BLOCKOUT (concept-v2)"
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "source_bindings": {
+  "canon_row": {
+   "line": 511,
+   "path": "Docs/Archive/DevelopmentBible.md"
+  },
+  "concept_image": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/meridian-units.png",
+   "region": [
+    0,
+    0.5,
+    0.5,
+    1
+   ],
+   "sha256_prefix": "427e60cd27bd78e9",
+   "status": "KEEP as DESIGN_IDENTITY (EBS-CON-MER-UNT-003)"
+  },
+  "contract": {
+   "package_id": "EBS-PKG-MC-BULWARK-TEAM",
+   "path": "Docs/VisualAssetPipeline/reference-packages.json"
+  },
+  "fidelity_target": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/ArtSource/EBS-MER-UNT-003/concept-fidelity.md"
+  },
+  "gameplay_record": {
+   "deployment": {
+    "cover_depth_cm": 350,
+    "cover_half_width_cm": 250,
+    "damage_reduction_percent": 40,
+    "move_speed_percent": 35
+   },
+   "id": "mc_bulwark_team",
+   "path": "Content/Data/Source/units.json"
+  },
+  "owner_corrected_reference": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/bulwark-review/bulwark-centered-wings-reference.png",
+   "role": "PRODUCTION TARGET (owner correction: centre the six panes)",
+   "sha256_prefix": "6a8c5cef6697f84f"
+  },
+  "requirements": [
+   "SPEC-UNIT-003",
+   "REL-FAC-025.MC.BULWARK",
+   "REL-FAC-025.MC.BULWARK.ASSET",
+   "REL-ART-005",
+   "REL-ART-006"
+  ],
+  "review_decision": {
+   "choice": "KEEP",
+   "concept_id": "EBS-CON-MER-UNT-003",
+   "path": "Docs/VisualAssetPipeline/review-selections.json"
+  },
+  "superseded_references": [
+   {
+    "defect": "wall off-centre",
+    "path": ".../bulwark-six-panel-reference.png",
+    "sha256_prefix": "7574643acfde08f0"
+   },
+   {
+    "defect": "five visible panes",
+    "path": ".../bulwark-reference.png",
+    "sha256_prefix": "55e15667ecf2c6a9"
+   }
+  ]
+ },
+ "stage": "BLOCKOUT (concept-v2)",
+ "stage_boundary": "Concept-matched deployed rest geometry, 18-bone transformation rig, keyframed clip data and the packed state as a posed review assembly; no textures, no import, no gate acceptance, no owner acceptance. The deployed rear read is geometry (opaque pane back plates, measured 0.0 percent barrier field frontmost from -X); the packed flank read is a runtime material requirement, measured and recorded as README section 8 deviation 16.",
+ "tools": {
+  "builder_sha256": "a5a23c1aae62b4770dd50ecb7d4639f991e3394833d97c545f5f89c20580aeb5",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.7"
+ },
+ "units": {
+  "authored": "centimeters at unit scale 1.0",
+  "axes": "+X forward (the shield faces +X), +Y right, +Z up",
+  "nanite": false,
+  "pivot": "ground-contact centre (root)",
+  "runtime_presentation_note": "EchoesEntityView.cpp:1817 draws EntityType::HeavyUnit at 1.75; not part of the asset. At 1.75 the 500 cm authored face draws 875 cm wide against a 500 cm authoritative cover width - README section 8 OWNER-QUESTION.",
+  "runtime_presentation_scale": 1.75
+ }
+}

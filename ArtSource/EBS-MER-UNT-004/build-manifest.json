@@ -1,0 +1,955 @@
+{
+ "acceptance": {
+  "art_gate": "NOT_EVALUATED",
+  "gameplay_gate": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical_gate": "NOT_EVALUATED"
+ },
+ "asset_name": "SK_EBS_MER_UNT_004",
+ "author": "Angelis Pseftis",
+ "budgets": {
+  "cradle_part_triangles": [
+   168,
+   144
+  ],
+  "emissive_area_fraction_lod0": 0.02068846120641742,
+  "emissive_cap": 0.08,
+  "lod0_cap": 5000,
+  "lod0_triangles": 1956,
+  "lod0_within_cap": true,
+  "lod1_cap": 2100,
+  "lod1_triangles": 1340,
+  "lod1_within_cap": true,
+  "nanite": "OFF",
+  "texture_stack_resolution": 2048
+ },
+ "clips": [
+  {
+   "bones": [
+    "hull",
+    "mast",
+    "pod_bank_l",
+    "pod_bank_r"
+   ],
+   "duration_s": 2.0,
+   "loop": true,
+   "name": "idle",
+   "purpose": "continuous harmonic hover bob (<= 4 cm peak to peak) with the pods breathing and the mast swaying; station keeping, no ground contact"
+  },
+  {
+   "bones": [
+    "hull",
+    "mast",
+    "pod_bank_l",
+    "pod_bank_r"
+   ],
+   "duration_s": 0.6,
+   "loop": true,
+   "name": "move",
+   "purpose": "glide at 500 cm/s: slight nose-down lean (canon), reduced bob, pods raked back; play rate follows authoritative velocity (REL-ART-009), no root motion"
+  },
+  {
+   "bones": [
+    "hull",
+    "mast",
+    "pod_bank_l",
+    "pod_bank_r"
+   ],
+   "duration_s": 0.6,
+   "loop": true,
+   "name": "turn",
+   "purpose": "banks into the heading sweep the runtime owns (SPEC-MOV-010): hull rolls, pods differential; no root yaw, facing snaps under Reduced Motion"
+  },
+  {
+   "bones": [
+    "hull",
+    "pod_bank_l",
+    "pod_bank_r"
+   ],
+   "duration_s": 0.4,
+   "loop": false,
+   "name": "stop",
+   "purpose": "deceleration flare: the nose lifts and the frame settles back to the hover attitude (Bible motion line)"
+  },
+  {
+   "bones": [
+    "dish",
+    "hull",
+    "mast"
+   ],
+   "duration_s": 0.7,
+   "loop": false,
+   "name": "relay_extend",
+   "purpose": "Extend Relay activation (contract track relay_activation): the dish turns toward the connected grid node within 700 cm and the mast segments light cyan (material state); the hull holds station"
+  },
+  {
+   "bones": [
+    "dish",
+    "hull",
+    "mast"
+   ],
+   "duration_s": 1.6,
+   "loop": true,
+   "name": "relay_hold",
+   "purpose": "relay sustained (400 ticks): the dish holds the node with a slow scan, the hull keeps station with a reduced bob; UI owns duration and expiry"
+  },
+  {
+   "bones": [
+    "dish",
+    "hull",
+    "mast"
+   ],
+   "duration_s": 0.5,
+   "loop": false,
+   "name": "relay_expiry",
+   "purpose": "relay expiry or cooldown: the dish returns to the forward rest aim and the mast lights fade (material state); no simulation effect from the clip"
+  },
+  {
+   "bones": [
+    "emitter",
+    "hull"
+   ],
+   "duration_s": 0.26666666666666666,
+   "loop": false,
+   "name": "attack_anticipation",
+   "purpose": "secondary emitter anticipation: the mount aims off the nose and the hull noses up slightly; no muzzle drama (canon: clearly secondary)"
+  },
+  {
+   "bones": [
+    "emitter",
+    "hull"
+   ],
+   "duration_s": 0.2,
+   "loop": false,
+   "name": "attack_execution",
+   "purpose": "emitter discharge: barrel recoils along its axis and the hull kicks back 2 deg; damage is authoritative, never driven from the clip"
+  },
+  {
+   "bones": [
+    "emitter",
+    "hull"
+   ],
+   "duration_s": 0.3,
+   "loop": false,
+   "name": "attack_recovery",
+   "purpose": "emitter returns to the stowed forward rest and the hull returns to the hover attitude"
+  },
+  {
+   "bones": [
+    "hull",
+    "pod_bank_l",
+    "pod_bank_r"
+   ],
+   "duration_s": 0.3,
+   "loop": false,
+   "name": "damage",
+   "purpose": "flinch on authoritative damage: the hull pitches up, rolls and drops on its cushion, then recovers; no displacement"
+  },
+  {
+   "bones": [
+    "cradle",
+    "dish",
+    "emitter",
+    "hull",
+    "mast",
+    "pod_bank_l",
+    "pod_bank_r"
+   ],
+   "duration_s": 1.2,
+   "loop": false,
+   "name": "death",
+   "purpose": "cushion failure: the hull sinks onto its pods and the mast folds over; final pose held (cosmetic debris only, 200 ticks), no navigation change"
+  },
+  {
+   "bones": [
+    "dish",
+    "emitter",
+    "hull",
+    "mast",
+    "pod_bank_l",
+    "pod_bank_r"
+   ],
+   "duration_s": 0.3,
+   "loop": false,
+   "name": "cancel",
+   "purpose": "order cancelled: the dish and emitter return to rest and the hull resumes the idle hover attitude; never replays a one-shot"
+  },
+  {
+   "bones": [
+    "cradle",
+    "dish",
+    "emitter",
+    "hull",
+    "mast",
+    "pod_bank_l",
+    "pod_bank_r"
+   ],
+   "duration_s": 0.0,
+   "loop": false,
+   "name": "restore",
+   "purpose": "single-frame rest pose for reconstructing presentation from saved state; never replays a one-shot (event_rule)"
+  }
+ ],
+ "collision": {
+  "authored_primitives": 0,
+  "rule": "no collision primitive is authored: hovering uses ground raycasts to float the view actor and never alters simulation passability (card .MAT_RULE); the authoritative footprint stays the simulation's 25 cm square"
+ },
+ "component_inventory": {
+  "archive_cradle": {
+   "built": 1,
+   "contract": 1
+  },
+  "bones": {
+   "built": 8,
+   "contract": 8,
+   "names": [
+    "root",
+    "hull",
+    "mast",
+    "dish",
+    "pod_bank_l",
+    "pod_bank_r",
+    "emitter",
+    "cradle"
+   ]
+  },
+  "cable_loop": {
+   "built": 1,
+   "concept": 1
+  },
+  "deck_rails": {
+   "built": 2,
+   "concept": 2
+  },
+  "dish": {
+   "built": 1,
+   "contract": 1
+  },
+  "hull": {
+   "built": 1,
+   "contract": 1
+  },
+  "lift_pods": {
+   "basis": "PIXELS: two per side in all three candidate panels; concept-fidelity.md item 3 says six (three per side). README section 8.2 and OWNER-QUESTION 5",
+   "built": 4,
+   "concept": 4,
+   "prose": 6
+  },
+  "relay_mast": {
+   "built": 1,
+   "contract": 1
+  },
+  "secondary_emitter": {
+   "built": 1,
+   "contract": 1
+  },
+  "sockets": {
+   "built": [
+    "Scouting_Sensor_Pod",
+    "Logistics_Relay_Beam"
+   ],
+   "contract": [
+    "Scouting_Sensor_Pod",
+    "Logistics_Relay_Beam"
+   ]
+  },
+  "tail_stubs": {
+   "built": 2,
+   "concept": 2
+  },
+  "tracks": {
+   "alias": {
+    "relay_activation": "relay_extend"
+   },
+   "built": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "relay_extend",
+    "relay_hold",
+    "relay_expiry",
+    "attack_anticipation",
+    "attack_execution",
+    "attack_recovery",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "contract": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "damage",
+    "death",
+    "cancel",
+    "restore",
+    "attack_anticipation",
+    "attack_execution",
+    "attack_recovery",
+    "relay_activation",
+    "relay_hold",
+    "relay_expiry"
+   ]
+  },
+  "whip_antennas": {
+   "built": 2,
+   "concept": 2
+  }
+ },
+ "concept_measurements": {
+  "L_cm": 360.0,
+  "bounds_cm": [
+   [
+    -196.2,
+    -70.74000000000001,
+    10.079999999999998
+   ],
+   [
+    180.72,
+    70.74000000000001,
+    255.6
+   ]
+  ],
+  "cradle_height_over_L": 0.13000000000000003,
+  "cradle_length_over_L": 0.42,
+  "cradle_width_over_L": 0.2,
+  "dish_centre_cm": [
+   -80.27999999999999,
+   28.08,
+   199.44000000000003
+  ],
+  "dish_centre_over_L": 0.554,
+  "dish_diameter_over_L": 0.13038404810405302,
+  "dish_projection": {
+   "concept_panel_basis": "TACTICAL SILHOUETTE disc 48.8 x 79.1 px and SIDE VIEW disc 29 x 59 px, both on a 533 px hull length",
+   "concept_side_footprint_cm": [
+    19.6,
+    39.8
+   ],
+   "concept_top_footprint_cm": [
+    33.1,
+    53.6
+   ],
+   "concept_top_projected_area_cm2": 1393.0,
+   "dish_diameter_cm": 46.93825731745909,
+   "dish_elevation_deg": 28.000000000000004,
+   "dish_normal": [
+    0.8695336349509378,
+    0.15332224047535542,
+    0.4694715627858908
+   ],
+   "side_footprint_cm": [
+    23.181572054984226,
+    41.444021311443414
+   ],
+   "top_footprint_cm": [
+    23.181572054984226,
+    46.38327084840182
+   ],
+   "top_projected_area_cm2": 812.3685377247853
+  },
+  "dish_rest_aim_deg": {
+   "pitch": 28.0,
+   "yaw": 10.0
+  },
+  "emissive_area_fraction": 0.02068846120641742,
+  "emitter_length_over_L": 0.10999999999999999,
+  "emitter_tip_cm": [
+   180.0,
+   0.0,
+   29.52
+  ],
+  "height_cm": 255.6,
+  "hull_band_depth_over_L": 0.164,
+  "hull_deck_top_over_L": 0.19,
+  "hull_length_cm": 360.0,
+  "hull_length_over_L": 1.0,
+  "hull_pale_flank_over_L": 0.075,
+  "hull_pale_share_of_band": 0.45731707317073167,
+  "hull_thickness_over_L": 0.10000000000000002,
+  "hull_underside_over_L": 0.09,
+  "hull_width_over_L": 0.333,
+  "length_cm": 376.91999999999996,
+  "lowest_vertex_cm": 10.079999999999998,
+  "mast_above_deck_over_hull_thickness": 3.6000000000000005,
+  "mast_ahead_of_tail_over_L": 0.26,
+  "mast_top_over_L": 0.55,
+  "mast_x_over_L": -0.23999999999999996,
+  "measured_on_candidate": {
+   "cradle_length_over_L": 0.377,
+   "dish_centre_over_L": 0.554,
+   "dish_diameter_over_L": 0.111,
+   "dish_diameter_over_L_plan_panel": 0.149,
+   "hull_deck_top_over_L": 0.205,
+   "hull_plan_max_width_over_L": 0.373,
+   "hull_underside_over_L": 0.077,
+   "hull_width_over_L": 0.333,
+   "mast_ahead_of_tail_over_L": 0.258,
+   "note": "TACTICAL SILHOUETTE per-column trace y 620..900, threshold luminance 172; SIDE VIEW underside trace y 110..495, same threshold; the disc bounds are the bright rim of the ribbed face",
+   "pale_flank_share_of_band": 0.42,
+   "panel_scale": "SIDE VIEW x 951..1484 and TACTICAL SILHOUETTE x 955..1487 are both 533 px long; ground shadow centre y 503 (side panel)",
+   "pod_bottom_over_L": 0.024,
+   "pod_count_per_side": 2,
+   "pod_stations_from_bow_over_L": [
+    0.738,
+    0.238
+   ],
+   "tail_face_width_over_L": 0.278,
+   "whip_top_over_L": 0.71
+  },
+  "nose_face_width_over_L": 0.134,
+  "pod_bottom_over_L": 0.027999999999999994,
+  "pod_count": 4,
+  "pod_length_over_L": 0.14,
+  "tail_face_width_over_L": 0.278,
+  "whip_top_over_L": 0.71,
+  "width_cm": 141.48000000000002
+ },
+ "creator": "Angelis Pseftis",
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "2 slots (contract material_slots_provisional_max 2); cyan link conduits, brass trim, plate seams, the cradle status strip and the team mask are texture channels of the ceramic slot; the review OBJs keep a third pseudo slot (MI_EBS_MER_StatusCyan) so the renders show the cyan",
+ "material_slots": [
+  "MI_EBS_MER_UnitCeramic",
+  "MI_EBS_MER_UnitFrame"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -196.2,
+     -70.74000000000001,
+     10.079999999999998
+    ],
+    [
+     180.72,
+     70.74000000000001,
+     255.6
+    ]
+   ],
+   "by_bone": {
+    "cradle": 168,
+    "dish": 252,
+    "emitter": 80,
+    "hull": 740,
+    "mast": 364,
+    "pod_bank_l": 176,
+    "pod_bank_r": 176
+   },
+   "by_slot": {
+    "MI_EBS_MER_UnitCeramic": 656,
+    "MI_EBS_MER_UnitFrame": 1300
+   },
+   "clips": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "relay_extend",
+    "relay_hold",
+    "relay_expiry",
+    "attack_anticipation",
+    "attack_execution",
+    "attack_recovery",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_004",
+   "path": "export/SK_EBS_MER_UNT_004_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_MER_UnitCeramic",
+    "MI_EBS_MER_UnitFrame"
+   ],
+   "sha256": "60bcb247bc8ecb087460f4c52cf64c0d85df28a303f4c9a93d5abec1507c4c09",
+   "sockets": [
+    {
+     "bone": "dish",
+     "name": "Scouting_Sensor_Pod",
+     "position_cm": [
+      -72.76722939402389,
+      29.40470415770707,
+      203.49623430247013
+     ],
+     "purpose": "dish face: sensor pod origin (sight 1,500 cm), turns with the dish bone",
+     "yaw_deg": 10.0
+    },
+    {
+     "bone": "mast",
+     "name": "Logistics_Relay_Beam",
+     "position_cm": [
+      -86.39999999999999,
+      0.0,
+      198.00000000000003
+     ],
+     "purpose": "mast head: origin of the Extend Relay cone toward a grid node within 700 cm",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 1956
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_004",
+   "path": "export/SK_EBS_MER_UNT_004_LOD0.obj",
+   "sha256": "443f77a8f88ed1e5edfad0ecabe5f5f44caffa39c0502414627c9b6b87ffafcd"
+  },
+  {
+   "kind": "static rest pose",
+   "lod": 0,
+   "mesh": "SK_EBS_MER_UNT_004",
+   "path": "export/SK_EBS_MER_UNT_004_LOD0_static.glb",
+   "sha256": "fd44a919bc25c29240b5b3a086fd4a68654af4486bf0a24a9d4d940c310901d4",
+   "triangles": 1956
+  },
+  {
+   "bounds_cm": [
+    [
+     -76.68,
+     -37.44,
+     -0.9359999999999999
+    ],
+    [
+     76.68,
+     37.44,
+     48.800000000000004
+    ]
+   ],
+   "kind": "separate part (loaded state)",
+   "lod": 0,
+   "mesh": "SM_EBS_MER_UNT_004_ArchiveCradle",
+   "path": "export/SM_EBS_MER_UNT_004_ArchiveCradle_LOD0.glb",
+   "sha256": "e6ac57b36d1d40c9ebc246980148dbd4373024a0fa6b75bbfa0aef41a38bf9dc",
+   "triangles": 168
+  },
+  {
+   "kind": "separate part OBJ",
+   "lod": 0,
+   "mesh": "SM_EBS_MER_UNT_004_ArchiveCradle",
+   "path": "export/SM_EBS_MER_UNT_004_ArchiveCradle_LOD0.obj",
+   "sha256": "64daa5ef36ff7e46d9e29f66bb43a42afb30caa94d9820c42eae58e7d7d835d5"
+  },
+  {
+   "bounds_cm": [
+    [
+     -196.2,
+     -70.74000000000001,
+     10.303199999999997
+    ],
+    [
+     180.72,
+     70.74000000000001,
+     255.6
+    ]
+   ],
+   "by_bone": {
+    "cradle": 144,
+    "dish": 112,
+    "emitter": 56,
+    "hull": 564,
+    "mast": 240,
+    "pod_bank_l": 112,
+    "pod_bank_r": 112
+   },
+   "by_slot": {
+    "MI_EBS_MER_UnitCeramic": 416,
+    "MI_EBS_MER_UnitFrame": 924
+   },
+   "clips": [
+    "idle",
+    "move",
+    "turn",
+    "stop",
+    "relay_extend",
+    "relay_hold",
+    "relay_expiry",
+    "attack_anticipation",
+    "attack_execution",
+    "attack_recovery",
+    "damage",
+    "death",
+    "cancel",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_004",
+   "path": "export/SK_EBS_MER_UNT_004_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_MER_UnitCeramic",
+    "MI_EBS_MER_UnitFrame"
+   ],
+   "sha256": "cf621de6fb1cad9e542d0622ea7a1d810ebd0419112f9054261e266f6b3bbd77",
+   "sockets": [
+    {
+     "bone": "dish",
+     "name": "Scouting_Sensor_Pod",
+     "position_cm": [
+      -72.76722939402389,
+      29.40470415770707,
+      203.49623430247013
+     ],
+     "purpose": "dish face: sensor pod origin (sight 1,500 cm), turns with the dish bone",
+     "yaw_deg": 10.0
+    },
+    {
+     "bone": "mast",
+     "name": "Logistics_Relay_Beam",
+     "position_cm": [
+      -86.39999999999999,
+      0.0,
+      198.00000000000003
+     ],
+     "purpose": "mast head: origin of the Extend Relay cone toward a grid node within 700 cm",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 1340
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_004",
+   "path": "export/SK_EBS_MER_UNT_004_LOD1.obj",
+   "sha256": "6167ba736dd5393c2dbddacf383c18a924aaed12230b286c95cc766a4683664c"
+  },
+  {
+   "kind": "static rest pose",
+   "lod": 1,
+   "mesh": "SK_EBS_MER_UNT_004",
+   "path": "export/SK_EBS_MER_UNT_004_LOD1_static.glb",
+   "sha256": "371d0b018a2f41ebc98c19264c3d964ca5e27e572a6d95752c4fe8ee23241abf",
+   "triangles": 1340
+  },
+  {
+   "bounds_cm": [
+    [
+     -76.68,
+     -37.44,
+     -0.9359999999999999
+    ],
+    [
+     76.68,
+     37.44,
+     47.800000000000004
+    ]
+   ],
+   "kind": "separate part (loaded state)",
+   "lod": 1,
+   "mesh": "SM_EBS_MER_UNT_004_ArchiveCradle",
+   "path": "export/SM_EBS_MER_UNT_004_ArchiveCradle_LOD1.glb",
+   "sha256": "10679db052f8559c76fe9b0f33a040f9a0d6ec32bc38d4a58013e3ba8ce76a9e",
+   "triangles": 144
+  },
+  {
+   "kind": "separate part OBJ",
+   "lod": 1,
+   "mesh": "SM_EBS_MER_UNT_004_ArchiveCradle",
+   "path": "export/SM_EBS_MER_UNT_004_ArchiveCradle_LOD1.obj",
+   "sha256": "367b26a84280064cb0ed66619473ab17953d853e7e6f1c4a3fe888ac6d84516f"
+  }
+ ],
+ "package_id": "EBS-PKG-MC-RELAY-SKIFF",
+ "parts": [
+  "SK_EBS_MER_UNT_004",
+  "SM_EBS_MER_UNT_004_ArchiveCradle"
+ ],
+ "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_004/",
+ "production_asset_id": "EBS-MER-UNT-004",
+ "review": [
+  {
+   "bounds_cm": [
+    [
+     -196.2,
+     -70.74000000000001,
+     10.079999999999998
+    ],
+    [
+     180.72,
+     70.74000000000001,
+     255.6
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-004/review/SK_EBS_MER_UNT_004_rest_LOD0.obj",
+   "sha256": "365fe9d27920648201015e0484a4534abfc24f8f6d3a486e757e223dbe59936e",
+   "state": "loaded",
+   "triangles": 1956
+  },
+  {
+   "bounds_cm": [
+    [
+     -196.2,
+     -70.74000000000001,
+     10.079999999999998
+    ],
+    [
+     180.72,
+     70.74000000000001,
+     255.6
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-004/review/SK_EBS_MER_UNT_004_rest_unloaded_LOD0.obj",
+   "sha256": "5bd671c6a3ba252f766a32ba88a306404cc01accca59ef8092953d60030708c0",
+   "state": "unloaded",
+   "triangles": 1788
+  },
+  {
+   "bounds_cm": [
+    [
+     -196.2,
+     -70.74000000000001,
+     10.303199999999997
+    ],
+    [
+     180.72,
+     70.74000000000001,
+     255.6
+    ]
+   ],
+   "lod": 1,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-004/review/SK_EBS_MER_UNT_004_rest_LOD1.obj",
+   "sha256": "8ead5b465420e2f4081010ce288a9992536c4d27a6155328c278d143b015cefc",
+   "state": "loaded",
+   "triangles": 1340
+  },
+  {
+   "bounds_cm": [
+    [
+     -196.2,
+     -70.74000000000001,
+     10.303199999999997
+    ],
+    [
+     180.72,
+     70.74000000000001,
+     255.6
+    ]
+   ],
+   "lod": 1,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-004/review/SK_EBS_MER_UNT_004_rest_unloaded_LOD1.obj",
+   "sha256": "0689aea47bef6570428a2fe907f195cd38b832b355612dbb60dd13802e5cb28f",
+   "state": "unloaded",
+   "triangles": 1196
+  },
+  {
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-004/review/SM_EBS_MER_UNT_004_ArchiveCradle_LOD0.obj",
+   "sha256": "6137cacb2782d4be35376d8998e5d61e5167e5c822c71e6cb6b6b8af6e752fd0",
+   "state": "cradle part",
+   "triangles": 168
+  }
+ ],
+ "review_scenes": [
+  "compare.json",
+  "compare_lod1.json",
+  "compare_unloaded.json",
+  "context.json",
+  "cradle_part.json",
+  "lod1.json",
+  "lod1_tactical.json",
+  "rest.json",
+  "rest_tactical.json",
+  "rest_unloaded.json",
+  "rest_unloaded_tactical.json"
+ ],
+ "revision": "ebs-mer-unt-004-concept-v3",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "ground point under the hull centre; never keyed, so the runtime hover offset is additive"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     50.4
+    ],
+    "name": "hull",
+    "parent": "root",
+    "purpose": "hull centre; carries the harmonic hover bob, the nose-down lean and the turn bank"
+   },
+   {
+    "head_cm": [
+     -86.39999999999999,
+     0.0,
+     68.4
+    ],
+    "name": "mast",
+    "parent": "hull",
+    "purpose": "relay mast base on the deck; sway and the lit relay state"
+   },
+   {
+    "head_cm": [
+     -80.27999999999999,
+     28.08,
+     199.44000000000003
+    ],
+    "name": "dish",
+    "parent": "mast",
+    "purpose": "dish gimbal; carries Scouting_Sensor_Pod. The clips key a fixed placeholder aim; the node-facing rotation is a runtime look-at layered on this bone"
+   },
+   {
+    "head_cm": [
+     0.0,
+     -47.88,
+     32.4
+    ],
+    "name": "pod_bank_l",
+    "parent": "hull",
+    "purpose": "port lift-pod bank (two pods): tilt on move, droop on death"
+   },
+   {
+    "head_cm": [
+     0.0,
+     47.88,
+     32.4
+    ],
+    "name": "pod_bank_r",
+    "parent": "hull",
+    "purpose": "starboard lift-pod bank (two pods)"
+   },
+   {
+    "head_cm": [
+     140.4,
+     0.0,
+     29.52
+    ],
+    "name": "emitter",
+    "parent": "hull",
+    "purpose": "secondary emitter mount: small aim, recoil and recovery"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     68.4
+    ],
+    "name": "cradle",
+    "parent": "hull",
+    "purpose": "archive cradle deck contact; separate component group, hidden when unloaded"
+   }
+  ],
+  "hover": "root is never keyed; the hull bone carries the harmonic bob so the runtime hover offset stays additive",
+  "policy": "8 bones (contract bone_count_source 8), identity rest orientation, no decorative bones; the whip antennas, cable loop, rails and pods' cyan strips are rigid with their bone; the relay light and the emitter muzzle are material/VFX states, not bones"
+ },
+ "scale_basis": {
+  "canon": "SPEC-UNIT-004 / Bible line 512: light, fast, low-slung skimmer with a tall relay mast, a dish and a small forward weapon",
+  "concept": "concept-fidelity.md: L = 360 cm hull length (PROVISIONAL), every proportion a ratio of L measured on relay-skiff-candidate.png",
+  "height_cm": 255.6,
+  "hover_gap_cm": 10.079999999999998,
+  "length_cm": 376.91999999999996,
+  "simulation_footprint_half_extent_cm": 12.5,
+  "status": "CONCEPT-MEASURED BLOCKOUT (concept-v1)",
+  "width_cm": 141.48000000000002
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "socket_semantics": {
+  "Logistics_Relay_Beam": "FIXED ORIGIN on the mast head, identity rotation. It is a position, not an aim transform: the card's cyan cone toward the nearest grid node within 700 cm must be aimed at runtime, not bound to this socket's rotation.",
+  "Scouting_Sensor_Pod": "rides the dish bone, so it swings whenever the dish moves - including during relay_extend, which is a logistics action. Any scouting VFX bound to it inherits that motion.",
+  "dish_aim": "the relay clips key a FIXED placeholder aim (-60 deg yaw, +14 deg pitch, unit-relative); the node-facing rotation is a runtime look-at layered on the dish bone. No clip knows where a grid node is."
+ },
+ "sockets": [
+  {
+   "bone": "mast",
+   "name": "Logistics_Relay_Beam"
+  },
+  {
+   "bone": "dish",
+   "name": "Scouting_Sensor_Pod"
+  }
+ ],
+ "source_bindings": {
+  "canon_row": {
+   "line": 512,
+   "path": "Docs/Archive/DevelopmentBible.md"
+  },
+  "contract": {
+   "package_id": "EBS-PKG-MC-RELAY-SKIFF",
+   "path": "Docs/VisualAssetPipeline/motion/gap-decisions.json"
+  },
+  "fidelity_target": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/ArtSource/EBS-MER-UNT-004/concept-fidelity.md"
+  },
+  "gameplay_record": {
+   "id": "mc_relay_skiff (SPEC-UNIT-004: 500 cm/s, 75 HP, 1,500 cm sight, 6 damage at 400 cm, +4 Logistics within 700 cm)",
+   "path": "Content/Data/Source/units.json"
+  },
+  "requirement_card": {
+   "card": "REL-FAC-025.MC.SKIFF.ASSET",
+   "path": "Docs/Requirements.md"
+  },
+  "selected_candidate": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/relay-skiff-review/relay-skiff-candidate.png",
+   "status": "SELECTED CANDIDATE (production direction): main three-quarter, SIDE VIEW, TACTICAL SILHOUETTE"
+  },
+  "style_reference": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/lancer-review/lancer-candidate.png",
+   "status": "FACTION/STYLE REFERENCE the candidate was made from"
+  },
+  "superseded_concept": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/meridian-units.png",
+   "region": [
+    0.5,
+    0.5,
+    1.0,
+    1.0
+   ],
+   "sha256_prefix": "427e60cd27bd78e9",
+   "status": "EBS-CON-MER-UNT-004 REPLACE, retained history only"
+  }
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Concept-matched rest geometry, the 8-bone hover rig and keyframed clip data, exported skinned on the verified skeletal kit; no textures, no Unreal import, no gate or owner acceptance.",
+ "states": {
+  "loaded": "deck_archive_* present (M01 archive carrier)",
+  "rule": "the archive rack never changes unless an authoritative event binds it (canon line 512); visibility only, never animation",
+  "unloaded": "deck_archive_* hidden; nothing else changes"
+ },
+ "tools": {
+  "builder_sha256": "92f3e0b14d64dbf1c93f3f9ea0f6dd60f0652346376ae596f3c93d4891b90c6d",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.7"
+ },
+ "track_contract": {
+  "alias": {
+   "relay_activation": "relay_extend"
+  },
+  "note": "relay_activation (frozen contract) is authored as relay_extend (concept-fidelity.md and the production handoff); README section 8 / OWNER-QUESTION 1",
+  "required": [
+   "idle",
+   "move",
+   "turn",
+   "stop",
+   "damage",
+   "death",
+   "cancel",
+   "restore",
+   "attack_anticipation",
+   "attack_execution",
+   "attack_recovery",
+   "relay_activation",
+   "relay_hold",
+   "relay_expiry"
+  ]
+ },
+ "units": {
+  "authored": "centimeters at unit scale 1.0",
+  "axes": "+X forward, +Y right, +Z up",
+  "pivot": "ground point under the hull centre (root at 0,0,0); the runtime hover offset is additive on the authored 0.09 L gap"
+ }
+}
