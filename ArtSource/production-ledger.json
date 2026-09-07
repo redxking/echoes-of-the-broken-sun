@@ -743,15 +743,16 @@
      "stage": "BLOCKOUT (concept build, ebs-hol-bld-004-concept-v1)",
      "date": "2026-09-07",
      "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-HOL-BLD-004/ (receipt.json, renders/concept-compare/, import/)",
-     "result": "A tapering hexagonal spire on a three-step hexagonal plinth, 640 cm to the apex, with magenta arris lines up all six edges and a diamond register up the front face. Traced before the card was authored: slenderness 0.175 against a traced 0.177, plinth 0.175 of height against a traced 0.176. Two traced figures rejected as perspective reads rather than proportions. The 700 cm aura is a light effect: the mesh provides Field_Ring_Origin and implies no radius. The lit read is a slot change, not brightness: the two power states share their 254 triangles exactly. LOD0 254 / LOD1 158 against the provisional 4,000 / 1,600; magenta 5.6% against 12%. Monochrome separability from the Chorus Loom on ground-free tactical renders: IoU 0.514, largest band difference 0.490, aspect difference 0.481. 21 tests. Import clean: 0 errors, 0 warnings, 0 pipeline property failures, 3 bones, 4 sockets, 3 material slots, 3 clips on both meshes."
+     "result": "A tapering hexagonal spire on a three-step hexagonal plinth, 640 cm to the apex, with magenta arris lines up all six edges and a diamond register up the front face. Traced before the card was authored: slenderness 0.175 against a traced 0.177, plinth 0.175 of height against a traced 0.176. Two traced figures rejected as perspective reads rather than proportions. The 700 cm aura is a light effect: the mesh provides Field_Ring_Origin and implies no radius. The lit read is a slot change, not brightness: the two power states share their 254 triangles exactly. LOD0 254 / LOD1 158 against the provisional 4,000 / 1,600; magenta 5.6% against 12%. Monochrome comparison against the Chorus Loom on ground-free tactical renders: IoU 0.514, largest band difference 0.490, aspect difference 0.481 - COMPARISON EVIDENCE ONLY, no acceptance meaning without a defined criterion (owner ruling 2026-09-07). 21 tests. Import clean: 0 errors, 0 warnings, 0 pipeline property failures, 3 bones, 4 sockets, 3 material slots, 3 clips on both meshes."
     }
    ],
    "next": "Textures, a detail judgement at gameplay distance, in-engine capture, gate reviews, card incorporation, owner acceptance.",
    "open_owner_questions": [],
    "open_items": [
     "The articulated-component requirement stays pending; the spire and apex drift is a presentation device.",
-    "The plinth is held to 300 cm across corners against a traced proportion near 500 cm: a footprint-driven adaptation under the owner's Array Foundry ruling.",
-    "The destroyed state snaps the spire into a stump and two sections, because a 528 cm shaft cannot lie down inside a 400 cm footprint unbroken. The candidate has no destroyed panel; this is invention constrained by the footprint."
+    "The plinth is held to 300 cm across corners against a traced proportion near 500 cm: a footprint-driven adaptation. The matching plinth-height / total-height ratio does not establish a matching width proportion (owner clarification 2026-09-07).",
+    "The destroyed state is a PROPOSED DESTRUCTION STUDY. Segmentation is neither mechanically mandatory nor concept-approved; the placement ruling does not require cosmetic debris to stay inside the footprint, and the controlling concern is navigation, selection and gameplay readability.",
+    "Separability from the Chorus Loom is unevaluated. The IoU 0.514 figure is comparison evidence with no acceptance meaning; evaluation in representative terrain, lighting, team colour treatment and tactical camera views is PENDING."
    ]
   }
  ],
@@ -854,7 +855,8 @@
    "date": "2026-09-07",
    "package": "EBS-PKG-HC-PHASE-ANCHOR",
    "finding": "Collision in a skinned GLB is imported by Interchange as a SECOND SkeletalMesh with its own skeleton. The Phase Anchor was written with include_collision=(lod == 0), copied from an older static-mesh generator; the LOD0 file's UBX box arrived as UBX_SK_EBS_HOL_BLD_004_01 alongside a SK_..._scene_Skeleton, and the inspection failed on 7 imported objects against an expected 5.",
-   "rule": "Skeletal packages in this pipeline export with include_collision=False; collision for a skeletal mesh comes from a physics asset, not from UBX geometry. My deviation from the established convention, not a new engine defect, but the import behaviour is worth knowing."
+   "rule": "Skeletal packages in this pipeline export with include_collision=False; collision for a skeletal mesh comes from a physics asset, not from UBX geometry. My deviation from the established convention, not a new engine defect, but the import behaviour is worth knowing.",
+   "regression_check": "ue_import_inspect_skeletal.py fails any import producing a UBX_/UCX_/USP_/UCP_ SkeletalMesh, or more Skeleton assets than the job declares, and names the cause rather than only reporting a count mismatch. Pipeline-wide, verified clean on EBS-HOL-BLD-003 and EBS-HOL-BLD-004. Owner ruling 2026-09-07."
   },
   {
    "id": "PF-012",
@@ -1047,6 +1049,37 @@
     "aliases": "a test verifies every alias resolves to an emitted socket, does not shadow a real name, and lands on an existing bone.",
     "vertex_ids": "mapping defined R/G/B to baseline/carapace/striker; blocked because ebs_meshkit emits no COLOR_0; three verifications recorded; a test asserts verified is false."
    }
+  },
+  {
+   "date": "2026-09-07",
+   "subject": "Phase Anchor review, and the next phase",
+   "rulings": [
+    {
+     "topic": "Plinth",
+     "ruling": "Retain the footprint-driven adaptation. Clarify that the matching plinth-height / total-height ratio does NOT establish matching plinth-width / shaft-width proportions; those are different measurements.",
+     "applied": "Recorded in the card's traced_measurements, the manifest's footprint_adaptation, concept-fidelity.md, README decision 1, and asserted by test_the_plinth_is_a_recorded_footprint_adaptation."
+    },
+    {
+     "topic": "Destruction",
+     "ruling": "Retain the stump-and-two-sections treatment as a PROPOSED DESTRUCTION STUDY. The placement ruling does not automatically require cosmetic debris to remain inside the footprint; the controlling concern is preserving navigation, selection and gameplay readability. Do not present segmentation as mechanically mandatory or concept-approved.",
+     "applied": "The manifest state, the card state, the generator comment, concept-fidelity.md and README decision 4 all now say so; test_the_destroyed_study_is_labelled_as_proposed pins the wording, and the containment test was reworded to pin what the build does rather than what it must do."
+    },
+    {
+     "topic": "PF-011",
+     "ruling": "The correction and clean re-import appropriately document an export-convention failure. Keep a regression check that rejects unintended collision meshes and extra skeletons.",
+     "applied": "ue_import_inspect_skeletal.py now fails any import producing a UBX_/UCX_/USP_/UCP_ SkeletalMesh, or more Skeleton assets than the job declares, and names the cause instead of only reporting a count mismatch. Pipeline-wide. Re-ran the Chorus Loom and Phase Anchor imports against it: both clean, 2 skeletons each, no collision meshes rejected. A build-side test also pins include_collision=False."
+    },
+    {
+     "topic": "Silhouette",
+     "ruling": "IoU 0.514 is useful comparison evidence but has no acceptance meaning without a defined criterion. Evaluate Phase Anchor versus Chorus Loom in representative terrain, lighting, team treatment and tactical camera views.",
+     "applied": "The manifest gains monochrome_separation marked COMPARISON EVIDENCE ONLY with the required evaluation PENDING; the card's readability clause and README section 3 say the same; test_the_silhouette_figure_carries_no_acceptance_meaning asserts it."
+    },
+    {
+     "topic": "Next",
+     "ruling": "Reconcile the twelve provisional cards and the Riftstalker amendment with the authoritative requirements before final technical qualification. Continue independent texture and material work against explicitly identified provisional contracts.",
+     "applied": "Recorded as the next_phase block below; no card has been moved into Docs/Requirements.md."
+    }
+   ]
   }
  ],
  "progress": {
@@ -1056,5 +1089,22 @@
   "at_blockout": 21,
   "remaining": 0,
   "remaining_packages": []
+ },
+ "next_phase": {
+  "as_of": "2026-09-07",
+  "authority": "Owner ruling 2026-09-07 (Phase Anchor review).",
+  "blocking_final_technical_qualification": [
+   "Reconcile the twelve provisional asset cards with Docs/Requirements.md.",
+   "Reconcile the Riftstalker rig amendment (REL-ART-005.KA.RIFTSTALKER, 22 bones against the card's 14) with Docs/Requirements.md."
+  ],
+  "may_proceed_independently": [
+   "Texture and material work, against contracts named explicitly as PROVISIONAL in every artefact it produces. Provisional status must not be dropped from a filename, manifest or receipt because textures now exist."
+  ],
+  "also_open": [
+   "Phase Anchor versus Chorus Loom separability, in representative terrain, lighting, team colour treatment and tactical camera views.",
+   "Riftstalker vertex-ID channels, blocked on adding COLOR_0 to ebs_meshkit.py.",
+   "Runtime verification of simultaneous locomotion and firing.",
+   "Detail judgements at gameplay distance, in-engine capture, gate reviews, owner acceptance."
+  ]
  }
 }

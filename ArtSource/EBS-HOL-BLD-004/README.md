@@ -63,8 +63,11 @@ the three states and for LOD1, and one posed frame per looping clip. Comparison 
 both power states beside the destroyed state, and the two power states at tactical framing.
 
 **Monochrome separability from the Chorus Loom**, measured on ground-free tactical renders:
-intersection over union 0.514, largest band difference 0.490, aspect difference 0.481. The card requires
-the Anchor to stay separable from the Loom's posts; this is the measurement, not a verdict.
+intersection over union 0.514, largest band difference 0.490, aspect difference 0.481. **This is
+comparison evidence with no acceptance meaning** (owner ruling, 2026-09-07): no criterion is defined
+against which an IoU figure would pass or fail. The card's separability requirement is evaluated by
+comparing the Phase Anchor against the Chorus Loom in representative terrain, lighting, team colour
+treatment and tactical camera views — **pending**, and listed as open below.
 
 Checks: 21 structural tests in [test_phase_anchor_build.py](test_phase_anchor_build.py) — the contract
 inventory, the taper matching the traced slenderness and plinth fraction and narrowing monotonically,
@@ -96,6 +99,10 @@ python3 test_phase_anchor_build.py
    adaptation is recorded in the manifest, the fidelity target and a test, under the owner's Array
    Foundry ruling of 2026-09-07: adapt the proportion to the footprint, and do not change navigation or
    placement rules to match a drawing's apparent proportion.
+   **The matching height ratio does not establish a matching width proportion** (owner clarification,
+   2026-09-07). The plinth height against total height meets the trace at 0.175 versus 0.176; plinth
+   width against shaft width is a different measurement, and it is adapted, not met. Agreement on the
+   first is not evidence about the second.
 2. **The register was invisible until the hexagon was re-phased.** With a vertex on the −Y axis the
    front face was an edge, so the diamond register straddled it and never showed in the front
    orthographic; the arris tube sat on top of what little was visible. Rotating the hexagon so a face
@@ -105,19 +112,30 @@ python3 test_phase_anchor_build.py
    `target − arm × forward`, so yaw 0 sits at −X looking toward +X. An earlier register camera was
    therefore pointed at the back of the spire. Diagnosed by reading the camera function rather than
    guessing at the render.
-4. **The destroyed state snaps the spire rather than toppling it whole.** A 528 cm shaft laid down
-   reaches 300 cm outside the 400 cm footprint — it cannot lie inside its own placement envelope
-   unbroken. It falls as a stump and two sections, all inside the footprint. The candidate has no
-   destroyed panel, so this is invention constrained by the footprint, and it is labelled as such.
-5. **Collision does not travel in a skinned GLB here.** This package was written with
+4. **The destroyed state is a proposed destruction study, not an approved treatment.** The spire falls
+   as a stump and two sections, all inside the footprint. A 528 cm shaft laid down whole reaches 300 cm
+   past the 400 cm footprint, which is what prompted the segmentation — but per the owner's
+   clarification of 2026-09-07, **the placement ruling does not require cosmetic debris to remain inside
+   the footprint**. The controlling concern is preserving navigation, selection and gameplay
+   readability, and keeping the debris contained is one way of serving that, not a mechanical
+   requirement. Segmentation is neither mandatory nor concept-approved: the candidate draws no destroyed
+   panel at all.
+5. **Collision does not travel in a skinned GLB here, and a regression check now rejects it.** This package was written with
    `include_collision=(lod == 0)`, copied from an older static-mesh generator; every other skeletal
    package in this pipeline exports without collision. Interchange imported the UBX box as a **second
    SkeletalMesh with its own skeleton**, and the inspection failed on 7 imported objects against an
    expected 5. My deviation from the established convention, not a new engine defect — but the
-   behaviour is worth knowing and is recorded as a ledger finding.
+   behaviour is worth knowing and is recorded as a ledger finding. `ue_import_inspect_skeletal.py` now
+   fails any package whose import produces a `UBX_`/`UCX_`/`USP_`/`UCP_` SkeletalMesh, or more Skeleton
+   assets than the job declares, and names the cause rather than only reporting a count mismatch. The
+   check is pipeline-wide, and re-running the Chorus Loom and Phase Anchor imports against it leaves
+   both clean.
 6. **The spire and apex drift is a presentation device**, labelled as such in the card and the manifest
    so it cannot later be cited as canon motion. The articulated-component requirement stays pending.
-7. Open: textures, a detail judgement at gameplay distance, in-engine capture, gate reviews,
-   incorporation of the provisional card into the authoritative requirements, owner acceptance.
+7. Open: **separability against the Chorus Loom evaluated in representative terrain, lighting, team
+   colour treatment and tactical camera views**; textures and materials, developed against this
+   explicitly provisional contract; a detail judgement at gameplay distance; in-engine capture; gate
+   reviews; **reconciliation of this provisional card with the authoritative requirements before final
+   technical qualification**; owner acceptance.
 
 No OWNER-QUESTIONs are open for this package.

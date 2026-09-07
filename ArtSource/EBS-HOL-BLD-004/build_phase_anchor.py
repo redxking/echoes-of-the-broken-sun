@@ -134,8 +134,11 @@ def build_body(lod: int, state: str = "field_active") -> kit.Mesh:
         m.prism(hexagon(radius), z0, z1, ground, f"plinth_step_{k:02d}", cap_bottom=(k == 1))
 
     if state == "destroyed":
-        # The spire SNAPS and falls in two sections. A 528 cm shaft toppled whole reaches 300 cm past
-        # the 400 cm footprint; it cannot lie down inside its own placement envelope unbroken.
+        # PROPOSED DESTRUCTION STUDY, not an approved treatment: the spire snaps and falls in two
+        # sections. A 528 cm shaft toppled whole reaches 300 cm past the 400 cm footprint. Keeping the
+        # debris inside the footprint is a choice made for navigation, selection and readability - the
+        # placement ruling does not require it of cosmetic debris, and the candidate draws no destroyed
+        # state at all.
         stump_h = 96.0
         _frustum(m, PLINTH_H, PLINTH_H + stump_h, SHAFT_BASE_R,
                  shaft_radius(PLINTH_H + stump_h), vitrified, "stump")
@@ -447,7 +450,12 @@ def manifest(exported: dict) -> dict:
             "why": ("The traced plinth-to-shaft proportion would put it near 500 cm across, outside the 400 cm footprint."),
             "authority": ("Owner ruling 2026-09-07 (Array Foundry): adapt the proportion to the footprint; do not change "
                           "navigation or placement rules to match a drawing's apparent proportion."),
-            "recorded_as": "a footprint-driven adaptation, not a concept deviation to be silently absorbed"},
+            "recorded_as": "a footprint-driven adaptation, not a concept deviation to be silently absorbed",
+            "what_the_matching_ratios_do_NOT_establish": (
+                "Owner clarification 2026-09-07: the plinth-height / total-height ratio matching the trace (0.175 against "
+                "0.176) says nothing about plinth WIDTH against shaft width. Those are different measurements. The height "
+                "ratio is met; the width proportion is adapted, and no agreement on the first may be read as agreement "
+                "on the second.")},
         "faction_language_inference": {
             "what": "the 12% Magenta Fracture ceiling",
             "source": "the four REL-FAC-027.HC.* UNIT cards",
@@ -463,6 +471,14 @@ def manifest(exported: dict) -> dict:
                     "headroom_note": "Under the ceiling is HEADROOM, not sufficiency (owner ruling 2026-09-07).",
                     "magenta_area_fraction_field_active": round(magenta, 5), "magenta_cap": 0.12,
                     "magenta_within_cap": magenta <= 0.12},
+        "monochrome_separation": {
+            "measurement": {"vs": "EBS-HOL-BLD-003 Chorus Loom, ground-free tactical renders",
+                            "intersection_over_union": 0.514, "largest_band_difference": 0.490,
+                            "aspect_difference": 0.481},
+            "status": ("COMPARISON EVIDENCE ONLY. Owner ruling 2026-09-07: an IoU figure carries no acceptance meaning "
+                       "without a defined criterion, and none is defined."),
+            "required_evaluation": ("Phase Anchor against Chorus Loom in representative terrain, lighting, team colour "
+                                    "treatment and tactical camera views. PENDING.")},
         "state_read": {"field_active_lit_lines": lit_lines(m0), "field_lost_lit_lines": lit_lines(lost),
                        "mechanism": ("field_lost moves every arris and register line into the vitrified slot, so the lit "
                                      "read is a slot change and not a brightness parameter. The register is the geometry "
@@ -476,7 +492,11 @@ def manifest(exported: dict) -> dict:
                    "loop": c.loop, "purpose": c.purpose, "bones": sorted(c.tracks)} for c in clips],
         "states": {"field_active": "arrises and register lit; the aura ring is projected from Field_Ring_Origin",
                    "field_lost": "arrises and register dark; the spire reads as inert stone",
-                   "destroyed": "the spire toppled across its own plinth"},
+                   "destroyed": ("PROPOSED DESTRUCTION STUDY: the spire snaps into a stump and two sections. Owner "
+                                 "clarification 2026-09-07: the placement ruling does NOT require cosmetic debris to stay "
+                                 "inside the footprint; the controlling concern is navigation, selection and gameplay "
+                                 "readability. Segmentation is neither mechanically mandatory nor concept-approved - the "
+                                 "candidate has no destroyed panel.")},
         "pending_requirements": [
             {"requirement": "Articulated components for a structure of this role", "status": "PENDING, not waived",
              "detail": "The spire and apex drift is a presentation device, not a role-required articulated assembly."}],

@@ -230,12 +230,13 @@ UNITS only. None of the four remaining packages is a unit. REL-FAC-027.HC.INTERV
 |---|---|
 | `field_active` | arrises and register lit; the 700 cm aura ring is projected from Field_Ring_Origin |
 | `field_lost` | arrises and register dark; the spire reads as inert stone |
-| `destroyed` | the spire toppled across its own plinth |
+| `destroyed` | PROPOSED DESTRUCTION STUDY, not an approved treatment: the candidate draws no destroyed panel. Judge it on navigation, selection and gameplay readability, not on concept fidelity, and do not read the built segmentation as mechanically mandatory. |
 
 **.READABILITY.**
 
 * Field active and field lost must be distinguishable at gameplay distance.
 * The 700 cm aura ring is a LIGHT EFFECT, not geometry; the mesh provides Field_Ring_Origin only. Its radius belongs to gameplay data, and the mesh must not imply any other radius.
+* The Anchor must stay separable from the Chorus Loom. Evaluate that in representative terrain, lighting, team colour treatment and tactical camera views. A monochrome IoU figure is comparison evidence only and carries no acceptance meaning: no criterion is defined (owner ruling 2026-09-07).
 * The taper must read at tactical distance: this is the faction's tallest, thinnest silhouette and must not be confused with the Chorus Loom's posts.
 * LOD1 shall preserve the taper, the plinth steps and the arris lines.
 * Triangle counts under the ceiling are headroom, not sufficiency.

@@ -489,6 +489,19 @@ def main():
             report["errors"].append(f"{len(sequences)} AnimSequence assets in {destination}, expected {expected_clip_total}")
         if len(meshes) != len(job["assets"]):
             report["errors"].append(f"{len(meshes)} SkeletalMesh assets in {destination}, expected {len(job['assets'])}")
+        # PF-011 regression check: collision geometry left in a skinned GLB arrives as an EXTRA
+        # SkeletalMesh with its own Skeleton. Name the cause rather than only the count.
+        collision_meshes = sorted(m.get_name() for m in meshes
+                                  if m.get_name().startswith(("UBX_", "UCX_", "USP_", "UCP_")))
+        if collision_meshes:
+            report["errors"].append(
+                f"collision meshes imported as SkeletalMesh assets: {collision_meshes}. Skeletal packages must "
+                f"export with include_collision=False; collision comes from a physics asset, not UBX geometry")
+        if len(report["skeletons"]) != len(job["assets"]):
+            report["errors"].append(
+                f"{len(report['skeletons'])} Skeleton assets in {destination}, expected {len(job['assets'])}: "
+                f"{sorted(sk['name'] for sk in report['skeletons'])}")
+        report["collision_meshes_rejected"] = collision_meshes
     bone_names, ref_local, first_mesh = [], {}, None
     for mesh in meshes:
         try:

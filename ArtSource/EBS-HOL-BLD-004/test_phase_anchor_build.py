@@ -84,8 +84,10 @@ class PhaseAnchorBlockout(unittest.TestCase):
         for slot in self.m0.slots:
             self.assertTrue(slot.startswith("MI_EBS_HOL_"), slot)
 
-    def test_destroyed_snaps_the_spire_rather_than_toppling_it_whole(self):
-        # a 528 cm shaft toppled whole reaches 300 cm outside the 400 cm footprint
+    def test_destroyed_is_recorded_as_a_proposed_study(self):
+        # segmentation is neither mechanically mandatory nor concept-approved: the candidate has no
+        # destroyed panel, and the placement ruling does not require cosmetic debris to stay inside
+        # the footprint. This test pins what the build DOES, not that it must be this way.
         comps = self.destroyed.components()
         self.assertEqual(len([c for c in comps if c.startswith("fallen_section_")]), 2)
         self.assertIn("stump", comps)
@@ -110,6 +112,9 @@ class PhaseAnchorBlockout(unittest.TestCase):
             data = json.load(handle)
         self.assertIn("footprint_adaptation", data)
         self.assertIn("Array Foundry", data["footprint_adaptation"]["authority"])
+        # the matching HEIGHT ratio must not be read as agreement on the WIDTH proportion
+        self.assertIn("different measurements",
+                      data["footprint_adaptation"]["what_the_matching_ratios_do_NOT_establish"])
 
     def test_no_frame_of_any_clip_passes_through_the_ground(self):
         for clip in self.clips:
@@ -169,6 +174,27 @@ class PhaseAnchorBlockout(unittest.TestCase):
         self.assertEqual(tuple(pa.STATES), ("field_active", "field_lost", "destroyed"))
         with self.assertRaises(ValueError):
             pa.assemble(0, "producing")
+
+    def test_the_destroyed_study_is_labelled_as_proposed(self):
+        path = os.path.join(HERE, "build-manifest.json")
+        if not os.path.exists(path):
+            self.skipTest("no manifest")
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        destroyed = data["states"]["destroyed"]
+        self.assertIn("PROPOSED DESTRUCTION STUDY", destroyed)
+        self.assertIn("NOT require cosmetic debris", destroyed)
+        self.assertIn("neither mechanically mandatory nor concept-approved", destroyed)
+
+    def test_the_silhouette_figure_carries_no_acceptance_meaning(self):
+        path = os.path.join(HERE, "build-manifest.json")
+        if not os.path.exists(path):
+            self.skipTest("no manifest")
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        sep = data["monochrome_separation"]
+        self.assertIn("COMPARISON EVIDENCE ONLY", sep["status"])
+        self.assertIn("PENDING", sep["required_evaluation"])
 
     def test_no_collision_travels_in_the_skinned_glb(self):
         # every skeletal package in this pipeline exports without collision; a UBX box in the LOD0 file

@@ -179,6 +179,7 @@
   "authority": "Owner ruling 2026-09-07 (Array Foundry): adapt the proportion to the footprint; do not change navigation or placement rules to match a drawing's apparent proportion.",
   "recorded_as": "a footprint-driven adaptation, not a concept deviation to be silently absorbed",
   "what": "The plinth is held to 300 cm across corners.",
+  "what_the_matching_ratios_do_NOT_establish": "Owner clarification 2026-09-07: the plinth-height / total-height ratio matching the trace (0.175 against 0.176) says nothing about plinth WIDTH against shaft width. Those are different measurements. The height ratio is met; the width proportion is adapted, and no agreement on the first may be read as agreement on the second.",
   "why": "The traced plinth-to-shaft proportion would put it near 500 cm across, outside the 400 cm footprint."
  },
  "kit_revision": "ebs-meshkit-v3",
@@ -188,6 +189,16 @@
   "MI_EBS_HOL_ApronStone",
   "MI_EBS_HOL_Magenta"
  ],
+ "monochrome_separation": {
+  "measurement": {
+   "aspect_difference": 0.481,
+   "intersection_over_union": 0.514,
+   "largest_band_difference": 0.49,
+   "vs": "EBS-HOL-BLD-003 Chorus Loom, ground-free tactical renders"
+  },
+  "required_evaluation": "Phase Anchor against Chorus Loom in representative terrain, lighting, team colour treatment and tactical camera views. PENDING.",
+  "status": "COMPARISON EVIDENCE ONLY. Owner ruling 2026-09-07: an IoU figure carries no acceptance meaning without a defined criterion, and none is defined."
+ },
  "outputs": [
   {
    "bounds_cm": [
@@ -497,7 +508,7 @@
   "mechanism": "field_lost moves every arris and register line into the vitrified slot, so the lit read is a slot change and not a brightness parameter. The register is the geometry that carries it; LOD1 keeps the two silhouette arrises so the read survives."
  },
  "states": {
-  "destroyed": "the spire toppled across its own plinth",
+  "destroyed": "PROPOSED DESTRUCTION STUDY: the spire snaps into a stump and two sections. Owner clarification 2026-09-07: the placement ruling does NOT require cosmetic debris to stay inside the footprint; the controlling concern is navigation, selection and gameplay readability. Segmentation is neither mechanically mandatory nor concept-approved - the candidate has no destroyed panel.",
   "field_active": "arrises and register lit; the aura ring is projected from Field_Ring_Origin",
   "field_lost": "arrises and register dark; the spire reads as inert stone"
  },

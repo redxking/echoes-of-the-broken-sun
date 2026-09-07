@@ -51,9 +51,12 @@ the height (0.176), because both are measured on the near-vertical axis where fo
 5. **The 700 cm aura ring is a light effect, not geometry.** The candidate draws it on the ground as a
    thin magenta circle. Its radius belongs to gameplay data; the mesh provides `Field_Ring_Origin` and
    must not imply any other radius.
-6. **Two power states.** Field active: arrises and register lit, ring projected. Field lost: both dark,
+6. **The destroyed state is invention.** The candidate draws no destroyed panel. Whatever is built for
+   it is a proposed destruction study, judged on navigation, selection and gameplay readability rather
+   than on concept fidelity.
+7. **Two power states.** Field active: arrises and register lit, ring projected. Field lost: both dark,
    the spire inert stone.
-7. **Palette.** Grey vitrified stone with Magenta Fracture. No Kharuun strata, no Meridian plates or
+8. **Palette.** Grey vitrified stone with Magenta Fracture. No Kharuun strata, no Meridian plates or
    conduits, no amber, no cyan.
 
 ## Forced adaptation: the plinth against the 2×2 footprint
@@ -63,6 +66,10 @@ footprint. The plinth is held to 300 cm across corners, inside the footprint wit
 adaptation is recorded here rather than resolved by widening the placement envelope. This follows the
 owner's Array Foundry ruling of 2026-09-07: adapt the proportion to the footprint, and do not change
 navigation or placement rules to match a drawing's apparent proportion.
+
+**The height ratio being met does not mean the width proportion is** (owner clarification, 2026-09-07).
+Plinth height ÷ total height matches the trace at 0.175 against 0.176. Plinth width ÷ shaft width is a
+different measurement, and it is adapted. Neither figure is evidence about the other.
 
 ## Rig and tracks
 
@@ -82,4 +89,6 @@ Everything inside the 2×2 footprint. Being under the ceiling is headroom, not s
 - [ ] Register detail: the diamond lattice reads on the shaft face.
 - [ ] Field active beside field lost: the lit read differs in geometry, not brightness alone.
 - [ ] Top view: everything inside the 2×2 square.
-- [ ] Tactical framing: the Anchor is separable from the Chorus Loom's posts in monochrome.
+- [ ] Separability from the Chorus Loom, evaluated in representative terrain, lighting, team colour
+      treatment and tactical camera views. A monochrome IoU figure is comparison evidence only: no
+      criterion is defined against which it would pass or fail (owner ruling, 2026-09-07).
