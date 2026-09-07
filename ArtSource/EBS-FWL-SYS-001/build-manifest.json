@@ -8,38 +8,83 @@
  "asset_name": "SM_EBS_FWL_SYS_001",
  "author": "Angelis Pseftis",
  "budgets": {
-  "lod0_assembled_triangles": 986,
+  "lod0_assembled_triangles": 2904,
   "lod0_cap": 8000,
   "lod0_within_cap": true,
-  "lod1_assembled_triangles": 638,
+  "lod1_assembled_triangles": 1496,
   "lod1_cap": 3500,
-  "lod1_within_cap": true
+  "lod1_within_cap": true,
+  "per_part": {
+   "SM_EBS_FWL_SYS_001": {
+    "lod0": 2042,
+    "lod1": 1018
+   },
+   "SM_EBS_FWL_SYS_001_Spire": {
+    "lod0": 78,
+    "lod1": 46
+   },
+   "SM_EBS_FWL_SYS_001_Wall": {
+    "lod0": 784,
+    "lod1": 432
+   }
+  }
+ },
+ "comparison_baseline": {
+  "commit": "5a59c855fb82b97b0c684af513420478231afed8",
+  "main_lod0_glb_sha256_prefix": "538ca37c",
+  "note": "the committed revision this source is compared against; concept-v1 and concept-v2 were never committed or receipted, so their hashes are not a reproducible baseline",
+  "revision": "ebs-fwl-sys-001-blockout-v1"
  },
  "component_inventory": {
-  "bowl": {
-   "built": 1,
-   "contract": 1,
-   "rim_blocks": 16
-  },
   "core_spire": {
    "built": 1,
    "contract": 1,
-   "evidence": "one core stub plus one petal part instanced at Petal_01..04 (4 sockets)",
-   "petal_sockets": 4
+   "evidence": "one faceted shard part SM_EBS_FWL_SYS_001_Spire instanced at Spire_Hinge (single hinge socket)",
+   "hinge_sockets": 1
+  },
+  "courtyard_bowl": {
+   "apron_crumble": 14,
+   "apron_sectors": 36,
+   "apron_tongue": 1,
+   "built": 1,
+   "contract": 1,
+   "dais_socket": 1,
+   "dais_steps": 2,
+   "dais_veins": 3,
+   "paving_courses": 3,
+   "paving_seams": 12,
+   "paving_spokes": 4
+  },
+  "ring_wall": {
+   "blocks": 60,
+   "built": 1,
+   "collision": 0,
+   "component_group": "wall_*",
+   "contract": 1,
+   "gaps": 4,
+   "part": "SM_EBS_FWL_SYS_001_Wall",
+   "tall_segments": 4
   },
   "sockets": {
    "built": [
     "Target_Anchor_Center",
     "State_VFX_Origin",
-    "Petal_01",
-    "Petal_02",
-    "Petal_03",
-    "Petal_04",
-    "Reshape_Trace_End"
+    "Spire_Hinge",
+    "Reshape_Trace_End",
+    "Wall_Gap_01",
+    "Wall_Gap_02",
+    "Wall_Gap_03",
+    "Wall_Gap_04"
    ],
    "contract": [
     "Target_Anchor_Center",
-    "State_VFX_Origin"
+    "State_VFX_Origin",
+    "Spire_Hinge",
+    "Reshape_Trace_End",
+    "Wall_Gap_01",
+    "Wall_Gap_02",
+    "Wall_Gap_03",
+    "Wall_Gap_04"
    ]
   },
   "state_family": {
@@ -54,20 +99,137 @@
    ]
   }
  },
+ "concept_measurements": {
+  "apron": {
+   "bites": 6,
+   "outer_radius_max_cm": 610.29,
+   "outer_radius_mean_cm": 569.17,
+   "outer_radius_min_cm": 505.61,
+   "ratios_to_wall_R_out": {
+    "outer_radius_mean": 1.265,
+    "tongue_reach": 1.512
+   },
+   "relief_cm": 17.0,
+   "sectors": 36,
+   "tongue_reach_x_cm": 680.43
+  },
+  "preserve_ring_to_wall_R_out": 0.898,
+  "ratios_to_S": {
+   "apron_mean_radius": 2.587,
+   "preserve_ring_radius": 1.836,
+   "wall_outer_radius": 2.045
+  },
+  "spire": {
+   "base_extent_cm": [
+    145.6,
+    156.56
+   ],
+   "base_to_height": 0.712,
+   "facets": 14,
+   "height_cm": 220.0,
+   "seams": 4
+  },
+  "wall": {
+   "blocks": 60,
+   "gaps": {
+    "Wall_Gap_01": {
+     "angular_deg": 22.79,
+     "chord_cm": 177.85,
+     "facing_deg": 0
+    },
+    "Wall_Gap_02": {
+     "angular_deg": 19.43,
+     "chord_cm": 151.86,
+     "facing_deg": 90
+    },
+    "Wall_Gap_03": {
+     "angular_deg": 19.43,
+     "chord_cm": 151.86,
+     "facing_deg": 180
+    },
+    "Wall_Gap_04": {
+     "angular_deg": 19.43,
+     "chord_cm": 151.86,
+     "facing_deg": 270
+    }
+   },
+   "low_crest_max_cm": 90.72,
+   "low_crest_mean_cm": 68.95,
+   "low_crest_min_cm": 40.0,
+   "outer_radius_cm": 452.0,
+   "ratios_to_S": {
+    "low_wall_crest_mean": 0.313,
+    "outer_radius": 2.055,
+    "tall_max": 0.886
+   },
+   "tall_heights_cm": [
+    138.0,
+    124.0,
+    142.0,
+    195.0
+   ],
+   "tall_segments": 4
+  }
+ },
  "creator": "Angelis Pseftis",
- "dimensions_cm_provisional": {
-  "apron_radius": 300.0,
-  "apron_z": 5.0,
-  "bowl_floor_z": 8.0,
-  "bowl_inner_radius": 74.0,
-  "bowl_outer_radius": 98.0,
-  "fold_pitch_deg": 28.0,
-  "fold_sink_cm": 150.0,
-  "petal_height": 172.0,
-  "preserve_ring_radius": 215.0,
-  "reshape_trace_length": 330.0,
-  "rim_height_max": 76.0,
-  "spire_top_z": 180.0
+ "dimensions_cm": {
+  "apron_base_radius": 580.0,
+  "apron_tongue_end_x": 640.0,
+  "apron_z": 4.0,
+  "assembled_bounds_dormant": [
+   [
+    -579.2214327211925,
+    -607.0743970294902,
+    0.0
+   ],
+   [
+    680.4308021106242,
+    572.1108145877275,
+    234.2
+   ]
+  ],
+  "dais_radius": 98.0,
+  "dais_rim_inner_radius": 82.0,
+  "dais_rim_top_z": 14.0,
+  "dais_veins": 3,
+  "flush_proud_max": 1.5,
+  "fold_pitch_deg": 24.0,
+  "fold_sink_cm": 224.0,
+  "hinge_z": 14.2,
+  "paving_courses": [
+   165.0,
+   255.0,
+   345.0
+  ],
+  "paving_radius": 412.0,
+  "paving_z": 6.0,
+  "preserve_ring_radius": 404.0,
+  "preserve_ring_top_z": 7.0,
+  "reshape_trace_end_x": 600.0,
+  "reshape_trace_top_z_max": 12.0,
+  "reshape_trace_width": 8.0,
+  "socket_radius": 82.0,
+  "socket_top_z": 12.5,
+  "spent_spire_top_z": -5.9728428170972165,
+  "spire_apex_z": 234.2,
+  "spire_base_across_flats": 132.0,
+  "spire_height_S": 220.0,
+  "spoke_r_end": 360.0,
+  "wall_gap_widths": {
+   "Wall_Gap_01": 176.0,
+   "Wall_Gap_02": 150.0,
+   "Wall_Gap_03": 150.0,
+   "Wall_Gap_04": 150.0
+  },
+  "wall_inner_radius": 410.0,
+  "wall_low_height": 84.0,
+  "wall_outer_radius": 450.0,
+  "wall_tall_heights": [
+   138.0,
+   124.0,
+   142.0,
+   195.0
+  ]
  },
  "kit_revision": "ebs-meshkit-v3",
  "material_slots": [
@@ -79,33 +241,33 @@
   {
    "bounds_cm": [
     [
-     -300.0,
-     -300.0,
+     -579.2214327211925,
+     -607.0743970294902,
      0.0
     ],
     [
-     330.0,
-     300.0,
-     76.0
+     680.4308021106242,
+     572.1108145877275,
+     17.0
     ]
    ],
    "by_slot": {
-    "MI_EBS_FWL_Basalt": 468,
-    "MI_EBS_FWL_State": 376,
-    "MI_EBS_FWL_Vitrified": 22
+    "MI_EBS_FWL_Basalt": 948,
+    "MI_EBS_FWL_State": 472,
+    "MI_EBS_FWL_Vitrified": 622
    },
    "collision_boxes": [
     {
      "center_cm": [
       0.0,
       0.0,
-      36.0
+      60.0
      ],
-     "name": "bowl",
+     "name": "dais",
      "size_cm": [
       196.0,
       196.0,
-      72.0
+      120.0
      ]
     }
    ],
@@ -117,16 +279,16 @@
     "MI_EBS_FWL_Vitrified",
     "MI_EBS_FWL_State"
    ],
-   "sha256": "538ca37cb397feec48dc41334f86ff4e14ed23f8fa9dacf8a366751983f407ac",
+   "sha256": "761dec67a3bf0d5965f0d4a16e7d4a7754884ba17778d59daf8b3c3ce3e67c4f",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
      "position_cm": [
       0.0,
       0.0,
-      8.0
+      14.0
      ],
-     "purpose": "capture / protocol targeting anchor at the bowl centre",
+     "purpose": "capture / protocol targeting anchor at the dais centre",
      "yaw_deg": 0.0
     },
     {
@@ -134,122 +296,165 @@
      "position_cm": [
       0.0,
       0.0,
-      52.0
+      14.2
      ],
-     "purpose": "Harvest amber climb, Preserve pulse and Reshape trace effects originate here",
+     "purpose": "Harvest amber climb, Preserve pulse and Reshape trace effects originate at the shard base",
      "yaw_deg": 0.0
     },
     {
-     "name": "Petal_01",
+     "name": "Spire_Hinge",
      "position_cm": [
-      18.700000000000003,
       0.0,
-      8.0
+      0.0,
+      14.2
      ],
-     "purpose": "spire petal hinge; folds outward-down on Harvest commit (part pose)",
+     "purpose": "shard part origin (base centre); Harvest commit pitches the part +24 deg about the socket Y axis and sinks it 224 cm (part pose)",
      "yaw_deg": 0.0
-    },
-    {
-     "name": "Petal_02",
-     "position_cm": [
-      1.1450447572027754e-15,
-      18.700000000000003,
-      8.0
-     ],
-     "purpose": "spire petal hinge; folds outward-down on Harvest commit (part pose)",
-     "yaw_deg": 90.0
-    },
-    {
-     "name": "Petal_03",
-     "position_cm": [
-      -18.700000000000003,
-      2.290089514405551e-15,
-      8.0
-     ],
-     "purpose": "spire petal hinge; folds outward-down on Harvest commit (part pose)",
-     "yaw_deg": 180.0
-    },
-    {
-     "name": "Petal_04",
-     "position_cm": [
-      -3.435134271608326e-15,
-      -18.700000000000003,
-      8.0
-     ],
-     "purpose": "spire petal hinge; folds outward-down on Harvest commit (part pose)",
-     "yaw_deg": 270.0
     },
     {
      "name": "Reshape_Trace_End",
      "position_cm": [
-      330.0,
+      600.0,
       0.0,
-      5.0
+      4.0
      ],
-     "purpose": "where the map-authored temporary feature's own effect continues",
+     "purpose": "where the map-authored temporary crossing's own effect continues",
      "yaw_deg": 0.0
+    },
+    {
+     "name": "Wall_Gap_01",
+     "position_cm": [
+      430.0,
+      0.0,
+      0.0
+     ],
+     "purpose": "centre of the 176 cm wall gap facing 0 deg; units enter the courtyard here",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Wall_Gap_02",
+     "position_cm": [
+      2.6329906181668095e-14,
+      430.0,
+      0.0
+     ],
+     "purpose": "centre of the 150 cm wall gap facing 90 deg; units enter the courtyard here",
+     "yaw_deg": 90.0
+    },
+    {
+     "name": "Wall_Gap_03",
+     "position_cm": [
+      -430.0,
+      5.265981236333619e-14,
+      0.0
+     ],
+     "purpose": "centre of the 150 cm wall gap facing 180 deg; units enter the courtyard here",
+     "yaw_deg": 180.0
+    },
+    {
+     "name": "Wall_Gap_04",
+     "position_cm": [
+      -7.898971854500427e-14,
+      -430.0,
+      0.0
+     ],
+     "purpose": "centre of the 150 cm wall gap facing 270 deg; units enter the courtyard here",
+     "yaw_deg": 270.0
     }
    ],
-   "triangles": 866
+   "triangles": 2042
   },
   {
    "lod": 0,
    "mesh": "SM_EBS_FWL_SYS_001",
    "path": "export/SM_EBS_FWL_SYS_001_LOD0.obj",
-   "sha256": "538adc0ab9153e806b6c5b7735230efda3d9a32aa37b21101c4f8dfb6e893704"
+   "sha256": "1fdb3b42310a54a05bca954785d199acf863c0af11048f1718184c5eb2da855c"
   },
   {
    "bounds_cm": [
     [
-     -18.700000000000003,
-     -34.0,
+     -75.79282196934845,
+     -79.90605986834187,
      0.0
     ],
     [
-     0.0,
-     34.0,
-     172.0
+     72.9649617736154,
+     79.65392889328739,
+     220.0
     ]
    ],
    "by_slot": {
-    "MI_EBS_FWL_State": 24,
-    "MI_EBS_FWL_Vitrified": 6
+    "MI_EBS_FWL_State": 64,
+    "MI_EBS_FWL_Vitrified": 14
    },
    "collision_boxes": [],
    "lod": 0,
-   "mesh": "SM_EBS_FWL_SYS_001_Petal",
-   "path": "export/SM_EBS_FWL_SYS_001_Petal_LOD0.glb",
+   "mesh": "SM_EBS_FWL_SYS_001_Spire",
+   "path": "export/SM_EBS_FWL_SYS_001_Spire_LOD0.glb",
    "section_slot_names": [
     "MI_EBS_FWL_Vitrified",
     "MI_EBS_FWL_State"
    ],
-   "sha256": "0195bd47f32c48f3a62fec11d8d4f24835e1d2649d3ce3f361e202bd1291168b",
+   "sha256": "ae20832100eb84abb835564dad6bcda1bbf62006c75b854fd90ba04b266ebc6f",
    "sockets": [],
-   "triangles": 30
+   "triangles": 78
   },
   {
    "lod": 0,
-   "mesh": "SM_EBS_FWL_SYS_001_Petal",
-   "path": "export/SM_EBS_FWL_SYS_001_Petal_LOD0.obj",
-   "sha256": "7c339eb22b69ba9f42bc9778fd91275708d8676b1c28b8d5040fcff3d6a8af92"
+   "mesh": "SM_EBS_FWL_SYS_001_Spire",
+   "path": "export/SM_EBS_FWL_SYS_001_Spire_LOD0.obj",
+   "sha256": "d429d5f88d9615169c20d7f5b29aa13e71f153ad5ca1fbcfbeb08cc2a3d397e8"
   },
   {
    "bounds_cm": [
     [
-     -300.0,
-     -300.0,
+     -443.54793105886773,
+     -443.54793105886773,
      0.0
     ],
     [
-     330.0,
-     300.0,
-     64.8
+     441.1264067025359,
+     443.54793105886773,
+     195.0
     ]
    ],
    "by_slot": {
-    "MI_EBS_FWL_Basalt": 336,
-    "MI_EBS_FWL_State": 208,
-    "MI_EBS_FWL_Vitrified": 22
+    "MI_EBS_FWL_Basalt": 784
+   },
+   "collision_boxes": [],
+   "lod": 0,
+   "mesh": "SM_EBS_FWL_SYS_001_Wall",
+   "path": "export/SM_EBS_FWL_SYS_001_Wall_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_FWL_Basalt"
+   ],
+   "sha256": "e05502cc20df3eeb749699c2f6217df4158df7220ed424c97fa6fe9faf7d6e69",
+   "sockets": [],
+   "triangles": 784
+  },
+  {
+   "lod": 0,
+   "mesh": "SM_EBS_FWL_SYS_001_Wall",
+   "path": "export/SM_EBS_FWL_SYS_001_Wall_LOD0.obj",
+   "sha256": "6ac235e35cbee6e68555569639800d3691ce40e6085a5f39c85a8b79095f513a"
+  },
+  {
+   "bounds_cm": [
+    [
+     -554.8729862642272,
+     -599.3933226028685,
+     0.0
+    ],
+    [
+     680.4308021106242,
+     564.2961849562448,
+     17.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_FWL_Basalt": 520,
+    "MI_EBS_FWL_State": 272,
+    "MI_EBS_FWL_Vitrified": 226
    },
    "collision_boxes": [],
    "lod": 1,
@@ -260,16 +465,16 @@
     "MI_EBS_FWL_Vitrified",
     "MI_EBS_FWL_State"
    ],
-   "sha256": "c6b480d6a097d5eabe62dfb8cbca21d430f54654f5376e45ce80f4a9ff3fb60e",
+   "sha256": "3de8583c9703374935eaf926f4ae28a7032ce161c60785043206f1b49f53bea7",
    "sockets": [
     {
      "name": "Target_Anchor_Center",
      "position_cm": [
       0.0,
       0.0,
-      8.0
+      14.0
      ],
-     "purpose": "capture / protocol targeting anchor at the bowl centre",
+     "purpose": "capture / protocol targeting anchor at the dais centre",
      "yaw_deg": 0.0
     },
     {
@@ -277,205 +482,433 @@
      "position_cm": [
       0.0,
       0.0,
-      52.0
+      14.2
      ],
-     "purpose": "Harvest amber climb, Preserve pulse and Reshape trace effects originate here",
+     "purpose": "Harvest amber climb, Preserve pulse and Reshape trace effects originate at the shard base",
      "yaw_deg": 0.0
     },
     {
-     "name": "Petal_01",
+     "name": "Spire_Hinge",
      "position_cm": [
-      18.700000000000003,
       0.0,
-      8.0
+      0.0,
+      14.2
      ],
-     "purpose": "spire petal hinge; folds outward-down on Harvest commit (part pose)",
+     "purpose": "shard part origin (base centre); Harvest commit pitches the part +24 deg about the socket Y axis and sinks it 224 cm (part pose)",
      "yaw_deg": 0.0
-    },
-    {
-     "name": "Petal_02",
-     "position_cm": [
-      1.1450447572027754e-15,
-      18.700000000000003,
-      8.0
-     ],
-     "purpose": "spire petal hinge; folds outward-down on Harvest commit (part pose)",
-     "yaw_deg": 90.0
-    },
-    {
-     "name": "Petal_03",
-     "position_cm": [
-      -18.700000000000003,
-      2.290089514405551e-15,
-      8.0
-     ],
-     "purpose": "spire petal hinge; folds outward-down on Harvest commit (part pose)",
-     "yaw_deg": 180.0
-    },
-    {
-     "name": "Petal_04",
-     "position_cm": [
-      -3.435134271608326e-15,
-      -18.700000000000003,
-      8.0
-     ],
-     "purpose": "spire petal hinge; folds outward-down on Harvest commit (part pose)",
-     "yaw_deg": 270.0
     },
     {
      "name": "Reshape_Trace_End",
      "position_cm": [
-      330.0,
+      600.0,
       0.0,
-      5.0
+      4.0
      ],
-     "purpose": "where the map-authored temporary feature's own effect continues",
+     "purpose": "where the map-authored temporary crossing's own effect continues",
      "yaw_deg": 0.0
+    },
+    {
+     "name": "Wall_Gap_01",
+     "position_cm": [
+      430.0,
+      0.0,
+      0.0
+     ],
+     "purpose": "centre of the 176 cm wall gap facing 0 deg; units enter the courtyard here",
+     "yaw_deg": 0.0
+    },
+    {
+     "name": "Wall_Gap_02",
+     "position_cm": [
+      2.6329906181668095e-14,
+      430.0,
+      0.0
+     ],
+     "purpose": "centre of the 150 cm wall gap facing 90 deg; units enter the courtyard here",
+     "yaw_deg": 90.0
+    },
+    {
+     "name": "Wall_Gap_03",
+     "position_cm": [
+      -430.0,
+      5.265981236333619e-14,
+      0.0
+     ],
+     "purpose": "centre of the 150 cm wall gap facing 180 deg; units enter the courtyard here",
+     "yaw_deg": 180.0
+    },
+    {
+     "name": "Wall_Gap_04",
+     "position_cm": [
+      -7.898971854500427e-14,
+      -430.0,
+      0.0
+     ],
+     "purpose": "centre of the 150 cm wall gap facing 270 deg; units enter the courtyard here",
+     "yaw_deg": 270.0
     }
    ],
-   "triangles": 566
+   "triangles": 1018
   },
   {
    "lod": 1,
    "mesh": "SM_EBS_FWL_SYS_001",
    "path": "export/SM_EBS_FWL_SYS_001_LOD1.obj",
-   "sha256": "2a465399eebf2f792669238807c93a4c561de9f2decc13a8b65ede07bc97dd3f"
+   "sha256": "5bb45cda8dba044a47257dbffb544675ff2f15c4d3fc8a6de88b8c5cdcf327a6"
   },
   {
    "bounds_cm": [
     [
-     -18.700000000000003,
-     -34.0,
+     -74.36591758028312,
+     -78.2799132424033,
      0.0
     ],
     [
-     0.0,
-     34.0,
-     172.0
+     71.234721050587,
+     78.2799132424033,
+     220.0
     ]
    ],
    "by_slot": {
-    "MI_EBS_FWL_State": 12,
-    "MI_EBS_FWL_Vitrified": 6
+    "MI_EBS_FWL_State": 32,
+    "MI_EBS_FWL_Vitrified": 14
    },
    "collision_boxes": [],
    "lod": 1,
-   "mesh": "SM_EBS_FWL_SYS_001_Petal",
-   "path": "export/SM_EBS_FWL_SYS_001_Petal_LOD1.glb",
+   "mesh": "SM_EBS_FWL_SYS_001_Spire",
+   "path": "export/SM_EBS_FWL_SYS_001_Spire_LOD1.glb",
    "section_slot_names": [
     "MI_EBS_FWL_Vitrified",
     "MI_EBS_FWL_State"
    ],
-   "sha256": "37579c15d7bf8beed6c93ae25acec003751ab28e71f5ed10e6905ffda5710a2e",
+   "sha256": "9dfa02d639501d53f3ecd26cc2560ef773b7e599454ca097d8acf9dde73e55f0",
    "sockets": [],
-   "triangles": 18
+   "triangles": 46
   },
   {
    "lod": 1,
-   "mesh": "SM_EBS_FWL_SYS_001_Petal",
-   "path": "export/SM_EBS_FWL_SYS_001_Petal_LOD1.obj",
-   "sha256": "6b8e9d0ee5f5cd0c3cb3ea5308585e80ff077cf67d2e387e40046f9ecd298ac6"
+   "mesh": "SM_EBS_FWL_SYS_001_Spire",
+   "path": "export/SM_EBS_FWL_SYS_001_Spire_LOD1.obj",
+   "sha256": "ea5f8cd2eefd0a46a41963d378576d9875427a1fa955a37c826aefe40c2e53aa"
+  },
+  {
+   "bounds_cm": [
+    [
+     -443.54793105886773,
+     -443.54793105886773,
+     0.0
+    ],
+    [
+     441.1264067025359,
+     443.54793105886773,
+     195.0
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_FWL_Basalt": 432
+   },
+   "collision_boxes": [],
+   "lod": 1,
+   "mesh": "SM_EBS_FWL_SYS_001_Wall",
+   "path": "export/SM_EBS_FWL_SYS_001_Wall_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_FWL_Basalt"
+   ],
+   "sha256": "a25bced9ca8002298157c91eec26ec69cce6c3bda52b3c7fdf338adee7019698",
+   "sockets": [],
+   "triangles": 432
+  },
+  {
+   "lod": 1,
+   "mesh": "SM_EBS_FWL_SYS_001_Wall",
+   "path": "export/SM_EBS_FWL_SYS_001_Wall_LOD1.obj",
+   "sha256": "473d21cfbb3cb47cb31e31be25c6a92165107a48116e6010eb101a34a3942610"
   }
  ],
  "package_id": "EBS-PKG-EBS-FAM-FWL-001",
+ "parts": [
+  "SM_EBS_FWL_SYS_001",
+  "SM_EBS_FWL_SYS_001_Spire",
+  "SM_EBS_FWL_SYS_001_Wall"
+ ],
  "planned_unreal_folder": "/Game/Echoes/Production/FWL/SYS/EBS_FWL_SYS_001/",
+ "pose_amounts": {
+  "all_channels": 0.0,
+  "dormant": 0.0,
+  "harvest_commit": 0.85,
+  "harvest_fold_mid": 0.5,
+  "harvest_telegraph": 0.0,
+  "preserve": 0.0,
+  "reshape": 0.0,
+  "spent": 1.0
+ },
  "production_asset_id": "EBS-FWL-SYS-001",
  "review_assemblies": [
   {
    "bounds_cm": [
     [
-     -300.0,
-     -300.0,
+     -579.2214327211925,
+     -607.0743970294902,
      0.0
     ],
     [
-     330.0,
-     300.0,
-     180.0
+     680.4308021106242,
+     572.1108145877275,
+     234.2
     ]
    ],
    "lod": 0,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-FWL-SYS-001/review/SM_EBS_FWL_SYS_001_assembly_dormant_LOD0.obj",
-   "sha256": "ac35fd8d5ecf582d4ae46bb0d4a50a2b2360b19bf662db2e387edbfc51f5ca0e",
+   "pose_amount": 0.0,
+   "review_slots": [
+    "MI_EBS_FWL_Basalt",
+    "MI_EBS_FWL_Vitrified",
+    "MI_EBS_FWL_State",
+    "MI_EBS_FWL_State_Hidden"
+   ],
+   "sha256": "9c182a09ec8eb49257fb4ac589c684d932ff367039cea71f14edc8a1ab8761ef",
    "state": "dormant",
-   "triangles": 986
+   "triangles": 2904
   },
   {
    "bounds_cm": [
     [
-     -300.0,
-     -300.0,
-     -71.07154550294241
+     -579.2214327211925,
+     -607.0743970294902,
+     0.0
     ],
     [
-     330.0,
-     300.0,
-     95.36692547175761
+     680.4308021106242,
+     572.1108145877275,
+     234.2
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-FWL-SYS-001/review/SM_EBS_FWL_SYS_001_assembly_harvest_telegraph_LOD0.obj",
+   "pose_amount": 0.0,
+   "review_slots": [
+    "MI_EBS_FWL_Basalt",
+    "MI_EBS_FWL_Vitrified",
+    "MI_EBS_FWL_State",
+    "MI_EBS_FWL_State_Hidden"
+   ],
+   "sha256": "fc57c7b46700e7ddf932ba7eee400e3baa35a458e3fb6c3728d0e99f8ecf51a4",
+   "state": "harvest_telegraph",
+   "triangles": 2904
+  },
+  {
+   "bounds_cm": [
+    [
+     -579.2214327211925,
+     -607.0743970294902,
+     -113.2615436633308
+    ],
+    [
+     680.4308021106242,
+     572.1108145877275,
+     195.0
     ]
    ],
    "lod": 0,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-FWL-SYS-001/review/SM_EBS_FWL_SYS_001_assembly_harvest_fold_mid_LOD0.obj",
-   "sha256": "f25e8beaaa074fdf52fd873090e9828f302547f1376492002642950f7c76e93a",
+   "pose_amount": 0.5,
+   "review_slots": [
+    "MI_EBS_FWL_Basalt",
+    "MI_EBS_FWL_Vitrified",
+    "MI_EBS_FWL_State",
+    "MI_EBS_FWL_State_Hidden"
+   ],
+   "sha256": "8a5e6b2ba49f3ef8eba7ce4e5872c0c18fe90252ce393ad821ac737034e1ec6d",
    "state": "harvest_fold_mid",
-   "triangles": 986
+   "triangles": 2904
   },
   {
    "bounds_cm": [
     [
-     -300.0,
-     -300.0,
-     -149.90120640168655
+     -579.2214327211925,
+     -607.0743970294902,
+     -202.12188014192466
     ],
     [
-     330.0,
-     300.0,
-     76.0
+     680.4308021106242,
+     572.1108145877275,
+     195.0
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-FWL-SYS-001/review/SM_EBS_FWL_SYS_001_assembly_harvest_commit_LOD0.obj",
+   "pose_amount": 0.85,
+   "review_slots": [
+    "MI_EBS_FWL_Basalt",
+    "MI_EBS_FWL_Vitrified",
+    "MI_EBS_FWL_State",
+    "MI_EBS_FWL_State_Hidden"
+   ],
+   "sha256": "d7d243050c608e2af252cdcb55e635b61635adaadbc55fbee38bf7c20e616da8",
+   "state": "harvest_commit",
+   "triangles": 2904
+  },
+  {
+   "bounds_cm": [
+    [
+     -579.2214327211925,
+     -607.0743970294902,
+     -240.047343675856
+    ],
+    [
+     680.4308021106242,
+     572.1108145877275,
+     195.0
     ]
    ],
    "lod": 0,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-FWL-SYS-001/review/SM_EBS_FWL_SYS_001_assembly_spent_LOD0.obj",
-   "sha256": "dcce21388f0d61ef5c8e6d9d20d5d806ea6de3e4195578628759291fed7820cb",
+   "pose_amount": 1.0,
+   "review_slots": [
+    "MI_EBS_FWL_Basalt",
+    "MI_EBS_FWL_Vitrified",
+    "MI_EBS_FWL_State",
+    "MI_EBS_FWL_State_Off",
+    "MI_EBS_FWL_State_Hidden"
+   ],
+   "sha256": "6f2994a688cf5676d95159b65dfd2451925a46b2269ad4c0a0fc88ced9a77046",
    "state": "spent",
-   "triangles": 986
+   "triangles": 2904
   },
   {
    "bounds_cm": [
     [
-     -300.0,
-     -300.0,
+     -579.2214327211925,
+     -607.0743970294902,
      0.0
     ],
     [
-     330.0,
-     300.0,
-     180.0
+     680.4308021106242,
+     572.1108145877275,
+     234.2
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-FWL-SYS-001/review/SM_EBS_FWL_SYS_001_assembly_preserve_LOD0.obj",
+   "pose_amount": 0.0,
+   "review_slots": [
+    "MI_EBS_FWL_Basalt",
+    "MI_EBS_FWL_Vitrified",
+    "MI_EBS_FWL_State",
+    "MI_EBS_FWL_State_Off",
+    "MI_EBS_FWL_State_Hidden"
+   ],
+   "sha256": "c2fefdade83f921069d7f9737fde188a407c81000f3bb4f6ed4ea1367f0b8b69",
+   "state": "preserve",
+   "triangles": 2904
+  },
+  {
+   "bounds_cm": [
+    [
+     -579.2214327211925,
+     -607.0743970294902,
+     0.0
+    ],
+    [
+     680.4308021106242,
+     572.1108145877275,
+     234.2
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-FWL-SYS-001/review/SM_EBS_FWL_SYS_001_assembly_reshape_LOD0.obj",
+   "pose_amount": 0.0,
+   "review_slots": [
+    "MI_EBS_FWL_Basalt",
+    "MI_EBS_FWL_Vitrified",
+    "MI_EBS_FWL_State",
+    "MI_EBS_FWL_State_Off",
+    "MI_EBS_FWL_State_Hidden"
+   ],
+   "sha256": "922018fbc9afe7427b16e4ba21d6d43349ab00b5a5ced43fb0c438ff614380be",
+   "state": "reshape",
+   "triangles": 2904
+  },
+  {
+   "bounds_cm": [
+    [
+     -579.2214327211925,
+     -607.0743970294902,
+     0.0
+    ],
+    [
+     680.4308021106242,
+     572.1108145877275,
+     234.2
+    ]
+   ],
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-FWL-SYS-001/review/SM_EBS_FWL_SYS_001_assembly_all_channels_LOD0.obj",
+   "pose_amount": 0.0,
+   "review_slots": [
+    "MI_EBS_FWL_Basalt",
+    "MI_EBS_FWL_Vitrified",
+    "MI_EBS_FWL_State"
+   ],
+   "sha256": "138ddf919e05875c9a1607dfbe498f8c2ea8c4ce73f7e287cf033ca91adc092f",
+   "state": "all_channels",
+   "triangles": 2904
+  },
+  {
+   "bounds_cm": [
+    [
+     -554.8729862642272,
+     -599.3933226028685,
+     0.0
+    ],
+    [
+     680.4308021106242,
+     564.2961849562448,
+     234.2
     ]
    ],
    "lod": 1,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-FWL-SYS-001/review/SM_EBS_FWL_SYS_001_assembly_dormant_LOD1.obj",
-   "sha256": "f43d972e816bd7b9a19394c69369b1598888ad996671cecc5d9dcb0a8df6f16f",
+   "pose_amount": 0.0,
+   "review_slots": [
+    "MI_EBS_FWL_Basalt",
+    "MI_EBS_FWL_Vitrified",
+    "MI_EBS_FWL_State",
+    "MI_EBS_FWL_State_Hidden"
+   ],
+   "sha256": "5a46ad1e97a2a4284d6096422a978c4760f9b96b5305735e7d9108042725e02e",
    "state": "dormant",
-   "triangles": 638
+   "triangles": 1496
   }
  ],
- "revision": "ebs-fwl-sys-001-blockout-v1",
+ "review_only_slots": {
+  "MI_EBS_FWL_State_Hidden": "light-only channels (preserve_ring, reshape_trace) a state does not light (coloured as the basalt: nothing shows)",
+  "MI_EBS_FWL_State_Off": "seam channels a state does not light (dark fracture lines)"
+ },
+ "revision": "ebs-fwl-sys-001-concept-v3",
  "scale_basis": {
-  "apron_radius_cm": 300.0,
-  "apron_relief_cm": 16.0,
-  "apron_rule": "REL-ART-016 / REL-ART-030: passable dressing <= 20 cm and not reading impassable",
+  "apron_radius_cm_max": 610.29,
+  "assembled_reach_x_cm": 680.4308021106242,
   "capture_radius_cm_presentation": 840.0,
+  "concept_S_cm": 220.0,
   "footprint_cm": [
    200.0,
    200.0
   ],
+  "footprint_conflict": "The 450 cm wall ring lies outside the one-tile blocking footprint and reads impassable; recorded as an OWNER-QUESTION in README section 8 (not resolved here). The wall part carries no collision. Everything (apron, tongue, trace end) stays inside the 840 cm capture radius.",
   "footprint_tiles": [
    1,
    1
   ],
   "impassable_mass_max_radius_cm": 98.0,
   "scar_radius_cm_presentation": 1200.0,
-  "source": "Source/EchoesSimCore/Private/Simulation.cpp: FutureWell footprintHalfExtentRaw = kFixedScale/2; kFutureWellCaptureRadiusRaw = 21*kFixedScale/5; kFutureWellScarRadiusRaw = 6*kFixedScale; presentation TileWorldSize 200",
-  "status": "PROVISIONAL BLOCKOUT ESTIMATE; the current runtime shrinks its 280 cm-radius placeholder dais by 0.35 to fit the same one-tile footprint"
+  "simulation_source": "Source/EchoesSimCore/Private/Simulation.cpp: FutureWell footprintHalfExtentRaw = kFixedScale/2; kFutureWellCaptureRadiusRaw = 21*kFixedScale/5; kFutureWellScarRadiusRaw = 6*kFixedScale; presentation TileWorldSize 200",
+  "source_concept": "concept-fidelity.md (amended concept-v3) and the candidate pixels: Dormant/Preserve panels wall outer radius 2.0-2.4 S (2.05 S built), low wall ~0.3 S, one dominant back peak ~0.85-0.95 S over stubs ~0.55-0.65 S, shard base ~0.63 S, Preserve ring at 0.90 R_out, apron ~1.3 R_out with a +X tongue ~1.4-1.5 R_out",
+  "status": "CONCEPT-V3 BLOCKOUT; dimensions follow concept-fidelity.md as amended by the pixel measurement",
+  "superseded_estimate": "concept-fidelity.md's earlier 1.6-1.8 S / 360 cm wall radius (concept-v1/v2 built 360 = 1.64 S); superseded by the pixel measurement, recorded in the fidelity file and README section 8",
+  "walkable_relief_cm": 17.0,
+  "walkable_rule": "REL-ART-016 / REL-ART-030: passable dressing <= 20 cm and not reading impassable",
+  "wall_outer_radius_cm": 450.0
  },
  "source_bindings": {
   "amendment": "gap-decisions.json#/master_amendments FWL-HARVEST (PREPARED_NOT_APPLIED)",
@@ -492,6 +925,24 @@
   "candidate_image": {
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/future-well-candidate.png",
    "sha256": "b16e84cb4465c3c3cee46a71fb4b661256c0bdcbb9a030994fd7d7262ed60ba7"
+  },
+  "composition_reference": {
+   "path": "Project/site/assets/concepts/target-render-vertical-slice.jpg",
+   "region": [
+    0.37,
+    0.29,
+    0.63,
+    0.68
+   ],
+   "role": "composition only"
+  },
+  "concept_fidelity": {
+   "amended": "concept-v3: Scale section (wall radius 2.0-2.2 S / 450 cm) and item 1 (one dominant peak)",
+   "path": "ArtSource/EBS-FWL-SYS-001/concept-fidelity.md"
+  },
+  "concept_sheet": {
+   "path": "Project/site/assets/concepts/future-well-states.png",
+   "regions": "TL Dormant, TR Harvest (material and courtyard read)"
   },
   "gameplay_record": {
    "path": "Content/Data/Source/future_wells.json",
@@ -513,19 +964,19 @@
    "path": "Docs/VisualAssetPipeline/motion/storyboards/EBS-PKG-EBS-FAM-FWL-001-GAP-01.svg"
   }
  },
- "stage": "BLOCKOUT",
- "stage_boundary": "Editable source geometry, petal part and state-presentation plan with review views; no textures, no import, no gate acceptance, no owner acceptance.",
+ "stage": "BLOCKOUT (concept-v3)",
+ "stage_boundary": "Editable source geometry (main, shard part, collision-less wall part), state-presentation plan and review views built to the concept-fidelity target; no textures, no import, no gate acceptance, no owner acceptance.",
  "state_presentations": [
   {
    "authority": "wellChoice == Dormant",
-   "colour": "quiet magenta/amber fracture",
-   "extra": "doubled-shadow decal (Crownfall dual key/fill), reduced motion: static",
-   "petals": "up",
+   "colour": "quiet magenta/amber fracture, low glow (held potential)",
+   "extra": "doubled-outline/shadow cue is a lighting/decal task (Crownfall dual key/fill); reduced motion: static",
+   "spire": "standing",
    "state_mask": {
-    "petal_seam": 0.15,
     "preserve_ring": 0.0,
     "reshape_trace": 0.0,
-    "veins": 0.25
+    "seams": 0.25,
+    "spire_seam": 0.15
    },
    "track": "dormant"
   },
@@ -533,10 +984,10 @@
    "authority": "harvest telegraph progress",
    "colour": "broken-sun amber",
    "extra": "amber climb VFX at State_VFX_Origin; public siren/ping are simulation-owned",
-   "petals": "up",
+   "spire": "standing",
    "state_mask": {
-    "petal_seam": "ramps 0.15 -> 1.0 over the authoritative 180-tick telegraph progress",
-    "veins": 0.4
+    "seams": 0.4,
+    "spire_seam": "ramps 0.15 -> 1.0 up the shard edges over the authoritative 180-tick telegraph progress"
    },
    "track": "harvest_telegraph"
   },
@@ -544,9 +995,9 @@
    "authority": "control broken before tick 180",
    "colour": "dormant",
    "extra": "no payout cue",
-   "petals": "up",
+   "spire": "standing",
    "state_mask": {
-    "petal_seam": "returns to dormant without a spent pose or success cue"
+    "spire_seam": "returns to dormant without a spent pose or success cue"
    },
    "track": "harvest_cancel"
   },
@@ -554,17 +1005,17 @@
    "authority": "harvest committed",
    "colour": "amber cut to dark",
    "extra": "light and harmonic cut hard on commit (book 246)",
-   "petals": "tilt inward 0 -> 28 deg and sink 150 cm over ~20 ticks",
+   "spire": "tilts 0 -> 24 deg about Spire_Hinge and sinks 224 cm into the dais over ~20 ticks",
    "state_mask": {
-    "petal_seam": "1.0 then hard cut to 0"
+    "spire_seam": "1.0 then hard cut to 0"
    },
    "track": "harvest_commit"
   },
   {
    "authority": "permanent_state == collapsed",
    "colour": "dark cracked charcoal",
-   "extra": "permanent; scar radius 6 tiles is terrain-owned; Well non-interactive",
-   "petals": "sunk into the bowl; only the tips break the floor",
+   "extra": "permanent; scar radius 6 tiles is terrain-owned; Well non-interactive; nothing rises above the wall",
+   "spire": "gone below the paving (part fully sunk; the round recessed vitrified socket with its dark veins remains as the cracked bowl centre)",
    "state_mask": {
     "all": 0.0
    },
@@ -573,11 +1024,11 @@
   {
    "authority": "wellChoice == Preserve and controlled",
    "colour": "cyan custody",
-   "extra": "1,400 cm intelligence radius is simulation-owned; ring carries no gameplay radius",
-   "petals": "up",
+   "extra": "flat ring on the paving inside the wall; 1,400 cm intelligence radius is simulation-owned; ring carries no gameplay radius",
+   "spire": "standing",
    "state_mask": {
-    "petal_seam": 0.3,
-    "preserve_ring": "1.0 with a slow custody pulse"
+    "preserve_ring": "1.0 with a slow custody pulse",
+    "spire_seam": 0.3
    },
    "track": "preserve_hold"
   },
@@ -585,7 +1036,7 @@
    "authority": "control lost",
    "colour": "ring dark",
    "extra": "ownership transfer routes benefits authoritatively",
-   "petals": "up",
+   "spire": "standing",
    "state_mask": {
     "preserve_ring": "0.0"
    },
@@ -594,8 +1045,8 @@
   {
    "authority": "reshape telegraph progress",
    "colour": "magenta fracture",
-   "extra": "trace rung marks fill toward Reshape_Trace_End",
-   "petals": "up",
+   "extra": "the trace mask fills from the dais through Wall_Gap_01 toward Reshape_Trace_End (rung marks are a mask/texture feature, not geometry; the trace is flush and invisible at mask 0)",
+   "spire": "standing",
    "state_mask": {
     "reshape_trace": "ramps 0 -> 1.0 over the 180-tick telegraph"
    },
@@ -605,7 +1056,7 @@
    "authority": "telegraph interrupted",
    "colour": "dormant",
    "extra": "",
-   "petals": "up",
+   "spire": "standing",
    "state_mask": {
     "reshape_trace": "returns to 0"
    },
@@ -614,8 +1065,8 @@
   {
    "authority": "reshape manifest active (1,800 ticks)",
    "colour": "magenta",
-   "extra": "the temporary feature itself is a separate map-authored asset",
-   "petals": "up",
+   "extra": "the temporary crossing itself is a separate map-authored asset beyond Reshape_Trace_End",
+   "spire": "standing",
    "state_mask": {
     "reshape_trace": 1.0
    },
@@ -625,7 +1076,7 @@
    "authority": "expiry warning window",
    "colour": "magenta",
    "extra": "expiry warning is simulation-owned; reduced flashing holds steady",
-   "petals": "up",
+   "spire": "standing",
    "state_mask": {
     "reshape_trace": "slow warning cadence (no rapid flash)"
    },
@@ -635,7 +1086,7 @@
    "authority": "manifest expired",
    "colour": "dormant",
    "extra": "authored fallback displacement is simulation-owned",
-   "petals": "up",
+   "spire": "standing",
    "state_mask": {
     "reshape_trace": 0.0
    },
@@ -645,7 +1096,7 @@
    "authority": "load / replay",
    "colour": "per state",
    "extra": "reconstruct from saved state; never replay payout, collapse or terrain creation",
-   "petals": "per current state",
+   "spire": "per current state",
    "state_mask": {
     "all": "per current state"
    },
@@ -653,13 +1104,15 @@
   }
  ],
  "tools": {
-  "builder_sha256": "e938a22d5ada787c1cce7f570384235e35854da1eb3b074ca8edff36d2fe6ba2",
+  "builder_sha256": "757eb093bc39560a363443c060eeee032344597d2e4c9aa265e0164a5d39309e",
   "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
   "python": "3.14.7"
  },
  "units": {
   "authored": "centimeters",
   "axes": "+X forward (Reshape trace direction), +Y right, +Z up",
-  "pivot": "ground-contact centre of the one-tile footprint"
+  "import_policy": "Nanite off on every part; LOD0/LOD1 authored (no auto LOD); UBX collision from the main part only",
+  "nanite": false,
+  "pivot": "ground-contact centre of the one-tile footprint (dais centre)"
  }
 }

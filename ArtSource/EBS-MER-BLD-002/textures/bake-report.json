@@ -5,148 +5,148 @@
   "tool_revision": "ebs-texbake-v1",
   "tool_sha256": "70449e3335dcff2aa04314a5789350e724b537b218686372b63de0977da15be5",
   "manifest": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/ArtSource/EBS-MER-BLD-002/bake-manifest.json",
-  "manifest_sha256": "39acc14972b79b8c2c90446ab9333add5755179afe75466f8445a186e60db325",
+  "manifest_sha256": "0ab1d77899954a91da28b8585c995828592c0d7a01946fb981ebd9269a4cfd08",
   "production_asset_id": "EBS-MER-BLD-002",
-  "manifest_revision": "ebs-mer-bld-002-blockout-v3",
+  "manifest_revision": "ebs-mer-bld-002-concept-v3",
   "kit_revision": "ebs-meshkit-v3",
   "size": 1024,
   "maps": {
     "basecolor": {
       "file": "T_EBS_MER_BLD_002_BaseColor.png",
-      "bytes": 401072,
-      "sha256": "90aa4d00fd8f034f41ca06025ac3387648cb2c643c082d2bd3a7df8f39183fec",
+      "bytes": 511347,
+      "sha256": "639d0cece6a0519de8c471f360ee236ad186befc8bd990e6c52adb3722cd4b54",
       "channels": {
         "R": {
           "min": 0,
-          "mean": 132.846,
+          "mean": 119.578,
           "max": 248
         },
         "G": {
           "min": 0,
-          "mean": 135.615,
+          "mean": 122.367,
           "max": 248
         },
         "B": {
           "min": 0,
-          "mean": 136.674,
+          "mean": 123.637,
           "max": 250
         }
       }
     },
     "normal": {
       "file": "T_EBS_MER_BLD_002_Normal.png",
-      "bytes": 494958,
-      "sha256": "b84db5fd7a240cd9075bd04d30800b9d06ab1ce387d6fd4bda80fdff2adf8e7f",
+      "bytes": 586373,
+      "sha256": "90f3c81036c9361724fd4599eb408f8739f8a701e4e7b7cac19659c2b89e6e94",
       "channels": {
         "R": {
-          "min": 14,
-          "mean": 127.793,
-          "max": 239
+          "min": 19,
+          "mean": 127.483,
+          "max": 238
         },
         "G": {
-          "min": 15,
-          "mean": 127.76,
+          "min": 18,
+          "mean": 127.644,
           "max": 239
         },
         "B": {
-          "min": 186,
-          "mean": 249.209,
+          "min": 189,
+          "mean": 249.458,
           "max": 255
         }
       }
     },
     "mre": {
       "file": "T_EBS_MER_BLD_002_MRE.png",
-      "bytes": 336753,
-      "sha256": "69891b5e1237304eeb0a5665ea3112ec025c48cdeb5af01ab19bb71cb5d0fa61",
+      "bytes": 412482,
+      "sha256": "e51fe0b6606fac3268af5c96945d2487488ac48589386e26df3890c7451c5306",
       "channels": {
         "R": {
           "min": 0,
-          "mean": 104.479,
+          "mean": 131.022,
           "max": 217
         },
         "G": {
           "min": 77,
-          "mean": 155.427,
+          "mean": 144.295,
           "max": 255
         },
         "B": {
           "min": 0,
-          "mean": 3.978,
+          "mean": 3.625,
           "max": 255
         }
       }
     },
     "statemask": {
       "file": "T_EBS_MER_BLD_002_StateMask.png",
-      "bytes": 4949,
-      "sha256": "07a818c1f06a5fb0b3c7b1bc1e3b5defae8e31264c0798bffa946f499739e58b",
+      "bytes": 4863,
+      "sha256": "0c0906ffde4003049a3318db169f48ae02eaa6f55004ca9da3ea6f699cdc8cfa",
       "channels": {
         "R": {
           "min": 0,
-          "mean": 1.761,
-          "max": 255
+          "mean": 0.913,
+          "max": 128
         },
         "G": {
           "min": 0,
-          "mean": 0.65,
+          "mean": 0.686,
           "max": 255
         },
         "B": {
           "min": 0,
-          "mean": 3.187,
+          "mean": 8.902,
           "max": 255
         }
       }
     },
     "debug": {
       "file": "T_EBS_MER_BLD_002_AtlasDebug.png",
-      "bytes": 29658,
-      "sha256": "39b78dcb615be4f3ff1c4de806b93f567c580d8a791d11d056d8be1cf14836b9",
+      "bytes": 34288,
+      "sha256": "b7f124043bbe200cc84d9211f82f2b8415001f238270e6da35e85bfaa7f4027a",
       "channels": {
         "R": {
           "min": 24,
-          "mean": 80.214,
+          "mean": 95.012,
           "max": 255
         },
         "G": {
           "min": 24,
-          "mean": 82.556,
+          "mean": 99.224,
           "max": 255
         },
         "B": {
           "min": 28,
-          "mean": 83.65,
+          "mean": 100.081,
           "max": 255
         }
       }
     }
   },
   "coverage": {
-    "polygon_fraction": 0.495496,
-    "painted_fraction": 0.683048,
-    "polygon_pixels": 519565,
-    "gutter_pixels": 196663,
-    "manifest_used_fraction": 0.4601
+    "polygon_fraction": 0.71431,
+    "painted_fraction": 0.845799,
+    "polygon_pixels": 749008,
+    "gutter_pixels": 137877,
+    "manifest_used_fraction": 0.7007
   },
-  "charts_total": 722,
+  "charts_total": 495,
   "rule_counts": {
-    "bottom_wear": 342,
-    "collar_segment": 48,
-    "conduit_pulse": 6,
-    "coupling_indicator": 12,
-    "family:ceramic_civic": 147,
-    "family:compact_metal": 509,
-    "family:status_emissive": 66,
+    "bottom_wear": 207,
+    "collar_segment": 20,
+    "conduit_pulse": 5,
+    "coupling_indicator": 10,
+    "family:ceramic_civic": 139,
+    "family:compact_metal": 321,
+    "family:status_emissive": 35,
     "panel_label_numerals": 1,
     "panel_plate_edge_wear": 6,
     "panel_plate_grid": 1,
-    "team_band": 43
+    "team_band": 10
   },
   "charts_unmatched": [],
   "charts_skipped": [],
-  "elapsed_seconds": 15.9,
-  "bake_seconds": 15.9,
+  "elapsed_seconds": 16.8,
+  "bake_seconds": 16.8,
   "conventions": {
     "basecolor": "sRGB-encoded",
     "normal": "tangent-space, DirectX/Unreal (+G = tilt toward +v_dir, image down); flat = (128,128,255)",

@@ -52,6 +52,12 @@
      "date": "2026-09-06",
      "evidence": "ArtSource/EBS-MER-BLD-002/textures/ (bake-report.json) and the package README §4.2/§6.3",
      "result": "Five 1024^2 maps (BaseColor, Normal DirectX green-down, MRE, StateMask, AtlasDebug) baked from the v3 atlas by ebs_texbake.py, 722/722 charts painted, deterministic, independently verified against the bake manifest (no blocking or major defects; eight minor defects recorded for the ART_ALPHA bake). Not yet: Material instances, in-engine textured capture, 2048^2 stack, gate reviews, owner acceptance."
+    },
+    {
+     "stage": "BLOCKOUT (concept rework, ebs-mer-bld-002-concept-v3)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-BLD-002/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Concept rework to the candidate proportions: octagonal tower 780 cm at W 200 (3.9 W, measured on the candidate pixels), single load collar at 0.72 H, four near-square numbered panels, two-step plinth with outboard couplings, Ø 0.16 W segmented conduit stubs; re-baked 1024^2 maps on the new atlas; 42 tests; comparison sheets 01-09 against concepts A/B and the candidate; two independent verification lenses (fidelity, rules) and a fix pass; headless import run 10: 3 meshes, all checks pass. Not yet: Hanging-conduit part (OWNER-QUESTION OQ-2), owner ruling on the pixel-measured proportion amendment (OQ-1), textures rebake at 2048^2, in-engine capture, gates, owner acceptance."
     }
    ],
    "gates": {
@@ -60,14 +66,16 @@
     "technical": "NOT_EVALUATED"
    },
    "owner_acceptance": "NOT_ACCEPTED",
-   "next": "Material-instance definitions against the existing master materials and an in-engine textured capture (needs an exclusive editor run), state presentation plan review; ART_ALPHA requires those, the 2048^2 rebake with the recorded minor bake defects fixed, and owner direction on the slenderness question."
+   "next": "Hanging-conduit part (OWNER-QUESTION OQ-2), owner ruling on the pixel-measured proportion amendment (OQ-1), textures rebake at 2048^2, in-engine capture, gates, owner acceptance.",
+   "concept_fidelity_target": "ArtSource/EBS-MER-BLD-002/concept-fidelity.md",
+   "current_revision": "ebs-mer-bld-002-concept-v3"
   },
   {
    "package_id": "EBS-PKG-MC-SURVEYOR",
    "production_asset_id": "EBS-MER-UNT-001",
    "subject": "Surveyor",
    "production_maturity": "BLOCKOUT",
-   "next": "textures (2048² stack per REL-FAC-025), emissive-share measurement, in-engine playback capture, gate reviews",
+   "next": "Gather/deliver upper-arm angles cannot reach the reference panels with the concept arm lengths (deviation README 8.3), compatibility parts vs the runtime M01 rig constants (README 8), textures, emissive measurement, in-engine playback, gates.",
    "asset_name": "SK_EBS_MER_UNT_001",
    "planned_unreal_folder": "/Game/Echoes/Production/MER/UNT/EBS_MER_UNT_001/",
    "canon_status": "CANDIDATE (KEEP direction under delegation; not owner acceptance)",
@@ -89,6 +97,12 @@
      "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-001/",
      "what_exists": "v2 clip pass (planted-feet leans, cradle-presenting deliver dip, backward-settle collapse; no vertex below -1 cm in any clip at 20 ms sampling), skinned GLB export (1 skin, 12 joints, 13 clips, sockets under joints), headless skeletal import run 2 with the idempotent inspector (import/skeletal-report-run2.json: 0 errors, 13 AnimSequences per mesh, sockets and reference pose as authored), posed review stills and renders for twelve clip samples (renders/pose_*), 14 structural tests.",
      "what_does_not_exist": "Textures, emissive-share measurement, in-engine playback capture, gate reviews, owner acceptance."
+    },
+    {
+     "stage": "BLOCKOUT (concept rework, ebs-mer-unt-001-concept-v3)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-001/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Concept rework to the knuckle-walker: torso on top pitched forward with the lens and status band, long arms to the ground (drill right, gripper left), near-vertical column legs at the rear, three upright canisters hung on the rear-right, simplified mast rear-left; clips re-solved on the new proportions (19 tests incl. ground contact); comparison sheets against the concept and the derived reference (rest, rear, gather, deliver, death); two verification lenses and a fix pass; headless skeletal import run 3: 12 bones, 3 sockets, 13 clips per mesh, 0 errors. Not yet: Gather/deliver upper-arm angles cannot reach the reference panels with the concept arm lengths (deviation README 8.3), compatibility parts vs the runtime M01 rig constants (README 8), textures, emissive measurement, in-engine playback, gates."
     }
    ],
    "gates": {
@@ -96,14 +110,16 @@
     "gameplay": "NOT_EVALUATED",
     "technical": "NOT_EVALUATED"
    },
-   "owner_acceptance": "NOT_ACCEPTED"
+   "owner_acceptance": "NOT_ACCEPTED",
+   "concept_fidelity_target": "ArtSource/EBS-MER-UNT-001/concept-fidelity.md",
+   "current_revision": "ebs-mer-unt-001-concept-v3"
   },
   {
    "package_id": "EBS-PKG-EBS-FAM-FWL-001",
    "production_asset_id": "EBS-FWL-SYS-001",
    "subject": "Future Well family",
    "production_maturity": "BLOCKOUT",
-   "next": "headless import inspection, texture bake (2048^2), state-mask material plan",
+   "next": "OWNER-QUESTION: extend the Well's blocking footprint to the wall ring (simulation change) or accept a walkable courtyard wall; state material fallback for the light-only channels; textures; in-engine capture; gates.",
    "asset_name": "SM_EBS_FWL_SYS_001",
    "planned_unreal_folder": "/Game/Echoes/Production/FWL/SYS/EBS_FWL_SYS_001/",
    "canon_status": "CANDIDATE (one-family direction under delegation; REL-ART-014 amendment prepared, not applied)",
@@ -117,6 +133,12 @@
      "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-FWL-SYS-001/",
      "what_exists": "One-tile bowl mass with a walkable apron (relief <= 16 cm), four-petal spire part with inward-tilt-and-sink collapse pose, thirteen state presentations, sockets, review renders for dormant / harvest telegraph / mid-fold / spent / preserve / reshape / LOD1, emissive-area measurement (7.3% at full Preserve ring), 8 structural tests.",
      "what_does_not_exist": "Import inspection, textures, VFX, doubled-shadow decal, in-engine capture, gate reviews, owner acceptance; REL-ART-014 amendment application belongs to the integration task."
+    },
+    {
+     "stage": "BLOCKOUT (concept rework, ebs-fwl-sys-001-concept-v3)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-FWL-SYS-001/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Concept rework to the candidate courtyard: single faceted shard (S 220) on a one-tile dais, ring wall R 450 (2.05 S, measured) with four cardinal gaps and one dominant peak, radial paving, torn apron with the +X tongue, flush light-only Preserve ring and Reshape trace, wall as a separate collision-less part; 20 tests; comparison sheets 01-07; two verification lenses and a fix pass; headless import run 2: 3 meshes, 8 sockets, 1 UBX box on the tile, all checks pass. Not yet: OWNER-QUESTION: extend the Well's blocking footprint to the wall ring (simulation change) or accept a walkable courtyard wall; state material fallback for the light-only channels; textures; in-engine capture; gates."
     }
    ],
    "gates": {
@@ -124,7 +146,9 @@
     "gameplay": "NOT_EVALUATED",
     "technical": "NOT_EVALUATED"
    },
-   "owner_acceptance": "NOT_ACCEPTED"
+   "owner_acceptance": "NOT_ACCEPTED",
+   "concept_fidelity_target": "ArtSource/EBS-FWL-SYS-001/concept-fidelity.md",
+   "current_revision": "ebs-fwl-sys-001-concept-v3"
   },
   {
    "package_id": "EBS-PKG-MC-LANCER",
@@ -209,6 +233,9 @@
   "texture_baker": "ArtSource/tools/ebs_texbake.py (BaseColor/Normal/MRE/StateMask/AtlasDebug from a bake manifest)",
   "unreal_import_inspector_static": "ArtSource/tools/ue_import_inspect.py (headless Interchange import + StaticMesh inspection in the sandbox project)",
   "unreal_import_inspector_skeletal": "ArtSource/tools/ue_import_inspect_skeletal.py (headless skeletal import into a unique per-run folder + bone/socket/AnimSequence inspection)",
-  "tests": "ArtSource/tools/test_ebs_render.py, test_ebs_skelkit.py, test_ebs_texbake.py and each package's test_*.py"
- }
+  "tests": "ArtSource/tools/test_ebs_render.py, test_ebs_skelkit.py, test_ebs_texbake.py and each package's test_*.py",
+  "comparison_sheet": "ArtSource/tools/ebs_sheet.py (concept crop beside renders)",
+  "concept_crops": "ArtSource/tools/ebs_concept_crops.py (hash-verified crops of every registered concept input)"
+ },
+ "authority_note_2026_09_06": "Owner ruling: the registered concept images define what every production asset looks like; each package carries concept-fidelity.md as its authoritative visual target, and forced deviations are recorded in the README §8 with the rule cited."
 }

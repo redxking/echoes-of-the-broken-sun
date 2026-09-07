@@ -4,7 +4,9 @@
 Author: Angelis Pseftis. Usage: python3 pose_review.py --evidence-dir <root>/EBS-MER-UNT-001
 Samples each listed clip at a normalized time (linear interpolation between keyframes, the same
 interpolation glTF samplers use) and writes review/pose_<clip>_<t>.obj with the parts posed by
-forward kinematics. These are stills for the review renderer, not animation evidence.
+forward kinematics; the deliver sample is also written with the cargo hidden
+(pose_deliver_050_unloaded.obj, the DELIVERY panel state). These are stills for the review
+renderer, not animation evidence.
 """
 from __future__ import annotations
 
@@ -65,6 +67,14 @@ def main() -> int:
         (x0, y0, z0), (x1, y1, z1) = posed.bounds()
         written.append({"clip": name, "fraction": fraction, "path": path, "sha256": digest, "bounds_cm": [[round(x0, 1), round(y0, 1), round(z0, 1)], [round(x1, 1), round(y1, 1), round(z1, 1)]],
                         "sockets": [{"name": s.name, "position_cm": [round(c, 1) for c in s.position]} for s in posed.sockets]})
+        if name == "deliver":
+            # DELIVERY panel read: the same squat with the cargo hidden, as the runtime shows it after the authorized transfer
+            unloaded = sv.unloaded_mesh(posed)
+            upath = os.path.join(review, f"pose_{name}_{int(fraction * 100):03d}_unloaded.obj")
+            udigest = unloaded.write_obj(upath, header_lines=[f"Posed still: clip {name} at {fraction:.2f}, cargo hidden (canister components removed) as after the authorized transfer"])
+            (ux0, uy0, uz0), (ux1, uy1, uz1) = unloaded.bounds()
+            written.append({"clip": name, "fraction": fraction, "path": upath, "sha256": udigest, "state": "unloaded", "bounds_cm": [[round(ux0, 1), round(uy0, 1), round(uz0, 1)], [round(ux1, 1), round(uy1, 1), round(uz1, 1)]],
+                            "sockets": [{"name": s.name, "position_cm": [round(c, 1) for c in s.position]} for s in unloaded.sockets]})
     scenes = os.path.join(args.evidence_dir, "scenes")
     base_path = os.path.join(scenes, "rest.json")
     if os.path.exists(base_path):

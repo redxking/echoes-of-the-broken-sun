@@ -4,6 +4,7 @@ author: Angelis Pseftis
 creator: Angelis Pseftis
 created: 2026-09-06
 status: AUTHORITATIVE production target (owner ruling 2026-09-06: the concepts define what every asset should be)
+amended: 2026-09-06 concept-v3 (pixel measurement of the candidate; Scale section and Form item 1 — the superseded text is kept struck through)
 ---
 
 # Concept fidelity target — Future Well family
@@ -28,8 +29,11 @@ ring around the bowl. Reshape: magenta identity pointing to an actual temporary 
 ## Form (the candidate is the reconciled family; the sheet gives the material and courtyard read)
 
 1. **Courtyard bowl.** A broad circular courtyard of dark vitrified basalt masonry: a low ring wall of
-   stacked blocks (height ≈ 0.35 S where S = spire height) with a "ruined rhythm" — four to six taller
-   broken segments rising to ≈ 0.7 S — and at least one clear gap in the wall (the candidate shows the
+   stacked blocks (height ≈ 0.35 S where S = spire height) with a "ruined rhythm" — ~~four to six taller
+   broken segments rising to ≈ 0.7 S~~ four taller broken segments: ONE dominant peak on the far side
+   (≈ 0.85–0.95 S; candidate Dormant panel apex at source px (392,125) over a ≈ 0.35 S crest) and three
+   lower stubs (≈ 0.55–0.65 S) [amended concept-v3 by pixel measurement] — and at least one clear gap in
+   the wall (the candidate shows the
    break on the +X side, where the Reshape trace leaves). Inside: flat radial paving with concentric
    courses and fine magenta/amber fracture seams. Outside: a fractured paving apron that crumbles into
    the ground.
@@ -52,16 +56,26 @@ ring around the bowl. Reshape: magenta identity pointing to an actual temporary 
 
 - Simulation: impassable footprint = one tile (200 cm) centred on the spire (`Simulation.cpp`,
   half extent `kFixedScale/2`); capture radius 4.2 tiles (840 cm); scar radius 6 tiles.
-- Concept: the courtyard wall radius is ≈ 1.6–1.8 S ≈ 350–400 cm, well outside the impassable tile,
-  and a 75–150 cm wall reads impassable (REL-ART-016 / REL-ART-030 forbid passable dressing that reads
-  impassable).
-- Build to the concept: wall outer radius 360 cm with four cardinal gaps ≥ 140 cm wide (units can enter
+- Concept: ~~the courtyard wall radius is ≈ 1.6–1.8 S ≈ 350–400 cm~~ the courtyard wall outer radius is
+  ≈ 2.0–2.2 S ≈ 440–480 cm [amended concept-v3, 2026-09-06: measured on the candidate at source pixels —
+  Dormant panel shard apparent height 88–95 px at ≈ 32° elevation (Preserve ring ellipse 410 × 220 px)
+  → S ≈ 104–112 px; wall outer extremes 107..600 px (R ≈ 246) and 117..575 px (R ≈ 229) → R_out/S ≈
+  2.0–2.4; the Preserve ring sits at 0.90 R_out; the apron field reaches ≈ 1.3 R_out with a +X tongue to
+  ≈ 1.5 R_out; the earlier 1.6–1.8 S / 350–400 cm estimate is superseded], well outside the impassable
+  tile, and a 75–150 cm wall reads impassable (REL-ART-016 / REL-ART-030 forbid passable dressing that
+  reads impassable).
+- Build to the concept: wall outer radius ~~360 cm~~ 450 cm (2.05 S; amended concept-v3 — a collision-less
+  wall at 450 cm, the apron at ≈ 580 cm and the trace end at 600 cm all stay inside the 840 cm capture
+  radius and the 1,200 cm scar radius, so the rules never forced 360) with four cardinal gaps ≥ 140 cm wide (units can enter
   the courtyard from every side; the capture zone is reachable), the wall as its own component group
   and a separate collision-less part `SM_EBS_FWL_SYS_001_Wall`, the spire + dais + inner paving as the
   main mesh with the UBX collision box confined to the one-tile footprint. The OWNER-QUESTION on
   extending the Well's blocking footprint to the wall ring (a simulation change, integration task) is
   recorded in the README §8; until answered the wall part is a concept-faithful dressing with the
   conflict flagged, and the previous one-tile "bowl-only" build remains available in git history.
+- Light-only channels (concept-v3): the Preserve ring and the Reshape trace are pure light in the
+  candidate (no ring or trace shows in panels 01/03-trace/spent); they are built flush (≤ 1.5 cm proud of
+  the paving, the +X band or the apron) so that nothing implies a state the simulation has not committed.
 
 ## Budgets and rules that bound the concept
 
@@ -72,8 +86,11 @@ the game framing; walkable inner paving relief ≤ 20 cm.
 
 ## Fidelity checks (render next to the concept crop)
 
-- [ ] Tactical view: broad dark courtyard with a ring wall of uneven blocks, four taller segments, gaps.
+- [ ] Tactical view: broad dark courtyard (wall ≈ 2.0–2.2 S; the shard spans ≈ 15 % of the courtyard
+      width) with a ring wall of uneven blocks, one dominant far-side peak over three stubs, gaps, a torn
+      apron with a +X tongue.
 - [ ] Single faceted shard spire on a dais at the centre; radial/concentric paving.
-- [ ] Preserve: flat cyan ring inside the wall. Reshape: magenta trace leaving through the +X gap.
+- [ ] Preserve: flat cyan ring hugging the wall's inner face (0.90 R_out). Reshape: thin magenta trace
+      leaving through the +X gap onto the tongue; neither shows in the other states.
 - [ ] Harvest commit and spent: shard sinks, bowl dark and cracked, nothing rising above the wall.
 - [ ] Dormant reads as held potential (low glow), doubled shadow cue documented for lighting.

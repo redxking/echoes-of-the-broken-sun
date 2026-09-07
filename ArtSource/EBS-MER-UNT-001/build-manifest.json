@@ -8,11 +8,13 @@
  "asset_name": "SK_EBS_MER_UNT_001",
  "author": "Angelis Pseftis",
  "budgets": {
+  "emissive_area_fraction_lod0": 0.015630145614898092,
+  "emissive_cap": 0.05,
   "lod0_cap": 4500,
-  "lod0_triangles": 1096,
+  "lod0_triangles": 1932,
   "lod0_within_cap": true,
   "lod1_cap": 1800,
-  "lod1_triangles": 604,
+  "lod1_triangles": 1116,
   "lod1_within_cap": true
  },
  "clips": [
@@ -27,16 +29,18 @@
    "duration_s": 2.0,
    "loop": true,
    "name": "idle",
-   "purpose": "standing service frame: breathing lean, tools at rest, feet planted"
+   "purpose": "knuckle-walker at rest: breathing lean on the hips, tools touching down ahead, feet planted"
   },
   {
    "bones": [
     "body",
     "l_foot",
+    "l_forearm",
     "l_shin",
     "l_shoulder",
     "l_thigh",
     "r_foot",
+    "r_forearm",
     "r_shin",
     "r_shoulder",
     "r_thigh"
@@ -44,7 +48,7 @@
    "duration_s": 0.5,
    "loop": true,
    "name": "move",
-   "purpose": "walk cycle authored for 360 cm/s (two 90 cm strides); play rate scales with authoritative velocity; <= 2 cm vertical bob"
+   "purpose": "walk cycle authored for 360 cm/s (two 90 cm strides); play rate scales with authoritative velocity; <= 2 cm vertical bob; the hanging tools swing clear of the ground"
   },
   {
    "bones": [
@@ -63,16 +67,18 @@
    "duration_s": 0.5,
    "loop": true,
    "name": "carry",
-   "purpose": "loaded walk: same cycle, body pitched forward, arms tucked; cargo visibility follows the authoritative load"
+   "purpose": "loaded walk: same cycle, body pitched forward, arms tucked up clear of the ground; cargo visibility follows the authoritative load"
   },
   {
    "bones": [
     "body",
     "l_foot",
     "l_shin",
+    "l_shoulder",
     "l_thigh",
     "r_foot",
     "r_shin",
+    "r_shoulder",
     "r_thigh"
    ],
    "duration_s": 0.5,
@@ -83,7 +89,9 @@
   {
    "bones": [
     "body",
+    "l_shoulder",
     "l_thigh",
+    "r_shoulder",
     "r_thigh"
    ],
    "duration_s": 0.3,
@@ -94,25 +102,32 @@
   {
    "bones": [
     "body",
+    "l_foot",
+    "l_forearm",
+    "l_shin",
     "l_shoulder",
     "l_thigh",
+    "r_foot",
     "r_forearm",
+    "r_shin",
     "r_shoulder",
     "r_thigh"
    ],
    "duration_s": 1.0,
    "loop": true,
    "name": "gather",
-   "purpose": "drill down at the deposit ahead of the feet (tip ~4-8 cm above ground, 80-88 cm forward); drill spin is a material effect gated by this state"
+   "purpose": "GATHERING panel: crouched forward, drill tip at the deposit ahead (tip 0-6 cm above ground, ~100 cm forward), gripper on the ground beside; drill spin is a material effect gated by this state"
   },
   {
    "bones": [
     "body",
     "l_foot",
+    "l_forearm",
     "l_shin",
     "l_shoulder",
     "l_thigh",
     "r_foot",
+    "r_forearm",
     "r_shin",
     "r_shoulder",
     "r_thigh"
@@ -120,7 +135,7 @@
    "duration_s": 0.8,
    "loop": false,
    "name": "deliver",
-   "purpose": "cradle presentation: knees dip and the torso tilts back to present the rear cradle (the arms cannot reach it); cargo empties only on the authorized transfer event"
+   "purpose": "DELIVERY panel: low squat beside the drop point with both tools down; the cradle's canisters are runtime-hidden on the authorized transfer event (no arm reach required)"
   },
   {
    "bones": [
@@ -181,7 +196,7 @@
    "duration_s": 1.0,
    "loop": false,
    "name": "death",
-   "purpose": "engineered collapse: knees fold, the frame drops and settles back onto its cradle, tools splay to the ground; final pose held (cosmetic debris <= 200 ticks)"
+   "purpose": "engineered collapse: knees fold, the frame drops and pitches forward onto its arms (the long arms carry it), tools on the ground ahead; final pose held (cosmetic debris <= 200 ticks)"
   },
   {
    "bones": [
@@ -210,8 +225,7 @@
     "r_forearm",
     "r_shin",
     "r_shoulder",
-    "r_thigh",
-    "root"
+    "r_thigh"
    ],
    "duration_s": 0.0,
    "loop": false,
@@ -219,6 +233,29 @@
    "purpose": "single-frame rest pose used when reconstructing presentation from saved state; never replays a one-shot"
   }
  ],
+ "compatibility_parts": {
+  "authored": {
+   "ankle_above_sole_cm": 13.0,
+   "foot_len_cm": 35.0,
+   "shin_cm": 41.773197148410844,
+   "thigh_cm": 43.86342439892262
+  },
+  "delta_cm": {
+   "ankle_above_sole_cm": 3.0,
+   "shin_cm": -4.226802851589156,
+   "thigh_cm": 1.8634243989226178
+  },
+  "matches_runtime": false,
+  "note": "Parts are authored at the concept lengths; the static-part route needs UpdateM01SurveyorRig's 42/46/+10 constants changed (or a second export at the runtime lengths). README section 8.",
+  "requires_runtime_change": true,
+  "runtime": {
+   "ankle_above_sole_cm": 10.0,
+   "shin_cm": 46.0,
+   "source": "EchoesM01SurveyorRig.cpp:439,446-449",
+   "thigh_cm": 42.0,
+   "tolerance_cm": 0.5
+  }
+ },
  "component_inventory": {
   "bones": {
    "built": 12,
@@ -252,6 +289,9 @@
   "rear_canisters": {
    "built": 3,
    "contract": 3
+  },
+  "shoulder_discs": {
+   "built": 1
   },
   "sockets": {
    "built": [
@@ -304,9 +344,56 @@
    ]
   }
  },
+ "concept_measurements": {
+  "H_cm": 176.0,
+  "ankle_ahead_of_knee_cm": 8.0,
+  "canister_cap_above_torso_top_cm": 8.401090335343184,
+  "canister_diameter_over_H": 0.1,
+  "canister_height_over_H": 0.1590909090909091,
+  "cradle_floor_over_torso_height": 0.6538461538461539,
+  "cradle_floor_z_cm": 124.0,
+  "cradle_side": "rear-right (+Y)",
+  "cradle_tray_x_cm": [
+   -59.8,
+   -32.2
+  ],
+  "cradle_tray_y_max_cm": 36.0,
+  "drill_tip_ahead_of_hip_line_cm": 79.0334516032797,
+  "drill_tip_height_cm": 7.449822595080455,
+  "drill_tool_over_H": 0.21022727272727273,
+  "emissive_area_fraction": 0.015630145614898092,
+  "feet_apart_cm": 80.0,
+  "feet_apart_over_H": 0.45454545454545453,
+  "foot_len_over_H": 0.19886363636363635,
+  "forearm_below_horizontal_deg": 50.50016510727094,
+  "forearm_over_H": 0.24299323614026244,
+  "knee_ahead_of_hip_cm": -4.0,
+  "knee_disc_diameter_over_H": 0.09090909090909091,
+  "lens_diameter_over_H": 0.06818181818181818,
+  "lens_side": "front upper-left (-Y)",
+  "mast_head_over_H": 0.056818181818181816,
+  "mast_post_over_H": 0.125,
+  "mast_side": "rear-left (-Y)",
+  "shin_lean_deg_from_vertical": 11.040940180323732,
+  "shin_over_H": 0.23734771107051617,
+  "thigh_lean_deg_from_vertical": -5.440332031005506,
+  "thigh_over_H": 0.2492240022666058,
+  "toe_ahead_of_knee_cm": 25.5,
+  "torso_flank_y_cm": 33.0,
+  "torso_pitch_deg": -10.0,
+  "torso_wdh_over_H": [
+   0.375,
+   0.3409090909090909,
+   0.29545454545454547
+  ],
+  "upper_arm_over_H": 0.2970346732410848,
+  "wider_than_tall": true,
+  "width_across_arms_cm": 214.5230061588925,
+  "width_across_arms_over_H": 1.2188807168118894
+ },
  "creator": "Angelis Pseftis",
  "kit_revision": "ebs-meshkit-v3",
- "material_slot_policy": "2 slots (contract max 2); status band, canister windows, lens and team colour are texture channels of the ceramic slot; the review OBJ keeps a third pseudo slot so renders show the cyan",
+ "material_slot_policy": "2 slots (contract max 2); status band, canister windows, lens, tool strips, brass trim and team colour are texture channels of the ceramic slot; the review OBJ keeps a third pseudo slot so renders show the cyan",
  "material_slots": [
   "MI_EBS_MER_UnitFrame",
   "MI_EBS_MER_UnitCeramic"
@@ -315,46 +402,46 @@
   {
    "bounds_cm": [
     [
-     -42.5,
-     -61.5,
+     -59.8,
+     -108.44854003410207,
      0.0
     ],
     [
-     92.93844696917827,
-     62.0,
+     67.56889951463702,
+     106.07446612479045,
      176.0
     ]
    ],
    "by_bone": {
-    "body": 396,
-    "l_foot": 36,
-    "l_forearm": 124,
-    "l_shin": 64,
-    "l_shoulder": 52,
-    "l_thigh": 52,
-    "r_foot": 36,
-    "r_forearm": 168,
-    "r_shin": 64,
-    "r_shoulder": 52,
-    "r_thigh": 52
+    "body": 836,
+    "l_foot": 76,
+    "l_forearm": 176,
+    "l_shin": 120,
+    "l_shoulder": 64,
+    "l_thigh": 64,
+    "r_foot": 76,
+    "r_forearm": 272,
+    "r_shin": 120,
+    "r_shoulder": 64,
+    "r_thigh": 64
    },
    "by_slot": {
-    "MI_EBS_MER_UnitCeramic": 420,
-    "MI_EBS_MER_UnitFrame": 676
+    "MI_EBS_MER_UnitCeramic": 700,
+    "MI_EBS_MER_UnitFrame": 1232
    },
    "kind": "static rest pose",
    "lod": 0,
    "mesh": "SK_EBS_MER_UNT_001",
    "path": "export/SK_EBS_MER_UNT_001_LOD0_static.glb",
-   "sha256": "b2e82814b2ce7eeaf380ae94891a77cf1a83ce9b79965594ffc8e63e548751c8",
+   "sha256": "1ef5e4733cf9da1a8f9ba04708f5f3f6e8e69c2fe45dfe97351db76d58a1a452",
    "sockets": [
     {
      "bone": "body",
      "name": "Cargo_Drop_Anchor",
      "position_cm": [
-      -31.0,
-      0.0,
-      104.0
+      -46.0,
+      7.0,
+      138.0
      ],
      "yaw_deg": 180.0
     },
@@ -364,7 +451,7 @@
      "position_cm": [
       0.0,
       0.0,
-      102.0
+      116.0
      ],
      "yaw_deg": 0.0
     },
@@ -372,14 +459,14 @@
      "bone": "r_forearm",
      "name": "Harvest_Tether_Muzzle",
      "position_cm": [
-      91.30434782608695,
-      54.0,
-      17.477315484718034
+      65.0334516032797,
+      103.84251025693068,
+      7.449822595080455
      ],
-     "yaw_deg": 0.0
+     "yaw_deg": 36.02737338510361
     }
    ],
-   "triangles": 1096
+   "triangles": 1932
   },
   {
    "clips": [
@@ -401,75 +488,75 @@
    "lod": 0,
    "mesh": "SK_EBS_MER_UNT_001",
    "path": "export/SK_EBS_MER_UNT_001_LOD0.glb",
-   "sha256": "83c972ce0a642a13c5ed99f91e80ba8b6a36fa98c02280c5b1667d34097b4209"
+   "sha256": "a084cda6c44fde8da7101d6fcd5a9ba070d6f81c28e454c05e8ca714b3f021ce"
   },
   {
    "kind": "compatibility part",
    "lod": 0,
    "mesh": "EBS_MER_UNT_001_UpperLeg",
    "path": "export/SM_EBS_MER_UNT_001_UpperLeg_LOD0.glb",
-   "sha256": "317491f57e42656aae744a3db3b87a525600f59600a62bf0765b89310859e887",
-   "triangles": 52
+   "sha256": "62fd393fa55fc055d23611622dd7b643a2c4a1f0e32f9eb51f9dbcba486b22d3",
+   "triangles": 64
   },
   {
    "kind": "compatibility part",
    "lod": 0,
    "mesh": "EBS_MER_UNT_001_LowerLeg",
    "path": "export/SM_EBS_MER_UNT_001_LowerLeg_LOD0.glb",
-   "sha256": "9ab2988d8d0f7a296bec87c58d9117128b312f9ba4f4ccabfab1b49f3670e6a6",
-   "triangles": 64
+   "sha256": "cb45e7d17f96770a00011c49be6e0699ffd5ec747bba24fdae65499059e8cc14",
+   "triangles": 120
   },
   {
    "kind": "compatibility part",
    "lod": 0,
    "mesh": "EBS_MER_UNT_001_Foot",
    "path": "export/SM_EBS_MER_UNT_001_Foot_LOD0.glb",
-   "sha256": "f6f446f0575e03824767f9ec2f70e5b63fecabdf415e9629333e9c8ff6236450",
-   "triangles": 36
+   "sha256": "f4711d4fff1432a1cdc3eea888b5030202d871350b259d88b0d29d001081cca4",
+   "triangles": 76
   },
   {
    "bounds_cm": [
     [
-     -42.5,
-     -61.5,
+     -59.8,
+     -108.44854003410207,
      0.0
     ],
     [
-     93.32602121211477,
-     62.0,
+     67.67610518411254,
+     106.40350785722411,
      176.0
     ]
    ],
    "by_bone": {
-    "body": 252,
-    "l_foot": 24,
-    "l_forearm": 72,
-    "l_shin": 24,
-    "l_shoulder": 24,
-    "l_thigh": 24,
-    "r_foot": 24,
-    "r_forearm": 88,
-    "r_shin": 24,
-    "r_shoulder": 24,
-    "r_thigh": 24
+    "body": 492,
+    "l_foot": 48,
+    "l_forearm": 116,
+    "l_shin": 44,
+    "l_shoulder": 44,
+    "l_thigh": 44,
+    "r_foot": 48,
+    "r_forearm": 148,
+    "r_shin": 44,
+    "r_shoulder": 44,
+    "r_thigh": 44
    },
    "by_slot": {
-    "MI_EBS_MER_UnitCeramic": 336,
-    "MI_EBS_MER_UnitFrame": 268
+    "MI_EBS_MER_UnitCeramic": 392,
+    "MI_EBS_MER_UnitFrame": 724
    },
    "kind": "static rest pose",
    "lod": 1,
    "mesh": "SK_EBS_MER_UNT_001",
    "path": "export/SK_EBS_MER_UNT_001_LOD1_static.glb",
-   "sha256": "5bde5adee445b355469c180c4261a1ddfded23a5b5ca2ae53bc4ce8bc0318456",
+   "sha256": "4270bdcde8400d16eb3d646c7253ed65316924a8c85afa1e50cefa2b14c1d777",
    "sockets": [
     {
      "bone": "body",
      "name": "Cargo_Drop_Anchor",
      "position_cm": [
-      -31.0,
-      0.0,
-      104.0
+      -46.0,
+      7.0,
+      138.0
      ],
      "yaw_deg": 180.0
     },
@@ -479,7 +566,7 @@
      "position_cm": [
       0.0,
       0.0,
-      102.0
+      116.0
      ],
      "yaw_deg": 0.0
     },
@@ -487,14 +574,14 @@
      "bone": "r_forearm",
      "name": "Harvest_Tether_Muzzle",
      "position_cm": [
-      91.30434782608695,
-      54.0,
-      17.477315484718034
+      65.0334516032797,
+      103.84251025693068,
+      7.449822595080455
      ],
-     "yaw_deg": 0.0
+     "yaw_deg": 36.02737338510361
     }
    ],
-   "triangles": 604
+   "triangles": 1116
   },
   {
    "clips": [
@@ -516,31 +603,31 @@
    "lod": 1,
    "mesh": "SK_EBS_MER_UNT_001",
    "path": "export/SK_EBS_MER_UNT_001_LOD1.glb",
-   "sha256": "19889d78d155d4398198cf4640aec7e53c2f778adf37c1e1b93e6e84d9bce7e4"
+   "sha256": "aece7fe18b454f8463cbeeab8f21e07f4fd13397837cb48f42a367242355f3d9"
   },
   {
    "kind": "compatibility part",
    "lod": 1,
    "mesh": "EBS_MER_UNT_001_UpperLeg",
    "path": "export/SM_EBS_MER_UNT_001_UpperLeg_LOD1.glb",
-   "sha256": "f990a4d2585132d1931d7610a1b408738ce765785dbcb911dfe69acaf6567575",
-   "triangles": 24
+   "sha256": "cfc4cdd9e6ba9dbd82a0e8c72f444a6b326ffb3cee6d1815e07c0101ae14fcbb",
+   "triangles": 44
   },
   {
    "kind": "compatibility part",
    "lod": 1,
    "mesh": "EBS_MER_UNT_001_LowerLeg",
    "path": "export/SM_EBS_MER_UNT_001_LowerLeg_LOD1.glb",
-   "sha256": "729d67972df66bf4b8347df573dbe04295ed5b8b2910d59ee8fc26dd31d1d463",
-   "triangles": 24
+   "sha256": "15de7591b914e7bf316576f3d84552dc1f069118fd6aba08fcfced31e1918576",
+   "triangles": 44
   },
   {
    "kind": "compatibility part",
    "lod": 1,
    "mesh": "EBS_MER_UNT_001_Foot",
    "path": "export/SM_EBS_MER_UNT_001_Foot_LOD1.glb",
-   "sha256": "77d9f3cda42bf6d5a3ed22f08678f2bb1a6b4f84e612df4f516ec68f1723d133",
-   "triangles": 24
+   "sha256": "3afeed7b39476beb9e4482427483015061b4c1e22044202bffb029a4a3a048eb",
+   "triangles": 48
   }
  ],
  "package_id": "EBS-PKG-MC-SURVEYOR",
@@ -550,17 +637,24 @@
   {
    "lod": 0,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-001/review/SK_EBS_MER_UNT_001_rest_LOD0.obj",
-   "sha256": "4694d106ece8b7b1bc07de1159527119d022e736f1aacbdc7218fea49921ae69",
-   "triangles": 1096
+   "sha256": "053b34bd7055b68d683f7db6e01a7f002269effdab1cbfecebc42fd6fcae8fb3",
+   "triangles": 1932
+  },
+  {
+   "lod": 0,
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-001/review/SK_EBS_MER_UNT_001_rest_unloaded_LOD0.obj",
+   "sha256": "c2680431661ac72760ad2d6240098c9c5b75d632f0a3b3e7af05700a8ec166f9",
+   "state": "unloaded",
+   "triangles": 1680
   },
   {
    "lod": 1,
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-MER-UNT-001/review/SK_EBS_MER_UNT_001_rest_LOD1.obj",
-   "sha256": "ba842ad57cf813ef4ead933262812707de9121c12ee533c1fbdd9f2452bd0e04",
-   "triangles": 604
+   "sha256": "4c39ef102da206c77b357b70db847bed89d719cc60adcb4534830d3412e6dd4e",
+   "triangles": 1116
   }
  ],
- "revision": "ebs-mer-unt-001-blockout-v2",
+ "revision": "ebs-mer-unt-001-concept-v3",
  "rig": {
   "bones": [
    {
@@ -575,19 +669,19 @@
    },
    {
     "head_cm": [
+     -14.0,
      0.0,
-     0.0,
-     76.0
+     96.0
     ],
     "name": "body",
     "parent": "root",
-    "purpose": "pelvis and torso as one rigid mass; mast and cradle ride on it"
+    "purpose": "hip centre; torso, mast and cradle as one rigid mass"
    },
    {
     "head_cm": [
-     0.0,
-     21.0,
-     76.0
+     -14.0,
+     28.0,
+     96.0
     ],
     "name": "r_thigh",
     "parent": "body",
@@ -595,9 +689,9 @@
    },
    {
     "head_cm": [
-     26.99707960683465,
-     21.0,
-     43.826133389002926
+     -18.0,
+     40.0,
+     54.0
     ],
     "name": "r_shin",
     "parent": "r_thigh",
@@ -605,9 +699,9 @@
    },
    {
     "head_cm": [
-     -4.176510176014894,
-     21.0,
-     10.0
+     -10.0,
+     40.0,
+     13.0
     ],
     "name": "r_foot",
     "parent": "r_shin",
@@ -615,9 +709,9 @@
    },
    {
     "head_cm": [
-     0.0,
-     -21.0,
-     76.0
+     -14.0,
+     -28.0,
+     96.0
     ],
     "name": "l_thigh",
     "parent": "body",
@@ -625,9 +719,9 @@
    },
    {
     "head_cm": [
-     26.99707960683465,
-     -21.0,
-     43.826133389002926
+     -18.0,
+     -40.0,
+     54.0
     ],
     "name": "l_shin",
     "parent": "l_thigh",
@@ -635,9 +729,9 @@
    },
    {
     "head_cm": [
-     -4.176510176014894,
-     -21.0,
-     10.0
+     -10.0,
+     -40.0,
+     13.0
     ],
     "name": "l_foot",
     "parent": "l_shin",
@@ -645,19 +739,19 @@
    },
    {
     "head_cm": [
-     10.0,
-     48.0,
-     108.0
+     14.0,
+     46.0,
+     112.0
     ],
     "name": "r_shoulder",
     "parent": "body",
-    "purpose": "shoulder (pitch/yaw)"
+    "purpose": "shoulder hub (pitch/yaw)"
    },
    {
     "head_cm": [
      24.0,
-     54.0,
-     71.01351598218614
+     74.0,
+     69.0
     ],
     "name": "r_forearm",
     "parent": "r_shoulder",
@@ -665,19 +759,19 @@
    },
    {
     "head_cm": [
-     10.0,
-     -48.0,
-     108.0
+     14.0,
+     -46.0,
+     112.0
     ],
     "name": "l_shoulder",
     "parent": "body",
-    "purpose": "shoulder (pitch/yaw)"
+    "purpose": "shoulder hub (pitch/yaw)"
    },
    {
     "head_cm": [
      24.0,
-     -54.0,
-     71.01351598218614
+     -74.0,
+     69.0
     ],
     "name": "l_forearm",
     "parent": "l_shoulder",
@@ -687,37 +781,64 @@
   "policy": "identity rest orientation; hinge pitch about +Y at the joint; no decorative bones; drill spin via material; canisters rigid with the body and emptied by the authoritative transfer (visibility/material), not by animation",
   "rest_stance": {
    "ankle": [
-    -4.176510176014894,
-    21.0,
-    10.0
+    -10.0,
+    40.0,
+    13.0
+   ],
+   "drill_tip": [
+    65.0334516032797,
+    103.8425102569307,
+    7.449822595080455
    ],
    "elbow": [
     24.0,
-    54.0,
-    71.01351598218614
+    74.0,
+    69.0
    ],
-   "fore_dir_pitch": -38.499950409247866,
+   "fore_dir": [
+    -50.50016510727094,
+    36.02737338510361,
+    -43.30506417977059
+   ],
+   "hip": [
+    -14.0,
+    28.0,
+    96.0
+   ],
    "knee": [
-    26.99707960683465,
-    21.0,
-    43.826133389002926
+    -18.0,
+    40.0,
+    54.0
    ],
-   "shin_dir_pitch": -132.6631397076147,
-   "thigh_dir_pitch": -50.0,
-   "upper_dir_pitch": -69.26751130198598,
+   "shin_dir": [
+    -78.95905981967628,
+    0.0,
+    0.0
+   ],
+   "thigh_dir": [
+    -106.760688665808,
+    -71.56505117707799,
+    72.29834552210988
+   ],
+   "upper_dir": [
+    -55.33827146474584,
+    70.3461759419467,
+    -73.62939483345075
+   ],
    "wrist": [
-    60.0,
-    54.0,
-    42.377873855633425
+    46.0,
+    90.0,
+    36.0
    ]
   }
  },
  "scale_basis": {
   "canon": "about as tall as a person and half again as wide at the shoulder (Bible line 509)",
-  "existing_envelope": "welded placeholder ~180 cm tall; M01 parts thigh 42 / shin 46 / foot 32 cm",
+  "concept": "concept-fidelity.md: knuckle-walker measured on EBS-CON-MER-UNT-001 (meridian-units.png top-left) at H = 176 cm at the mast top",
   "height_cm": 176.0,
-  "shoulder_width_cm": 115.0,
-  "status": "PROVISIONAL BLOCKOUT ESTIMATE"
+  "status": "CONCEPT-MEASURED BLOCKOUT (concept-v3)",
+  "torso_width_cm": 66.0,
+  "width_across_arms_cm": 214.5230061588925
  },
  "skel_revision": "ebs-skelkit-v1",
  "source_bindings": {
@@ -732,25 +853,39 @@
   "candidate_image": {
    "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/surveyor-review/surveyor-reference.png",
    "sha256": "98c3a0ef2300178942d30e0f2ff8d725ef94a51d38877639638c3cd90b6fd913",
-   "status": "DERIVED_REFERENCE_FOR_REVIEW; the derived turnaround in the same folder was rejected (canister drift, reversed side labels)"
+   "status": "DERIVED_REFERENCE_FOR_REVIEW (front, rear, gathering, delivery); the derived turnaround in the same folder was rejected (canister drift, reversed side labels)"
   },
   "canon_row": {
    "line": 509,
    "path": "Docs/Archive/DevelopmentBible.md"
   },
+  "concept_image": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/meridian-units.png",
+   "region": [
+    0,
+    0,
+    0.5,
+    0.5
+   ],
+   "sha256_prefix": "427e60cd27bd78e9",
+   "status": "KEEP as DESIGN_IDENTITY (EBS-CON-MER-UNT-001)"
+  },
   "contract": {
    "package_id": "EBS-PKG-MC-SURVEYOR",
    "path": "Docs/VisualAssetPipeline/motion/gap-decisions.json"
+  },
+  "fidelity_target": {
+   "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/ArtSource/EBS-MER-UNT-001/concept-fidelity.md"
   },
   "gameplay_record": {
    "id": "mc_surveyor (SPEC-UNIT-001: 360 cm/s, logistics footprint 1, work rate 10, cargo 10)",
    "path": "Content/Data/Source/units.json"
   }
  },
- "stage": "BLOCKOUT",
- "stage_boundary": "Rest-stance geometry, 12-bone rig definition and keyframed clip data; skinned export only when the skeletal kit is verified; no textures, no import, no acceptance.",
+ "stage": "BLOCKOUT (concept-v3)",
+ "stage_boundary": "Concept-matched rest-stance geometry, 12-bone rig definition and keyframed clip data; skinned export on the verified skeletal kit; no textures, no import, no acceptance.",
  "tools": {
-  "builder_sha256": "f0cba2220aaf1209d5966b76d17888e183fde380583046aa3de566ccafe5a18f",
+  "builder_sha256": "de2e06000701728ed7c0883fc5bfb530a96983374b305278250e734ae769cc22",
   "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
   "python": "3.14.7"
  },
