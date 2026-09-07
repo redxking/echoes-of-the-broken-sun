@@ -135,13 +135,16 @@ class HearthBlockout(unittest.TestCase):
             self.assertLessEqual(box.size[0] / 2.0, hh.BASE_R + 1e-6)
 
     def test_provisional_budget(self):
-        # NO Kharuun asset card exists; these ceilings are provisional and recorded as such
+        # the ceilings come from the PROVISIONAL Kharuun card, which is not yet in the authoritative
+        # requirements; the manifest has to keep saying so
         path = os.path.join(HERE, "build-manifest.json")
         lod0 = lod1 = 0
         if os.path.exists(path):
             with open(path, encoding="utf-8") as handle:
                 data = json.load(handle)
-            self.assertIn("NO KHARUUN ASSET CARD EXISTS", data["provisional_contract"]["status"])
+            self.assertIn("REL-BLD-016.KA.HEARTH.ASSET", data["provisional_contract"]["card"])
+            self.assertIn("PROVISIONAL", data["provisional_contract"]["status"])
+            self.assertIn("PENDING", data["acceptance"]["technical"])
             for row in data.get("outputs", []):
                 if str(row.get("path", "")).endswith(".glb") and "triangles" in row:
                     if int(row["lod"]) == 0:
@@ -153,6 +156,21 @@ class HearthBlockout(unittest.TestCase):
         self.assertLessEqual(lod0, 8000)
         self.assertLessEqual(lod1, 3500)
         self.assertLess(self.m1.triangle_count(), self.m0.triangle_count())
+
+    def test_lod1_preserves_what_the_card_requires(self):
+        # REL-BLD-016.KA.HEARTH.ASSET .READABILITY: LOD1 shall preserve the crown, the worker hollows,
+        # the intake cleft and the headquarters silhouette. A LOD that drops any of them fails the card
+        # regardless of triangle count.
+        comps = self.m1.components()
+        self.assertEqual(sum(1 for c in comps if c.startswith("spire_") and "_vein" not in c),
+                         len(hh.SPIRES), "LOD1 keeps every spire: the crown is a required read")
+        self.assertEqual(sum(1 for c in comps if c.endswith("_interior")), hh.HOLLOW_COUNT,
+                         "LOD1 keeps every worker hollow")
+        for part in ("cleft_hood", "cleft_recess", "cleft_lip"):
+            self.assertIn(part, comps, "LOD1 keeps the intake cleft distinct")
+        tall = self.m1.bounds()[1][2]
+        self.assertAlmostEqual(tall, self.m0.bounds()[1][2], delta=1.0,
+                               msg="LOD1 keeps the headquarters silhouette height")
 
     def test_states_are_declared(self):
         self.assertEqual(tuple(hh.STATES), ("working", "damaged", "destroyed"))

@@ -27,7 +27,7 @@ Single authoritative source record for the Kharuun headquarters. Bounded by the 
 | Canon | `SPEC-BLD-016.KA.HEARTH`, Bible line 555: a wide grown dome of banded strata with a warm amber glow from within, several arched worker hollows at the base, a matter-intake cleft, and a crown of rooted adaptation spires. Working: interior glow breathes slowly. Damaged: a spire dark, strata cracked. Destroyed: ceramic collapse inward |
 | Gameplay record | `buildings.json` `ka_memory_hearth`: headquarters drop-off, 1,300 HP, 800 cm sight, 400 construction ticks, +12 logistics, footprint 5×5 tiles |
 | Requirement | `REL-BLD-016.KA.HEARTH` (function) and `REL-ART-029` (Kharuun grown mineral architecture) |
-| Asset card | **None exists.** See §8.1 |
+| Asset card | `REL-BLD-016.KA.HEARTH.ASSET` — **provisional**, authored in this worktree at [../kharuun-asset-cards.md](../kharuun-asset-cards.md). Not yet in `Docs/Requirements.md`. See §8.1 |
 | Production ID | `EBS-KHA-BLD-001`, planned `SM_EBS_KHA_BLD_001` under `/Game/Echoes/Production/KHA/BLD/EBS_KHA_BLD_001/` |
 
 ## 2. Contextual brief (`SPEC-VISD-008`)
@@ -109,13 +109,14 @@ for s in working damaged destroyed lod1; do \
 
 ## 8. Decisions and open items
 
-1. **There is no Kharuun asset card, so the triangle ceilings here are mine.** `Docs/Requirements.md`
-   §18.2 carries eight asset cards and every one of them is Meridian. No `REL-BLD-016.KA.HEARTH.ASSET`
-   exists, so nothing authoritative states this asset's polygon, texture or LOD limits. What does bind
-   is `REL-ART-029` (faceted basalt, zero organic smoothing, 2048² PBR, amber ≤15% of surface area) and
-   the function requirement. I have built to provisional ceilings of 8,000 / 3,500, the largest
-   structure budget already in use here, and recorded them in the manifest as provisional rather than
-   as a card. `acceptance.technical` is **BLOCKED** for that reason. **OWNER-QUESTION A.**
+1. **The asset card is provisional and lives here, not in the requirements.** `Docs/Requirements.md`
+   §18.2 still carries eight asset cards, every one of them Meridian. On 2026-09-07 the owner confirmed
+   8,000 / 3,500 as this asset's provisional ceilings and directed that a dedicated Kharuun card be
+   authored; `REL-BLD-016.KA.HEARTH.ASSET` is in [../kharuun-asset-cards.json](../kharuun-asset-cards.json),
+   rendered to [../kharuun-asset-cards.md](../kharuun-asset-cards.md). The owner was explicit that these
+   match the preparation pipeline's selected limits and are **not existing authoritative per-asset
+   requirements**. `acceptance.technical` is therefore **PENDING**, not compliant: it waits on the card
+   being incorporated into the authoritative requirements and its checks passing.
 2. **The dome is 880 cm across, not the full 1,000.** The thresholds, the cleft apron and the delivered
    matter all sit outside the shell and all have to stay inside the placement envelope, which is the
    same rule the owner confirmed for the Array Foundry on 2026-09-07. The shell was sized so the whole
@@ -136,9 +137,9 @@ for s in working damaged destroyed lod1; do \
 7. Open: textures (2048² packed PBR with micro-noise normals per `REL-ART-029`), in-engine capture,
    gate reviews, owner acceptance.
 
-> **OWNER-QUESTION A — no Kharuun asset card exists.** Every asset card in `Docs/Requirements.md` §18.2
-> is Meridian, so this asset has no authoritative polygon, texture or LOD contract and I cannot mark it
-> technically compliant against anything. I have used provisional ceilings of LOD0 ≤8,000 / LOD1 ≤3,500
-> with `REL-ART-029`'s material and emissive rules. Confirm those bounds as the Hearth's provisional
-> contract, give different ones, or direct that a Kharuun card be authored — the same question will
-> recur for the Waystone, Growth Basin, Listening Spine and every other Kharuun package in the queue.
+> **OWNER-QUESTION A — RESOLVED 2026-09-07.** Asked: confirm the provisional ceilings, give different
+> ones, or direct that a Kharuun card be authored. Owner ruling: 8,000 / 3,500 confirmed as this asset's
+> provisional ceilings, and a dedicated Kharuun card authored — together with cards for every remaining
+> Kharuun package, the Tender keeping its separately selected 4,500 / 1,800. The cards are in
+> [../kharuun-asset-cards.md](../kharuun-asset-cards.md). They are production contracts, not authoritative
+> requirements: final technical acceptance stays pending until they are incorporated and their checks pass.

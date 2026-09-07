@@ -458,10 +458,12 @@
      "result": "Wide grown dome of eight faceted strata bands, five arched worker hollows with tended thresholds on the front arc, a low wide matter-intake cleft on the right flank with delivered matter at its mouth, and a crown of seven tapered rooted spires. Built to a silhouette trace of the candidate's main WORKING view: shell height 0.44 of the 880 cm base width, total height 0.69, spire spread 0.55. Three states per canon (working, damaged, destroyed). LOD0 1,554 / LOD1 634 against PROVISIONAL ceilings of 8,000 / 3,500; amber 10.5% of surface area against REL-ART-029's 15%. 18 tests, 6 comparison sheets. Import run 2 clean: 0 errors, 1,554/634 at 3 sections, 5 sockets exact, 2 UBX boxes, Nanite off. Run 1 caught my own bug of writing collision into the LOD1 file (recorded in pipeline_findings)."
     }
    ],
-   "next": "An owner ruling on the Kharuun provisional contract, then textures (2048 packed PBR with micro-noise normals), a stronger damage read, in-engine capture, gate reviews, owner acceptance.",
-   "open_owner_questions": [
-    "A - no Kharuun asset card exists anywhere in Requirements section 18.2, so the triangle ceilings are mine and provisional; the same gap blocks every remaining Kharuun package (README section 8.1)."
-   ]
+   "next": "Textures (2048 packed PBR with micro-noise normals), a stronger damage read, in-engine capture, gate reviews, incorporation of the provisional card into the authoritative requirements, owner acceptance.",
+   "open_owner_questions": [],
+   "resolved_owner_questions": [
+    "A - provisional ceilings: CONFIRMED 8,000/3,500 and a dedicated Kharuun card authored (owner, 2026-09-07). The card is provisional and not yet in the authoritative requirements, so technical acceptance stays PENDING."
+   ],
+   "asset_card": "REL-BLD-016.KA.HEARTH.ASSET (PROVISIONAL, ArtSource/kharuun-asset-cards.json)"
   }
  ],
  "tools": {
@@ -477,7 +479,8 @@
   "tests": "ArtSource/tools/test_ebs_render.py, test_ebs_skelkit.py, test_ebs_texbake.py and each package's test_*.py",
   "comparison_sheet": "ArtSource/tools/ebs_sheet.py (concept crop beside renders)",
   "concept_crops": "ArtSource/tools/ebs_concept_crops.py (hash-verified crops of every registered concept input)",
-  "import_job_generator": "ArtSource/tools/ebs_make_import_job.py (derives the isolated-import job and its expectations from a package build manifest) (separates skinned sub-objects from the unit's LODs)"
+  "import_job_generator": "ArtSource/tools/ebs_make_import_job.py (derives the isolated-import job and its expectations from a package build manifest) (separates skinned sub-objects from the unit's LODs)",
+  "kharuun_card_renderer": "ArtSource/tools/render_kharuun_cards.py (--check verifies the rendered document matches its JSON source)"
  },
  "authority_note_2026_09_06": "Owner ruling: the registered concept images define what every production asset looks like; each package carries concept-fidelity.md as its authoritative visual target, and forced deviations are recorded in the README \u00a78 with the rule cited.",
  "pipeline_findings": [
@@ -561,6 +564,30 @@
      "ruling": "Confirmed: the three-legged ceramic mount with twin emitters, following the selected concept and the explicit decision to replace the bunker. The conflicting pillbox / vertical-barrel wording is to be retired through a coordinated asset-card amendment. Preserve the tripod silhouette and the twin-emitter aiming assembly. No canon or concept-review reversal is needed."
     }
    ]
+  },
+  {
+   "date": "2026-09-07",
+   "source": "Owner message answering EBS-KHA-BLD-001 OWNER-QUESTION A",
+   "status": "Production direction. The confirmed ceilings match the preparation pipeline's selected limits and are NOT existing authoritative per-asset requirements. Final technical acceptance stays pending until the cards are incorporated into the authoritative requirements and their checks pass.",
+   "rulings": [
+    {
+     "subject": "EBS-KHA-BLD-001 Memory Hearth - provisional ceilings",
+     "ruling": "Confirmed: 8,000 LOD0 / 3,500 LOD1, and a dedicated Kharuun asset card is to be authored. The Hearth card specifies a 2048^2 PBR stack following REL-ART-029; faceted mineral construction with localised amber emissive at <= 15% surface area as a CEILING not a target; triangle budgets covering the complete assembly including articulated parts; and LODs that preserve the crown, worker hollows, intake and headquarters silhouette at gameplay distance."
+    },
+    {
+     "subject": "Kharuun roster - card authoring",
+     "ruling": "Apply the same card-authoring process to the Waystone, Growth Basin, Listening Spine and the remaining Kharuun packages. Default provisional geometry ceilings of 8,000 / 3,500 where no tighter contract exists. Specify each asset's components, motion, materials, sockets, states and readability requirements individually. Retain the Tender's separately selected 4,500 / 1,800 limits."
+    },
+    {
+     "subject": "Kharuun roster - identity",
+     "ruling": "Continue isolated modelling against these provisional contracts. Do not inherit Meridian anatomy and do not mechanically copy one rig across the faction."
+    }
+   ],
+   "implementation": {
+    "cards": "ArtSource/kharuun-asset-cards.json, rendered by ArtSource/tools/render_kharuun_cards.py to kharuun-asset-cards.md",
+    "count": 8,
+    "boundary": "The cards live in this isolated worktree. Docs/Requirements.md section 18.2 is UNCHANGED and still carries Meridian cards only. Incorporating them into the authoritative requirements is not this worktree's authority."
+   }
   }
  ]
 }

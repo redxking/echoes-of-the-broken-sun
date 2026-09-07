@@ -3,7 +3,7 @@
   "art": "NOT_EVALUATED",
   "gameplay": "NOT_EVALUATED",
   "owner": "NOT_ACCEPTED",
-  "technical": "BLOCKED \u2014 no Kharuun asset card exists to evaluate against (OWNER-QUESTION A)"
+  "technical": "PENDING \u2014 built against the provisional card REL-BLD-016.KA.HEARTH.ASSET; final technical acceptance waits on that card being incorporated into the authoritative requirements and its checks passing (owner ruling 2026-09-07)"
  },
  "asset_name": "SM_EBS_KHA_BLD_001",
  "author": "Angelis Pseftis",
@@ -13,7 +13,7 @@
   "amber_measure": "surface area, as REL-ART-029 states",
   "amber_within_cap": true,
   "cap_scope": "Owner ruling 2026-09-07: ceilings apply to the complete asset including articulated components",
-  "cap_source": "PROVISIONAL, mine; no Kharuun asset card exists (see provisional_contract)",
+  "cap_source": "REL-BLD-016.KA.HEARTH.ASSET (PROVISIONAL, ArtSource/kharuun-asset-cards.json; owner-confirmed 2026-09-07)",
   "lod0_cap": 8000,
   "lod0_triangles": 1554,
   "lod0_within_cap": true,
@@ -366,12 +366,13 @@
    "REL-ART-029 (faceted basalt, zero organic smoothing, 2048^2 PBR, amber <= 15.0% surface area)",
    "REL-BLD-016.KA.HEARTH (1,300 health, 800 cm sight, +12 logistics, 5x5 footprint, produces Tenders)"
   ],
+  "card": "REL-BLD-016.KA.HEARTH.ASSET in ArtSource/kharuun-asset-cards.json (rendered to kharuun-asset-cards.md)",
   "provisional_bounds": {
-   "basis": "the largest structure budget already in use in this pipeline",
+   "basis": "confirmed by the owner on 2026-09-07 as this asset's provisional ceilings",
    "lod0_triangles": 8000,
    "lod1_triangles": 3500
   },
-  "status": "NO KHARUUN ASSET CARD EXISTS. Docs/Requirements.md section 18.2 carries Meridian cards only, so there is no REL-BLD-016.KA.HEARTH.ASSET to govern this asset. The triangle ceilings below are MINE and provisional, pending an owner ruling (README section 8, OWNER-QUESTION A). They are not an authoritative card."
+  "status": "PROVISIONAL. Docs/Requirements.md section 18.2 still carries Meridian cards only. The owner confirmed 8,000/3,500 as this asset's provisional ceilings on 2026-09-07 and directed that a dedicated Kharuun card be authored; that card lives in this worktree and has NOT been incorporated into the authoritative requirements. It is not an existing authoritative per-asset requirement and not owner acceptance."
  },
  "review": {
   "scenes": [

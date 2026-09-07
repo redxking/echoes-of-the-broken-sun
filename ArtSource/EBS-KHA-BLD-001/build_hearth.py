@@ -375,16 +375,18 @@ def manifest(exported: dict) -> dict:
                                  "veins, which is the only emissive. REL-ART-029 forbids organic smoothing, so every band is a "
                                  "straight-sided prism rather than a subdivided dome."),
         "provisional_contract": {
-            "status": ("NO KHARUUN ASSET CARD EXISTS. Docs/Requirements.md section 18.2 carries Meridian cards only, so there is no "
-                       "REL-BLD-016.KA.HEARTH.ASSET to govern this asset. The triangle ceilings below are MINE and provisional, "
-                       "pending an owner ruling (README section 8, OWNER-QUESTION A). They are not an authoritative card."),
+            "card": "REL-BLD-016.KA.HEARTH.ASSET in ArtSource/kharuun-asset-cards.json (rendered to kharuun-asset-cards.md)",
+            "status": ("PROVISIONAL. Docs/Requirements.md section 18.2 still carries Meridian cards only. The owner confirmed "
+                       "8,000/3,500 as this asset's provisional ceilings on 2026-09-07 and directed that a dedicated Kharuun card "
+                       "be authored; that card lives in this worktree and has NOT been incorporated into the authoritative "
+                       "requirements. It is not an existing authoritative per-asset requirement and not owner acceptance."),
             "binding_requirements": ["REL-ART-029 (faceted basalt, zero organic smoothing, 2048^2 PBR, amber <= 15.0% surface area)",
                                      "REL-BLD-016.KA.HEARTH (1,300 health, 800 cm sight, +12 logistics, 5x5 footprint, produces Tenders)"],
             "provisional_bounds": {"lod0_triangles": 8000, "lod1_triangles": 3500,
-                                   "basis": "the largest structure budget already in use in this pipeline"}},
+                                   "basis": "confirmed by the owner on 2026-09-07 as this asset's provisional ceilings"}},
         "budgets": {"lod0_triangles": m0.triangle_count(), "lod1_triangles": m1.triangle_count(),
                     "lod0_cap": 8000, "lod1_cap": 3500,
-                    "cap_source": "PROVISIONAL, mine; no Kharuun asset card exists (see provisional_contract)",
+                    "cap_source": "REL-BLD-016.KA.HEARTH.ASSET (PROVISIONAL, ArtSource/kharuun-asset-cards.json; owner-confirmed 2026-09-07)",
                     "cap_scope": "Owner ruling 2026-09-07: ceilings apply to the complete asset including articulated components",
                     "lod0_within_cap": m0.triangle_count() <= 8000, "lod1_within_cap": m1.triangle_count() <= 3500,
                     "amber_area_fraction_lod0": round(amber, 5), "amber_cap": 0.15,
@@ -406,7 +408,9 @@ def manifest(exported: dict) -> dict:
         "outputs": exported["outputs"], "review_assemblies": exported["review"],
         "tools": {"mesh_kit": "ArtSource/tools/ebs_meshkit.py", "renderer": "ArtSource/tools/ebs_render.py"},
         "acceptance": {"art": "NOT_EVALUATED", "gameplay": "NOT_EVALUATED",
-                       "technical": "BLOCKED — no Kharuun asset card exists to evaluate against (OWNER-QUESTION A)",
+                       "technical": ("PENDING — built against the provisional card REL-BLD-016.KA.HEARTH.ASSET; final technical "
+                                     "acceptance waits on that card being incorporated into the authoritative requirements and its "
+                                     "checks passing (owner ruling 2026-09-07)"),
                        "owner": "NOT_ACCEPTED"},
         "source_bindings": {"candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/memory-hearth-review/memory-hearth-candidate.png",
                             "concepts": ["EBS-CON-KHA-BLD-005 (KEEP, design identity)",
