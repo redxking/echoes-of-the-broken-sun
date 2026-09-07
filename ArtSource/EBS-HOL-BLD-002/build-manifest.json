@@ -1,0 +1,516 @@
+{
+ "acceptance": {
+  "animation": "NOT_EVALUATED",
+  "art": "NOT_EVALUATED",
+  "gameplay": "NOT_EVALUATED",
+  "owner": "NOT_ACCEPTED",
+  "technical": "PENDING \u2014 built against a provisional card that is not in the authoritative requirements"
+ },
+ "asset_name": "SK_EBS_HOL_BLD_002",
+ "author": "Angelis Pseftis",
+ "bind_counts": {
+  "arch_a": 324,
+  "arch_b": 324,
+  "root": 108
+ },
+ "budgets": {
+  "cap_source": "REL-BLD-017.HC.INTERVAL.ASSET (PROVISIONAL)",
+  "headroom_note": "Under the ceiling is HEADROOM, not sufficiency (owner ruling 2026-09-07).",
+  "lod0_cap": 3000,
+  "lod0_triangles": 756,
+  "lod0_within_cap": true,
+  "lod1_cap": 1200,
+  "lod1_triangles": 420,
+  "lod1_within_cap": true,
+  "magenta_area_fraction_supplied": 0.05398,
+  "magenta_cap": 0.12,
+  "magenta_within_cap": true,
+  "upkeep_state_triangles": 780,
+  "worst_state_triangles": 780
+ },
+ "clips": [
+  {
+   "bones": [
+    "arch_a",
+    "arch_b"
+   ],
+   "duration_s": 6.0,
+   "loop": true,
+   "name": "supplied_idle",
+   "purpose": "supplied: the two arches drift a little out of step with each other. Faction reality-bleed device, NOT a canon motion clause for this building",
+   "ticks": 120
+  },
+  {
+   "bones": [
+    "arch_a",
+    "arch_b"
+   ],
+   "duration_s": 1.5,
+   "loop": false,
+   "name": "upkeep",
+   "purpose": "the 600-tick coherence charge falling due: both arches pull taut together, which is the one moment they agree",
+   "ticks": 30
+  },
+  {
+   "bones": [
+    "arch_a",
+    "arch_b"
+   ],
+   "duration_s": 0.0,
+   "loop": false,
+   "name": "restore",
+   "purpose": "single-frame rest pose for reconstruction from saved state",
+   "ticks": 0
+  }
+ ],
+ "component_inventory": {
+  "arches": {
+   "built": 2,
+   "contract": 2,
+   "spans_each": 9
+  },
+  "bones": {
+   "built": 3,
+   "contract": "root plus one bone per arch (2)",
+   "names": [
+    "root",
+    "arch_a",
+    "arch_b"
+   ]
+  },
+  "dropoff_pad": {
+   "built": true,
+   "contract": 1,
+   "delivered_matter": 4
+  },
+  "edge_lines": {
+   "built": 36,
+   "contract": "two per arch, running its full length",
+   "lit": 36
+  },
+  "feet": {
+   "built": 4,
+   "contract": 4
+  },
+  "sockets": {
+   "built": [
+    "Arch_Crossing_Center",
+    "Matter_Dropoff",
+    "Target_Anchor_Center",
+    "Upkeep_Signal"
+   ],
+   "contract": [
+    "Arch_Crossing_Center",
+    "Matter_Dropoff",
+    "Target_Anchor_Center",
+    "Upkeep_Signal"
+   ]
+  },
+  "states": {
+   "built": [
+    "supplied",
+    "upkeep_tick",
+    "insolvent",
+    "destroyed"
+   ],
+   "contract": [
+    "supplied",
+    "upkeep_tick",
+    "insolvent",
+    "destroyed"
+   ]
+  },
+  "surge_band": {
+   "built": 0,
+   "contract": "present only in upkeep_tick"
+  },
+  "tracks": {
+   "built": [
+    "supplied_idle",
+    "upkeep",
+    "restore"
+   ],
+   "contract": [
+    "supplied_idle",
+    "upkeep",
+    "restore"
+   ]
+  }
+ },
+ "concept_measurements": {
+  "arch_count": 2,
+  "arch_span_cm": 260.0,
+  "bounds_cm": [
+   [
+    -171.0,
+    -128.69,
+    0.0
+   ],
+   [
+    128.69,
+    128.69,
+    167.63
+   ]
+  ],
+  "everything_inside_the_footprint": true,
+  "feet_on_the_ground": true,
+  "footprint_cm": 400.0,
+  "footprint_tiles": [
+   2,
+   2
+  ],
+  "height_cm": 167.63,
+  "height_over_span": 0.6447,
+  "max_extent_cm": 171.0
+ },
+ "creator": "Angelis Pseftis",
+ "faction_language_inference": {
+  "source": "the four REL-FAC-027.HC.* UNIT cards",
+  "status": "INFERENCE, not a requirement. No authoritative card places it on a Hollow Choir BUILDING.",
+  "what": "the 12% Magenta Fracture ceiling"
+ },
+ "kit_revision": "ebs-meshkit-v3",
+ "material_slot_policy": "Three slots: vitrified stone for the arches and feet, a worn stone for the drop-off pad, and Magenta Fracture for the arch edge lines, which are the only emissive.",
+ "material_slots": [
+  "MI_EBS_HOL_Vitrified",
+  "MI_EBS_HOL_ApronStone",
+  "MI_EBS_HOL_Magenta"
+ ],
+ "outputs": [
+  {
+   "bounds_cm": [
+    [
+     -171.0,
+     -128.69343417595167,
+     0.0
+    ],
+    [
+     128.69343417595167,
+     128.69343417595167,
+     167.63000946990445
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_HOL_ApronStone": 12,
+    "MI_EBS_HOL_Magenta": 432,
+    "MI_EBS_HOL_Vitrified": 312
+   },
+   "clips": [
+    "supplied_idle",
+    "upkeep",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 0,
+   "mesh": "SK_EBS_HOL_BLD_002",
+   "path": "export/SK_EBS_HOL_BLD_002_LOD0.glb",
+   "section_slot_names": [
+    "MI_EBS_HOL_Vitrified",
+    "MI_EBS_HOL_ApronStone",
+    "MI_EBS_HOL_Magenta"
+   ],
+   "sha256": "cd734f68348109819b9deb207d718df040d9bf420efdfc344573ba69dac50261",
+   "sockets": [
+    {
+     "bone": "root",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      90.2
+     ],
+     "purpose": "targeting and selection anchor under the crossing",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Matter_Dropoff",
+     "position_cm": [
+      -96.0,
+      0.0,
+      7.0
+     ],
+     "purpose": "the drop-off pad: where workers deliver Matter",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "root",
+     "name": "Arch_Crossing_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      164.0
+     ],
+     "purpose": "where the two arches cross",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Upkeep_Signal",
+     "position_cm": [
+      0.0,
+      0.0,
+      188.0
+     ],
+     "purpose": "where the 600-tick coherence charge is signalled; the surge itself is a material effect",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 756
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 0,
+   "mesh": "SK_EBS_HOL_BLD_002",
+   "path": "export/SK_EBS_HOL_BLD_002_LOD0.obj",
+   "sha256": "a897e4dede93ed27e2ce9965e7290672c5de888f915504bc18c1117e5cb638b9"
+  },
+  {
+   "bounds_cm": [
+    [
+     -171.0,
+     -128.69343417595167,
+     0.0
+    ],
+    [
+     128.69343417595167,
+     128.69343417595167,
+     162.36481654204397
+    ]
+   ],
+   "by_slot": {
+    "MI_EBS_HOL_ApronStone": 12,
+    "MI_EBS_HOL_Magenta": 240,
+    "MI_EBS_HOL_Vitrified": 168
+   },
+   "clips": [
+    "supplied_idle",
+    "upkeep",
+    "restore"
+   ],
+   "kind": "skinned + clips",
+   "lod": 1,
+   "mesh": "SK_EBS_HOL_BLD_002",
+   "path": "export/SK_EBS_HOL_BLD_002_LOD1.glb",
+   "section_slot_names": [
+    "MI_EBS_HOL_Vitrified",
+    "MI_EBS_HOL_ApronStone",
+    "MI_EBS_HOL_Magenta"
+   ],
+   "sha256": "cd946dc5fe75acd1b6ce21c5dc81c9dc82a500417fcad3513f1842a993814956",
+   "sockets": [
+    {
+     "bone": "root",
+     "name": "Target_Anchor_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      90.2
+     ],
+     "purpose": "targeting and selection anchor under the crossing",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Matter_Dropoff",
+     "position_cm": [
+      -96.0,
+      0.0,
+      7.0
+     ],
+     "purpose": "the drop-off pad: where workers deliver Matter",
+     "yaw_deg": 180.0
+    },
+    {
+     "bone": "root",
+     "name": "Arch_Crossing_Center",
+     "position_cm": [
+      0.0,
+      0.0,
+      164.0
+     ],
+     "purpose": "where the two arches cross",
+     "yaw_deg": 0.0
+    },
+    {
+     "bone": "root",
+     "name": "Upkeep_Signal",
+     "position_cm": [
+      0.0,
+      0.0,
+      188.0
+     ],
+     "purpose": "where the 600-tick coherence charge is signalled; the surge itself is a material effect",
+     "yaw_deg": 0.0
+    }
+   ],
+   "triangles": 420
+  },
+  {
+   "kind": "rest-pose OBJ",
+   "lod": 1,
+   "mesh": "SK_EBS_HOL_BLD_002",
+   "path": "export/SK_EBS_HOL_BLD_002_LOD1.obj",
+   "sha256": "b51cab50ddd2eedbba69f6cf5ccf056fce70b81e3444c1e2ff30a86a98a5a3a7"
+  }
+ ],
+ "package_id": "EBS-PKG-HC-INTERVAL-LOOM",
+ "pending_requirements": [
+  {
+   "detail": "The arch drift is a presentation device, not a role-required articulated assembly.",
+   "requirement": "Articulated components for a structure of this role",
+   "status": "PENDING, not waived"
+  }
+ ],
+ "planned_unreal_folder": "/Game/Echoes/Production/HOL/BLD/EBS_HOL_BLD_002/",
+ "production_asset_id": "EBS-HOL-BLD-002",
+ "provisional_contract": {
+  "bounds": {
+   "lod0_triangles": 3000,
+   "lod1_triangles": 1200
+  },
+  "card": "REL-BLD-017.HC.INTERVAL.ASSET in ArtSource/hollow-choir-asset-cards.json (rendered to hollow-choir-asset-cards.md)",
+  "status": "PROVISIONAL. Authored in this worktree after the trace; NOT in Docs/Requirements.md. The four REL-FAC-027.HC.* cards cover UNITS, and REL-FAC-027.HC.INTERVALIST is the Intervalist unit, NOT this building, despite the shared word."
+ },
+ "review": {
+  "scenes": [
+   "scenes/supplied.json",
+   "scenes/upkeep_tick.json",
+   "scenes/insolvent.json",
+   "scenes/destroyed.json",
+   "scenes/lod1.json",
+   "scenes/pose_supplied_idle_025.json",
+   "scenes/pose_upkeep_027.json"
+  ]
+ },
+ "review_assemblies": [
+  {
+   "lit_edges": 36,
+   "name": "supplied",
+   "path": "review/SK_EBS_HOL_BLD_002_supplied_LOD0.obj",
+   "sha256": "abd012f00698ed63ba911c204a6707da7449ad69b837673f1001901e2a069fcb",
+   "triangles": 756
+  },
+  {
+   "lit_edges": 36,
+   "name": "upkeep_tick",
+   "path": "review/SK_EBS_HOL_BLD_002_upkeep_tick_LOD0.obj",
+   "sha256": "fee35a20fd3510d90419f144bc43eee58ac8027651dd47f08fa647bfc93cb812",
+   "triangles": 780
+  },
+  {
+   "lit_edges": 0,
+   "name": "insolvent",
+   "path": "review/SK_EBS_HOL_BLD_002_insolvent_LOD0.obj",
+   "sha256": "830212384ba9714efa996d312100b0c2817660850aacf9912560eba53fc2f681",
+   "triangles": 756
+  },
+  {
+   "lit_edges": 0,
+   "name": "destroyed",
+   "path": "review/SK_EBS_HOL_BLD_002_destroyed_LOD0.obj",
+   "sha256": "94b6a5ec052a74fc51c130e5aff1390dad6235632d4ca11319b50d1fd030b404",
+   "triangles": 132
+  },
+  {
+   "name": "supplied_lod1",
+   "path": "review/SK_EBS_HOL_BLD_002_supplied_LOD1.obj",
+   "sha256": "b27457e785f03d6f67f97ba3d0e02195a6031fa7b0663a128884e8bb4d6b7836",
+   "triangles": 420
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_supplied_idle_025",
+   "path": "review/pose_supplied_idle_025.obj",
+   "sha256": "ab79cf60c2a89856752374951686a3de111b89884ab73fae57377bdae13fe88c"
+  },
+  {
+   "lowest_z_cm": 0.0,
+   "name": "pose_upkeep_027",
+   "path": "review/pose_upkeep_027.obj",
+   "sha256": "e87247a449d89c11d772abe7867a9aeb342b425aa5c6414ca3e8f4c7dd64aa54"
+  }
+ ],
+ "revision": "ebs-hol-bld-002-concept-v1",
+ "rig": {
+  "bones": [
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "name": "root",
+    "parent": null,
+    "purpose": "ground-contact centre between the four feet; the Loom never moves"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     82.0
+    ],
+    "name": "arch_a",
+    "parent": "root",
+    "purpose": "arch a: lets the two arches drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   },
+   {
+    "head_cm": [
+     0.0,
+     0.0,
+     82.0
+    ],
+    "name": "arch_b",
+    "parent": "root",
+    "purpose": "arch b: lets the two arches drift independently. Faction reality-bleed device, NOT a canon motion clause for this building"
+   }
+  ],
+  "policy": "Root plus one bone per arch so the two drift independently. That drift is the faction's reality-bleed device, NOT a canon motion clause for this building. No root motion."
+ },
+ "scale_basis": {
+  "canon": "SPEC-BLD-017.HC.INTERVAL: a supply node carrying a recurring coherence obligation",
+  "footprint_cm": 400.0,
+  "footprint_tiles": [
+   2,
+   2
+  ],
+  "source": "Content/Data/Source/buildings.json hc_interval_loom",
+  "upkeep": "600 ticks = 30 s between charges"
+ },
+ "skel_revision": "ebs-skelkit-v2",
+ "solvency_read": {
+  "insolvent": 0,
+  "mechanism": "the edge lines move between the magenta and vitrified slots, and the tick adds a surge band the other states do not carry. Brightness alone is a material parameter, so the states differ in GEOMETRY as well as in material.",
+  "supplied": 36,
+  "upkeep_tick": 36
+ },
+ "source_bindings": {
+  "candidate": "BuildArtifacts/Evidence/concept-discovery-20260906/interval-loom-review/interval-loom-candidate.png",
+  "canon": "Requirements SPEC-BLD-017.HC.INTERVAL",
+  "gameplay": "Content/Data/Source/buildings.json hc_interval_loom"
+ },
+ "stage": "BLOCKOUT (concept-v1)",
+ "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
+ "states": {
+  "destroyed": "the arches down; the feet and the pad remain",
+  "insolvent": "every edge line dark; the frame reads as unpowered",
+  "supplied": "edge lines lit and steady",
+  "upkeep_tick": "a surge band across both crowns as the 600-tick charge falls due"
+ },
+ "tools": {
+  "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
+  "renderer": "ArtSource/tools/ebs_render.py",
+  "skeletal_kit": "ArtSource/tools/ebs_skelkit.py"
+ },
+ "traced_before_the_card": {
+  "card_written_after": true,
+  "directive": "Owner ruling 2026-09-07: trace each selected concept BEFORE authoring its provisional card.",
+  "trace": "the candidate's SUPPLIED view, dark-pixel row spans; 849 x 550 px, height over width 0.648, two crossed arches on four feet with a separate ground pad"
+ },
+ "units": {
+  "axes": "+X forward, +Y right, +Z up",
+  "length": "centimetres",
+  "nanite": false,
+  "pivot": "ground-contact centre between the four feet"
+ }
+}

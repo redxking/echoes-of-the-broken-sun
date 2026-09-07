@@ -15,7 +15,12 @@
   ],
   "coverage_basis": {
    "audited": "2026-09-07, every '#### [Asset Card: ...]' heading in Docs/Requirements.md matched against all 21 packages",
-   "hollow_choir_cards_that_exist": ["REL-FAC-027.HC.THREADKEEPER.ASSET", "REL-FAC-027.HC.INTERVALIST.ASSET", "REL-FAC-027.HC.WARDEN.ASSET", "REL-FAC-027.HC.AFTERIMAGE.ASSET"],
+   "hollow_choir_cards_that_exist": [
+    "REL-FAC-027.HC.THREADKEEPER.ASSET",
+    "REL-FAC-027.HC.INTERVALIST.ASSET",
+    "REL-FAC-027.HC.WARDEN.ASSET",
+    "REL-FAC-027.HC.AFTERIMAGE.ASSET"
+   ],
    "what_they_cover": "UNITS only. None of the four remaining packages is a unit.",
    "explicit_non_match": "REL-FAC-027.HC.INTERVALIST.ASSET is the Intervalist unit and does NOT govern the Interval Loom building, despite the shared word."
   },
@@ -41,7 +46,10 @@
     "lod0_triangles": 8000,
     "lod1_triangles": 3500,
     "scope": "the complete assembly including every slab pair and its offset duplicate",
-    "footprint_tiles": [5, 5],
+    "footprint_tiles": [
+     5,
+     5
+    ],
     "nanite": false,
     "pivot": "disc ground-contact centre",
     "budget_note": "the faction default; a ring of flat slabs is cheap, so the ceiling is headroom for the plinth and intake detail"
@@ -63,7 +71,13 @@
     "articulated_requirement": "PENDING, not waived: the pipeline expects a static primary structure with role-required articulated components.",
     "root_motion": "None. The Concordance never moves and is the faction's Command Core."
    },
-   "sockets": ["Target_Anchor_Center", "Unit_Emergence", "Rally_Default", "Matter_Dropoff", "Choir_Thread_Center"],
+   "sockets": [
+    "Target_Anchor_Center",
+    "Unit_Emergence",
+    "Rally_Default",
+    "Matter_Dropoff",
+    "Choir_Thread_Center"
+   ],
    "states": {
     "working": "every pair whole, the fracture edging lit, the intake apron clear",
     "damaged": "one pair cracked, as the candidate's DAMAGED PAIR panel draws it",
@@ -73,6 +87,63 @@
     "The ring must read as a ring at gameplay distance, and the intake apron must read as the place matter goes.",
     "LOD1 shall preserve the ring, the pair count and the intake apron.",
     "The offset duplicate must remain visible as a duplicate; if it merges into its parent slab the reality-bleed read is lost.",
+    "Triangle counts under the ceiling are headroom, not sufficiency."
+   ]
+  },
+  {
+   "card_id": "REL-BLD-017.HC.INTERVAL.ASSET",
+   "status": "PROVISIONAL",
+   "package_id": "EBS-PKG-HC-INTERVAL-LOOM",
+   "production_asset_id": "EBS-HOL-BLD-002",
+   "subject": "Interval Loom",
+   "canon": "SPEC-BLD-017.HC.INTERVAL",
+   "function": "Supply node: 400 HP, 600 cm sight, 110 construction ticks, +6 logistics, 2x2 footprint. Coherence: charges 5 Dawn every 600 ticks, reduced to 4 inside a Phase Anchor field",
+   "traced_from": "BuildArtifacts/Evidence/concept-discovery-20260906/interval-loom-review/interval-loom-candidate.png (SUPPLIED, UPKEEP TICK, INSOLVENT), traced 2026-09-07 before this card was written",
+   "mesh_prop": {
+    "lod0_triangles": 3000,
+    "lod1_triangles": 1200,
+    "scope": "the complete assembly including both arches, all four feet and the drop-off pad",
+    "footprint_tiles": [
+     2,
+     2
+    ],
+    "nanite": false,
+    "pivot": "ground-contact centre between the four feet",
+    "budget_note": "well under the faction default: two ribbon arches and a flat pad carry no mass that a LOD could keep"
+   },
+   "tex_maps": "2048x2048 packed PBR following the HC unit cards' stack; the arch ribbons carry a vitrified glass core value.",
+   "mat_rule": {
+    "construction": "Two flat ribbon arches crossing over a bare footprint. No walls, no roof, no machinery: the Loom is a frame, not a building.",
+    "emissive": "Magenta Fracture edge lines along both borders of each arch, <= 12% of surface area as a CEILING not a target.",
+    "forbidden": "No Kharuun strata, no Meridian plates or conduits, no amber, no cyan."
+   },
+   "components": [
+    "Two ribbon arches crossing diagonally over the footprint",
+    "Four flat foot plates, one at each arch end",
+    "A flat drop-off pad on the ground with delivered matter on it",
+    "Magenta fracture edge lines along both borders of each arch"
+   ],
+   "motion": {
+    "rig": "Static primary structure. Provisional plan is root plus one bone per arch so the two can drift independently \u2014 the faction's reality-bleed device, NOT a canon motion clause for this building.",
+    "articulated_requirement": "PENDING, not waived.",
+    "root_motion": "None."
+   },
+   "sockets": [
+    "Target_Anchor_Center",
+    "Matter_Dropoff",
+    "Arch_Crossing_Center",
+    "Upkeep_Signal"
+   ],
+   "states": {
+    "supplied": "the edge lines hold a steady glow",
+    "upkeep_tick": "a surge band runs the arch crowns as the 600-tick charge falls due",
+    "insolvent": "every edge line dark; the frame reads as unpowered",
+    "destroyed": "the arches down, the feet and pad left"
+   },
+   "readability": [
+    "Supplied, ticking and insolvent must be distinguishable at gameplay distance; the player's Dawn solvency is the read.",
+    "The drop-off pad must read as a place workers deliver to.",
+    "LOD1 shall preserve both arches, the four feet, the pad and the edge lines.",
     "Triangle counts under the ceiling are headroom, not sufficiency."
    ]
   }

@@ -48,6 +48,7 @@ UNITS only. None of the four remaining packages is a unit. REL-FAC-027.HC.INTERV
 | Card | Subject | LOD0 | LOD1 | Status |
 |---|---|---|---|---|
 | `REL-BLD-017.HC.CONCORDANCE.ASSET` | Concordance | 8,000 | 3,500 | PROVISIONAL |
+| `REL-BLD-017.HC.INTERVAL.ASSET` | Interval Loom | 3,000 | 1,200 | PROVISIONAL |
 
 ### REL-BLD-017.HC.CONCORDANCE.ASSET — Concordance
 
@@ -93,4 +94,51 @@ UNITS only. None of the four remaining packages is a unit. REL-FAC-027.HC.INTERV
 * The ring must read as a ring at gameplay distance, and the intake apron must read as the place matter goes.
 * LOD1 shall preserve the ring, the pair count and the intake apron.
 * The offset duplicate must remain visible as a duplicate; if it merges into its parent slab the reality-bleed read is lost.
+* Triangle counts under the ceiling are headroom, not sufficiency.
+
+### REL-BLD-017.HC.INTERVAL.ASSET — Interval Loom
+
+| Field | Value |
+|---|---|
+| Status | PROVISIONAL |
+| Package | `EBS-PKG-HC-INTERVAL-LOOM` |
+| Production asset | `EBS-HOL-BLD-002` |
+| Canon | SPEC-BLD-017.HC.INTERVAL |
+| Function | Supply node: 400 HP, 600 cm sight, 110 construction ticks, +6 logistics, 2x2 footprint. Coherence: charges 5 Dawn every 600 ticks, reduced to 4 inside a Phase Anchor field |
+
+**.MESH_PROP.** LOD0 ceiling 3,000 triangles; LOD1 ceiling 1,200. Scope: the complete assembly including both arches, all four feet and the drop-off pad. Footprint 2x2 tiles. Nanite off. Pivot at the ground-contact centre between the four feet. well under the faction default: two ribbon arches and a flat pad carry no mass that a LOD could keep
+
+**.TEX_MAPS.** 2048x2048 packed PBR following the HC unit cards' stack; the arch ribbons carry a vitrified glass core value.
+
+**.MAT_RULE.** Construction: Two flat ribbon arches crossing over a bare footprint. No walls, no roof, no machinery: the Loom is a frame, not a building. Emissive: Magenta Fracture edge lines along both borders of each arch, <= 12% of surface area as a CEILING not a target. Forbidden: No Kharuun strata, no Meridian plates or conduits, no amber, no cyan.
+
+**.COMPONENTS.**
+
+* Two ribbon arches crossing diagonally over the footprint
+* Four flat foot plates, one at each arch end
+* A flat drop-off pad on the ground with delivered matter on it
+* Magenta fracture edge lines along both borders of each arch
+
+**.ANIM_RIG.** Static primary structure. Provisional plan is root plus one bone per arch so the two can drift independently — the faction's reality-bleed device, NOT a canon motion clause for this building.
+
+**.ARTICULATION.** PENDING, not waived.
+
+**.ROOT_MOTION.** None.
+
+**.SOCKETS.** `Target_Anchor_Center`, `Matter_Dropoff`, `Arch_Crossing_Center`, `Upkeep_Signal`.
+
+**.STATES.**
+
+| State | Read |
+|---|---|
+| `supplied` | the edge lines hold a steady glow |
+| `upkeep_tick` | a surge band runs the arch crowns as the 600-tick charge falls due |
+| `insolvent` | every edge line dark; the frame reads as unpowered |
+| `destroyed` | the arches down, the feet and pad left |
+
+**.READABILITY.**
+
+* Supplied, ticking and insolvent must be distinguishable at gameplay distance; the player's Dawn solvency is the read.
+* The drop-off pad must read as a place workers deliver to.
+* LOD1 shall preserve both arches, the four feet, the pad and the edge lines.
 * Triangle counts under the ceiling are headroom, not sufficiency.

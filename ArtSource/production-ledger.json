@@ -668,6 +668,33 @@
    "open_items": [
     "The articulated-component requirement stays pending; the pair drift is a presentation device, not a role-required assembly."
    ]
+  },
+  {
+   "package_id": "EBS-PKG-HC-INTERVAL-LOOM",
+   "production_asset_id": "EBS-HOL-BLD-002",
+   "subject": "Interval Loom",
+   "production_maturity": "BLOCKOUT",
+   "current_revision": "ebs-hol-bld-002-concept-v1",
+   "asset_name": "SK_EBS_HOL_BLD_002",
+   "planned_unreal_folder": "/Game/Echoes/Production/HOL/BLD/EBS_HOL_BLD_002/",
+   "canon_status": "CANDIDATE (interval-loom candidate against canon SPEC-BLD-017.HC.INTERVAL); not owner acceptance",
+   "source_root": "ArtSource/EBS-HOL-BLD-002/",
+   "authoritative_document": "ArtSource/EBS-HOL-BLD-002/README.md",
+   "concept_fidelity_target": "ArtSource/EBS-HOL-BLD-002/concept-fidelity.md",
+   "asset_card": "REL-BLD-017.HC.INTERVAL.ASSET (PROVISIONAL, authored AFTER the trace). REL-FAC-027.HC.INTERVALIST.ASSET is the Intervalist UNIT and does NOT govern this building.",
+   "stage_receipts": [
+    {
+     "stage": "BLOCKOUT (concept build, ebs-hol-bld-002-concept-v1)",
+     "date": "2026-09-07",
+     "evidence": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/asset-production-20260906T221157Z/EBS-HOL-BLD-002/ (receipt.json, renders/concept-compare/, import/)",
+     "result": "Two ribbon arches crossing diagonally over a bare 2x2 footprint on four foot plates, with a drop-off pad and magenta fracture edge lines. Traced before the card was authored. The solvency read is geometry as well as material: supplied lights 36 edge segments, insolvent lights none, and the upkeep tick adds a surge band no other state carries. LOD0 756 / LOD1 420 against the provisional 3,000 / 1,200; magenta 5.4% against 12% after a first pass measured 27%. 18 tests. Import clean: 0 errors, 0 warnings, 3 bones, 4 sockets, 3 clips."
+    }
+   ],
+   "next": "Textures, a detail judgement at gameplay distance, in-engine capture, gate reviews, card incorporation, owner acceptance.",
+   "open_owner_questions": [],
+   "open_items": [
+    "The articulated-component requirement stays pending; the arch drift is a presentation device."
+   ]
   }
  ],
  "tools": {
@@ -940,10 +967,9 @@
   "as_of": "2026-09-07",
   "counting_authority": "Docs/VisualAssetPipeline/reference-packages.json, audited 2026-09-07",
   "total_packages": 21,
-  "at_blockout": 18,
-  "remaining": 3,
+  "at_blockout": 19,
+  "remaining": 2,
   "remaining_packages": [
-   "EBS-PKG-HC-INTERVAL-LOOM",
    "EBS-PKG-HC-CHORUS-LOOM",
    "EBS-PKG-HC-PHASE-ANCHOR"
   ]
