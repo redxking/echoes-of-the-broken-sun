@@ -1,0 +1,32 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "map_id": "M08",
+  "revision": 2,
+  "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Change ONLY the public contact plinth in upper center and lower-right detail. Remove the black central spire and circular ring/bowl form that make it look like a Future Well. Replace with a LOW RECTANGULAR contact platform on stable ground, with two small separate interface fittings at opposite ends: one pale civic ceramic, one stratified grown mineral; exposed neutral adapter between them. No pedestal or large crystal, no Well, no portal. Preserve every frame, frame offset/gap, road, cliff, lighting, other detail panels and exact text.",
+  "reference_images": [
+    "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-3517b81e-2cb1-433a-b808-e507f7bf8090.png"
+  ],
+  "generated_original": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-90b2c683-666e-4c4e-a7b0-e820d4e0839c.png",
+  "generator": "Built-in image generation tool; backend model unspecified",
+  "status": "RETAINED_CANDIDATE",
+  "output_hint": "Generated images are saved to /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17 as /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-90b2c683-666e-4c4e-a7b0-e820d4e0839c.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "sha256": "bbe0a80765b560383a3877958c9ba4ecf792c9966658a9a513e56b9ab2eda11d",
+  "prompt_sha256": "c1e5325e63a05b512c4fa985798331bb2afbe50966fd7348be1df25742f15e05",
+  "retained_inputs": [
+    {
+      "original_path": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-3517b81e-2cb1-433a-b808-e507f7bf8090.png",
+      "retained_path": "reference-inputs/4a479da6ed1fd240.png",
+      "sha256": "4a479da6ed1fd2404619873d5e59e01c0121f11261de0c2ab7361180230747cc",
+      "role": "Edit target"
+    }
+  ],
+  "evidence_copy": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/map-concepts-20260906/generated-originals/m08-r2.png",
+  "evidence_copy_sha256": "bbe0a80765b560383a3877958c9ba4ecf792c9966658a9a513e56b9ab2eda11d",
+  "selected_image": "images/m08-environment-candidate.png",
+  "visual_inspection": {
+    "selected_revision": 2,
+    "status": "RETAINED_CANDIDATE",
+    "observation": "Contact surface is now a low rectangular plinth distinct from the Future Well. Offset frame ends and solid terrace floors remain visible; endpoint material refinements and exact interaction footprint remain future work."
+  }
+}

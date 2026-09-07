@@ -1,0 +1,764 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "schema_version": 1,
+  "snapshot_sha256": "1dc394c09e6b4f7602fc89674f2762aa0b74654043f152d9296174a876a6fc58",
+  "status": "REVIEW_DRAFT",
+  "revision": 43,
+  "created_utc": "2026-09-06T15:42:27.336618+00:00",
+  "updated_utc": "2026-09-06T17:48:22.532720+00:00",
+  "selections": {
+    "EBS-CON-MER-UNT-001": {
+      "concept_id": "EBS-CON-MER-UNT-001",
+      "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+      "choice": "KEEP",
+      "notes": "Book-based delegated decision: Retain the compact worker frame, paired working arms and visible cargo. The drill/gripper and repaired ceramic shoulder match the story. Simplify the decorative mast panel and make loaded/unloaded cargo readable during later production; this remains a worker, not an armed robot.\n\nEvidence: attached novel paragraphs 143, 1536, 1607. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.392702+00:00"
+    },
+    "EBS-CON-MER-UNT-002": {
+      "concept_id": "EBS-CON-MER-UNT-002",
+      "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+      "choice": "REPLACE",
+      "notes": "Earlier owner note: Check out the book for the lancer make sure it makes sense we need to rework this i think\n\nBook-based delegated decision: Replace this upright armored hero silhouette. Retain pale ceramic, charcoal underframe and cyan rail technology in a new narrow two-legged line-fire frame: low cowl, lance held low, exposed thin flanks and a visible rear-leg recoil strut. The book explicitly describes frames and bracing; it does not call for a human infantry redesign. Preserve the owner replacement choice.\n\nEvidence: attached novel paragraphs 178, 181, 1966, 3078. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.394175+00:00"
+    },
+    "EBS-CON-MER-UNT-003": {
+      "concept_id": "EBS-CON-MER-UNT-003",
+      "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+      "choice": "KEEP",
+      "notes": "Book-based delegated decision: Retain the broad two-operator shield chassis and articulated barrier wings. The book supports the slow heavy screen and unfolding shield face. Production must show one directional front, vulnerable rear and a packed state; the luminous panels cannot imply all-round invulnerability.\n\nEvidence: attached novel paragraphs 178, 187, 1967. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.395420+00:00"
+    },
+    "EBS-CON-MER-UNT-004": {
+      "concept_id": "EBS-CON-MER-UNT-004",
+      "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+      "choice": "REPLACE",
+      "notes": "Earlier owner note: Read the book make sure this make sense. \n\nBook-based delegated decision: Replace the fighter-like pointed canopy and ornamental ring assembly with a thin-hulled utility skimmer, dominant mast/dish and an exposed strapped archive cradle. Retain the maintained ceramic equipment language. The book says it could not fight; game canon gives a small secondary weapon. Flag that conflict and retain game capability pending reconciliation. Preserve the owner replacement choice.\n\nEvidence: attached novel paragraphs 139, 169, 1941. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.396536+00:00"
+    },
+    "EBS-CON-KHA-UNT-001": {
+      "concept_id": "EBS-CON-KHA-UNT-001",
+      "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+      "choice": "REPLACE",
+      "notes": "Book-based delegated decision: Replace the spider-like machine with hose manipulators. The story shows an ordinary cultivator using a staff, carrying a sling, and working with broad forearms; expanded game canon identifies a stocky humanoid Kharuun. Design living strata, amber wrist nodules, staff and carried Matter. Avoid turning an ordinary person into a generic insect worker.\n\nEvidence: attached novel paragraphs 447, 455, 1061, 2627. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.397938+00:00"
+    },
+    "EBS-CON-KHA-UNT-002": {
+      "concept_id": "EBS-CON-KHA-UNT-002",
+      "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the low, lean, long-legged moving skirmisher. Rework the smooth cream shell, conspicuous purple crystals and manufactured-looking cannon into grown charcoal strata, amber seams and a shoulder shard-caster whose attachment can split with damage. Do not infer exact limb count from the prose.\n\nEvidence: attached novel paragraphs 181, 1060, 2474, 2475. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.400082+00:00"
+    },
+    "EBS-CON-KHA-UNT-003": {
+      "concept_id": "EBS-CON-KHA-UNT-003",
+      "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+      "choice": "KEEP",
+      "notes": "Book-based delegated decision: Retain the broad, low layered back and protected head as the assault-screen identity. The book supports grown mineral cover and bulk that must turn carefully in a narrow passage. Later production must show strata heaving into cover, mineral fracture and warm material detail; avoid mechanical joints or a giant ornamental gem becoming its defining feature.\n\nEvidence: attached novel paragraphs 496, 1066, 2467, 2516. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.401799+00:00"
+    },
+    "EBS-CON-KHA-UNT-004": {
+      "concept_id": "EBS-CON-KHA-UNT-004",
+      "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the tall delicate scout silhouette. Replace the prominent purple jewel and cable-like appendages with translucent amber sensor fins along head/spine and grounded mineral-organic anatomy. The story describes repaired and inclined fins; sensing should be visible as listening, not a spell or weapon.\n\nEvidence: attached novel paragraphs 1689, 2436, 2468. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.403317+00:00"
+    },
+    "EBS-CON-MER-BLD-001": {
+      "concept_id": "EBS-CON-MER-BLD-001",
+      "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain radial network-root organization and delivery approaches, but reduce the monumental reactor-spire emphasis. Make a field station with serviceable rails, redundant conduits, work entrances and a modest command/sensor core. The book establishes function and maintenance, not this ornate exact massing.\n\nEvidence: attached novel paragraphs 136, 172, 173. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.404540+00:00"
+    },
+    "EBS-CON-MER-BLD-002": {
+      "concept_id": "EBS-CON-MER-BLD-002",
+      "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the vertical pylon and physical connection points. Slim its oversized reactor base, remove exposed trophy-crystal emphasis, and show removable numbered ceramic panels, load collar and accessible conduit couplings. It should read as maintained distribution equipment.\n\nEvidence: attached novel paragraphs 135, 169. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.405992+00:00"
+    },
+    "EBS-CON-MER-BLD-003": {
+      "concept_id": "EBS-CON-MER-BLD-003",
+      "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+      "choice": "KEEP",
+      "notes": "Book-based delegated decision: Retain the long open fabrication hall, structural rails and visible work-to-output sequence. This follows the story’s repairable frame economy and the Bible’s explicit Array Foundry brief; the novel does not establish this exact building design. Production still needs intelligible intake/output and research gantry states.\n\nEvidence: attached novel paragraphs 143, 1536, 1551. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.407415+00:00"
+    },
+    "EBS-CON-MER-BLD-004": {
+      "concept_id": "EBS-CON-MER-BLD-004",
+      "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the readable rotating gun and obvious power connection. Rework the large single ornamental barrel and circular pedestal to the Bible’s three-legged ceramic mount and twin-emitter head. Supply/offline status must be visible. The novel establishes a fixed powered emplacement, not emitter count.\n\nEvidence: attached novel paragraphs 2515. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.408816+00:00"
+    },
+    "EBS-CON-KHA-BLD-001": {
+      "concept_id": "EBS-CON-KHA-BLD-001",
+      "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+      "choice": "REPLACE",
+      "notes": "Book-based delegated decision: Replace this armored shrine-like headquarters as the production direction. Retain warm communal center only. Prefer the annotated grown-dome study: inhabited hollows, intake cleft, banded strata and adaptation crown. The novel supports cultivated, maintained material; the specific Memory Hearth form comes from the Bible, not a named book scene.\n\nEvidence: attached novel paragraphs 447, 455, 2626, 566. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.410286+00:00"
+    },
+    "EBS-CON-KHA-BLD-002": {
+      "concept_id": "EBS-CON-KHA-BLD-002",
+      "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the monolith that can migrate. Replace insect-robot legs and polished armor with a grown carriage, retracting mineral root ring, worn docking hollows and dark layered strata. Show both rooted and mobile states; it is infrastructure, not a combat creature.\n\nEvidence: attached novel paragraphs 446, 447, 454, 1695. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.411611+00:00"
+    },
+    "EBS-CON-KHA-BLD-003": {
+      "concept_id": "EBS-CON-KHA-BLD-003",
+      "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the bowl and surrounding niches. Lower the fortress-like ribs, expose a shallow amber matrix pool and make molt niches accessible to warforms and cultivators. Grown texture and use should dominate ornament. The specific basin and niche form is from game canon; the book does not supply a named Growth Basin description.\n\nEvidence: attached novel paragraphs 447, 2626. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.412988+00:00"
+    },
+    "EBS-CON-KHA-BLD-004": {
+      "concept_id": "EBS-CON-KHA-BLD-004",
+      "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the single tall listening rib, but soften the assembled antenna impression into a rooted curve of banded strata with amber nodules spaced along it. The book explicitly describes this growth sequence. Show sensor sequence and rooted socket; no weapon styling.\n\nEvidence: attached novel paragraphs 1083, 1084, 1721. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.430306+00:00"
+    },
+    "EBS-CON-MER-BLD-005": {
+      "concept_id": "EBS-CON-MER-BLD-005",
+      "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Use the repairable civic shell, ramp and status bands as the stronger architectural direction; lower the bunker-like dome, expose useful load paths and separate worker intake from exit. Combine its service clarity with the original study’s network-root organization. Do not adopt printed scale or doorway proportions as approved dimensions.\n\nEvidence: attached novel paragraphs 136, 172, 173. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.493851+00:00"
+    },
+    "EBS-CON-MER-BLD-006": {
+      "concept_id": "EBS-CON-MER-BLD-006",
+      "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the slender ceramic pylon: closer to the book than the original oversized reactor. Replace airborne lightning webs with physically legible conduits and restrained status illumination; show the numbered panels and service collar the maintenance crew can remove.\n\nEvidence: attached novel paragraphs 135. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.495510+00:00"
+    },
+    "EBS-CON-MER-BLD-007": {
+      "concept_id": "EBS-CON-MER-BLD-007",
+      "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain overhead gantries, service access and visible fabrication work. Reorganize the stacked workshop into the Bible’s long intake/work/output hall, with a separate readable roof research gantry. Reduce sparks and tiny machinery that conceal the principal unit-production path. Exact architecture is a game-canon design judgment, not a novel quotation.\n\nEvidence: attached novel paragraphs 143, 1551. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.497101+00:00"
+    },
+    "EBS-CON-MER-BLD-008": {
+      "concept_id": "EBS-CON-MER-BLD-008",
+      "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain twin emitters and a readable turret head. Replace the massive bunker and decorative shield bubble with the canonical three-legged mount and heavy supply coupling. No new shielding mechanic follows from this painting. Make loss of power obvious.\n\nEvidence: attached novel paragraphs 2515. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.500000+00:00"
+    },
+    "EBS-CON-KHA-BLD-005": {
+      "concept_id": "EBS-CON-KHA-BLD-005",
+      "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+      "choice": "KEEP",
+      "notes": "Book-based delegated decision: Retain the grown dome, inhabited worker hollows and layered communal interior as the Memory Hearth direction. These align with the Bible’s explicit headquarters brief and the novel’s maintained mineral-organic culture. The printed 145 m scale is rejected as production guidance; volcanic brightness and scale are not approved by keeping the silhouette.\n\nEvidence: attached novel paragraphs 447, 455, 2626, 566. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.502209+00:00"
+    },
+    "EBS-CON-KHA-BLD-006": {
+      "concept_id": "EBS-CON-KHA-BLD-006",
+      "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain banded monolith, amber nodules and visible roots. Add the grown carriage and root-retraction sequence essential to the story. Reject the sheet’s resource-node label and 80 m annotation as authority: this is mobile logistical infrastructure, not a static mineral deposit.\n\nEvidence: attached novel paragraphs 446, 447, 454, 1695. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.504289+00:00"
+    },
+    "EBS-CON-KHA-BLD-007": {
+      "concept_id": "EBS-CON-KHA-BLD-007",
+      "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain terraced mineral bowl, pool and emergence access. Replace rainbow/geothermal-resort coloring with restrained amber matrix light and make the molt niches unmistakable. Scale and production footprint come from game requirements, not the scene’s human figures. The novel informs material culture; the Bible supplies this asset’s role.\n\nEvidence: attached novel paragraphs 447, 2626. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.506553+00:00"
+    },
+    "EBS-CON-KHA-BLD-008": {
+      "concept_id": "EBS-CON-KHA-BLD-008",
+      "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the slender rooted curve. Replace the near-invisible whisker-only identity with clearly spaced amber sensor nodules and a stronger rib silhouette at RTS distance. Discard the printed 110 m height. The book supplies the banded growth and nodules, not a skyscraper scale.\n\nEvidence: attached novel paragraphs 1084, 1721. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.508501+00:00"
+    },
+    "EBS-CON-HOL-BLD-001": {
+      "concept_id": "EBS-CON-HOL-BLD-001",
+      "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+      "choice": "REPLACE",
+      "notes": "Book-based delegated decision: Replace the glowing armored cathedral with an open ring of paired, offset charcoal-glass panes surrounding a held tone. Provide one true intake gap and worker passages. The book explicitly describes paired panes and the true gap; solid ribbed armor and a blazing magical core obscure both function and maintained possibility.\n\nEvidence: attached novel paragraphs 2434, 2435, 3037. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.510269+00:00"
+    },
+    "EBS-CON-HOL-BLD-002": {
+      "concept_id": "EBS-CON-HOL-BLD-002",
+      "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain crossed spans and conflicting shadows. Reduce the solid portal-machine casing, add the small drop-pane beneath and make the structure connective rather than a large gateway/production facility. The sheet’s label conflicts with the game roster. Exact Interval Loom form comes from the Bible; prose supplies conditional geometry and upkeep.\n\nEvidence: attached novel paragraphs 1909, 2434, 3041. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.511907+00:00"
+    },
+    "EBS-CON-HOL-BLD-003": {
+      "concept_id": "EBS-CON-HOL-BLD-003",
+      "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the visible weaving space and parallel threads. Replace armored cradle rails with two charcoal-glass pylons and maintained luminous filaments; distinguish the research pane from unit formation. Avoid constant lightning. The novel supports costly weaving/learning; exact pylon geometry is game canon.\n\nEvidence: attached novel paragraphs 3037, 3041, 3047. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.513661+00:00"
+    },
+    "EBS-CON-HOL-BLD-004": {
+      "concept_id": "EBS-CON-HOL-BLD-004",
+      "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the single slender glass-spire direction. Remove root-like magical tendrils and excessive bloom; show a perfectly registered silhouette and restrained field ring. The book explicitly describes a luminous-lattice spire in exact register and its steady field easing nearby upkeep. Stable alignment must distinguish it from offset Choir neighbors.\n\nEvidence: attached novel paragraphs 3105, 3112. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.516974+00:00"
+    },
+    "EBS-CON-FWL-SYS-001": {
+      "concept_id": "EBS-CON-FWL-SYS-001",
+      "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain courtyard-scale bowl and central spire as the family base. Rework the ceremonial stone machinery into vitrified charcoal glass with quiet fracture seams and doubled outline/shadows. Lower the gold glow and floating spectacle so Dormant reads as held potential. Existing rings are a design proposal, not textually established engineering.\n\nEvidence: attached novel paragraphs 191, 196. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.519212+00:00"
+    },
+    "EBS-CON-FWL-SYS-002": {
+      "concept_id": "EBS-CON-FWL-SYS-002",
+      "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the collapse direction, but make this a transition reference rather than an enduring geyser state: telegraph climbs the spire, then spire folds into bowl, light cuts off and a dark cracked spent site remains. Book/Bible amber conflicts with REL-ART-014 cyan geyser; color reconciliation remains open and no requirement is changed.\n\nEvidence: attached novel paragraphs 244, 245, 246, 247. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.521441+00:00"
+    },
+    "EBS-CON-FWL-SYS-003": {
+      "concept_id": "EBS-CON-FWL-SYS-003",
+      "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain intact core and custody ring. Reduce the spraying fragments and active energy column: the novel says the spire steadies into one outline and a slow ring holds around the bowl. Show ongoing custody and continued cost through restrained motion, not a more powerful Harvest.\n\nEvidence: attached novel paragraphs 2510, 2511. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.523732+00:00"
+    },
+    "EBS-CON-FWL-SYS-004": {
+      "concept_id": "EBS-CON-FWL-SYS-004",
+      "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain magenta transformation identity and the shared bowl/spire. Make the effect point to an actual temporary crossing or other authorized terrain feature, with readable duration and expiry. Orbiting rings alone do not communicate Reshape’s spatial consequence. The prose supports temporary manifested ground, not this exact machine. Chapter 24 explicitly says this novel’s basin has no realized Reshape precedent; the new state design therefore requires the game’s authored reference, not a claimed book scene.\n\nEvidence: attached novel paragraphs 198, 2499, 3630, 3328. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.525760+00:00"
+    },
+    "EBS-CON-FWL-SYS-005": {
+      "concept_id": "EBS-CON-FWL-SYS-005",
+      "source_sha256": "262ecb70ca9cb970bd6feba4cba1546c2f1b2d31297b3d476eafa2d94f205c78",
+      "choice": "REPLACE",
+      "notes": "Book-based delegated decision: Replace the giant luminous tornado as the Future Well production reference. It obscures the bowl/core, turns sustained custody into spectacle and fails to explain permanent exhaustion or temporary terrain. Preserve the image in visual history; it must not define the state family.\n\nEvidence: attached novel paragraphs 191, 246, 247, 2511. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.527722+00:00"
+    },
+    "EBS-CON-FWL-SYS-007": {
+      "concept_id": "EBS-CON-FWL-SYS-007",
+      "source_sha256": "04ec9daa608ee6d5f15268b8fa7aa412d7eafe132dac5811681daa2ce105e62f",
+      "choice": "REWORK",
+      "notes": "Book-based delegated decision: Retain the central landmark’s relationship to the route and opposing forces as composition reference. Rework the polished gold plinth and floating collectible appearance into a vitrified bowl with embedded core identity. This choice applies to the Well region only; it does not approve the surrounding skiff, units, sky or map geometry.\n\nEvidence: attached novel paragraphs 191, 196. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+      "updated_utc": "2026-09-06T17:48:22.529696+00:00"
+    }
+  },
+  "family_notes": "Book-based delegated direction: Rework one bowl-and-core-spire family. Dormant: quiet fractured glass and doubled outline. Harvest: visible commitment followed by irreversible collapse and a dark spent site. Preserve: stabilized core and slow custody ring. Reshape: temporary authored terrain with expiry cues. Reject the giant tornado as the family definition. Resolve the amber-versus-cyan Harvest conflict before production; no game rule or canon status changes.",
+  "history": [
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-UNT-001",
+        "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+        "choice": "KEEP",
+        "notes": "",
+        "updated_utc": "2026-09-06T16:52:41.737350+00:00"
+      },
+      "revision": 1,
+      "time_utc": "2026-09-06T16:52:41.737360+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-UNT-002",
+        "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+        "choice": "REWORK",
+        "notes": "Check out the book for the lancer make sure it makes sense we need to rework this i think",
+        "updated_utc": "2026-09-06T16:53:23.054215+00:00"
+      },
+      "revision": 2,
+      "time_utc": "2026-09-06T16:53:23.054227+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-UNT-002",
+        "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+        "choice": "REPLACE",
+        "notes": "Check out the book for the lancer make sure it makes sense we need to rework this i think",
+        "updated_utc": "2026-09-06T16:53:24.290895+00:00"
+      },
+      "revision": 3,
+      "time_utc": "2026-09-06T16:53:24.290931+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-UNT-002",
+        "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+        "choice": "REPLACE",
+        "notes": "Check out the book for the lancer make sure it makes sense we need to rework this i think",
+        "updated_utc": "2026-09-06T16:53:27.058010+00:00"
+      },
+      "revision": 4,
+      "time_utc": "2026-09-06T16:53:27.058020+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-UNT-002",
+        "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+        "choice": "REPLACE",
+        "notes": "Check out the book for the lancer make sure it makes sense we need to rework this i think",
+        "updated_utc": "2026-09-06T16:53:28.276228+00:00"
+      },
+      "revision": 5,
+      "time_utc": "2026-09-06T16:53:28.276488+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-UNT-003",
+        "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+        "choice": "KEEP",
+        "notes": "",
+        "updated_utc": "2026-09-06T16:53:35.863130+00:00"
+      },
+      "revision": 6,
+      "time_utc": "2026-09-06T16:53:35.863138+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-UNT-004",
+        "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+        "choice": "REPLACE",
+        "notes": "Read the book make sure this make sense. ",
+        "updated_utc": "2026-09-06T16:53:57.895110+00:00"
+      },
+      "revision": 7,
+      "time_utc": "2026-09-06T16:53:57.895121+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-UNT-004",
+        "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+        "choice": "REPLACE",
+        "notes": "Read the book make sure this make sense. ",
+        "updated_utc": "2026-09-06T16:54:00.500801+00:00"
+      },
+      "revision": 8,
+      "time_utc": "2026-09-06T16:54:00.500810+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-UNT-001",
+        "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+        "choice": "KEEP",
+        "notes": "Book-based delegated decision: Retain the compact worker frame, paired working arms and visible cargo. The drill/gripper and repaired ceramic shoulder match the story. Simplify the decorative mast panel and make loaded/unloaded cargo readable during later production; this remains a worker, not an armed robot.\n\nEvidence: attached novel paragraphs 143, 1536, 1607. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.392702+00:00"
+      },
+      "revision": 9,
+      "time_utc": "2026-09-06T17:48:22.392710+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-UNT-002",
+        "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+        "choice": "REPLACE",
+        "notes": "Earlier owner note: Check out the book for the lancer make sure it makes sense we need to rework this i think\n\nBook-based delegated decision: Replace this upright armored hero silhouette. Retain pale ceramic, charcoal underframe and cyan rail technology in a new narrow two-legged line-fire frame: low cowl, lance held low, exposed thin flanks and a visible rear-leg recoil strut. The book explicitly describes frames and bracing; it does not call for a human infantry redesign. Preserve the owner replacement choice.\n\nEvidence: attached novel paragraphs 178, 181, 1966, 3078. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.394175+00:00"
+      },
+      "revision": 10,
+      "time_utc": "2026-09-06T17:48:22.394182+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-UNT-003",
+        "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+        "choice": "KEEP",
+        "notes": "Book-based delegated decision: Retain the broad two-operator shield chassis and articulated barrier wings. The book supports the slow heavy screen and unfolding shield face. Production must show one directional front, vulnerable rear and a packed state; the luminous panels cannot imply all-round invulnerability.\n\nEvidence: attached novel paragraphs 178, 187, 1967. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.395420+00:00"
+      },
+      "revision": 11,
+      "time_utc": "2026-09-06T17:48:22.395425+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-UNT-004",
+        "source_sha256": "427e60cd27bd78e9a3d9ee31e2c2663869cd36cc5f027c59ae62f090560532dc",
+        "choice": "REPLACE",
+        "notes": "Earlier owner note: Read the book make sure this make sense. \n\nBook-based delegated decision: Replace the fighter-like pointed canopy and ornamental ring assembly with a thin-hulled utility skimmer, dominant mast/dish and an exposed strapped archive cradle. Retain the maintained ceramic equipment language. The book says it could not fight; game canon gives a small secondary weapon. Flag that conflict and retain game capability pending reconciliation. Preserve the owner replacement choice.\n\nEvidence: attached novel paragraphs 139, 169, 1941. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.396536+00:00"
+      },
+      "revision": 12,
+      "time_utc": "2026-09-06T17:48:22.396540+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-KHA-UNT-001",
+        "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+        "choice": "REPLACE",
+        "notes": "Book-based delegated decision: Replace the spider-like machine with hose manipulators. The story shows an ordinary cultivator using a staff, carrying a sling, and working with broad forearms; expanded game canon identifies a stocky humanoid Kharuun. Design living strata, amber wrist nodules, staff and carried Matter. Avoid turning an ordinary person into a generic insect worker.\n\nEvidence: attached novel paragraphs 447, 455, 1061, 2627. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.397938+00:00"
+      },
+      "revision": 13,
+      "time_utc": "2026-09-06T17:48:22.397946+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-KHA-UNT-002",
+        "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the low, lean, long-legged moving skirmisher. Rework the smooth cream shell, conspicuous purple crystals and manufactured-looking cannon into grown charcoal strata, amber seams and a shoulder shard-caster whose attachment can split with damage. Do not infer exact limb count from the prose.\n\nEvidence: attached novel paragraphs 181, 1060, 2474, 2475. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.400082+00:00"
+      },
+      "revision": 14,
+      "time_utc": "2026-09-06T17:48:22.400091+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-KHA-UNT-003",
+        "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+        "choice": "KEEP",
+        "notes": "Book-based delegated decision: Retain the broad, low layered back and protected head as the assault-screen identity. The book supports grown mineral cover and bulk that must turn carefully in a narrow passage. Later production must show strata heaving into cover, mineral fracture and warm material detail; avoid mechanical joints or a giant ornamental gem becoming its defining feature.\n\nEvidence: attached novel paragraphs 496, 1066, 2467, 2516. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.401799+00:00"
+      },
+      "revision": 15,
+      "time_utc": "2026-09-06T17:48:22.401807+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-KHA-UNT-004",
+        "source_sha256": "88f1a44ffa34739d54dbd0eb83fc2da888af6b7f6152c12d9cbab3d3ff160d1a",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the tall delicate scout silhouette. Replace the prominent purple jewel and cable-like appendages with translucent amber sensor fins along head/spine and grounded mineral-organic anatomy. The story describes repaired and inclined fins; sensing should be visible as listening, not a spell or weapon.\n\nEvidence: attached novel paragraphs 1689, 2436, 2468. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.403317+00:00"
+      },
+      "revision": 16,
+      "time_utc": "2026-09-06T17:48:22.403326+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-BLD-001",
+        "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain radial network-root organization and delivery approaches, but reduce the monumental reactor-spire emphasis. Make a field station with serviceable rails, redundant conduits, work entrances and a modest command/sensor core. The book establishes function and maintenance, not this ornate exact massing.\n\nEvidence: attached novel paragraphs 136, 172, 173. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.404540+00:00"
+      },
+      "revision": 17,
+      "time_utc": "2026-09-06T17:48:22.404544+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-BLD-002",
+        "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the vertical pylon and physical connection points. Slim its oversized reactor base, remove exposed trophy-crystal emphasis, and show removable numbered ceramic panels, load collar and accessible conduit couplings. It should read as maintained distribution equipment.\n\nEvidence: attached novel paragraphs 135, 169. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.405992+00:00"
+      },
+      "revision": 18,
+      "time_utc": "2026-09-06T17:48:22.405997+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-BLD-003",
+        "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+        "choice": "KEEP",
+        "notes": "Book-based delegated decision: Retain the long open fabrication hall, structural rails and visible work-to-output sequence. This follows the story’s repairable frame economy and the Bible’s explicit Array Foundry brief; the novel does not establish this exact building design. Production still needs intelligible intake/output and research gantry states.\n\nEvidence: attached novel paragraphs 143, 1536, 1551. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.407415+00:00"
+      },
+      "revision": 19,
+      "time_utc": "2026-09-06T17:48:22.407421+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-BLD-004",
+        "source_sha256": "5b64820bbd2bbc2891d24d42baf3cfae432ab78dce56b7086fd90254fa6f562e",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the readable rotating gun and obvious power connection. Rework the large single ornamental barrel and circular pedestal to the Bible’s three-legged ceramic mount and twin-emitter head. Supply/offline status must be visible. The novel establishes a fixed powered emplacement, not emitter count.\n\nEvidence: attached novel paragraphs 2515. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.408816+00:00"
+      },
+      "revision": 20,
+      "time_utc": "2026-09-06T17:48:22.408822+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-KHA-BLD-001",
+        "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+        "choice": "REPLACE",
+        "notes": "Book-based delegated decision: Replace this armored shrine-like headquarters as the production direction. Retain warm communal center only. Prefer the annotated grown-dome study: inhabited hollows, intake cleft, banded strata and adaptation crown. The novel supports cultivated, maintained material; the specific Memory Hearth form comes from the Bible, not a named book scene.\n\nEvidence: attached novel paragraphs 447, 455, 2626, 566. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.410286+00:00"
+      },
+      "revision": 21,
+      "time_utc": "2026-09-06T17:48:22.410290+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-KHA-BLD-002",
+        "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the monolith that can migrate. Replace insect-robot legs and polished armor with a grown carriage, retracting mineral root ring, worn docking hollows and dark layered strata. Show both rooted and mobile states; it is infrastructure, not a combat creature.\n\nEvidence: attached novel paragraphs 446, 447, 454, 1695. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.411611+00:00"
+      },
+      "revision": 22,
+      "time_utc": "2026-09-06T17:48:22.411614+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-KHA-BLD-003",
+        "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the bowl and surrounding niches. Lower the fortress-like ribs, expose a shallow amber matrix pool and make molt niches accessible to warforms and cultivators. Grown texture and use should dominate ornament. The specific basin and niche form is from game canon; the book does not supply a named Growth Basin description.\n\nEvidence: attached novel paragraphs 447, 2626. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.412988+00:00"
+      },
+      "revision": 23,
+      "time_utc": "2026-09-06T17:48:22.412992+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-KHA-BLD-004",
+        "source_sha256": "6b8bed5fc02ef99686f9740130e9437595815242f0ddfcf83bb8d571b4c92da9",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the single tall listening rib, but soften the assembled antenna impression into a rooted curve of banded strata with amber nodules spaced along it. The book explicitly describes this growth sequence. Show sensor sequence and rooted socket; no weapon styling.\n\nEvidence: attached novel paragraphs 1083, 1084, 1721. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.430306+00:00"
+      },
+      "revision": 24,
+      "time_utc": "2026-09-06T17:48:22.430313+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-BLD-005",
+        "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Use the repairable civic shell, ramp and status bands as the stronger architectural direction; lower the bunker-like dome, expose useful load paths and separate worker intake from exit. Combine its service clarity with the original study’s network-root organization. Do not adopt printed scale or doorway proportions as approved dimensions.\n\nEvidence: attached novel paragraphs 136, 172, 173. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.493851+00:00"
+      },
+      "revision": 25,
+      "time_utc": "2026-09-06T17:48:22.493857+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-BLD-006",
+        "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the slender ceramic pylon: closer to the book than the original oversized reactor. Replace airborne lightning webs with physically legible conduits and restrained status illumination; show the numbered panels and service collar the maintenance crew can remove.\n\nEvidence: attached novel paragraphs 135. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.495510+00:00"
+      },
+      "revision": 26,
+      "time_utc": "2026-09-06T17:48:22.495514+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-BLD-007",
+        "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain overhead gantries, service access and visible fabrication work. Reorganize the stacked workshop into the Bible’s long intake/work/output hall, with a separate readable roof research gantry. Reduce sparks and tiny machinery that conceal the principal unit-production path. Exact architecture is a game-canon design judgment, not a novel quotation.\n\nEvidence: attached novel paragraphs 143, 1551. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.497101+00:00"
+      },
+      "revision": 27,
+      "time_utc": "2026-09-06T17:48:22.497105+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-MER-BLD-008",
+        "source_sha256": "b6396728d4fd2a49890da5061c3ce598376b35d62621d5f63f9da25d700457f5",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain twin emitters and a readable turret head. Replace the massive bunker and decorative shield bubble with the canonical three-legged mount and heavy supply coupling. No new shielding mechanic follows from this painting. Make loss of power obvious.\n\nEvidence: attached novel paragraphs 2515. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.500000+00:00"
+      },
+      "revision": 28,
+      "time_utc": "2026-09-06T17:48:22.500024+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-KHA-BLD-005",
+        "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+        "choice": "KEEP",
+        "notes": "Book-based delegated decision: Retain the grown dome, inhabited worker hollows and layered communal interior as the Memory Hearth direction. These align with the Bible’s explicit headquarters brief and the novel’s maintained mineral-organic culture. The printed 145 m scale is rejected as production guidance; volcanic brightness and scale are not approved by keeping the silhouette.\n\nEvidence: attached novel paragraphs 447, 455, 2626, 566. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.502209+00:00"
+      },
+      "revision": 29,
+      "time_utc": "2026-09-06T17:48:22.502217+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-KHA-BLD-006",
+        "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain banded monolith, amber nodules and visible roots. Add the grown carriage and root-retraction sequence essential to the story. Reject the sheet’s resource-node label and 80 m annotation as authority: this is mobile logistical infrastructure, not a static mineral deposit.\n\nEvidence: attached novel paragraphs 446, 447, 454, 1695. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.504289+00:00"
+      },
+      "revision": 30,
+      "time_utc": "2026-09-06T17:48:22.504295+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-KHA-BLD-007",
+        "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain terraced mineral bowl, pool and emergence access. Replace rainbow/geothermal-resort coloring with restrained amber matrix light and make the molt niches unmistakable. Scale and production footprint come from game requirements, not the scene’s human figures. The novel informs material culture; the Bible supplies this asset’s role.\n\nEvidence: attached novel paragraphs 447, 2626. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.506553+00:00"
+      },
+      "revision": 31,
+      "time_utc": "2026-09-06T17:48:22.506565+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-KHA-BLD-008",
+        "source_sha256": "42600ed96eef7e308ab31e620e49180a41719b5e4d05803967a71c2bc5fcb49e",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the slender rooted curve. Replace the near-invisible whisker-only identity with clearly spaced amber sensor nodules and a stronger rib silhouette at RTS distance. Discard the printed 110 m height. The book supplies the banded growth and nodules, not a skyscraper scale.\n\nEvidence: attached novel paragraphs 1084, 1721. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.508501+00:00"
+      },
+      "revision": 32,
+      "time_utc": "2026-09-06T17:48:22.508506+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-HOL-BLD-001",
+        "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+        "choice": "REPLACE",
+        "notes": "Book-based delegated decision: Replace the glowing armored cathedral with an open ring of paired, offset charcoal-glass panes surrounding a held tone. Provide one true intake gap and worker passages. The book explicitly describes paired panes and the true gap; solid ribbed armor and a blazing magical core obscure both function and maintained possibility.\n\nEvidence: attached novel paragraphs 2434, 2435, 3037. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.510269+00:00"
+      },
+      "revision": 33,
+      "time_utc": "2026-09-06T17:48:22.510273+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-HOL-BLD-002",
+        "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain crossed spans and conflicting shadows. Reduce the solid portal-machine casing, add the small drop-pane beneath and make the structure connective rather than a large gateway/production facility. The sheet’s label conflicts with the game roster. Exact Interval Loom form comes from the Bible; prose supplies conditional geometry and upkeep.\n\nEvidence: attached novel paragraphs 1909, 2434, 3041. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.511907+00:00"
+      },
+      "revision": 34,
+      "time_utc": "2026-09-06T17:48:22.511911+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-HOL-BLD-003",
+        "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the visible weaving space and parallel threads. Replace armored cradle rails with two charcoal-glass pylons and maintained luminous filaments; distinguish the research pane from unit formation. Avoid constant lightning. The novel supports costly weaving/learning; exact pylon geometry is game canon.\n\nEvidence: attached novel paragraphs 3037, 3041, 3047. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.513661+00:00"
+      },
+      "revision": 35,
+      "time_utc": "2026-09-06T17:48:22.513665+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-HOL-BLD-004",
+        "source_sha256": "bebd1d65a82c0127264d15db3127ce09f1fb42ecd0d927fc70afee8f008683e5",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the single slender glass-spire direction. Remove root-like magical tendrils and excessive bloom; show a perfectly registered silhouette and restrained field ring. The book explicitly describes a luminous-lattice spire in exact register and its steady field easing nearby upkeep. Stable alignment must distinguish it from offset Choir neighbors.\n\nEvidence: attached novel paragraphs 3105, 3112. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.516974+00:00"
+      },
+      "revision": 36,
+      "time_utc": "2026-09-06T17:48:22.516982+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-FWL-SYS-001",
+        "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain courtyard-scale bowl and central spire as the family base. Rework the ceremonial stone machinery into vitrified charcoal glass with quiet fracture seams and doubled outline/shadows. Lower the gold glow and floating spectacle so Dormant reads as held potential. Existing rings are a design proposal, not textually established engineering.\n\nEvidence: attached novel paragraphs 191, 196. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.519212+00:00"
+      },
+      "revision": 37,
+      "time_utc": "2026-09-06T17:48:22.519219+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-FWL-SYS-002",
+        "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the collapse direction, but make this a transition reference rather than an enduring geyser state: telegraph climbs the spire, then spire folds into bowl, light cuts off and a dark cracked spent site remains. Book/Bible amber conflicts with REL-ART-014 cyan geyser; color reconciliation remains open and no requirement is changed.\n\nEvidence: attached novel paragraphs 244, 245, 246, 247. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.521441+00:00"
+      },
+      "revision": 38,
+      "time_utc": "2026-09-06T17:48:22.521448+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-FWL-SYS-003",
+        "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain intact core and custody ring. Reduce the spraying fragments and active energy column: the novel says the spire steadies into one outline and a slow ring holds around the bowl. Show ongoing custody and continued cost through restrained motion, not a more powerful Harvest.\n\nEvidence: attached novel paragraphs 2510, 2511. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.523732+00:00"
+      },
+      "revision": 39,
+      "time_utc": "2026-09-06T17:48:22.523737+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-FWL-SYS-004",
+        "source_sha256": "f95912742d42bd754e282e1a0a13e81ce07ee8a58ce3ef025569d1b483f9ed90",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain magenta transformation identity and the shared bowl/spire. Make the effect point to an actual temporary crossing or other authorized terrain feature, with readable duration and expiry. Orbiting rings alone do not communicate Reshape’s spatial consequence. The prose supports temporary manifested ground, not this exact machine. Chapter 24 explicitly says this novel’s basin has no realized Reshape precedent; the new state design therefore requires the game’s authored reference, not a claimed book scene.\n\nEvidence: attached novel paragraphs 198, 2499, 3630, 3328. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.525760+00:00"
+      },
+      "revision": 40,
+      "time_utc": "2026-09-06T17:48:22.525764+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-FWL-SYS-005",
+        "source_sha256": "262ecb70ca9cb970bd6feba4cba1546c2f1b2d31297b3d476eafa2d94f205c78",
+        "choice": "REPLACE",
+        "notes": "Book-based delegated decision: Replace the giant luminous tornado as the Future Well production reference. It obscures the bowl/core, turns sustained custody into spectacle and fails to explain permanent exhaustion or temporary terrain. Preserve the image in visual history; it must not define the state family.\n\nEvidence: attached novel paragraphs 191, 246, 247, 2511. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.527722+00:00"
+      },
+      "revision": 41,
+      "time_utc": "2026-09-06T17:48:22.527726+00:00"
+    },
+    {
+      "kind": "concept",
+      "record": {
+        "concept_id": "EBS-CON-FWL-SYS-007",
+        "source_sha256": "04ec9daa608ee6d5f15268b8fa7aa412d7eafe132dac5811681daa2ce105e62f",
+        "choice": "REWORK",
+        "notes": "Book-based delegated decision: Retain the central landmark’s relationship to the route and opposing forces as composition reference. Rework the polished gold plinth and floating collectible appearance into a vitrified bowl with embedded core identity. This choice applies to the Well region only; it does not approve the surrounding skiff, units, sky or map geometry.\n\nEvidence: attached novel paragraphs 191, 196. See book-based-review.json for exact source hash and retained excerpts. This is a visual-direction choice, not canon or production acceptance.",
+        "updated_utc": "2026-09-06T17:48:22.529696+00:00"
+      },
+      "revision": 42,
+      "time_utc": "2026-09-06T17:48:22.529700+00:00"
+    },
+    {
+      "kind": "family_notes",
+      "notes": "Book-based delegated direction: Rework one bowl-and-core-spire family. Dormant: quiet fractured glass and doubled outline. Harvest: visible commitment followed by irreversible collapse and a dark spent site. Preserve: stabilized core and slow custody ring. Reshape: temporary authored terrain with expiry cues. Reject the giant tornado as the family definition. Resolve the amber-versus-cyan Harvest conflict before production; no game rule or canon status changes.",
+      "revision": 43,
+      "time_utc": "2026-09-06T17:48:22.532720+00:00"
+    }
+  ],
+  "boundary": "Keep/Rework/Replace choices are visual-direction review input, not canon acceptance, production authorization or asset changes."
+}

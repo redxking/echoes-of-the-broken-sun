@@ -1,0 +1,32 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "map_id": "M02",
+  "revision": 2,
+  "prompt": "Edit this exact M02 Shivergrass environment sheet. Preserve the entire grass ecology, lighting, central basalt divider, large open migration lanes, all three detail panel positions, labels and header/footer. Change ONLY the observation sills visible at the upper left, far back and right and in lower-right detail panel: replace their pale ceramic segmented railings, cyan devices, amber status bars and manufactured pylons with low practical worked basalt/mineral-stone ledges seated directly in naturally layered bedrock. Smooth weather-worn observation surfaces, natural striation and simple stone shoulders; no electronics, metal fittings, UI lights, runes, shrine, tall pillar or tribal ornament. Keep small scale and clear open standing surfaces. These sills belong to a mineral-organic custodial landscape, not a Meridian service base. No animals or new features.",
+  "reference_images": [
+    "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-479c1fd2-63f4-4ba5-a7e4-dbd52bdaa792.png"
+  ],
+  "generated_original": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-758922ba-b915-4770-9d39-208e2e62eabd.png",
+  "generator": "Built-in image generation tool; backend model unspecified",
+  "status": "RETAINED_CANDIDATE",
+  "output_hint": "Generated images are saved to /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17 as /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-758922ba-b915-4770-9d39-208e2e62eabd.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "sha256": "9c05b6aade72e83e1f4094ad4bbab74cce12b031bade7778c3a54d96c90c74a3",
+  "prompt_sha256": "f4d193af35df860008b2fd525c67d622399ba1d4427a71f34da17dbeef890d6e",
+  "retained_inputs": [
+    {
+      "original_path": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-479c1fd2-63f4-4ba5-a7e4-dbd52bdaa792.png",
+      "retained_path": "reference-inputs/a23388229c6b3f15.png",
+      "sha256": "a23388229c6b3f157020140f00446481a1b522507e008567f5123153c0e9a706",
+      "role": "Edit target"
+    }
+  ],
+  "evidence_copy": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/map-concepts-20260906/generated-originals/m02-r2.png",
+  "evidence_copy_sha256": "9c05b6aade72e83e1f4094ad4bbab74cce12b031bade7778c3a54d96c90c74a3",
+  "selected_image": "images/m02-environment-candidate.png",
+  "visual_inspection": {
+    "selected_revision": 2,
+    "status": "RETAINED_CANDIDATE",
+    "observation": "Corrected sills are worked stone without civic electronics. Pale grass, compressed route margins and central basalt divider remain distinct. Actual route availability and grass scale need later map binding."
+  }
+}

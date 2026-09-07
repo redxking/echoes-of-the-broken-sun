@@ -1,0 +1,1120 @@
+{
+  "author": "Angelis Pseftis",
+  "errors": [],
+  "concept_sources_without_objects": [],
+  "concept_objects": 162,
+  "mapped": 52,
+  "unmapped": 110,
+  "by_domain": {
+    "MER": 30,
+    "KHA": 26,
+    "HOL": 10,
+    "FWL": 7,
+    "GLS": 8,
+    "WRL": 30,
+    "UIX": 47,
+    "CHR": 4
+  },
+  "by_type": {
+    "UNT": 20,
+    "BLD": 20,
+    "PRP": 21,
+    "SYS": 7,
+    "ENV": 27,
+    "VFX": 11,
+    "UI": 51,
+    "CHR": 4,
+    "VEH": 1
+  },
+  "by_canon": {
+    "CANDIDATE": 145,
+    "UNKNOWN": 11,
+    "EXPLORATORY": 6
+  },
+  "by_maturity": {
+    "NOT_STARTED": 162
+  },
+  "unmapped_ids": [
+    "EBS-CON-MER-PRP-001",
+    "EBS-CON-MER-PRP-002",
+    "EBS-CON-MER-PRP-003",
+    "EBS-CON-MER-PRP-004",
+    "EBS-CON-KHA-PRP-001",
+    "EBS-CON-KHA-PRP-002",
+    "EBS-CON-KHA-PRP-003",
+    "EBS-CON-KHA-PRP-004",
+    "EBS-CON-GLS-ENV-001",
+    "EBS-CON-GLS-ENV-002",
+    "EBS-CON-GLS-ENV-003",
+    "EBS-CON-GLS-ENV-004",
+    "EBS-CON-WRL-ENV-001",
+    "EBS-CON-WRL-ENV-002",
+    "EBS-CON-WRL-PRP-001",
+    "EBS-CON-WRL-PRP-002",
+    "EBS-CON-WRL-PRP-003",
+    "EBS-CON-WRL-ENV-003",
+    "EBS-CON-WRL-PRP-004",
+    "EBS-CON-WRL-PRP-005",
+    "EBS-CON-WRL-ENV-004",
+    "EBS-CON-WRL-ENV-005",
+    "EBS-CON-WRL-PRP-006",
+    "EBS-CON-WRL-UNT-001",
+    "EBS-CON-WRL-PRP-007",
+    "EBS-CON-WRL-ENV-006",
+    "EBS-CON-WRL-ENV-007",
+    "EBS-CON-WRL-PRP-008",
+    "EBS-CON-WRL-PRP-009",
+    "EBS-CON-WRL-PRP-010",
+    "EBS-CON-WRL-ENV-008",
+    "EBS-CON-WRL-VFX-001",
+    "EBS-CON-WRL-ENV-009",
+    "EBS-CON-KHA-ENV-001",
+    "EBS-CON-WRL-ENV-010",
+    "EBS-CON-MER-ENV-001",
+    "EBS-CON-GLS-ENV-005",
+    "EBS-CON-WRL-ENV-011",
+    "EBS-CON-WRL-ENV-012",
+    "EBS-CON-UIX-UI-001",
+    "EBS-CON-WRL-ENV-013",
+    "EBS-CON-WRL-ENV-014",
+    "EBS-CON-GLS-ENV-006",
+    "EBS-CON-WRL-ENV-015",
+    "EBS-CON-WRL-PRP-011",
+    "EBS-CON-CHR-CHR-001",
+    "EBS-CON-FWL-SYS-006",
+    "EBS-CON-GLS-ENV-007",
+    "EBS-CON-WRL-ENV-016",
+    "EBS-CON-FWL-SYS-007",
+    "EBS-CON-GLS-ENV-008",
+    "EBS-CON-WRL-PRP-012",
+    "EBS-CON-UIX-UI-003",
+    "EBS-CON-UIX-UI-005",
+    "EBS-CON-UIX-UI-007",
+    "EBS-CON-UIX-UI-009",
+    "EBS-CON-UIX-UI-010",
+    "EBS-CON-UIX-UI-011",
+    "EBS-CON-UIX-UI-012",
+    "EBS-CON-UIX-UI-013",
+    "EBS-CON-UIX-UI-014",
+    "EBS-CON-UIX-UI-015",
+    "EBS-CON-UIX-UI-016",
+    "EBS-CON-UIX-UI-017",
+    "EBS-CON-UIX-UI-018",
+    "EBS-CON-UIX-UI-019",
+    "EBS-CON-UIX-UI-020",
+    "EBS-CON-UIX-UI-021",
+    "EBS-CON-UIX-UI-022",
+    "EBS-CON-UIX-UI-023",
+    "EBS-CON-UIX-UI-024",
+    "EBS-CON-UIX-UI-025",
+    "EBS-CON-UIX-UI-026",
+    "EBS-CON-UIX-UI-027",
+    "EBS-CON-UIX-UI-029",
+    "EBS-CON-UIX-UI-030",
+    "EBS-CON-CHR-CHR-003",
+    "EBS-CON-CHR-CHR-004",
+    "EBS-CON-MER-PRP-005",
+    "EBS-CON-MER-ENV-002",
+    "EBS-CON-MER-VEH-001",
+    "EBS-CON-MER-UNT-008",
+    "EBS-CON-KHA-UNT-008",
+    "EBS-CON-HOL-UNT-001",
+    "EBS-CON-MER-VFX-001",
+    "EBS-CON-KHA-UNT-009",
+    "EBS-CON-HOL-UNT-002",
+    "EBS-CON-MER-VFX-002",
+    "EBS-CON-MER-VFX-003",
+    "EBS-CON-MER-VFX-004",
+    "EBS-CON-KHA-VFX-001",
+    "EBS-CON-KHA-VFX-002",
+    "EBS-CON-KHA-VFX-003",
+    "EBS-CON-HOL-VFX-001",
+    "EBS-CON-HOL-VFX-002",
+    "EBS-CON-HOL-VFX-003",
+    "EBS-CON-MER-UI-001",
+    "EBS-CON-KHA-UI-001",
+    "EBS-CON-UIX-UI-038",
+    "EBS-CON-MER-UI-002",
+    "EBS-CON-HOL-UI-001",
+    "EBS-CON-UIX-UI-039",
+    "EBS-CON-UIX-UI-040",
+    "EBS-CON-UIX-UI-041",
+    "EBS-CON-UIX-UI-042",
+    "EBS-CON-UIX-UI-043",
+    "EBS-CON-UIX-UI-044",
+    "EBS-CON-UIX-UI-045",
+    "EBS-CON-UIX-UI-046",
+    "EBS-CON-UIX-UI-047"
+  ],
+  "decision_backlog": {
+    "EBS-CON-MER-UNT-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-MER-UNT-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-MER-UNT-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-MER-UNT-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-KHA-UNT-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-KHA-UNT-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-KHA-UNT-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-KHA-UNT-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-MER-BLD-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004"
+    ],
+    "EBS-CON-MER-BLD-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004"
+    ],
+    "EBS-CON-MER-BLD-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004"
+    ],
+    "EBS-CON-MER-BLD-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004"
+    ],
+    "EBS-CON-KHA-BLD-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004"
+    ],
+    "EBS-CON-KHA-BLD-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004"
+    ],
+    "EBS-CON-KHA-BLD-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004"
+    ],
+    "EBS-CON-KHA-BLD-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004"
+    ],
+    "EBS-CON-MER-BLD-005": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-BLD-006": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-BLD-007": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-BLD-008": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004",
+      "DEC-013"
+    ],
+    "EBS-CON-KHA-BLD-005": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004",
+      "DEC-013"
+    ],
+    "EBS-CON-KHA-BLD-006": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004",
+      "DEC-013"
+    ],
+    "EBS-CON-KHA-BLD-007": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004",
+      "DEC-013"
+    ],
+    "EBS-CON-KHA-BLD-008": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004",
+      "DEC-013"
+    ],
+    "EBS-CON-HOL-BLD-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004",
+      "DEC-013"
+    ],
+    "EBS-CON-HOL-BLD-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004",
+      "DEC-013"
+    ],
+    "EBS-CON-HOL-BLD-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004",
+      "DEC-013"
+    ],
+    "EBS-CON-HOL-BLD-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-004",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-PRP-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-MER-PRP-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-MER-PRP-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-MER-PRP-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-KHA-PRP-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-KHA-PRP-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-KHA-PRP-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-KHA-PRP-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-FWL-SYS-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-FWL-SYS-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-FWL-SYS-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-FWL-SYS-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-FWL-SYS-005": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-006",
+      "DEC-013"
+    ],
+    "EBS-CON-GLS-ENV-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-GLS-ENV-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-GLS-ENV-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-GLS-ENV-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-ENV-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-ENV-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-PRP-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-PRP-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-PRP-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-ENV-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-PRP-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-PRP-005": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-ENV-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-ENV-005": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-PRP-006": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-UNT-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-PRP-007": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-ENV-006": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-ENV-007": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-PRP-008": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-PRP-009": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-PRP-010": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-ENV-008": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-VFX-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-ENV-009": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007",
+      "DEC-013"
+    ],
+    "EBS-CON-KHA-ENV-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007",
+      "DEC-013"
+    ],
+    "EBS-CON-WRL-ENV-010": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-ENV-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007",
+      "DEC-013"
+    ],
+    "EBS-CON-GLS-ENV-005": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007",
+      "DEC-013"
+    ],
+    "EBS-CON-WRL-ENV-011": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007",
+      "DEC-013"
+    ],
+    "EBS-CON-WRL-ENV-012": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007",
+      "DEC-013"
+    ],
+    "EBS-CON-WRL-ENV-013": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-ENV-014": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-GLS-ENV-006": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-ENV-015": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-PRP-011": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-CHR-CHR-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-FWL-SYS-006": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-GLS-ENV-007": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-ENV-016": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-FWL-SYS-007": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-GLS-ENV-008": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-WRL-PRP-012": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-007"
+    ],
+    "EBS-CON-MER-UNT-005": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-MER-UNT-006": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-MER-UNT-007": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-KHA-UNT-005": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-KHA-UNT-006": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-KHA-UNT-007": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-005"
+    ],
+    "EBS-CON-UIX-UI-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-005": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-006": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-007": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-008": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-009": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-010": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-011": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-012": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-013": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-014": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-015": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-016": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-017": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-018": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-019": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-020": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-021": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-022": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-023": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-024": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-025": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-026": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-027": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-028": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-029": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-030": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-031": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-032": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-033": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-034": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-035": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-036": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-UIX-UI-037": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-CHR-CHR-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-CHR-CHR-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-CHR-CHR-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-PRP-005": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-ENV-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-VEH-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-UNT-008": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-KHA-UNT-008": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-HOL-UNT-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-008",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-VFX-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-013"
+    ],
+    "EBS-CON-KHA-UNT-009": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-013"
+    ],
+    "EBS-CON-HOL-UNT-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-VFX-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-009",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-VFX-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-009",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-VFX-004": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-009",
+      "DEC-013"
+    ],
+    "EBS-CON-KHA-VFX-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-009",
+      "DEC-013"
+    ],
+    "EBS-CON-KHA-VFX-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-009",
+      "DEC-013"
+    ],
+    "EBS-CON-KHA-VFX-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-009",
+      "DEC-013"
+    ],
+    "EBS-CON-HOL-VFX-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-009",
+      "DEC-013"
+    ],
+    "EBS-CON-HOL-VFX-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-009",
+      "DEC-013"
+    ],
+    "EBS-CON-HOL-VFX-003": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-009",
+      "DEC-013"
+    ],
+    "EBS-CON-MER-UI-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-KHA-UI-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-UIX-UI-038": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-MER-UI-002": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-HOL-UI-001": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-UIX-UI-039": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-UIX-UI-040": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-UIX-UI-041": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-UIX-UI-042": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-UIX-UI-043": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-UIX-UI-044": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-UIX-UI-045": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-UIX-UI-046": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ],
+    "EBS-CON-UIX-UI-047": [
+      "DEC-001",
+      "DEC-002",
+      "DEC-003"
+    ]
+  },
+  "production_without_provenance": [],
+  "scope": "Register validation and source identity; no visual, gameplay, performance or rights acceptance."
+}

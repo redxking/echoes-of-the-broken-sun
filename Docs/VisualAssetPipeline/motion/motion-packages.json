@@ -1,0 +1,365 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "schema_version": 1,
+  "source_revision": "Primary checkout 1a60cb1 with dirty requirements; hashes bind inspected contents",
+  "source_bindings": {
+    "Docs/Requirements.md": "467e263d65a4f33c07882631c7479401d75cce2447ae018859aa86a7d435100e",
+    "Docs/Archive/DevelopmentBible.md": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c"
+  },
+  "common_contracts": [
+    "SPEC-SIM-001..002",
+    "SPEC-VISD-007",
+    "SPEC-ACC-001..002"
+  ],
+  "adapter_symbols": "TBD in later authorized integration",
+  "boundary": "Reference specifications only; NOT_STARTED production; NOT_ACCEPTED; audio cues unproduced and unlistened",
+  "items": [
+    {
+      "gap_id": "EBS-PKG-KA-RESONANT-GAP-02",
+      "title": "Resonant fins",
+      "contracts": [
+        "SPEC-UNIT-008",
+        "REL-FAC-026.KA.RESONANT",
+        "SPEC-ART-002"
+      ],
+      "phases": [
+        {
+          "label": "Rest",
+          "caption": "Baseline fins"
+        },
+        {
+          "label": "Signature enters",
+          "caption": "One authorized entry cue"
+        },
+        {
+          "label": "Localized wave",
+          "caption": "Fixed fin order; no bearing"
+        },
+        {
+          "label": "Active hold",
+          "caption": "Subdued group while active"
+        },
+        {
+          "label": "Signature expires",
+          "caption": "40-tick persistence from state"
+        },
+        {
+          "label": "Restored baseline",
+          "caption": "No replayed entry cue"
+        }
+      ],
+      "reduced_motion": "Static fin group and sensor marker; no whole-body flash.",
+      "audio": "One rate-limited rising resonance on inactive-to-active; no count, range or identity encoded.",
+      "acceptance_evidence_required": "2200 cm detection; 200 cm resolution; moving-only anonymous signatures; no health/targetability/identity disclosure.",
+      "interruption_and_restore": "Clear only when authoritative signature state removes or expires the contact; do not inspect hidden-unit velocity. Restore current signature state without replaying wave/sound.",
+      "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
+      "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here",
+      "selected_design": "UNARMED. Sensor-only board; current attack data removal is prepared but unimplemented."
+    },
+    {
+      "gap_id": "EBS-PKG-KA-GROWTH-BASIN-GAP-02",
+      "title": "Growth Basin matrix",
+      "contracts": [
+        "SPEC-BLD-016.KA.BASIN",
+        "REL-FAC-009",
+        "REL-FAC-026.KA.ADAPT"
+      ],
+      "phases": [
+        {
+          "label": "Rest",
+          "caption": "Dark calm pool"
+        },
+        {
+          "label": "Molt accepted",
+          "caption": "Bright continuous liquid"
+        },
+        {
+          "label": "Progress",
+          "caption": "Slow ripple; 80 state ticks"
+        },
+        {
+          "label": "Completion",
+          "caption": "One crack-and-settle beat"
+        },
+        {
+          "label": "Cancelled",
+          "caption": "Settle; no success beat"
+        },
+        {
+          "label": "Reload",
+          "caption": "Reload example: active molt snapshot"
+        }
+      ],
+      "reduced_motion": "Static bright pool plus progress marker and vulnerable posture.",
+      "audio": "Quiet liquid-mineral loop; completion crack only on authorized success. Stop on cancel/death.",
+      "acceptance_evidence_required": "80 ticks; 25 Dawn; 150% incoming damage; cancel without refund; old adaptation persists until success. No rigid crust.",
+      "interruption_and_restore": "Stop progress emphasis on cancellation. Do not change anatomy/statistics ahead of authoritative completion. Reload may restore idle or active; the illustrated reload example is active.",
+      "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
+      "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
+    },
+    {
+      "gap_id": "EBS-PKG-KA-LISTENING-SPINE-GAP-01",
+      "title": "Listening Spine sensing",
+      "contracts": [
+        "SPEC-BLD-016.KA.SPINE",
+        "REL-FAC-008"
+      ],
+      "phases": [
+        {
+          "label": "Rest",
+          "caption": "Baseline nodules"
+        },
+        {
+          "label": "Signature enters",
+          "caption": "Anonymous contact only"
+        },
+        {
+          "label": "Local sequence",
+          "caption": "Direction-neutral reference"
+        },
+        {
+          "label": "Active hold",
+          "caption": "40-tick ping lifetime"
+        },
+        {
+          "label": "Expiry",
+          "caption": "Return to baseline"
+        },
+        {
+          "label": "Reload",
+          "caption": "No repeated entry pulse"
+        }
+      ],
+      "reduced_motion": "Stable nodule group and anonymous contact icon.",
+      "audio": "Slow idle pulse; modestly quicker active pulse, with no count or precise bearing encoded.",
+      "acceptance_evidence_required": "2600 cm radius; 200 cm resolution; 40 ticks; stationary targets absent; no identity or direct target leakage.",
+      "interruption_and_restore": "Visibility loss/state exit stops the cue. Restore active anonymous pings; do not re-fire entry pulses.",
+      "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
+      "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
+    },
+    {
+      "gap_id": "EBS-PKG-HC-CONCORDANCE-GAP-03",
+      "title": "Concordance registration",
+      "contracts": [
+        "SPEC-BLD-017.HC.CONCORDANCE",
+        "REL-SIM-013",
+        "REL-ART-008",
+        "REL-ART-013",
+        "REL-BLD-014"
+      ],
+      "phases": [
+        {
+          "label": "Operational",
+          "caption": "Six offset pairs / 12 panes"
+        },
+        {
+          "label": "Local damage",
+          "caption": "One state-selected pair"
+        },
+        {
+          "label": "Pair registers",
+          "caption": "Darken damaged pane"
+        },
+        {
+          "label": "Repair",
+          "caption": "Only authoritative recovery"
+        },
+        {
+          "label": "Destruction",
+          "caption": "All pairs register coherently"
+        },
+        {
+          "label": "Extinguished",
+          "caption": "Identities retained; light fades"
+        }
+      ],
+      "reduced_motion": "Discrete offset, damaged, registered and extinguished poses.",
+      "audio": "Operational held tone; damage cue TBD. Stop tone on destruction; collapse cue requires Choir approval.",
+      "acceptance_evidence_required": "12 pane identities; immediate Core removal and conditional final-team-Core outcome. Nonblocking cosmetic debris lasts 200 ticks; gameplay footprint clears immediately under the selected amendment.",
+      "interruption_and_restore": "Restore current health/destruction state; never replay collapse. Presentation cannot delay Core destruction or the conditional match outcome.",
+      "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
+      "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
+    },
+    {
+      "gap_id": "EBS-PKG-HC-INTERVAL-LOOM-GAP-01",
+      "title": "Interval Loom shadow alternatives",
+      "contracts": [
+        "SPEC-BLD-017.HC.INTERVAL",
+        "REL-ART-008"
+      ],
+      "phases": [
+        {
+          "label": "Fixed spans",
+          "caption": "Exactly two physical spans"
+        },
+        {
+          "label": "Shadow A",
+          "caption": "Ordinary reference vector"
+        },
+        {
+          "label": "Shadow B",
+          "caption": "Contradictory Choir vector"
+        },
+        {
+          "label": "Combined effect",
+          "caption": "Same camera and light"
+        },
+        {
+          "label": "Reduced motion",
+          "caption": "Same static result"
+        },
+        {
+          "label": "Restore",
+          "caption": "Deterministic reconstruction"
+        }
+      ],
+      "reduced_motion": "Identical static contradictory shadows; no flicker.",
+      "audio": "None from the shadow effect.",
+      "acceptance_evidence_required": "Two span components only; fixed-view rendered proof of contradictory vectors; material, RTS and performance checks.",
+      "interruption_and_restore": "Persistent material state, not an event loop. No phantom third span on visibility restoration.",
+      "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
+      "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
+    },
+    {
+      "gap_id": "EBS-PKG-HC-INTERVAL-LOOM-GAP-03",
+      "title": "Interval Loom upkeep",
+      "contracts": [
+        "SPEC-BLD-017.HC.INTERVAL",
+        "REL-FAC-011.SIG",
+        "SPEC-ACC-001..002"
+      ],
+      "phases": [
+        {
+          "label": "Tick 600",
+          "caption": "Successful charge: 5 Dawn"
+        },
+        {
+          "label": "Tick 1200",
+          "caption": "First failure: tier 1"
+        },
+        {
+          "label": "Tick 1800",
+          "caption": "Second failure: tier 2"
+        },
+        {
+          "label": "Tick 2400",
+          "caption": "Third failure: tier 3"
+        },
+        {
+          "label": "Tick 3000",
+          "caption": "Fourth failure: collapse"
+        },
+        {
+          "label": "Recovery",
+          "caption": "Dawn before 3000 clears alert"
+        }
+      ],
+      "reduced_motion": "Steady magenta outline and persistent tier text; suppress pulses/sparks.",
+      "audio": "600: interval chime. 1200: rate-limited VO_Choir_Dawn_Deficit and AUE_Structure_Unstable_Lp. 3000: AUE_Choir_Material_Collapse, -16 LUFS source target.",
+      "acceptance_evidence_required": "Exact balance/tick transitions, no negative Dawn; tier 2/3 30% desaturation; recovery; save/replay; <=0.05 ms/tick traversal for 100 structures. Test Interval separately from Chorus fixture.",
+      "interruption_and_restore": "Payment/warnings follow events, not playback clock. Recovery immediately clears warnings and hum. Reload current tier; never replay voice/payment/collapse.",
+      "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
+      "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
+    },
+    {
+      "gap_id": "EBS-PKG-HC-PHASE-ANCHOR-GAP-03",
+      "title": "Phase Anchor field loss",
+      "contracts": [
+        "SPEC-BLD-017.HC.ANCHOR",
+        "REL-FAC-013",
+        "REL-FAC-011.SIG",
+        "REL-ART-008"
+      ],
+      "phases": [
+        {
+          "label": "Active",
+          "caption": "Steady field: 700 cm"
+        },
+        {
+          "label": "Entry / exit",
+          "caption": "Read membership state"
+        },
+        {
+          "label": "Overlap",
+          "caption": "Selected overlap floor: 3 Dawn"
+        },
+        {
+          "label": "Field loss",
+          "caption": "Ring becomes absent"
+        },
+        {
+          "label": "Neighbor response",
+          "caption": "One response per loss event"
+        },
+        {
+          "label": "Restore",
+          "caption": "Current membership; no replay"
+        }
+      ],
+      "reduced_motion": "Ring present/absent plus neighbor marker change; suppress flicker.",
+      "audio": "Pure sustained tone while active, no beating. Stop on loss; no replayed onset on restore.",
+      "acceptance_evidence_required": "Selected overlap: 5/4/3 Dawn with floor 3; apply prepared SPEC wording amendment. Test 700 cm membership, boundary/overlap/loss/reload and non-color state readability.",
+      "interruption_and_restore": "Animation never counts overlaps. Restore current resolved state. Recovery stops loss cue; no duplicate neighbor response.",
+      "status": "SPECIFICATION_READY_RUNTIME_UNVERIFIED",
+      "clock": "Discrete state storyboard; durations only where quoted from requirements; no simulation clock owned here"
+    },
+    {
+      "gap_id": "EBS-PKG-EBS-FAM-FWL-001-GAP-01",
+      "title": "Future Well chosen family",
+      "contracts": [
+        "REL-ART-014 (selected amendment)",
+        "REL-WEL-005/006/015",
+        "DevelopmentBible Future Wells"
+      ],
+      "phases": [
+        {
+          "label": "Dormant",
+          "caption": "One bowl/spire; quiet doubled shadow"
+        },
+        {
+          "label": "Harvest telegraph",
+          "caption": "180 state ticks; amber climbs"
+        },
+        {
+          "label": "Harvest commit",
+          "caption": "Fold inward; dark spent bowl"
+        },
+        {
+          "label": "Preserve",
+          "caption": "Cyan custody; keep the spire"
+        },
+        {
+          "label": "Reshape manifest",
+          "caption": "After 180-tick telegraph: temporary feature"
+        },
+        {
+          "label": "Reshape expiry",
+          "caption": "After 1800 ticks: authored feature removed"
+        }
+      ],
+      "reduced_motion": "Discrete state shape, progress and protocol marker; no rapid flash. Preserve/Reshape retain distinct cues.",
+      "audio": "Dormant low hum; Harvest rise then hard cutoff only on commit; Preserve sustained custody and cadence; Reshape phase tone and expiry warning. No audio files created.",
+      "acceptance_evidence_required": "Apply palette amendment; test interruption with zero payout, successful +500 Dawn once, permanent spent state, custody loss and authored Reshape expiry/fallback. Runtime and camera evidence remain pending.",
+      "interruption_and_restore": "Read authoritative protocol/state. Cancel telegraph without spent pose or success sound. Reload current state; never replay payout, collapse or terrain creation.",
+      "status": "SELECTED_AMENDMENT_REFERENCE_RUNTIME_UNVERIFIED",
+      "clock": "Exact state ticks from requirements; drawing sequence is not a runtime test."
+    }
+  ],
+  "source_evidence": [
+    {
+      "source_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/Requirements.md",
+      "evidence_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/authority-evidence/Requirements.source-evidence.txt",
+      "sha256": "467e263d65a4f33c07882631c7479401d75cce2447ae018859aa86a7d435100e",
+      "status": "EVIDENCE_COPY_NOT_AUTHORITY"
+    },
+    {
+      "source_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/Archive/DevelopmentBible.md",
+      "evidence_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/authority-evidence/DevelopmentBible.source-evidence.txt",
+      "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c",
+      "status": "EVIDENCE_COPY_NOT_AUTHORITY"
+    }
+  ],
+  "selected_amendments_source": "gap-decisions.json#/master_amendments",
+  "authority_boundary": "Source bindings retain inspected existing text. Selected conflicting directions are explicit planned amendments, not claims that the master/runtime has already changed."
+}

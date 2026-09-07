@@ -1,0 +1,143 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "observed_utc": "2026-09-06T15:26:52.272961+00:00",
+  "source_commit": "1a60cb1fecdd5a709f940726a6a3e15b0fc378ff",
+  "delivery_branch": "docs/concept-production-pipeline",
+  "delivery_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline",
+  "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906",
+  "checks": [
+    {
+      "check": "Read-only primary-source visual inventory",
+      "result": "244 tracked image paths; 102 unique image payloads; all source pixels available; 27 concept originals visually reviewed"
+    },
+    {
+      "check": "Public HTTPS crawl",
+      "result": "104/104 resources HTTP 200; queue exhausted; fetched images match retained sources"
+    },
+    {
+      "check": "Visual source review",
+      "result": "All 27 concept originals, 10 public engine originals, 30 current textures, six historical textures, five crests and six radar modes inspected. Ignored captures enumerated/hashed only."
+    },
+    {
+      "check": "Inventory negative tests",
+      "command": "python3 Docs/VisualAssetPipeline/test_audit.py",
+      "result": "27 tests passed; includes dirty raster/inline/archive, clean LFS pointer, staged-new source and evidence/mapping/family/decision rejection cases"
+    },
+    {
+      "check": "Schema and semantic source validator",
+      "command": "python3 Docs/VisualAssetPipeline/audit.py validate --register Docs/VisualAssetPipeline/concept-register.json --sources Docs/VisualAssetPipeline/sources.json --root /Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project",
+      "result": "See validation.json; schema keyword subset and source evidence bindings, not human approval authentication"
+    },
+    {
+      "check": "Project-wide agent document checker",
+      "command": "python3 Scripts/check_agent_docs.py (isolated worktree)",
+      "result": "21 pre-existing evidence links unavailable in isolated checkout; no new-folder link error reported. Existing shared docs left unchanged."
+    },
+    {
+      "check": "Scoped links, authorship, JSON and whitespace",
+      "result": "PASS for every new deliverable; all author/creator values Angelis Pseftis"
+    }
+  ],
+  "visual_use_boundary": "All 162 concept objects UNSELECTED. Per-image quality/replacement assessment is internal judgment responding to owner clarification, not final design selection.",
+  "non_interference": "Task writes confined to new worktree Docs/VisualAssetPipeline and task evidence directory. No writes issued to active Project checkout/index, existing art, runtime, generators or shared documentation. Other active work can continue independently.",
+  "artifacts": [
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/characters-0.png",
+      "sha256": "0a07aee9c70d938656bc21bf5f7ae9f45c8afc5053314fe8f8f27360dd4afcac"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/characters-1.png",
+      "sha256": "c2e097da83ad86eb85672e4f4d2130ce5c7536b934e5e1b22d972ee6c28454db"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/characters-2.png",
+      "sha256": "283c9094d227a3a0867655a45a67ad3e4824630ebf1a1903b7e1fbda4ec961c7"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/characters-3.png",
+      "sha256": "d6fd494cde21d2867bfb754277a3b9be86fbb964c9f396e60dfaef2bb699c9f3"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/characters-4.png",
+      "sha256": "10d1abc49251318ed283e31f18960fa6c80e56adf694363b416fbb1db837cb7e"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/characters.png",
+      "sha256": "71b146a5c73d878f2265fb8d704a70873aa71a3b49694a1e24dc8a6f58d40b9a"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/contact-0.jpg",
+      "sha256": "df7d84a87812aae26fe1074f9ed3ef77fa131eec777555a97408efc6516e6196"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/contact-1.jpg",
+      "sha256": "93c66ff4411c263daca77870adde328958a8c7e7c652d8aa013211547470331d"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/contact-2.jpg",
+      "sha256": "4cecb94554bab42537fba555930817687a771059ab412498cb510a30e0a1a25c"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/contact-3.jpg",
+      "sha256": "1666aae73ca0bc6cbd3c0115c74d1ba3bac0e6ab3623c096476f4d5e953806c1"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/contact-4.jpg",
+      "sha256": "8256c1781b5150d6a6525b08367f76ce47774ca0d00d06cd529c94d3b3b48f61"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/other-0.jpg",
+      "sha256": "67d6bfb331af1890921138383c917aa209d55e7b52139dca53714bb896711f3d"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/other-1.jpg",
+      "sha256": "561ec5411586b3ac38170f07687e8811791e124fc13348c410d09f5dcfbfd5a8"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/other-2.jpg",
+      "sha256": "fa4576be95d326e8a0473e37df53c4a5d4e6df78e459202e1a95f3a8a9f170f7"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/other-3.jpg",
+      "sha256": "2a3e1aae05a0a5c4f9f2de18b7d5c3e3a9f798ccb0b27d939c830a1038f64cfd"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/radar-all.jpg",
+      "sha256": "843666e79b017bc3e1212c6875ccc467a229ce84de4b426702007f994f93529d"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/radar-cavern.png",
+      "sha256": "47a87b70c632a53d3e1591ae35a6fbf654e78faa339131463d291bfc82873da4"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/radar-chasm.png",
+      "sha256": "6db3150607965ce7680294b56f032ade9a1809b5bcaa7c474766aa9239c879b4"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/radar-city.png",
+      "sha256": "d2ea389ac1e9a06311a89deab04bb6f2542070efd180dc6f638dd3d53df18a33"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/radar-dais.png",
+      "sha256": "6464a1113b0b471adec984cdffb613982f36c85e8a5e39ff8cc469f5dae4089f"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/radar-plain.png",
+      "sha256": "bb4cd9450b8c050953b9f995bcefdacb7455fd041df6c04961de1536b0e88bc5"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/radar-ridge.png",
+      "sha256": "bc7f7569555677df2e8bb429904f367c5679ba1fbe0c398262113a866fd4364f"
+    }
+  ],
+  "retention": "Local evidence files are not remotely backed up by the documentation commits. Original source artwork remains in existing Git/LFS locations.",
+  "review_findings_closed": [
+    "Working-tree raster, code graphics and archive bytes distinguished from HEAD; staged-new files represented without inventing a commit.",
+    "LFS pointer identity distinguished from payload availability.",
+    "Structured owner decision bindings and stage receipts required for advancement.",
+    "Actual source mapping path/hash/locator and roster ID checked.",
+    "Family/state/production/decision references checked.",
+    "Test bytecode writes disabled and task-created cache removed."
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "created_utc": "2026-09-06T22:34:46.716156+00:00",
+  "baseline_commit": "14f4c22",
+  "original_dirty_paths_preserved": [
+    "ArtSource/"
+  ],
+  "artifacts": [
+    {
+      "id": "EBS-SET-MER-001",
+      "faction": "meridian",
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/settlement-concepts-20260906/meridian-basic-base-candidate.png",
+      "sha256": "088ed5b86c0fe602d89b2f249d7002068db597d4b54220078dff3fa41a05e925",
+      "generated_source": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-7fd799d0-cf13-469b-a6d4-2739cf159f8a.png",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "owner_acceptance": "NOT_ACCEPTED",
+      "visual_inspection": "Settlement composition, labels and connection detail reviewed. Not dimensioned geometry, collision, animation or performance evidence."
+    },
+    {
+      "id": "EBS-SET-KHA-001",
+      "faction": "kharuun",
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/settlement-concepts-20260906/kharuun-basic-base-candidate.png",
+      "sha256": "7b48751528f862707dffd7f44dae5974fe98f1149bdd8560336050e47bc8d5f0",
+      "generated_source": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-cdc59d03-8a25-48f8-b362-a27c9e46c9c4.png",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "owner_acceptance": "NOT_ACCEPTED",
+      "visual_inspection": "Settlement composition, labels and connection detail reviewed. Not dimensioned geometry, collision, animation or performance evidence."
+    },
+    {
+      "id": "EBS-SET-HOL-001",
+      "faction": "hollow-choir",
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/settlement-concepts-20260906/hollow-choir-basic-base-candidate.png",
+      "sha256": "0a0990d4062983131fa2bec867725f041bde4f761187430dd25b93021b10a6ab",
+      "generated_source": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-0bd1693b-ce01-4cad-a230-ef9c3416dc00.png",
+      "canon_status": "CANDIDATE",
+      "production_maturity": "NOT_STARTED",
+      "owner_acceptance": "NOT_ACCEPTED",
+      "visual_inspection": "Settlement composition, labels and connection detail reviewed. Not dimensioned geometry, collision, animation or performance evidence."
+    }
+  ],
+  "history": [
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/settlement-concepts-20260906/hollow-choir-initial-study.png",
+      "sha256": "9c4b854eae53049a77990ed1a57e5229db7a68a5c58b790a80799fce842dea94",
+      "status": "INITIAL_STUDY_SUPERSEDED_BY_TARGETED_CORRECTION"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/settlement-concepts-20260906/meridian-initial-study.png",
+      "sha256": "27768c8134650108e767102a6fae692d3126eaeac01856e4e796ab737bd0c8bb",
+      "status": "INITIAL_STUDY_SUPERSEDED_BY_TARGETED_CORRECTION"
+    }
+  ],
+  "boundary": "Proposed derived settlement infrastructure art. No new gameplay mechanics; no original concepts replaced; no engine changes. Detailed asset contracts retain component/scale authority."
+}

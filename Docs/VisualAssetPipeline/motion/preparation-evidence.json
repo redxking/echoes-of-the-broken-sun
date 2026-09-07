@@ -1,0 +1,192 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "created_utc": "2026-09-06T21:40:44.512213+00:00",
+  "baseline_commit": "241fa55",
+  "boundary": "Vector construction and state references only; internal visual QA, not owner or runtime acceptance",
+  "generators": [
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/build_drawings.py",
+      "sha256": "dee5bb72c26302df6d34f162850fe3f2129772ebed4fd50f052b406b6b122827",
+      "scope": "Construction source"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/build_storyboards.py",
+      "sha256": "2906a2d9570d9f9e2ab73efb9fee189f8f32a794c886a728d889ba3d3e8541a0",
+      "scope": "State board source"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-EBS-FAM-FWL-001-GAP-01.png",
+      "sha256": "c901523bbf3e801866c7d2c8d92133d0b0b0ff58971a7d013654f89097dc95d1",
+      "scope": "Static vector export; scoped visual QA"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-CONCORDANCE-GAP-03.png",
+      "sha256": "7aba1be2a9e6806f5d83a3cb3d87c810285dc01934c68b93ff3e8e5cfcc04a7f",
+      "scope": "Static vector export; scoped visual QA"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-INTERVAL-LOOM-GAP-01.png",
+      "sha256": "d35b45cbe4a58017524f76fff0db192bd1047c47bbd224a398763bb0472c62d0",
+      "scope": "Static vector export; scoped visual QA"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-INTERVAL-LOOM-GAP-03.png",
+      "sha256": "1ff8a52bec997e99d802d74cda239dc1e1e049b259666ef4072c8ffcf8fcd0c6",
+      "scope": "Static vector export; scoped visual QA"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-PHASE-ANCHOR-GAP-03.png",
+      "sha256": "897631806b1b78bb12283695ef6fa0eb0341b41dec9587d4e307f1b6e80dd2de",
+      "scope": "Static vector export; scoped visual QA"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-KA-GROWTH-BASIN-GAP-02.png",
+      "sha256": "283c4d804fe5b1f3bef0db40ffc3fa5701c3a925a32192281f688606e5238b0b",
+      "scope": "Static vector export; scoped visual QA"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-KA-LISTENING-SPINE-GAP-01.png",
+      "sha256": "13c27640695a625d2501a3d5978525aa70aac4fd5da1f306d545da207fddc3bc",
+      "scope": "Static vector export; scoped visual QA"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-KA-RESONANT-GAP-02.png",
+      "sha256": "b1419df08d97c5372f5a51423bce08281778804612cf47c7b6d903dfd5dd1d68",
+      "scope": "Static vector export; scoped visual QA"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/aegis-post.png",
+      "sha256": "f7f3ec9ec3a6ee901d07d431d215b834c9eced409eeb3bddaadb8ac4c60b7ccb",
+      "scope": "Static vector export; scoped visual QA"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/array-foundry.png",
+      "sha256": "f82ba5482b8f304b7768ceff1c32ab2e80a1b0879de8309b77e1c2ae668ec143",
+      "scope": "Static vector export; scoped visual QA"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/concordance.png",
+      "sha256": "cd51426b5b4b1b4441b46d413184ae85ce6d2c09463177af6a0d30e06e093099",
+      "scope": "Static vector export; scoped visual QA"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/interval-loom.png",
+      "sha256": "3d9c1c81620766452a6945bfc80bbc7f0bbe5ca5617fae036dcc361a5d03d611",
+      "scope": "Static vector export; scoped visual QA"
+    },
+    {
+      "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/power-link.png",
+      "sha256": "b2004910219f4deb3a51698da6d42e17f818b0b4ab2e29a4008ab165e131222f",
+      "scope": "Static vector export; scoped visual QA"
+    }
+  ],
+  "rejected_turnarounds": [
+    "Lancer: weapon orientation differs between labeled projections",
+    "Surveyor: front canister count drift; anatomical side labels reverse tools"
+  ],
+  "source_status": "Dirty isolated documentation work only; primary runtime untouched",
+  "review_corrections": [
+    "Selected eight state boards",
+    "Explicit unarmed scout amendment",
+    "Bounded overlap decision",
+    "Immediate gameplay footprint clearance, 200-tick cosmetic debris"
+  ],
+  "history": [
+    {
+      "author": "Angelis Pseftis",
+      "creator": "Angelis Pseftis",
+      "created_utc": "2026-09-06T21:18:59.404306+00:00",
+      "baseline_commit": "8cd38ac",
+      "boundary": "Vector construction and state references only; internal visual QA, not owner or runtime acceptance",
+      "generators": [
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/construction/build_drawings.py",
+          "sha256": "dee5bb72c26302df6d34f162850fe3f2129772ebed4fd50f052b406b6b122827",
+          "scope": "Construction generator"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline/Docs/VisualAssetPipeline/motion/build_storyboards.py",
+          "sha256": "91bd3de98b50353fbea102db2244e25da45c5bc3d1885aa38af5e85f91620cf0",
+          "scope": "Storyboard generator"
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-CONCORDANCE-GAP-03.png",
+          "sha256": "2c53a3efe5fd11152a10a801be3ad2705bd3f926a47ba6e01a3409a334febbb9",
+          "scope": "Static vector export; visually inspected"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-INTERVAL-LOOM-GAP-01.png",
+          "sha256": "d35b45cbe4a58017524f76fff0db192bd1047c47bbd224a398763bb0472c62d0",
+          "scope": "Static vector export; visually inspected"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-INTERVAL-LOOM-GAP-03.png",
+          "sha256": "1ff8a52bec997e99d802d74cda239dc1e1e049b259666ef4072c8ffcf8fcd0c6",
+          "scope": "Static vector export; visually inspected"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-HC-PHASE-ANCHOR-GAP-03.png",
+          "sha256": "7d52128361089e854f6a754b0aadb435c4cda89c27dc48b6d526a8ffeb8b47dc",
+          "scope": "Static vector export; visually inspected"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-KA-GROWTH-BASIN-GAP-02.png",
+          "sha256": "283c4d804fe5b1f3bef0db40ffc3fa5701c3a925a32192281f688606e5238b0b",
+          "scope": "Static vector export; visually inspected"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-KA-LISTENING-SPINE-GAP-01.png",
+          "sha256": "13c27640695a625d2501a3d5978525aa70aac4fd5da1f306d545da207fddc3bc",
+          "scope": "Static vector export; visually inspected"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/EBS-PKG-KA-RESONANT-GAP-02.png",
+          "sha256": "b1419df08d97c5372f5a51423bce08281778804612cf47c7b6d903dfd5dd1d68",
+          "scope": "Static vector export; visually inspected"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/aegis-post.png",
+          "sha256": "f7f3ec9ec3a6ee901d07d431d215b834c9eced409eeb3bddaadb8ac4c60b7ccb",
+          "scope": "Static vector export; visually inspected"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/array-foundry.png",
+          "sha256": "f82ba5482b8f304b7768ceff1c32ab2e80a1b0879de8309b77e1c2ae668ec143",
+          "scope": "Static vector export; visually inspected"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/concordance.png",
+          "sha256": "cd51426b5b4b1b4441b46d413184ae85ce6d2c09463177af6a0d30e06e093099",
+          "scope": "Static vector export; visually inspected"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/interval-loom.png",
+          "sha256": "3d9c1c81620766452a6945bfc80bbc7f0bbe5ca5617fae036dcc361a5d03d611",
+          "scope": "Static vector export; visually inspected"
+        },
+        {
+          "path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/motion-preparation/power-link.png",
+          "sha256": "b2004910219f4deb3a51698da6d42e17f818b0b4ab2e29a4008ab165e131222f",
+          "scope": "Static vector export; visually inspected"
+        }
+      ],
+      "rejected_turnarounds": [
+        "Lancer: weapon orientation differs between labeled projections",
+        "Surveyor: front canister count drift; anatomical side labels reverse tools"
+      ],
+      "source_status": "Dirty isolated documentation work only; primary runtime untouched",
+      "review_corrections": [
+        "Basin reload active snapshot",
+        "Conditional team Core outcome",
+        "Resonant authoritative expiry only",
+        "Phase Anchor no loss ring",
+        "Preserved exact dirty authority payloads"
+      ]
+    }
+  ]
+}

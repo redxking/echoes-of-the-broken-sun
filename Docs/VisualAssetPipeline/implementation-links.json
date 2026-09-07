@@ -1,0 +1,972 @@
+{
+  "author": "Angelis Pseftis",
+  "capture_links": [
+    {
+      "capture_source_id": "EBS-SRC-48af0c4181e09681",
+      "capture_path": "site/assets/engine/future-well-dormant-in-engine.png",
+      "concept_context_ids": [
+        "EBS-CON-FWL-SYS-001"
+      ],
+      "relationship": "Implementation comparison reference only; does not establish asset derivation, production maturity or current acceptance"
+    },
+    {
+      "capture_source_id": "EBS-SRC-6003aaf734b67852",
+      "capture_path": "site/assets/engine/future-well-harvest-in-engine.png",
+      "concept_context_ids": [
+        "EBS-CON-FWL-SYS-002"
+      ],
+      "relationship": "Implementation comparison reference only; does not establish asset derivation, production maturity or current acceptance"
+    },
+    {
+      "capture_source_id": "EBS-SRC-059fd8dd93ea545a",
+      "capture_path": "site/assets/engine/future-well-preserve-in-engine.png",
+      "concept_context_ids": [
+        "EBS-CON-FWL-SYS-003"
+      ],
+      "relationship": "Implementation comparison reference only; does not establish asset derivation, production maturity or current acceptance"
+    },
+    {
+      "capture_source_id": "EBS-SRC-6bd93ac7cbb9dae0",
+      "capture_path": "site/assets/engine/future-well-reshape-in-engine.png",
+      "concept_context_ids": [
+        "EBS-CON-FWL-SYS-004"
+      ],
+      "relationship": "Implementation comparison reference only; does not establish asset derivation, production maturity or current acceptance"
+    },
+    {
+      "capture_source_id": "EBS-SRC-fff303938f551833",
+      "capture_path": "site/assets/engine/glass-scar-ash-cut-in-engine.png",
+      "concept_context_ids": [
+        "EBS-CON-GLS-ENV-002"
+      ],
+      "relationship": "Implementation comparison reference only; does not establish asset derivation, production maturity or current acceptance"
+    },
+    {
+      "capture_source_id": "EBS-SRC-d5590b412244d7af",
+      "capture_path": "site/assets/engine/glass-scar-buried-causeway-in-engine.png",
+      "concept_context_ids": [
+        "EBS-CON-GLS-ENV-003"
+      ],
+      "relationship": "Implementation comparison reference only; does not establish asset derivation, production maturity or current acceptance"
+    },
+    {
+      "capture_source_id": "EBS-SRC-5935234004cce12a",
+      "capture_path": "site/assets/engine/glass-scar-folded-verge-in-engine.png",
+      "concept_context_ids": [
+        "EBS-CON-GLS-ENV-004"
+      ],
+      "relationship": "Implementation comparison reference only; does not establish asset derivation, production maturity or current acceptance"
+    },
+    {
+      "capture_source_id": "EBS-SRC-12590dd7f6b861b3",
+      "capture_path": "site/assets/engine/glass-scar-overview-in-engine.png",
+      "concept_context_ids": [
+        "EBS-CON-GLS-ENV-001"
+      ],
+      "relationship": "Implementation comparison reference only; does not establish asset derivation, production maturity or current acceptance"
+    },
+    {
+      "capture_source_id": "EBS-SRC-15dae3fe56ba6696",
+      "capture_path": "site/assets/engine/kharuun-roster-in-engine.png",
+      "concept_context_ids": [
+        "EBS-CON-KHA-UNT-001",
+        "EBS-CON-KHA-UNT-002",
+        "EBS-CON-KHA-UNT-003",
+        "EBS-CON-KHA-UNT-004",
+        "EBS-CON-KHA-BLD-001",
+        "EBS-CON-KHA-BLD-002",
+        "EBS-CON-KHA-BLD-003",
+        "EBS-CON-KHA-BLD-004"
+      ],
+      "relationship": "Implementation comparison reference only; does not establish asset derivation, production maturity or current acceptance"
+    },
+    {
+      "capture_source_id": "EBS-SRC-00a3c47aba5c9d2b",
+      "capture_path": "site/assets/engine/meridian-roster-in-engine.png",
+      "concept_context_ids": [
+        "EBS-CON-MER-UNT-001",
+        "EBS-CON-MER-UNT-002",
+        "EBS-CON-MER-UNT-003",
+        "EBS-CON-MER-UNT-004",
+        "EBS-CON-MER-BLD-001",
+        "EBS-CON-MER-BLD-002",
+        "EBS-CON-MER-BLD-003",
+        "EBS-CON-MER-BLD-004"
+      ],
+      "relationship": "Implementation comparison reference only; does not establish asset derivation, production maturity or current acceptance"
+    }
+  ],
+  "existing_production_art_paths": [
+    {
+      "path": "Content/Art/Generated/Choir/Structures/SM_Choir_ChorusLoom.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Choir/Structures/SM_Choir_Concordance.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Choir/Structures/SM_Choir_IntervalLoom.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Choir/Structures/SM_Choir_PhaseAnchor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Choir/Units/SM_Choir_Afterimage.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Choir/Units/SM_Choir_Intervalist.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Choir/Units/SM_Choir_LacunaWarden.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Choir/Units/SM_Choir_Threadkeeper.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Kharuun/Structures/SM_Kharuun_GrowthBasin.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Kharuun/Structures/SM_Kharuun_ListeningSpine.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Kharuun/Structures/SM_Kharuun_MemoryHearth.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Kharuun/Structures/SM_Kharuun_Waystone.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Kharuun/Units/SM_Kharuun_Cairnback.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Kharuun/Units/SM_Kharuun_Resonant.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Kharuun/Units/SM_Kharuun_Riftstalker.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Kharuun/Units/SM_Kharuun_Tender.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_GlassScarAshCut_Ash.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_GlassScarAshCut_Basalt.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_GlassScarAshCut_Glass.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_GlassScarAshCut_Vein.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_GlassScarBuriedCauseway_Ceramic.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_GlassScarBuriedCauseway_Conduit.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_GlassScarBuriedCauseway_Recess.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_GlassScarBuriedCauseway_Stone.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_GlassScarFoldedVerge_Ceramic.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_GlassScarFoldedVerge_Obsidian.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_GlassScarFoldedVerge_Phase.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_GlassScarFoldedVerge_Rift.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_M01Evacuation_0.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_M01Evacuation_1.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_M01Evacuation_2.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_M01Evacuation_3.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_M02Migration_0.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_M02Migration_1.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_M02Migration_2.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/MI_M02Migration_3.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/M_EchoesCliffSurface.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/M_EchoesM01Explored.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/M_EchoesM01Shroud.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/M_EchoesPresentationVFX.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/M_EchoesRangeBoundary.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/M_EchoesShivergrassLeaf.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/M_EchoesSky.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/M_EchoesSurface.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/M_EchoesWorldSurface.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/M_GlassScarAshCut.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/M_GlassScarBuriedCauseway.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Materials/M_GlassScarFoldedVerge.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Structures/SM_Meridian_AegisPost.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Structures/SM_Meridian_Anchor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Structures/SM_Meridian_ArrayFoundry.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Structures/SM_Meridian_PowerLink.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Units/SM_Meridian_Bulwark.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Units/SM_Meridian_Lancer.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Units/SM_Meridian_M01BulwarkBody.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Units/SM_Meridian_M01BulwarkLeftWing.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Units/SM_Meridian_M01BulwarkRightWing.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Units/SM_Meridian_M01SurveyorBody.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Units/SM_Meridian_M01SurveyorFoot.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Units/SM_Meridian_M01SurveyorLower.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Units/SM_Meridian_M01SurveyorUpper.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Units/SM_Meridian_RelaySkiff.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Meridian/Units/SM_Meridian_Surveyor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesCausewayAsh_BaseColor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesCausewayAsh_MRE.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesCausewayAsh_Normal.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesCeramicCivic_BaseColor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesCeramicCivic_MRE.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesCeramicCivic_Normal.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesChoirCoherent_BaseColor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesChoirCoherent_MRE.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesChoirCoherent_Normal.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesCompactMetal_BaseColor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesCompactMetal_MRE.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesCompactMetal_Normal.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesGlassScarGround_BaseColor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesGlassScarGround_MRE.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesGlassScarGround_Normal.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesKharuunMineral_BaseColor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesKharuunMineral_MRE.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesKharuunMineral_Normal.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesMatterCrystal_BaseColor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesMatterCrystal_MRE.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesMatterCrystal_Normal.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesServiceCeramic_BaseColor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesServiceCeramic_MRE.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesServiceCeramic_Normal.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesVergeScored_BaseColor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesVergeScored_MRE.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesVergeScored_Normal.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesVitrifiedGlass_BaseColor.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesVitrifiedGlass_MRE.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/Textures/T_EchoesVitrifiedGlass_Normal.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_AbilityRangeRing.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_CommandAttack.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_CommandAttackMove.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_CommandBuild.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_CommandGuard.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_CommandInteract.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_CommandMove.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_CommandOrbit.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_CommandPatrol.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_DestructionCore.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_DestructionRing.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_DestructionShard.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/VFX/SM_VFX_SelectionHalo.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_BasaltFormation.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_BasaltGround.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_BrokenSunSky.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_CavernFormation.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_CavernGround.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_ChoirFormation.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_ChoirGround.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_CivicFormation.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_CivicGround.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_GlassScarAshCut.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_GlassScarBuriedCauseway.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_GlassScarFoldedVerge.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_GlassScarRidge.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_GlassScarShard.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_GlassScarShelf.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M01ArchiveApron.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M01ArchiveCradle.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M01ArchiveFrame.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M01ArchiveLoadingFace.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M01RoutePaving.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M01ServiceConduit.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M02ObservationSill.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M02PassagePaving.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M02RootingShoulder.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M03ArchiveStack.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M03LifeSupportBank.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M03ReservePaving.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_M03TransitSupport.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_ShivergrassFormation.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_ShivergrassGround.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_SkyDome.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_SolarFormation.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_SolarGround.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Environment/SM_World_WalkSurface.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Landmarks/SM_World_FutureWellBase.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Landmarks/SM_World_FutureWellCore.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Landmarks/SM_World_FutureWellGlyph.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Landmarks/SM_World_FutureWellOrbit.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    },
+    {
+      "path": "Content/Art/Generated/World/Resources/SM_World_MatterDeposit.uasset",
+      "production_asset_id": null,
+      "concept_provenance_status": "NOT_LINKED_IN_THIS_NEW_THREAD",
+      "existing_provenance_authority": "Docs/Archive/AssetRegister.md"
+    }
+  ],
+  "boundary": "Source inventory only. Existing AssetRegister remains authority; missing new IDs are backlog, not a claim of absent historical rights/provenance."
+}

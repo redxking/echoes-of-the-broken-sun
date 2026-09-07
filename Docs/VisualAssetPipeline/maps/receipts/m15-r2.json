@@ -1,0 +1,32 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "map_id": "M15",
+  "revision": 2,
+  "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Preserve the accord dais composition, three separated material-language witness sites, empty center resolution mount, three detail panels and labels. Change the eclipsed round sun at top right into an IRREGULAR BROKEN STELLAR FRAGMENT FIELD: multiple unequal luminous amber solar shards and dark gaps with coronal threads, no intact spherical disc or moon eclipse. Keep this confined to current small sky region so ground remains dominant. Change cyan-white emissive light in the offset GLASS/CHOIR accord site and its lower-center rightmost glass fitting to restrained MAGENTA threads; keep glass mostly transparent gray. Remove the tiny dark spire at center of main resolution mounting pad so it is visibly an EMPTY keyed mounting hole matching lower-right detail. The dais is a grounded plateau edge: show continuous thick supported basalt substructure descending out of frame, not an airborne floating island. No ending selected.",
+  "reference_images": [
+    "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-a0b46dc5-969d-48bc-9637-e5554707e2cd.png"
+  ],
+  "generated_original": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-aa6f4559-3b65-423f-a2b5-569bf8e9221c.png",
+  "generator": "Built-in image generation tool; backend model unspecified",
+  "status": "RETAINED_CANDIDATE",
+  "output_hint": "Generated images are saved to /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17 as /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-aa6f4559-3b65-423f-a2b5-569bf8e9221c.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "sha256": "44a29319807587bf3a239294571aad2fb947ec980408fea54d51a7394fd5b946",
+  "prompt_sha256": "76512a3c35c498e6b83c6b1a0356bf551d4d8c4ea173c1827c87f9f8ca6f421c",
+  "retained_inputs": [
+    {
+      "original_path": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-a0b46dc5-969d-48bc-9637-e5554707e2cd.png",
+      "retained_path": "reference-inputs/c8a2d427c967fba4.png",
+      "sha256": "c8a2d427c967fba4adbb9f600772b777f6d2bffdcb9597f4fe40e9cc6079443d",
+      "role": "Edit target"
+    }
+  ],
+  "evidence_copy": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/map-concepts-20260906/generated-originals/m15-r2.png",
+  "evidence_copy_sha256": "44a29319807587bf3a239294571aad2fb947ec980408fea54d51a7394fd5b946",
+  "selected_image": "images/m15-environment-candidate.png",
+  "visual_inspection": {
+    "selected_revision": 2,
+    "status": "RETAINED_CANDIDATE",
+    "observation": "Broken stellar fragments replace the eclipse, visible substructure grounds the dais, and empty resolution mount selects no ending. Three distinct construction-language sites and corresponding detail fittings remain visible. Fine signal colors and exact conduit silhouettes require later selected-state references."
+  }
+}

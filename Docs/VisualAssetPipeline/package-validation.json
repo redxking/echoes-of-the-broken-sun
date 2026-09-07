@@ -1,0 +1,18 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "valid": true,
+  "errors": [],
+  "boundary": "Structural/source consistency only; no art, human, rights or runtime acceptance",
+  "verified_utc": "2026-09-06T18:09:58.381503+00:00",
+  "base_commit": "8083836b137a6a8eb239f7f98844f145b3f736ea",
+  "checks": {
+    "package_regression_tests": 10,
+    "existing_audit_tests": 27,
+    "review_store_tests": 5,
+    "relocated_checkout": true,
+    "missing_tampered_book_and_missing_excerpt_rejected": true
+  },
+  "tool_sha256": "98c38fe7fa7cb96bfb2e85ecd5aac837c89989ce40ee6716cadbe8b9054c288a",
+  "manifest_sha256": "696a5ee297f044e26d6f7a2d0a715425b9b78160c93452b1f09061a365694e2f"
+}

@@ -1,0 +1,102 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "jobs": [
+    {
+      "map_id": "M05",
+      "revision": 2,
+      "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Change ONLY all magenta/pink/purple illumination on the grown mineral witness bench, its roots and the rooted mineral spine to restrained BROKEN-SUN AMBER. Apply this in upper scene and bottom-right detail. Keep neutral gray rock, the ivory civic kiosk, cyan CIVIC fittings, geometry, all labels and overall lighting unchanged. These are Kharuun mineral interfaces; magenta would incorrectly suggest Choir.",
+      "reference_images": [
+        "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-667c44ba-36d5-4c01-a501-a359df7a41da.png"
+      ]
+    },
+    {
+      "map_id": "M06",
+      "revision": 2,
+      "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Remove ALL monument-like urns, headstones, tall obelisks, memorial plinths and the circular spire landmark from the upper city scene. Replace their spots with clean empty unused structural foundations, flat ceramic footings, recessed service covers or simple low maintained civic blocks. NO memorials, tombs, statues or Future Well. Preserve the diagonal sharply bounded absence, the surviving street rim and big civic blocks. Bottom LEFT detail must clearly show TWO thick service duct CROSS-SECTIONS cleanly cut at the edge of solid ground, short ends visibly ending in air at the absence, showing hollow wall thickness, NO sparks or frayed cables. Other two bottom details and all labels unchanged.",
+      "reference_images": [
+        "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-de5cf40a-ef0f-4170-8244-49c456b096e7.png"
+      ]
+    },
+    {
+      "map_id": "M07",
+      "revision": 2,
+      "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Correct the ridge's mineral-custodial construction while preserving ridge composition, two witness approaches, distant civic absence, framing and labels. Replace ivory brick/ceramic collars, civic bridge railings, blue electronics, carved imperial marks on ribs with continuous naturally striated GROWN MINERAL sockets, rooted transitions and modest amber contact nodes. The repeated ribs are rough irregular dark mineral resonance blades with different fractures, NOT identical carved stelae. Witness stone remains a low practical observation ledge, no tomb. Remove the little central spire from the confluence hollow in main and lower-right panel: it is just a shallow EMPTY stable mineral depression, not a Future Well. Lower-left socket must be rooted grown mineral without masonry courses or engraved symbol. Keep clear solid approaches.",
+      "reference_images": [
+        "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-397c3d33-dcf9-409c-9ae2-a999a273730d.png"
+      ]
+    },
+    {
+      "map_id": "M08",
+      "revision": 2,
+      "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Change ONLY the public contact plinth in upper center and lower-right detail. Remove the black central spire and circular ring/bowl form that make it look like a Future Well. Replace with a LOW RECTANGULAR contact platform on stable ground, with two small separate interface fittings at opposite ends: one pale civic ceramic, one stratified grown mineral; exposed neutral adapter between them. No pedestal or large crystal, no Well, no portal. Preserve every frame, frame offset/gap, road, cliff, lighting, other detail panels and exact text.",
+      "reference_images": [
+        "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-3517b81e-2cb1-433a-b808-e507f7bf8090.png"
+      ]
+    },
+    {
+      "map_id": "M10",
+      "revision": 2,
+      "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Preserve scene layout, Well identity, two separate Choir pane settings, paving, panels and labels. Replace the tall ceremonial ivory gate/frontage on upper left with long LOW stepped windowless pale-ceramic ARCHIVE service blocks on a charcoal plinth, wide rectilinear cassette doors, recessed service rails, no pointed cathedral arch or decorative gold crest. The deferred district must be intact but DARK: remove all powered cyan/amber light from that frontage and bottom-center deferred district facade; retain non-emissive metal trim. Civic path markers may stay subtle cyan. In bottom-left adapter, change ONLY magenta veins on the rooted KHARUUN mineral endpoint to quiet amber; preserve magenta on the two CHOIR panes and Well fractures. No building destruction.",
+      "reference_images": [
+        "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-22cb40ee-15fa-4f42-a744-be08308c74ba.png"
+      ]
+    },
+    {
+      "map_id": "M11",
+      "revision": 2,
+      "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Preserve broad Census forecourt layout, two separate contribution stations, civic evidence kiosk, mineral record pillar, adapter and rally pad. Replace tall pointed cathedral gate with a long LOW stepped civic Census Gate: wide rectilinear ceramic opening, charcoal plinth and sober service seams, no pointed arch, heraldry or castle aesthetic. Remove ornamental Earthlike trees and banners; leave low bare mineral planters/maintained paving. Change magenta on the KHARUUN record pillar/interface (upper scene and bottom-right) to restrained AMBER mineral signal, retain its grown roots and distinct construction. No monuments, readable records, crowd or new objects. Keep labels and panels.",
+      "reference_images": [
+        "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-ff7168a8-0ba2-4fb9-a096-51016c2e0c51.png"
+      ]
+    },
+    {
+      "map_id": "M12",
+      "revision": 2,
+      "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Preserve demonstrator-spine composition, instrument count, independent station separation, dormant Well, three bottom panels and all labels. Replace all ocean/surf/water beyond lower outer edges with DRY deep layered basalt plateau ravines and quiet distant haze; this is inland Lume Reach. Replace tall pointed cathedral doorway with a wide rectilinear LOW stepped pale-ceramic Reserve Gate in a long civic frontage, no heraldry or pointed arch. Change cyan glowing orb/pod on dark KHARUUN readback station, including lower-right detail, into a compact restrained amber mineral contact cap naturally rooted in the strata housing; ceramic readback station can keep contained cyan. No water, magic orb or full-city relighting.",
+      "reference_images": [
+        "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-6b07c2a5-badc-4e81-b7b6-85dd5b0b0586.png"
+      ]
+    },
+    {
+      "map_id": "M13",
+      "revision": 2,
+      "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Preserve accessible tiered index, blank horizontal record drawers, distinct ceramic/mineral receivers, neutral adapter, far stairs, framing and labels. Replace the small circular bowl with black center spire in lower-left of MAIN scene with a SECOND EMPTY witness platform: low solid octagonal stone pad with clear approach, distinct from existing right witness platform. NO Future Well or crystal on it. Change magenta veins ONLY on the KHARUUN grown mineral record housing in main and bottom-center detail to restrained amber; keep remote environmental fracture magenta. No names, tombstones, memorials or records added.",
+      "reference_images": [
+        "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-97462468-8a95-462b-bf2b-cf4dfef7fbfc.png"
+      ]
+    },
+    {
+      "map_id": "M15",
+      "revision": 2,
+      "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Preserve the accord dais composition, three separated material-language witness sites, empty center resolution mount, three detail panels and labels. Change the eclipsed round sun at top right into an IRREGULAR BROKEN STELLAR FRAGMENT FIELD: multiple unequal luminous amber solar shards and dark gaps with coronal threads, no intact spherical disc or moon eclipse. Keep this confined to current small sky region so ground remains dominant. Change cyan-white emissive light in the offset GLASS/CHOIR accord site and its lower-center rightmost glass fitting to restrained MAGENTA threads; keep glass mostly transparent gray. Remove the tiny dark spire at center of main resolution mounting pad so it is visibly an EMPTY keyed mounting hole matching lower-right detail. The dais is a grounded plateau edge: show continuous thick supported basalt substructure descending out of frame, not an airborne floating island. No ending selected.",
+      "reference_images": [
+        "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-a0b46dc5-969d-48bc-9637-e5554707e2cd.png"
+      ]
+    },
+    {
+      "map_id": "SK01",
+      "revision": 2,
+      "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Repaint ONLY upper tactical scene, keeping header/footer and three bottom close studies unchanged. Use near-TOP-DOWN view, top=NORTH, bottom=SOUTH. Exactly one continuous EAST-WEST central separating basalt ridge spans left to right. Three NORTH-SOUTH crossings connect a north basin and south basin: LEFT rough Ash Cut trench, MIDDLE ribbed pale ceramic Buried Causeway DECK running top-to-bottom through the ridge, RIGHT stable offset stone Folded Verge crossing running top-to-bottom. Do not show the causeway horizontally across the picture. Exactly two EMPTY home shelves, one at top center and one bottom center, no bases/monuments. Exactly SIX distinct cyan-white deposits: one top home, one bottom home, one far left side, one far right side, two beside central approaches. One dormant low basalt bowl/one small dark spire near center offset just enough from the middle deck; no other Wells. Quiet continuous usable ground; no fourth crossing. Ridge ends meet outer boundary so there is no walk-around bypass. Treat this as a sculpted tactical terrain illustration with clearly visible three passage geometries, not a graphic diagram. No roads crossing through the Well.",
+      "reference_images": [
+        "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-97f65e45-a8f8-4412-94af-fdcefa58ba21.png"
+      ]
+    },
+    {
+      "map_id": "SK02",
+      "revision": 2,
+      "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Repaint ONLY upper tactical scene, preserving header/footer and three bottom detail panels. Use near-TOP-DOWN view, top=NORTH. TWO continuous NORTH-SOUTH basalt ridges run VERTICALLY from the top shelf wall to the bottom shelf wall, dividing WEST home area, central corridor, EAST home area. THREE EAST-WEST gate corridors run HORIZONTALLY across BOTH ridges: north third, middle, south third. Each of those three continuous cross-corridors makes aligned gaps in the two ridges. Therefore six ridge openings form THREE aligned gate corridors, not three horizontal ridges. One dormant Well in CENTRAL corridor offset NORTH of map center, off the north gate path. Exactly EIGHT separate cyan-white deposits: west/east home two; west/east near expansion two; four contested beside ridge approaches. Empty usable starting shelves, no bases, clear quiet paths, dry pale-tide polish and old civic foundation fragments at OUTER edges. Keep north/south shelf walls with no extra exits. Do not rotate the specified geometry.",
+      "reference_images": [
+        "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-5329d52d-a9b1-4124-81d1-95af11c00af9.png"
+      ]
+    },
+    {
+      "map_id": "SK03",
+      "revision": 2,
+      "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Keep entire central ring geometry and its EXACTLY FOUR cardinal entrances, one central dormant Well, all three bottom detail panels and all text unchanged. In UPPER scene only reduce the cyan-white Matter deposit clusters from TEN to exactly EIGHT: remove the two nearest foreground clusters (one lower-left of south entrance and one lower-right of south entrance), replacing their entire clusters and circular deposit markings with plain quiet ground. Keep the other eight clusters: two near far north edge, two around the upper west/east approach shoulders, four lower side clusters (two west and two east). Remove the small constructed base-like pedestals/monuments at far upper-left and far upper-right home shelves; leave simple empty buildable ground there. Keep the tall offset GLASS frames on west/east walls because those are environmental ring architecture, not bases. No other changes.",
+      "reference_images": [
+        "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-c9171280-3dca-4309-99b7-bcbcbe268e9b.png"
+      ]
+    }
+  ]
+}

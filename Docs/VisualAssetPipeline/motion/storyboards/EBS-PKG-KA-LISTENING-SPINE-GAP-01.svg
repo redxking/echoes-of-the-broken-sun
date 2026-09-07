@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1150" viewBox="0 0 1600 1150"><metadata>Author: Angelis Pseftis. Derived motion reference; not Unreal evidence.</metadata><rect width="1600" height="1150" fill="#eeeae1"/>
+<text x="40" y="52" font-family="sans-serif" font-size="32" fill="#26333c">Listening Spine sensing — state reference</text>
+<text x="40" y="88" font-family="sans-serif" font-size="18" fill="#26333c">SCHEMATIC • CANDIDATE • NOT AN ANIMATION CLIP OR RUNTIME TEST</text>
+<rect x="40" y="125" width="500" height="275" stroke="#b7b4aa" stroke-width="2" fill="none"/>
+<text x="58" y="157" font-family="sans-serif" font-size="24" fill="#26333c">Rest</text>
+<path d="M170,290 L410,290" fill="none" stroke="#545961" stroke-width="3"/>
+<circle cx="194" cy="260" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="242" cy="265" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="290" cy="270" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="338" cy="265" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="386" cy="260" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<text x="58" y="341" font-family="sans-serif" font-size="16" fill="#26333c">Abstract groups; anatomy count not specified</text>
+<text x="58" y="365" font-family="sans-serif" font-size="17" fill="#26333c">Baseline nodules</text>
+<rect x="560" y="125" width="500" height="275" stroke="#b7b4aa" stroke-width="2" fill="none"/>
+<text x="578" y="157" font-family="sans-serif" font-size="24" fill="#26333c">Signature enters</text>
+<path d="M690,290 L930,290" fill="none" stroke="#545961" stroke-width="3"/>
+<circle cx="714" cy="260" r="12" stroke="#b2883e" stroke-width="3" fill="#b2883e"/>
+<circle cx="762" cy="265" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="810" cy="270" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="858" cy="265" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="906" cy="260" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<text x="578" y="341" font-family="sans-serif" font-size="16" fill="#26333c">Abstract groups; anatomy count not specified</text>
+<text x="578" y="365" font-family="sans-serif" font-size="17" fill="#26333c">Anonymous contact only</text>
+<rect x="1080" y="125" width="500" height="275" stroke="#b7b4aa" stroke-width="2" fill="none"/>
+<text x="1098" y="157" font-family="sans-serif" font-size="24" fill="#26333c">Local sequence</text>
+<path d="M1210,290 L1450,290" fill="none" stroke="#545961" stroke-width="3"/>
+<circle cx="1234" cy="260" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="1282" cy="265" r="12" stroke="#b2883e" stroke-width="3" fill="#b2883e"/>
+<circle cx="1330" cy="270" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="1378" cy="265" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="1426" cy="260" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<text x="1098" y="341" font-family="sans-serif" font-size="16" fill="#26333c">Abstract groups; anatomy count not specified</text>
+<text x="1098" y="365" font-family="sans-serif" font-size="17" fill="#26333c">Direction-neutral reference</text>
+<rect x="40" y="420" width="500" height="275" stroke="#b7b4aa" stroke-width="2" fill="none"/>
+<text x="58" y="452" font-family="sans-serif" font-size="24" fill="#26333c">Active hold</text>
+<path d="M170,585 L410,585" fill="none" stroke="#545961" stroke-width="3"/>
+<circle cx="194" cy="555" r="12" stroke="#b2883e" stroke-width="3" fill="#b2883e"/>
+<circle cx="242" cy="560" r="12" stroke="#b2883e" stroke-width="3" fill="#b2883e"/>
+<circle cx="290" cy="565" r="12" stroke="#b2883e" stroke-width="3" fill="#b2883e"/>
+<circle cx="338" cy="560" r="12" stroke="#b2883e" stroke-width="3" fill="#b2883e"/>
+<circle cx="386" cy="555" r="12" stroke="#b2883e" stroke-width="3" fill="#b2883e"/>
+<text x="58" y="636" font-family="sans-serif" font-size="16" fill="#26333c">Abstract groups; anatomy count not specified</text>
+<text x="58" y="660" font-family="sans-serif" font-size="17" fill="#26333c">40-tick ping lifetime</text>
+<rect x="560" y="420" width="500" height="275" stroke="#b7b4aa" stroke-width="2" fill="none"/>
+<text x="578" y="452" font-family="sans-serif" font-size="24" fill="#26333c">Expiry</text>
+<path d="M690,585 L930,585" fill="none" stroke="#545961" stroke-width="3"/>
+<circle cx="714" cy="555" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="762" cy="560" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="810" cy="565" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="858" cy="560" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="906" cy="555" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<text x="578" y="636" font-family="sans-serif" font-size="16" fill="#26333c">Abstract groups; anatomy count not specified</text>
+<text x="578" y="660" font-family="sans-serif" font-size="17" fill="#26333c">Return to baseline</text>
+<rect x="1080" y="420" width="500" height="275" stroke="#b7b4aa" stroke-width="2" fill="none"/>
+<text x="1098" y="452" font-family="sans-serif" font-size="24" fill="#26333c">Reload</text>
+<path d="M1210,585 L1450,585" fill="none" stroke="#545961" stroke-width="3"/>
+<circle cx="1234" cy="555" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="1282" cy="560" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="1330" cy="565" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="1378" cy="560" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<circle cx="1426" cy="555" r="12" stroke="#646157" stroke-width="3" fill="none"/>
+<text x="1098" y="636" font-family="sans-serif" font-size="16" fill="#26333c">Abstract groups; anatomy count not specified</text>
+<text x="1098" y="660" font-family="sans-serif" font-size="17" fill="#26333c">No repeated entry pulse</text>
+<text x="40" y="745" font-family="sans-serif" font-size="17" fill="#26333c">REDUCED MOTION</text>
+<text x="40" y="769" font-family="sans-serif" font-size="18" fill="#26333c">Stable nodule group and anonymous contact icon.</text>
+<text x="40" y="804" font-family="sans-serif" font-size="17" fill="#26333c">CANCEL / RESTORE</text>
+<text x="40" y="828" font-family="sans-serif" font-size="18" fill="#26333c">Visibility loss/state exit stops the cue. Restore active anonymous pings; do not re-fire entry pulses.</text>
+<text x="40" y="863" font-family="sans-serif" font-size="17" fill="#26333c">LATER ACCEPTANCE</text>
+<text x="40" y="887" font-family="sans-serif" font-size="18" fill="#26333c">2600 cm radius; 200 cm resolution; 40 ticks; stationary targets absent; no identity or direct target leakage.</text>
+<text x="40" y="922" font-family="sans-serif" font-size="15" fill="#26333c">Contracts: SPEC-BLD-016.KA.SPINE, REL-FAC-008</text>
+<text x="40" y="1115" font-family="sans-serif" font-size="16" fill="#26333c">Author: Angelis Pseftis • State board only; labels specify intent, not executed simulation evidence.</text>
+</svg>

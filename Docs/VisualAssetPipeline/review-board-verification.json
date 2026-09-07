@@ -1,0 +1,34 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "verified_utc": "2026-09-06T15:42:45.585879+00:00",
+  "objects": 34,
+  "subjects": 21,
+  "persistence_tests_passed": 5,
+  "inventory_regression_tests_passed": 27,
+  "browser_checks": {
+    "objects": 34,
+    "groups": 21,
+    "all_images_loaded": true,
+    "save_reload": true,
+    "full_sheet": true,
+    "family_notes": true,
+    "responsive_widths": [
+      1440,
+      736,
+      360
+    ],
+    "stale_write_rejected": true,
+    "cross_origin_write_rejected": true,
+    "unknown_source_rejected": true,
+    "js_errors": [],
+    "evidence": "Synthetic interaction with isolated test-state file; no owner decisions"
+  },
+  "live_review_initial_selections": 0,
+  "files_sha256": {
+    "review_board.py": "40007adaee50c2343ccf2e47521f3b4a819aa93e11baf63c07e052ec4e4f9604",
+    "review-board.html": "d9775982394913d4a43f8b41b325392c9328f6f180ea4dc7c0e57b5f9f22f8a0",
+    "test_review_board.py": "6627b89d20f27182257ba019c1653de63412db5174c29cf7e53047b7397738f3"
+  },
+  "boundary": "Synthetic browser interactions used isolated test state. No owner selections, canon decisions or Unreal acceptance inferred."
+}

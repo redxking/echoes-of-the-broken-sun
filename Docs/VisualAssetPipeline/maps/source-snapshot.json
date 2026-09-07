@@ -1,0 +1,242 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "observed_at": "2026-09-06T22:53:03.668939+00:00",
+  "primary_checkout": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project",
+  "primary_commit": "57afedc0882d963dc4d52a3854678f5c8d42a1a0",
+  "primary_dirty_paths": [
+    "M Source/EchoesOfTheBrokenSun/Private/EchoesFieldHudView.cpp",
+    " M Source/EchoesOfTheBrokenSun/Private/EchoesFieldHudWidget.cpp",
+    " M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerController.cpp",
+    " M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerFieldHud.cpp",
+    " M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerTutorial.cpp",
+    " M Source/EchoesOfTheBrokenSun/Private/EchoesTacticalInput.cpp",
+    " M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesFieldHudRoutesTest.cpp",
+    " M Source/EchoesOfTheBrokenSun/Public/EchoesFieldHudView.h",
+    " M Source/EchoesOfTheBrokenSun/Public/EchoesFieldHudWidget.h",
+    " M Source/EchoesOfTheBrokenSun/Public/EchoesPlayerController.h"
+  ],
+  "art_checkout": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/map-environment-concepts",
+  "art_branch": "docs/map-environment-concepts",
+  "art_base_commit": "8d9ba30300045f5aa1c348e209d77abfe952d9e8",
+  "parallel_production_checkout": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Worktrees/concept-production-pipeline",
+  "parallel_production_commit": "82fc808f7638119d182d95fd9c7b7cbf3133582a",
+  "authority_files": [
+    {
+      "path": "AGENTS.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/AGENTS.md",
+      "sha256": "19a1e136c7c9ac237ab7c03c103d37e8583d7c16a3239893a6ae758bf72af06f",
+      "last_change_commit": "76fcb8c797ecb15cd46f911642787f37a7e2917d"
+    },
+    {
+      "path": "Docs/README.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/README.md",
+      "sha256": "992fe7767c687c026efbb9e5a4dfb0b276a9e76b37aeb5a8ab9f231fdd83abdf",
+      "last_change_commit": "57afedc0882d963dc4d52a3854678f5c8d42a1a0"
+    },
+    {
+      "path": "Docs/Requirements.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/Requirements.md",
+      "sha256": "1ec65a1511c49344c524da47b4876e8b49d3020e45034c39fd238f4f3c2faae9",
+      "last_change_commit": "57afedc0882d963dc4d52a3854678f5c8d42a1a0"
+    },
+    {
+      "path": "Docs/RequirementsState.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/RequirementsState.md",
+      "sha256": "2ef71614801143852dbb92b25b16e5a1dd52d38fd2b200698a697e02577dfc7f",
+      "last_change_commit": "57afedc0882d963dc4d52a3854678f5c8d42a1a0"
+    },
+    {
+      "path": "Docs/Archive/DevelopmentBible.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/Archive/DevelopmentBible.md",
+      "sha256": "e237a4e16fa5d6da082395ca94ed1479ed709d1d8d5937a21a5858733c7cfe8c",
+      "last_change_commit": "76fcb8c797ecb15cd46f911642787f37a7e2917d"
+    },
+    {
+      "path": "Docs/MapConcepts.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/MapConcepts.md",
+      "sha256": "bbcadfcf3c0572790d8886876134b3ceb95652c7eb6ea3f618ab3aadef3420e9",
+      "last_change_commit": "76fcb8c797ecb15cd46f911642787f37a7e2917d"
+    },
+    {
+      "path": "Docs/MapTechnicalBlueprint.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/MapTechnicalBlueprint.md",
+      "sha256": "7b9ea925f5232690ee663d047ddcee1f87332d26bd4d7e56549c48996b592e17",
+      "last_change_commit": "76fcb8c797ecb15cd46f911642787f37a7e2917d"
+    },
+    {
+      "path": "Docs/ArtDirection.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/ArtDirection.md",
+      "sha256": "82f4052be2952606bb2e8384d271839e61d130997dfb656118983154b70ba5f8",
+      "last_change_commit": "76fcb8c797ecb15cd46f911642787f37a7e2917d"
+    },
+    {
+      "path": "Docs/VisualTargetSpecification.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/VisualTargetSpecification.md",
+      "sha256": "498e026ce1908d3521420c94536dc5f5ab136757880443014b20c0d4e4858efa",
+      "last_change_commit": "dd4f9ab967039af9c61962335658bd49407e32e3"
+    },
+    {
+      "path": "Docs/ComponentDesignCatalog.md",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Docs/ComponentDesignCatalog.md",
+      "sha256": "bcd4849ff401fb5a1819a0853fc8d99c0e86f8cce6efa978d36b09b97a5255de",
+      "last_change_commit": "dd4f9ab967039af9c61962335658bd49407e32e3"
+    }
+  ],
+  "visual_inputs": [
+    {
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/concept-discovery-20260906/future-well-review/future-well-candidate.png",
+      "sha256": "b16e84cb4465c3c3cee46a71fb4b661256c0bdcbb9a030994fd7d7262ed60ba7",
+      "use": "Supplementary identity/material/ecology reference; source not overwritten; placeholder details excluded by prompt."
+    },
+    {
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/glass-scar-routes.png",
+      "sha256": "c8c06108f69e87412259f0015283c1ac50bfd2aead4138f17106734fd2f1e373",
+      "use": "Supplementary identity/material/ecology reference; source not overwritten; placeholder details excluded by prompt."
+    },
+    {
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/site/assets/concepts/shivergrass-basin.jpg",
+      "sha256": "0e7ecb0417ed5199b7cefdd8f339ff7b660cbc0859ebeacec0f1d802a0c0e2dd",
+      "use": "Supplementary identity/material/ecology reference; source not overwritten; placeholder details excluded by prompt."
+    },
+    {
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/settlement-concepts-20260906/kharuun-basic-base-candidate.png",
+      "sha256": "7b48751528f862707dffd7f44dae5974fe98f1149bdd8560336050e47bc8d5f0",
+      "use": "Later-added Kharuun mineral/root grammar reference; exact retained copy in reference-inputs/7b48751528f86270.png"
+    }
+  ],
+  "registered_campaign_maps": [
+    {
+      "mission_id": "M01",
+      "map_id": "glass-scar-evacuation-margin",
+      "path": "Content/World/Source/Campaign/m01_glass-scar-evacuation-margin_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m01_glass-scar-evacuation-margin_v1.json",
+      "sha256": "8ae50fa5adf740f0f7f0508c151e82c4e86b7f3a1e70cf323717ee536418669b"
+    },
+    {
+      "mission_id": "M02",
+      "map_id": "shivergrass-migration-basin",
+      "path": "Content/World/Source/Campaign/m02_shivergrass-migration-basin_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m02_shivergrass-migration-basin_v1.json",
+      "sha256": "5024db41cd825e2e948a84860b9f58f2a71690a650929cafa80a24fef6458f6c"
+    },
+    {
+      "mission_id": "M03",
+      "map_id": "ark-city-reserve-service",
+      "path": "Content/World/Source/Campaign/m03_ark-city-reserve-service_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m03_ark-city-reserve-service_v1.json",
+      "sha256": "28d3373a6af7413311e85b5eb62d9700787f3a782289452c8431159dc498c6e4"
+    },
+    {
+      "mission_id": "M04",
+      "map_id": "unburied-road-vaults",
+      "path": "Content/World/Source/Campaign/m04_unburied-road-vaults_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m04_unburied-road-vaults_v1.json",
+      "sha256": "532c6953893689090f55a6e03147b1824537a6e707de36a7cd9eb9130141d36d"
+    },
+    {
+      "mission_id": "M05",
+      "map_id": "terms-of-continuance-corridor",
+      "path": "Content/World/Source/Campaign/m05_terms-of-continuance-corridor_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m05_terms-of-continuance-corridor_v1.json",
+      "sha256": "fa1443c58ef754de49d09218ce5b499f269f5a3776397fe86553bcf255110a4e"
+    },
+    {
+      "mission_id": "M06",
+      "map_id": "names-without-births-district",
+      "path": "Content/World/Source/Campaign/m06_names-without-births-district_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m06_names-without-births-district_v1.json",
+      "sha256": "a70ce5089096fe776884eead58441bb19538a34bc818ae52adf6b3ddcb6190a4"
+    },
+    {
+      "mission_id": "M07",
+      "map_id": "listening-spine-ridge",
+      "path": "Content/World/Source/Campaign/m07_listening-spine-ridge_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m07_listening-spine-ridge_v1.json",
+      "sha256": "7977033d5ced5032741fcebe4dffbd243803a61e61e1af382e7de8faafa6bfd0"
+    },
+    {
+      "mission_id": "M08",
+      "map_id": "reciprocal-contact-verge",
+      "path": "Content/World/Source/Campaign/m08_reciprocal-contact-verge_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m08_reciprocal-contact-verge_v1.json",
+      "sha256": "bb48f971b3c94c8b399f0001c07abaea6e9b955bb4cfb5d960ad73233c3fd227"
+    },
+    {
+      "mission_id": "M09",
+      "map_id": "reserve-authority-exchange",
+      "path": "Content/World/Source/Campaign/m09_reserve-authority-exchange_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m09_reserve-authority-exchange_v1.json",
+      "sha256": "4ca4c4d3e629537d46dcf4f617e0ba6a7167765119ef3a2ee445c15edbaf4464"
+    },
+    {
+      "mission_id": "M10",
+      "map_id": "lume-reach-liability-district",
+      "path": "Content/World/Source/Campaign/m10_lume-reach-liability-district_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m10_lume-reach-liability-district_v1.json",
+      "sha256": "f994b12847186d275c718eea94f605b3ea54d193a065135cf7af9e8fc408b429"
+    },
+    {
+      "mission_id": "M11",
+      "map_id": "public-coalition-interface",
+      "path": "Content/World/Source/Campaign/m11_public-coalition-interface_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m11_public-coalition-interface_v1.json",
+      "sha256": "87f4fc3effbde0e92b2feb39fa3c7a99672848ba1ba88d0afddaf79b9d09cf75"
+    },
+    {
+      "mission_id": "M12",
+      "map_id": "public-readback-demonstrator",
+      "path": "Content/World/Source/Campaign/m12_public-readback-demonstrator_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m12_public-readback-demonstrator_v1.json",
+      "sha256": "90161ff3cecb08dc6f159cac072e4cace1ab3a7c5e015743397aabc43a8e8e62"
+    },
+    {
+      "mission_id": "M13",
+      "map_id": "crownfall-public-index",
+      "path": "Content/World/Source/Campaign/m13_crownfall-public-index_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m13_crownfall-public-index_v1.json",
+      "sha256": "2266b4acab0ef04e04eca266e2705509aa30d50b97c5e5d57a69f44e4d89552e"
+    },
+    {
+      "mission_id": "M14",
+      "map_id": "crownfall-command-crisis",
+      "path": "Content/World/Source/Campaign/m14_crownfall-command-crisis_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m14_crownfall-command-crisis_v1.json",
+      "sha256": "08628f6789304465fb1c5004bc0b0786d258fe0ad0aebe2fd1a7170e1798a38f"
+    },
+    {
+      "mission_id": "M15",
+      "map_id": "broken-sun-accord-dais",
+      "path": "Content/World/Source/Campaign/m15_broken-sun-accord-dais_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Campaign/m15_broken-sun-accord-dais_v1.json",
+      "sha256": "5fa8590d1398ea18517a3ec8dc2fd496dca9ff071cec24d3abe443ba943767b6"
+    }
+  ],
+  "work_routing": {
+    "write_owner": "Active parent agent",
+    "write_scope": "Docs/VisualAssetPipeline/maps only in isolated worktree",
+    "read_only_review": {
+      "role": "evidence_researcher",
+      "model": "gpt-5.6-terra",
+      "reasoning_effort": "medium",
+      "scope": "Canon and mission constraints; brief and compound-object review",
+      "outcome": "Well failure-state conflict retained explicitly; candidate/branch boundaries supported; compound details decomposed"
+    },
+    "image_generation": "Remote built-in tool; no local Unreal/DCC or shared GPU workload"
+  },
+  "skirmish_topology_evidence": [
+    {
+      "path": "Source/EchoesOfTheBrokenSun/Private/EchoesSkirmishSetup.cpp",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Source/EchoesOfTheBrokenSun/Private/EchoesSkirmishSetup.cpp",
+      "sha256": "32f8087b0818fd17e1b45d8af2e08c944ba506e1ac8a62880805a8c222dc7c5e",
+      "use": "Read-only topology/implementation comparison; no code or source edits"
+    },
+    {
+      "path": "Content/World/Source/Skirmish/crownfall_basin_map_source_v1.json",
+      "absolute_path": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/Content/World/Source/Skirmish/crownfall_basin_map_source_v1.json",
+      "sha256": "d847dc00b15a442c6f354a94c0e206f99b2ab0aa464fe5cc49e85c60f745399c",
+      "use": "Read-only topology/implementation comparison; no code or source edits"
+    }
+  ],
+  "skirmish_topology_note": "Live source at EchoesSkirmishSetup.cpp:711-727 opens three y bands through both x ridge bands: six ridge openings form three cross-ridge corridors. Proposed source Well coordinate 32,39 differs from implementation 34,34 (line 780). Concept asserts no exact placement and does not resolve source/runtime authority."
+}

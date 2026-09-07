@@ -1,0 +1,32 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "map_id": "M06",
+  "revision": 2,
+  "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Remove ALL monument-like urns, headstones, tall obelisks, memorial plinths and the circular spire landmark from the upper city scene. Replace their spots with clean empty unused structural foundations, flat ceramic footings, recessed service covers or simple low maintained civic blocks. NO memorials, tombs, statues or Future Well. Preserve the diagonal sharply bounded absence, the surviving street rim and big civic blocks. Bottom LEFT detail must clearly show TWO thick service duct CROSS-SECTIONS cleanly cut at the edge of solid ground, short ends visibly ending in air at the absence, showing hollow wall thickness, NO sparks or frayed cables. Other two bottom details and all labels unchanged.",
+  "reference_images": [
+    "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-de5cf40a-ef0f-4170-8244-49c456b096e7.png"
+  ],
+  "generated_original": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-669fd4a8-a80b-4697-b6c4-a0d11577f782.png",
+  "generator": "Built-in image generation tool; backend model unspecified",
+  "status": "RETAINED_CANDIDATE",
+  "output_hint": "Generated images are saved to /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17 as /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-669fd4a8-a80b-4697-b6c4-a0d11577f782.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "sha256": "7141ed2ba5568a0acabc980c243fb15a9b361357986ff198d3ddd8c95b25dd87",
+  "prompt_sha256": "6502dc92b0bf6bf4b2992b1c6d6be0cd02c57471c28f3c543dd403ec9105207e",
+  "retained_inputs": [
+    {
+      "original_path": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-de5cf40a-ef0f-4170-8244-49c456b096e7.png",
+      "retained_path": "reference-inputs/b702caea5d3cf5df.png",
+      "sha256": "b702caea5d3cf5df2108472e8bb4f87657401e2b126ecc33477ecd474b61dd1f",
+      "role": "Edit target"
+    }
+  ],
+  "evidence_copy": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/map-concepts-20260906/generated-originals/m06-r2.png",
+  "evidence_copy_sha256": "7141ed2ba5568a0acabc980c243fb15a9b361357986ff198d3ddd8c95b25dd87",
+  "selected_image": "images/m06-environment-candidate.png",
+  "visual_inspection": {
+    "selected_revision": 2,
+    "status": "RETAINED_CANDIDATE",
+    "observation": "Monument-like props and incidental Well-like spire were removed; empty foundations, intact civic blocks and diagonal absence remain. Duct cross sections are visible in lower-left detail. No cause, deaths or population total is asserted."
+  }
+}

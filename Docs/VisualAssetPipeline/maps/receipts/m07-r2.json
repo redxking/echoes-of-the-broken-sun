@@ -1,0 +1,32 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "map_id": "M07",
+  "revision": 2,
+  "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Correct the ridge's mineral-custodial construction while preserving ridge composition, two witness approaches, distant civic absence, framing and labels. Replace ivory brick/ceramic collars, civic bridge railings, blue electronics, carved imperial marks on ribs with continuous naturally striated GROWN MINERAL sockets, rooted transitions and modest amber contact nodes. The repeated ribs are rough irregular dark mineral resonance blades with different fractures, NOT identical carved stelae. Witness stone remains a low practical observation ledge, no tomb. Remove the little central spire from the confluence hollow in main and lower-right panel: it is just a shallow EMPTY stable mineral depression, not a Future Well. Lower-left socket must be rooted grown mineral without masonry courses or engraved symbol. Keep clear solid approaches.",
+  "reference_images": [
+    "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-397c3d33-dcf9-409c-9ae2-a999a273730d.png"
+  ],
+  "generated_original": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-5515782c-a779-496b-aff0-cc99e27bc00c.png",
+  "generator": "Built-in image generation tool; backend model unspecified",
+  "status": "RETAINED_CANDIDATE",
+  "output_hint": "Generated images are saved to /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17 as /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-5515782c-a779-496b-aff0-cc99e27bc00c.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "sha256": "0ff00b61fb6b448a1823bfacd7736a253a92ee8ad63e64c26a0ba53e76eeb749",
+  "prompt_sha256": "6c3d77b44bc033c6ef57e4953699d404e1ea425a277cea34dc80c3f0075b4934",
+  "retained_inputs": [
+    {
+      "original_path": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-397c3d33-dcf9-409c-9ae2-a999a273730d.png",
+      "retained_path": "reference-inputs/cc79e8b682ad0569.png",
+      "sha256": "cc79e8b682ad056976ff9f212b70aa87dc034c93c8fa4737282e7a3eebfd47a4",
+      "role": "Edit target"
+    }
+  ],
+  "evidence_copy": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/map-concepts-20260906/generated-originals/m07-r2.png",
+  "evidence_copy_sha256": "0ff00b61fb6b448a1823bfacd7736a253a92ee8ad63e64c26a0ba53e76eeb749",
+  "selected_image": "images/m07-environment-candidate.png",
+  "visual_inspection": {
+    "selected_revision": 2,
+    "status": "RETAINED_CANDIDATE",
+    "observation": "Ridge sockets and ribs now use grown/stratified mineral forms. Hollow is empty; no incidental Well remains. Civic absence stays distant; witness approaches are visible without a branch-route acceptance claim."
+  }
+}

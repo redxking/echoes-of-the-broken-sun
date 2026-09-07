@@ -1,0 +1,32 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "map_id": "SK03",
+  "revision": 2,
+  "prompt": "Use case: precise-object-edit. Edit this exact Echoes environment concept sheet. Keep entire central ring geometry and its EXACTLY FOUR cardinal entrances, one central dormant Well, all three bottom detail panels and all text unchanged. In UPPER scene only reduce the cyan-white Matter deposit clusters from TEN to exactly EIGHT: remove the two nearest foreground clusters (one lower-left of south entrance and one lower-right of south entrance), replacing their entire clusters and circular deposit markings with plain quiet ground. Keep the other eight clusters: two near far north edge, two around the upper west/east approach shoulders, four lower side clusters (two west and two east). Remove the small constructed base-like pedestals/monuments at far upper-left and far upper-right home shelves; leave simple empty buildable ground there. Keep the tall offset GLASS frames on west/east walls because those are environmental ring architecture, not bases. No other changes.",
+  "reference_images": [
+    "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-c9171280-3dca-4309-99b7-bcbcbe268e9b.png"
+  ],
+  "generated_original": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-5ddec93d-f79b-430f-88c3-9568f039765c.png",
+  "generator": "Built-in image generation tool; backend model unspecified",
+  "status": "RETAINED_CANDIDATE",
+  "output_hint": "Generated images are saved to /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17 as /Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-5ddec93d-f79b-430f-88c3-9568f039765c.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "sha256": "cb963fd861e6cf61eadf8e5d807cfed0e71483d1682f447e816ca187245fe42e",
+  "prompt_sha256": "423f283b64972249156287a39a75fa547d8e3e5ccc27c72cbfb5a3dadcc9e042",
+  "retained_inputs": [
+    {
+      "original_path": "/Users/angelispseftis/.codex/generated_images/01a0772f-7d98-7cd2-8d56-2254d585cf17/exec-c9171280-3dca-4309-99b7-bcbcbe268e9b.png",
+      "retained_path": "reference-inputs/cdf6cb309095f5c5.png",
+      "sha256": "cdf6cb309095f5c56d3d2a31750ba4139234b8bd0c12a8c984804df715cfe57e",
+      "role": "Edit target"
+    }
+  ],
+  "evidence_copy": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/map-concepts-20260906/generated-originals/sk03-r2.png",
+  "evidence_copy_sha256": "cb963fd861e6cf61eadf8e5d807cfed0e71483d1682f447e816ca187245fe42e",
+  "selected_image": "images/sk03-environment-candidate.png",
+  "visual_inspection": {
+    "selected_revision": 2,
+    "status": "RETAINED_CANDIDATE",
+    "observation": "Corrected overview shows four cardinal ring entrances, eight visible deposit clusters and one central Well. Base-like home ornaments were removed. Exact spawn/deposit zoning and approach fairness require registered-map verification."
+  }
+}
