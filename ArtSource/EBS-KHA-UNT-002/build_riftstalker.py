@@ -37,7 +37,10 @@ PACKAGE_ID = "EBS-PKG-KA-RIFTSTALKER"
 PRODUCTION_ID = "EBS-KHA-UNT-002"
 ASSET = "SK_EBS_KHA_UNT_002"
 PLANNED_FOLDER = "/Game/Echoes/Production/KHA/UNT/EBS_KHA_UNT_002/"
-REVISION = "ebs-kha-unt-002-concept-v1"
+REVISION = "ebs-kha-unt-002-concept-v2"   # v2: unique UV0 atlas (2048^2) for the texture bake; geometry identical to v1
+ATLAS_SIZE = 2048                         # card .TEX_MAPS: 2048x2048 PBR stack
+MOLT_BLEND_SIZE = 512                     # card .TEX_MAPS: secondary 512x512 translucent core blending skin mask
+TEAM_COMPONENTS = ("prow", "shell_01")    # team-colour carriers: the face and the crest, both tactical-camera facing
 CARD = "REL-ART-005.KA.RIFTSTALKER"          # AUTHORITATIVE, in Docs/Requirements.md
 PROVISIONAL_CARD = "REL-FAC-025.KA.RIFTSTALKER.ASSET"   # mine; SUPERSEDED for this asset
 
@@ -519,6 +522,31 @@ def measurements(m: kit.Mesh) -> dict:
     }
 
 
+def pack_uv_atlas(meshes_by_key: dict, bake_manifest_path: str) -> tuple:
+    """One unique UV0 atlas across the baseline LOD0/LOD1 and both molt-state LOD0 meshes, so every
+    molt part gets a chart and identical polygons share one. Writes bake-manifest.json."""
+    ordered = [(meshes_by_key[k], k[1]) for k in sorted(meshes_by_key)]
+    atlas = kit.pack_atlas(ordered, size=ATLAS_SIZE)
+    sha = kit.write_bake_manifest(bake_manifest_path, atlas, extras={
+        "production_asset_id": PRODUCTION_ID, "revision": REVISION,
+        "card": CARD,
+        "slot_families": {STRATA: "kharuun_obsidian", AMBER: "kharuun_amber"},
+        "team_components": list(TEAM_COMPONENTS),
+        "molt_blend_size": MOLT_BLEND_SIZE,
+        "decal_rules": {
+            "shell_*|underbody|prow|caster_housing|legs": ("kharuun_obsidian: opaque volcanic value mask over a charcoal "
+                                                          "body, warped strata bands, fractured cell field, NO emissive"),
+            "molt_plate_*|molt_striker_vane_*": "kharuun_fresh_growth: fewer fractures, lighter, smoother; StateMask G core blend",
+            "*_foot|*_lower": "kharuun_foot_wear: ground dust in the bottom 25 cm",
+            "seam_*|prow_seam": "kharuun_amber: the ONLY emissive (Broken-Sun Amber), brightest on the centre line",
+            "caster_slot": "kharuun_amber with StateMask G heat gradient breech -> muzzle",
+            "prow|shell_01": "team_carrier: StateMask B = 1 (TeamColor mechanism, disjoint from COLOR_0)",
+            "every chart": "StateMask R mirrors the authored COLOR_0.R (molt sweep order); COLOR_0 stays authoritative"},
+        "emissive_ceiling": {"fraction": 0.15, "source": f"{CARD} .MAT_RULE and REL-ART-029",
+                             "measured_on": "the baked MRE.B mask by painted polygon area (bake-report.json emissive)"}})
+    return atlas, sha
+
+
 def export(evidence_dir: str, out_dir: str, skinned: bool) -> dict:
     os.makedirs(out_dir, exist_ok=True)
     review = os.path.join(evidence_dir, "review")
@@ -526,8 +554,22 @@ def export(evidence_dir: str, out_dir: str, skinned: bool) -> dict:
     outputs, review_rows = [], []
     skeleton = build_skeleton()
     clips = build_clips(skeleton)
+    # Assemble every mesh that will be written ONCE, pack them into one atlas (which sets each
+    # polygon's UV0), then write. Assembling again after packing would lose the atlas.
+    assembled = {}
     for lod in (0, 1):
-        m, s, _c, socks = assemble(lod, "baseline")
+        assembled[("baseline", lod)] = assemble(lod, "baseline")
+    for state in STATES:
+        if state != "baseline":
+            assembled[(state, 0)] = assemble(0, state)
+    bake_manifest_path = os.path.join(HERE, "bake-manifest.json")
+    atlas, bake_sha = pack_uv_atlas({k: v[0] for k, v in assembled.items()}, bake_manifest_path)
+    uv_atlas = {"path": "bake-manifest.json", "sha256": bake_sha, "size": atlas["size"],
+                "density_px_per_cm": atlas["density_px_per_cm"], "charts": len(atlas["charts"]),
+                "used_fraction": atlas["used_fraction"], "meshes_packed": sorted(f"{k[0]}:LOD{k[1]}" for k in assembled),
+                "uv1": "per-polygon lightmap cells (unchanged)"}
+    for lod in (0, 1):
+        m, s, _c, socks = assembled[("baseline", lod)]
         base = os.path.join(out_dir, f"{ASSET}_LOD{lod}")
         extras = {"production_id": PRODUCTION_ID, "package_id": PACKAGE_ID, "revision": REVISION,
                   "lod": lod, "author": AUTHOR, "card": CARD}
@@ -551,7 +593,7 @@ def export(evidence_dir: str, out_dir: str, skinned: bool) -> dict:
         # One skinned GLB per molt state, so the vertex ID channels can be verified through import
         # and material for EVERY required state and not only the baseline rest pose.
         for state in STATES:
-            m, s, _c, socks = assemble(0, state)
+            m, s, _c, socks = assembled[(state, 0)]
             path = os.path.join(review, f"{ASSET}_{state}_vertexid.glb")
             digest = skel.write_skinned_glb(m, s, path, animations=[], extras={
                 "production_id": PRODUCTION_ID, "revision": REVISION, "molt_state": state,
@@ -561,12 +603,12 @@ def export(evidence_dir: str, out_dir: str, skinned: bool) -> dict:
                                 "sha256": digest, "molt_state": state,
                                 "authored_vertex_colors": {c: list(v) for c, v in sorted(m.vertex_colors.items())}})
     for state in STATES:
-        m = assemble(0, state)[0]
+        m = assembled[(state, 0)][0]
         path = os.path.join(review, f"{ASSET}_{state}_LOD0.obj")
         review_rows.append({"name": state, "path": os.path.relpath(path, evidence_dir),
                             "sha256": m.write_obj(path, header_lines=[f"{ASSET} {state}", f"Revision {REVISION}"]),
                             "triangles": m.triangle_count()})
-    m1 = assemble(1, "baseline")[0]
+    m1 = assembled[("baseline", 1)][0]
     path = os.path.join(review, f"{ASSET}_baseline_LOD1.obj")
     review_rows.append({"name": "baseline_lod1", "path": os.path.relpath(path, evidence_dir),
                         "sha256": m1.write_obj(path, header_lines=[f"{ASSET} LOD1"]),
@@ -579,7 +621,7 @@ def export(evidence_dir: str, out_dir: str, skinned: bool) -> dict:
         review_rows.append({"name": stem, "path": os.path.relpath(p, evidence_dir),
                             "sha256": mesh.write_obj(p, header_lines=[f"{ASSET} posed: {name} at {fraction:.2f}"]),
                             "lowest_z_cm": round(mesh.bounds()[0][2], 2)})
-    return {"outputs": outputs, "review": review_rows, "clips": clips}
+    return {"outputs": outputs, "review": review_rows, "clips": clips, "uv_atlas": uv_atlas}
 
 
 def manifest(exported: dict) -> dict:
@@ -595,7 +637,19 @@ def manifest(exported: dict) -> dict:
         "asset_name": ASSET, "planned_unreal_folder": PLANNED_FOLDER, "revision": REVISION,
         "kit_revision": getattr(kit, "KIT_REVISION", "unknown"),
         "skel_revision": getattr(skel, "SKEL_REVISION", "unknown"),
-        "stage": "BLOCKOUT (concept-v1)",
+        "stage": "BLOCKOUT (concept-v2: unique UV0 atlas for the texture bake; geometry identical to v1)",
+        "revision_note": ("v1 -> v2 changes ONLY UV0 (unique 2048^2 atlas from ebs_meshkit.pack_atlas). Triangle counts, "
+                          "bounds, sockets, rig, clips and COLOR_0 are unchanged; a test asserts the counts and bounds."),
+        "uv_atlas": exported["uv_atlas"],
+        "texture_stack": {
+            "contract": f"{CARD} .TEX_MAPS: 2048x2048 PBR (Albedo, Normal, Roughness/Metallic packed, Emissive Mask) + 512x512 translucent core blend mask",
+            "baker": "ArtSource/tools/ebs_texbake.py families kharuun_obsidian / kharuun_amber (this revision)",
+            "maps": {"T_EBS_KHA_UNT_002_BaseColor": "sRGB; charcoal obsidian body with ember-dim crack tint; amber seams",
+                     "T_EBS_KHA_UNT_002_Normal": "tangent-space DirectX/Unreal; strata, fractured cell field, grit",
+                     "T_EBS_KHA_UNT_002_MRE": "R metallic 0, G roughness, B emissive mask (seams + caster slot ONLY)",
+                     "T_EBS_KHA_UNT_002_StateMask": "R molt sweep order (mirror of COLOR_0.R), G translucent core blend on new growth, B team carrier",
+                     "T_EBS_KHA_UNT_002_MoltBlend": "512^2 box-filtered StateMask: the card's secondary translucent core blending skin mask"},
+            "status": "baked at BLOCKOUT against a PROVISIONAL reading of the authoritative card; see textures/bake-report.json"},
         "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
         "units": {"length": "centimetres", "axes": "+X forward, +Y right (anatomical right), +Z up",
                   "pivot": "ground-contact centre between the feet", "nanite": False},
@@ -924,6 +978,8 @@ def main() -> int:
                 drift.append(key)
         if saved.get("revision") != REVISION:
             drift.append(f"revision {saved.get('revision')} != {REVISION}")
+        if saved.get("uv_atlas", {}).get("sha256") != fresh["uv_atlas"]["sha256"]:
+            drift.append("bake-manifest.json")
         print(json.dumps({"check": "ok" if not drift and not missing else "drift", "revision": REVISION,
                           "drift": drift, "missing": missing,
                           "compared": {"outputs": len(fresh["outputs"]), "review": len(fresh["review_assemblies"])}}))

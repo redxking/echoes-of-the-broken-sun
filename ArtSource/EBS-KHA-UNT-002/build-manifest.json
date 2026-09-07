@@ -378,7 +378,7 @@
     "MI_EBS_KHA_Strata",
     "MI_EBS_KHA_Amber"
    ],
-   "sha256": "628ac0835801c6cdd6aeabd9e4016000bb059af0a3d49f2e3ac6ced8379d5d29",
+   "sha256": "220edb092adc944253dc599fa23f9e728d8fcb5c463705581b2d0e1c9912eba8",
    "sockets": [
     {
      "bone": "caster_pitch",
@@ -443,7 +443,7 @@
    "lod": 0,
    "mesh": "SK_EBS_KHA_UNT_002",
    "path": "export/SK_EBS_KHA_UNT_002_LOD0.obj",
-   "sha256": "cf4b4d6464eb073c4f287161caddc36279b785343d4d7bdf7a1b30089b054b58"
+   "sha256": "2b98fc5fcedfcea43c3e89b549a27d0e514092155f9dd16aad449c1466e54fe3"
   },
   {
    "bounds_cm": [
@@ -478,7 +478,7 @@
     "MI_EBS_KHA_Strata",
     "MI_EBS_KHA_Amber"
    ],
-   "sha256": "a89ecd0da6d5e2136020520faa8f7a1d798245ddb18ffd8992d74c085480c0a2",
+   "sha256": "23e77a5c88a27765426a7a1c5b4b4b5ebe7f110d4f18c3479233056f346a8b49",
    "sockets": [
     {
      "bone": "caster_pitch",
@@ -543,7 +543,7 @@
    "lod": 1,
    "mesh": "SK_EBS_KHA_UNT_002",
    "path": "export/SK_EBS_KHA_UNT_002_LOD1.obj",
-   "sha256": "5f8fda81c79596e6c1eb41a42ef090afec862a3f41094a8beeed262d89176171"
+   "sha256": "6c9d649dc8de8f8f42a6ceffeafa65d485f6e1e3a8d23a552275e55964b4f49d"
   }
  ],
  "package_id": "EBS-PKG-KA-RIFTSTALKER",
@@ -820,7 +820,7 @@
    "molt_state": "baseline",
    "name": "baseline_vertexid_glb",
    "path": "review/SK_EBS_KHA_UNT_002_baseline_vertexid.glb",
-   "sha256": "0f4cbe5766afb3c6b71cf6ddbdd40c5090fb5895640fff2418935ef550867f58"
+   "sha256": "e282124f35b05af8800011c115f0e86c151269dfa59e8bcd9c84aeff4752ebdf"
   },
   {
    "authored_vertex_colors": {
@@ -1098,7 +1098,7 @@
    "molt_state": "carapace_molt",
    "name": "carapace_molt_vertexid_glb",
    "path": "review/SK_EBS_KHA_UNT_002_carapace_molt_vertexid.glb",
-   "sha256": "a7f6a36170a4096200c9a68fe345c7fbb30e60007acfae01484e8967daf94ba7"
+   "sha256": "326ec9b0be4de60c7d4c4a861809f2395be2e68c70c94ecd08bfdd438bc53ecf"
   },
   {
    "authored_vertex_colors": {
@@ -1358,30 +1358,30 @@
    "molt_state": "striker_molt",
    "name": "striker_molt_vertexid_glb",
    "path": "review/SK_EBS_KHA_UNT_002_striker_molt_vertexid.glb",
-   "sha256": "887ebe87cdf93c3f3590e1638812135de56901cf09fd7d65c1c26092c51cd46a"
+   "sha256": "6926e0cefea4e2b6e835578accc9809b5dc84c53c43d3ae55ea18623a0a31109"
   },
   {
    "name": "baseline",
    "path": "review/SK_EBS_KHA_UNT_002_baseline_LOD0.obj",
-   "sha256": "2a58b176fadc1cc777b6d24672ce654af9fad77e422677da240b77207a178293",
+   "sha256": "87e83060cee5f32d1790c399019bf28e632f823685da810a64985692182ee252",
    "triangles": 542
   },
   {
    "name": "carapace_molt",
    "path": "review/SK_EBS_KHA_UNT_002_carapace_molt_LOD0.obj",
-   "sha256": "7850b4940e60404217f8bfe601c238e553eeee3c0271b1c3a5ed5ddc0af83295",
+   "sha256": "ab6bafc101c90c19786641772c750f5b3ca17b05de24fd0b739fce8004a66095",
    "triangles": 602
   },
   {
    "name": "striker_molt",
    "path": "review/SK_EBS_KHA_UNT_002_striker_molt_LOD0.obj",
-   "sha256": "7cf3f3a1f469870e254668b00570a947fa712e80cfce62cb145f5ab7800d66c9",
+   "sha256": "361300b576b1390e9e1a691fe4880813aa1fe96ee64b23081149b5505d356986",
    "triangles": 566
   },
   {
    "name": "baseline_lod1",
    "path": "review/SK_EBS_KHA_UNT_002_baseline_LOD1.obj",
-   "sha256": "d7f3d6cbf77325e006cf28e0258641a0c86bd686f187e32d78e047a4fced7379",
+   "sha256": "2bf82c8e9a6bec4a173bc7cc06eac144e0574aa5a5ee5e10d48ff141e33d081c",
    "triangles": 346
   },
   {
@@ -1421,7 +1421,8 @@
    "sha256": "5e4886b693c20aca6ad6b48b5be7300704a59c181320f55b7ba5e538812d2282"
   }
  ],
- "revision": "ebs-kha-unt-002-concept-v1",
+ "revision": "ebs-kha-unt-002-concept-v2",
+ "revision_note": "v1 -> v2 changes ONLY UV0 (unique 2048^2 atlas from ebs_meshkit.pack_atlas). Triangle counts, bounds, sockets, rig, clips and COLOR_0 are unchanged; a test asserts the counts and bounds.",
  "rig": {
   "bones": [
    {
@@ -1662,12 +1663,24 @@
   ],
   "gameplay": "Content/Data/Source/units.json ka_riftstalker"
  },
- "stage": "BLOCKOUT (concept-v1)",
+ "stage": "BLOCKOUT (concept-v2: unique UV0 atlas for the texture bake; geometry identical to v1)",
  "stage_boundary": "Editable source and review evidence only. Not a gate pass, not an Unreal integration, not owner acceptance.",
  "states": {
   "baseline": "the unmolted form",
   "carapace_molt": "thicker shells with added plates over them: visible on the unit, not only in the interface",
   "striker_molt": "a longer caster housing with added vanes"
+ },
+ "texture_stack": {
+  "baker": "ArtSource/tools/ebs_texbake.py families kharuun_obsidian / kharuun_amber (this revision)",
+  "contract": "REL-ART-005.KA.RIFTSTALKER .TEX_MAPS: 2048x2048 PBR (Albedo, Normal, Roughness/Metallic packed, Emissive Mask) + 512x512 translucent core blend mask",
+  "maps": {
+   "T_EBS_KHA_UNT_002_BaseColor": "sRGB; charcoal obsidian body with ember-dim crack tint; amber seams",
+   "T_EBS_KHA_UNT_002_MRE": "R metallic 0, G roughness, B emissive mask (seams + caster slot ONLY)",
+   "T_EBS_KHA_UNT_002_MoltBlend": "512^2 box-filtered StateMask: the card's secondary translucent core blending skin mask",
+   "T_EBS_KHA_UNT_002_Normal": "tangent-space DirectX/Unreal; strata, fractured cell field, grit",
+   "T_EBS_KHA_UNT_002_StateMask": "R molt sweep order (mirror of COLOR_0.R), G translucent core blend on new growth, B team carrier"
+  },
+  "status": "baked at BLOCKOUT against a PROVISIONAL reading of the authoritative card; see textures/bake-report.json"
  },
  "tools": {
   "mesh_kit": "ArtSource/tools/ebs_meshkit.py",
@@ -1679,6 +1692,21 @@
   "length": "centimetres",
   "nanite": false,
   "pivot": "ground-contact centre between the feet"
+ },
+ "uv_atlas": {
+  "charts": 448,
+  "density_px_per_cm": 2.0268,
+  "meshes_packed": [
+   "baseline:LOD0",
+   "baseline:LOD1",
+   "carapace_molt:LOD0",
+   "striker_molt:LOD0"
+  ],
+  "path": "bake-manifest.json",
+  "sha256": "805350a68a8b7f64287cfd40f66920c2e44861634041ea4b966417b2d76fb97c",
+  "size": 2048,
+  "used_fraction": 0.8102,
+  "uv1": "per-polygon lightmap cells (unchanged)"
  },
  "verification_pending": [
   {

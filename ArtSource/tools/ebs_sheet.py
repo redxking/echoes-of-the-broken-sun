@@ -36,6 +36,8 @@ def read_png(path: str):
                 raise SystemExit(f"unsupported PNG (bit depth {bd}, colour type {ct}): {path}")
         elif typ == b"IDAT":
             idat.append(body)
+        elif typ == b"IEND":
+            break  # Unreal's exporter appends bytes after IEND; never walk past it
         pos += 12 + ln
     raw = zlib.decompress(b"".join(idat))
     bpp = 3 if ct == 2 else 4

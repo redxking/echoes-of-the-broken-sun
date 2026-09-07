@@ -672,7 +672,10 @@ def pack_atlas(meshes, size: int = 1024, gutter_px: int = 2, min_px: int = 4, fi
                 origin, u_dir, v_dir, w, h, proj = planar_frame(poly)
                 entries[key] = {"polys": [], "origin": origin, "u_dir": u_dir, "v_dir": v_dir, "w_cm": w, "h_cm": h,
                                 "proj": proj, "component": poly.component, "slot": mesh.slots[poly.slot], "cells": max(1, poly.atlas_cells),
-                                "normal": poly.normal, "meshes": []}
+                                "normal": poly.normal, "meshes": [],
+                                # Authored COLOR_0 travels with the chart so the baker's StateMask can
+                                # mirror it. Only present when the mesh carries vertex colours.
+                                "vertex_color": mesh.vertex_color(poly.component) if mesh.vertex_colors else None}
                 order.append(key)
             entries[key]["polys"].append((mesh, index, poly))
             entries[key]["meshes"].append(f"{mesh.name}:LOD{lod}")
@@ -718,11 +721,14 @@ def pack_atlas(meshes, size: int = 1024, gutter_px: int = 2, min_px: int = 4, fi
         for mesh, index, poly in e["polys"]:
             poly.uv_override = list(uv)
             poly.chart_id = chart_id
-        charts.append({"id": chart_id, "component": e["component"], "slot": e["slot"], "meshes": sorted(set(e["meshes"])),
+        chart = {"id": chart_id, "component": e["component"], "slot": e["slot"], "meshes": sorted(set(e["meshes"])),
                        "rect_px": [px, py, cell_w * e["cells"], h], "cell_px": [cell_w, h], "cells": e["cells"],
                        "origin_cm": [_r(c) for c in e["origin"]], "u_dir": [_r(c) for c in e["u_dir"]], "v_dir": [_r(c) for c in e["v_dir"]],
                        "normal": [_r(c) for c in e["normal"]], "size_cm": [_r(e["w_cm"]), _r(e["h_cm"])],
-                       "polygon_uv": uv, "polygon_world": [[_r(c) for c in p] for p in e["polys"][0][2].points]})
+                       "polygon_uv": uv, "polygon_world": [[_r(c) for c in p] for p in e["polys"][0][2].points]}
+        if e["vertex_color"] is not None:
+            chart["vertex_color"] = [_r(c) for c in e["vertex_color"]]
+        charts.append(chart)
     return {"size": size, "density_px_per_cm": _r(density), "gutter_px": gutter_px, "charts": charts,
             "used_fraction": _r(sum(c["rect_px"][2] * c["rect_px"][3] for c in charts) / float(size * size))}
 

@@ -293,5 +293,166 @@ class Glyphs(unittest.TestCase):
                 self.assertNotEqual(masks[a], masks[b])
 
 
+
+
+# --- Kharuun unit families (REL-ART-029; card REL-ART-005.KA.RIFTSTALKER) ------------------------
+KHA_SLOTS = {"MI_EBS_KHA_Strata": "kharuun_obsidian", "MI_EBS_KHA_Amber": "kharuun_amber"}
+SHELL = (4, 4, 48, 48)        # obsidian carapace plate, +X face
+PLATE_MOLT = (60, 4, 30, 30)  # molt_plate_02: fresh growth
+FOOT = (4, 60, 20, 20)        # rl_foot: ground wear
+SEAM = (60, 60, 40, 6)        # seam_02_l: amber seam, long axis = u
+CASTER = (60, 74, 40, 6)      # caster_slot: amber with heat gradient along u
+PROW = (4, 90, 30, 16)        # prow: team carrier
+
+
+def kharuun_charts():
+    charts = [
+        make_chart(0, "shell_02", "MI_EBS_KHA_Strata", SHELL, [40, 40, 120], [0, -1, 0], [0, 0, -1], [1, 0, 0]),
+        make_chart(1, "molt_plate_02", "MI_EBS_KHA_Strata", PLATE_MOLT, [40, -40, 150], [0, -1, 0], [0, 0, -1], [1, 0, 0]),
+        make_chart(2, "rl_foot", "MI_EBS_KHA_Strata", FOOT, [-90, 60, 20], [0, -1, 0], [0, 0, -1], [1, 0, 0]),
+        make_chart(3, "seam_02_l", "MI_EBS_KHA_Amber", SEAM, [0, 40, 130], [1, 0, 0], [0, 0, -1], [0, 1, 0]),
+        make_chart(4, "caster_slot", "MI_EBS_KHA_Amber", CASTER, [60, 0, 160], [1, 0, 0], [0, 0, -1], [0, 1, 0]),
+        make_chart(5, "prow", "MI_EBS_KHA_Strata", PROW, [140, 20, 110], [0, -1, 0], [0, 0, -1], [1, 0, 0]),
+    ]
+    # authored COLOR_0 per component (R sweep order, G carapace, B striker, A reserved)
+    colours = {"shell_02": (0.525, 0, 0, 1), "molt_plate_02": (1.0, 1.0, 0, 1), "rl_foot": (0, 0, 0, 1),
+               "seam_02_l": (1.0, 0, 0, 1), "caster_slot": (0.15, 0, 0, 1), "prow": (0.85, 0, 0, 1)}
+    for c in charts:
+        c["vertex_color"] = list(colours[c["component"]])
+    return charts
+
+
+def kharuun_manifest(charts, blend=0):
+    m = make_manifest(charts)
+    m["slot_families"] = KHA_SLOTS
+    m["team_components"] = ["prow"]
+    if blend:
+        m["molt_blend_size"] = blend
+    return m
+
+
+class KharuunBake(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.manifest = kharuun_manifest(kharuun_charts())
+        cls.res = tb.bake(cls.manifest, size=ATLAS)
+
+    def test_families_matched_and_rules_counted(self):
+        self.assertEqual(self.res.unmatched, [])
+        rc = self.res.rule_counts
+        self.assertEqual(rc.get("family:kharuun_obsidian"), 4)
+        self.assertEqual(rc.get("family:kharuun_amber"), 2)
+        self.assertEqual(rc.get("kharuun_fresh_growth"), 1)
+        self.assertEqual(rc.get("kharuun_foot_wear"), 1)
+        self.assertEqual(rc.get("kharuun_seam"), 1)
+        self.assertEqual(rc.get("kharuun_caster_heat"), 1)
+        self.assertEqual(rc.get("team_carrier"), 1)
+
+    def test_obsidian_is_a_charcoal_body_with_no_emissive(self):
+        # Charcoal anchor: 0.02-0.07 linear. Sample the plate away from its gutters.
+        x, y, w, h = SHELL
+        def lin(c):
+            c /= 255.0
+            return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+        vals = []
+        for yy in range(y + 6, y + h - 6, 2):
+            for xx in range(x + 6, x + w - 6, 2):
+                r, g, b = px(self.res.base, xx, yy)
+                vals.append(0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b))
+                self.assertEqual(px(self.res.mre, xx, yy)[2], 0, "obsidian carries NO emissive")
+                self.assertEqual(px(self.res.mre, xx, yy)[0], 0, "obsidian is non-metallic")
+        # painted plate luminance must sit inside the Charcoal anchor (Docs/ArtDirection.md: 0.02-0.07 linear)
+        self.assertLessEqual(max(vals), 0.075)
+        self.assertGreaterEqual(min(vals), 0.018)
+        self.assertLess(sum(vals) / len(vals), 0.06)
+
+    def test_obsidian_is_warm_in_the_crack_bottoms_not_grey(self):
+        # Somewhere on the plate the ember tint must push R above B (amber, not a neutral crack).
+        x, y, w, h = SHELL
+        warm = 0
+        for yy in range(y + 4, y + h - 4):
+            for xx in range(x + 4, x + w - 4):
+                r, g, b = px(self.res.base, xx, yy)
+                if r > b + 6:
+                    warm += 1
+        self.assertGreater(warm, 10)
+
+    def test_fresh_growth_is_lighter_and_smoother_than_the_old_plate(self):
+        def mean_over(rect, buf, ch):
+            x, y, w, h = rect
+            vals = [px(buf, xx, yy)[ch] for yy in range(y + 4, y + h - 4) for xx in range(x + 4, x + w - 4)]
+            return sum(vals) / len(vals)
+        self.assertGreater(mean_over(PLATE_MOLT, self.res.base, 0), mean_over(SHELL, self.res.base, 0))
+        self.assertLess(mean_over(PLATE_MOLT, self.res.mre, 1), mean_over(SHELL, self.res.mre, 1))
+
+    def test_amber_seam_is_the_only_emissive_and_is_brightest_on_its_centre_line(self):
+        x, y, w, h = SEAM
+        centre = px(self.res.mre, x + w // 2, y + h // 2)[2]
+        edge = px(self.res.mre, x + w // 2, y + 1)[2]
+        # a 6 px seam has no texel centred on its centre line (texel centres sit at +0.5), so the
+        # brightest sample is one half-texel off the peak: >= 230, not 255
+        self.assertGreaterEqual(centre, 230)
+        self.assertGreater(centre, edge)
+        r, g, b = px(self.res.base, x + w // 2, y + h // 2)
+        self.assertGreater(r, g)
+        self.assertGreater(g, b)
+        # emissive accounting: seam + caster polygon texels only
+        self.assertGreater(self.res.emissive_polygon_px, 0)
+        n_amber = SEAM[2] * SEAM[3] + CASTER[2] * CASTER[3]
+        self.assertLessEqual(self.res.emissive_polygon_px, n_amber + 4 * (SEAM[2] + SEAM[3] + CASTER[2] + CASTER[3]))
+
+    def test_caster_heat_gradient_runs_along_the_slot(self):
+        x, y, w, h = CASTER
+        gs = [px(self.res.state, x + k, y + h // 2)[1] for k in range(2, w - 2, 6)]
+        self.assertEqual(gs, sorted(gs))
+        self.assertLess(gs[0], 40)
+        self.assertGreater(gs[-1], 200)
+
+    def test_state_mask_mirrors_color0_and_marks_team_and_core(self):
+        # R mirrors COLOR_0.R exactly (within 8-bit) so texture and vertex data cannot disagree
+        for rect, comp, r_expect in ((SHELL, "shell_02", 0.525), (PROW, "prow", 0.85), (FOOT, "rl_foot", 0.0)):
+            x, y, w, h = rect
+            self.assertAlmostEqual(px(self.res.state, x + w // 2, y + h // 2)[0] / 255.0, r_expect, delta=0.004, msg=comp)
+        # team carrier only on the prow
+        x, y, w, h = PROW
+        self.assertEqual(px(self.res.state, x + w // 2, y + h // 2)[2], 255)
+        x, y, w, h = SHELL
+        self.assertEqual(px(self.res.state, x + w // 2, y + h // 2)[2], 0)
+        # core blend only on new growth, peaking at the chart centre
+        x, y, w, h = PLATE_MOLT
+        self.assertGreater(px(self.res.state, x + w // 2, y + h // 2)[1], 230)
+        self.assertLess(px(self.res.state, x + 3, y + 3)[1], 80)
+        x, y, w, h = SHELL
+        self.assertEqual(px(self.res.state, x + w // 2, y + h // 2)[1], 0)
+
+    def test_foot_wear_dusts_the_ground_contact(self):
+        x, y, w, h = FOOT
+        low = px(self.res.mre, x + w // 2, y + h - 5)[1]   # near the ground (v down)
+        high = px(self.res.mre, x + w // 2, y + 5)[1]
+        self.assertGreaterEqual(low, high)
+
+    def test_debug_colours_and_normal_convention_hold(self):
+        x, y, w, h = SHELL
+        self.assertEqual(px(self.res.debug, x + 2, y + 2)[:2], tb.DEBUG_SLOT_COLOURS["kharuun_obsidian"][:2])
+        n = ATLAS * ATLAS
+        mean = [sum(self.res.normal[c::3]) / n for c in range(3)]
+        self.assertAlmostEqual(mean[0], 128, delta=3)
+        self.assertAlmostEqual(mean[1], 128, delta=3)
+
+    def test_deterministic_and_molt_blend_map(self):
+        import tempfile
+        again = tb.bake(kharuun_manifest(kharuun_charts()), size=ATLAS)
+        for name, buf in self.res.buffers().items():
+            self.assertEqual(bytes(buf), bytes(again.buffers()[name]), name)
+        with tempfile.TemporaryDirectory() as tmp:
+            m = kharuun_manifest(kharuun_charts(), blend=32)
+            res = tb.bake(m, size=ATLAS)
+            report = tb.write_outputs(res, tmp, "EBS-TEST-000", None, None, m, 0.0)
+            self.assertIn("moltblend", report["maps"])
+            self.assertEqual(report["maps"]["moltblend"]["size"], 32)
+            self.assertTrue(os.path.exists(os.path.join(tmp, "T_EBS_TEST_000_MoltBlend.png")))
+            self.assertGreater(report["emissive"]["fraction_of_painted_polygon_area"], 0.0)
+            self.assertLess(report["emissive"]["fraction_of_painted_polygon_area"], 0.5)
+
 if __name__ == "__main__":
     unittest.main()

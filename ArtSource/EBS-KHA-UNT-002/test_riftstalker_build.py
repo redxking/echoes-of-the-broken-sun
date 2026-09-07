@@ -261,7 +261,34 @@ class RiftstalkerBlockout(unittest.TestCase):
             self.assertEqual(a, b)
 
     def test_revision_string(self):
-        self.assertEqual(rs.REVISION, f"{rs.PRODUCTION_ID.lower()}-concept-v1")
+        self.assertEqual(rs.REVISION, f"{rs.PRODUCTION_ID.lower()}-concept-v2")
+
+    def test_v2_changed_only_uv0(self):
+        # v1 (000e99d .. 43e9909) recorded these; v2 packs a unique UV0 atlas and must change nothing else
+        V1 = {"lod0": 542, "lod1": 346, "worst": 602, "height": 201.0, "length": 295.19, "stance": 218.0,
+              "bones": 22, "clips": 6, "amber_area": 0.03102}
+        m0 = rs.assemble(0, "baseline")[0]
+        m1 = rs.assemble(1, "baseline")[0]
+        self.assertEqual(m0.triangle_count(), V1["lod0"])
+        self.assertEqual(m1.triangle_count(), V1["lod1"])
+        self.assertEqual(max(rs.assemble(0, st)[0].triangle_count() for st in rs.STATES), V1["worst"])
+        meas = rs.measurements(m0)
+        self.assertAlmostEqual(meas["standing_height_cm"], V1["height"], places=2)
+        self.assertAlmostEqual(meas["body_length_cm"], V1["length"], places=2)
+        self.assertAlmostEqual(meas["stance_width_cm"], V1["stance"], places=2)
+        self.assertEqual(len(rs.build_skeleton().bones), V1["bones"])
+        self.assertEqual(len(rs.build_clips(rs.build_skeleton())), V1["clips"])
+        self.assertAlmostEqual(rs.slot_area_fraction(m0, rs.AMBER), V1["amber_area"], places=5)
+        # and UV0 IS an atlas now: every polygon carries an override inside the unit square
+        import tempfile
+        assembled = {("baseline", 0): rs.assemble(0, "baseline"), ("baseline", 1): rs.assemble(1, "baseline")}
+        with tempfile.TemporaryDirectory() as tmp:
+            rs.pack_uv_atlas({k: v[0] for k, v in assembled.items()}, os.path.join(tmp, "bm.json"))
+        for (_st, _lod), (m, *_rest) in assembled.items():
+            for poly in m.polygons:
+                self.assertIsNotNone(poly.uv_override, poly.component)
+                for u, v in poly.uv_override:
+                    self.assertTrue(0.0 <= u <= 1.0 and 0.0 <= v <= 1.0, poly.component)
 
 
     # --- vertex ID channels (card .MESH_PROP; owner ruling 2026-09-07) -------------------------

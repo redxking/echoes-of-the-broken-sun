@@ -58,7 +58,7 @@ import zlib
 
 AUTHOR = "Angelis Pseftis"
 TOOL_NAME = "ebs_texbake.py"
-TOOL_REVISION = "ebs-texbake-v1"
+TOOL_REVISION = "ebs-texbake-v2"  # v2: kharuun_obsidian / kharuun_amber families, unit StateMask, MoltBlend map, emissive-area accounting
 
 ALL_MAPS = ("basecolor", "normal", "mre", "statemask", "debug")
 MAP_SUFFIX = {
@@ -76,8 +76,24 @@ CERAMIC_PANEL_CM = 64.0
 # Seeds are those of the registered recipes in echoes_texture_synth.py.
 SEED_CERAMIC = 101
 SEED_METAL = 505
+SEED_KHARUUN = 606  # the registered kharuun_mineral recipe's seed (echoes_texture_synth.py)
 # Normal-map strengths mirror the recipes (height units are the recipes').
-NORMAL_STRENGTH = {"ceramic_civic": 2.6, "compact_metal": 2.2, "status_emissive": 1.0, None: 1.0}
+NORMAL_STRENGTH = {"ceramic_civic": 2.6, "compact_metal": 2.2, "status_emissive": 1.0,
+                   "kharuun_obsidian": 2.4, "kharuun_amber": 1.2, None: 1.0}
+
+# Kharuun unit families (REL-ART-029; card REL-ART-005.KA.RIFTSTALKER .TEX_MAPS / .MAT_RULE).
+#   kharuun_obsidian  opaque volcanic value mask over a charcoal body (0.02-0.07 linear, the
+#                     Charcoal anchor), warped strata bands, a high-frequency fractured cell field
+#                     for the "fractured detail normal", micro-noise grit. NO emissive: the cracks
+#                     carry only an ember-dim, matte amber tint in their bottoms.
+#   kharuun_amber     Broken-Sun Amber seams: the ONLY emissive, so the <=15% ceiling is governed
+#                     by the geometry that carries this slot. Key-light weighting (1.0, 0.82, 0.62),
+#                     ember weighting (0.50, 0.22, 0.06) from Docs/ArtDirection.md.
+OBSIDIAN_BODY = 0.026            # charcoal body, linear; with the band and grit the plates span ~0.03-0.07
+OBSIDIAN_STRATA_CM = 48.0        # one strata band per 48 cm down the plate
+OBSIDIAN_CELL_CM = 12.0          # fracture cell size
+AMBER_KEY = (1.0, 0.82, 0.62)
+AMBER_EMBER = (0.50, 0.22, 0.06)
 
 # Neutral values for pixels no chart paints.
 NEUTRAL_BASE_LINEAR = 0.5
@@ -98,6 +114,8 @@ DEBUG_SLOT_COLOURS = {
     "ceramic_civic": (236, 222, 170),
     "compact_metal": (96, 110, 128),
     "status_emissive": (40, 200, 230),
+    "kharuun_obsidian": (58, 52, 50),
+    "kharuun_amber": (250, 170, 60),
     None: (200, 60, 200),
 }
 
@@ -227,6 +245,8 @@ def decode_png_rgb(data: bytes) -> tuple[int, int, bytes]:
             width, height = struct.unpack(">II", payload[:8])
         elif tag == b"IDAT":
             idat += payload
+        elif tag == b"IEND":
+            break
         pos += 12 + length
     raw = zlib.decompress(bytes(idat))
     stride = width * 3
@@ -295,15 +315,21 @@ def glyph_mask(cell_w: int, cell_h: int, text: str) -> list[int]:
 
 # --- Chart preparation ----------------------------------------------------------
 class ChartJob:
-    """Precomputed per-chart frame, polygon edges and rule flags."""
+    """Precomputed per-chart frame, polygon edges and rule flags.
+
+    ``vertex_color`` is the chart's authored COLOR_0 (RGBA) when the manifest carries one; the unit
+    StateMask mirrors its R (molt sweep order) so texture and vertex data cannot disagree. COLOR_0
+    stays authoritative. ``team`` marks a team-colour carrier chart (StateMask B)."""
 
     __slots__ = (
         "id", "component", "slot", "family", "rx", "ry", "rw", "rh", "cell_w", "cell_h",
         "cells", "origin", "u_dir", "v_dir", "normal", "size_cm", "poly_px", "edges",
-        "rules", "collar_k", "bbox", "n_offset", "meshes",
+        "rules", "collar_k", "bbox", "n_offset", "meshes", "vertex_color", "team",
     )
 
     def __init__(self) -> None:
+        self.vertex_color = None
+        self.team = False
         self.rules: list[str] = []
         self.collar_k = 0
         self.n_offset = 0.0
@@ -375,6 +401,16 @@ def classify_chart(chart: dict, slot_families: dict) -> tuple[str | None, list[s
         rules.append("coupling_indicator")
     if component == "team_band":
         rules.append("team_band")
+    if family == "kharuun_obsidian":
+        if component.startswith("molt_plate_") or component.startswith("molt_striker_vane_"):
+            rules.append("kharuun_fresh_growth")
+        if component.endswith("_foot") or component.endswith("_lower"):
+            rules.append("kharuun_foot_wear")
+    if family == "kharuun_amber":
+        if component == "caster_slot":
+            rules.append("kharuun_caster_heat")
+        else:
+            rules.append("kharuun_seam")
     if family == "status_emissive" and not any(
         r in rules for r in ("collar_segment", "conduit_pulse", "coupling_indicator")
     ):
@@ -417,6 +453,11 @@ def prepare_charts(manifest: dict, size: int) -> tuple[list[ChartJob], float, in
             delta = (pw[0][0] - job.origin[0], pw[0][1] - job.origin[1], pw[0][2] - job.origin[2])
             job.n_offset = _dot(delta, job.normal)
         job.family, job.rules, job.collar_k = classify_chart(chart, slot_families)
+        vc = chart.get("vertex_color")
+        job.vertex_color = tuple(float(c) for c in vc) if vc else None
+        job.team = job.component in set(manifest.get("team_components", []))
+        if job.team:
+            job.rules.append("team_carrier")
         xs = [p[0] for p in job.poly_px]
         ys = [p[1] for p in job.poly_px]
         if xs:
@@ -444,6 +485,9 @@ class BakeResult:
         self.charts_total = 0
         self.charts_skipped: list[dict] = []
         self.elapsed = 0.0
+        # Painted-polygon texels whose MRE.B (emissive mask) is non-zero. At uniform density this
+        # is the emissive fraction by WORLD AREA, which is what the <=15% ceiling is written against.
+        self.emissive_polygon_px = 0
 
     def buffers(self) -> dict[str, bytearray]:
         return {
@@ -495,6 +539,17 @@ def _bake_chart(job: ChartJob, res: BakeResult, density: float, gutter: int, ext
     is_ceramic = family == "ceramic_civic"
     is_metal = family == "compact_metal"
     is_status = family == "status_emissive"
+    is_obsidian = family == "kharuun_obsidian"
+    is_amber = family == "kharuun_amber"
+    r_fresh = "kharuun_fresh_growth" in rules
+    r_foot = "kharuun_foot_wear" in rules
+    r_caster = "kharuun_caster_heat" in rules
+    r_seam = "kharuun_seam" in rules
+    vc = job.vertex_color
+    seed_k = SEED_KHARUUN
+    inv_strata = 1.0 / OBSIDIAN_STRATA_CM
+    inv_cell = 1.0 / OBSIDIAN_CELL_CM
+    tau = math.tau
     r_plate_wear = "panel_plate_edge_wear" in rules
     r_plate_grid = "panel_plate_grid" in rules
     r_numerals = "panel_label_numerals" in rules
@@ -527,6 +582,7 @@ def _bake_chart(job: ChartJob, res: BakeResult, density: float, gutter: int, ext
     fbm_ = fbm
     floor = math.floor
     sin = math.sin
+    sqrt_ = math.sqrt
     hash2 = _hash2
     seed_c = SEED_CERAMIC
     seed_m = SEED_METAL
@@ -729,6 +785,93 @@ def _bake_chart(job: ChartJob, res: BakeResult, density: float, gutter: int, ext
                         rough += 0.25 * dust
                         metallic -= 0.2 * dust
                         height -= 0.1 * dust
+            elif is_obsidian:
+                # Volcanic value mask: warped strata bands down the plate (v), one per 48 cm.
+                warp = fbm_(u * 5.0, v * 5.0, seed_k + 1, 4) * 0.9
+                strata = sin((t * inv_strata + warp) * tau)
+                band = 0.5 + 0.5 * strata
+                # High-frequency fractured detail: a cellular field, thin lines on the cell borders.
+                cs = s * inv_cell
+                ct = t * inv_cell
+                ics = floor(cs)
+                ict = floor(ct)
+                d1 = 9.0
+                d2 = 9.0
+                for oy in (-1, 0, 1):
+                    for ox in (-1, 0, 1):
+                        gx = ics + ox
+                        gy = ict + oy
+                        fx = gx + hash2(gx, gy, seed_k + 11)
+                        fy = gy + hash2(gx, gy, seed_k + 13)
+                        ddx = fx - cs
+                        ddy = fy - ct
+                        dd = ddx * ddx + ddy * ddy
+                        if dd < d1:
+                            d2 = d1
+                            d1 = dd
+                        elif dd < d2:
+                            d2 = dd
+                crack = 1.0 - (sqrt_(d2) - sqrt_(d1)) / 0.14
+                if crack < 0.0:
+                    crack = 0.0
+                elif crack > 1.0:
+                    crack = 1.0
+                grit = fbm_(u * 60.0, v * 60.0, seed_k + 3, 4)
+                if r_fresh:
+                    # New growth after a molt: fewer fractures, a touch lighter, smoother.
+                    crack *= 0.4
+                    value = OBSIDIAN_BODY + 0.010 + band * 0.022 + grit * 0.012
+                    rough = 0.36 + grit * 0.10 + crack * 0.25
+                else:
+                    value = OBSIDIAN_BODY + band * 0.022 + grit * 0.012
+                    rough = 0.42 + grit * 0.12 + crack * 0.25
+                value *= 1.0 - crack * 0.6
+                # Ember-dim, matte amber in the crack bottoms. Not emissive: the ceiling is the seams'.
+                # "ember-dim": at full strength the tint adds ~0.07 linear to R, keeping the body in the anchor
+                ember = crack * (0.5 + 0.5 * fbm_(u * 20.0, v * 20.0, seed_k + 5, 3)) * 0.14
+                cr = value + ember * AMBER_EMBER[0]
+                cg = value + ember * AMBER_EMBER[1]
+                cb = value + ember * AMBER_EMBER[2]
+                height = band * 0.10 - crack * 0.5 + grit * 0.08
+                metallic = 0.0
+                emissive = 0.0
+                if r_foot and Pz < 25.0:
+                    f = (25.0 - Pz) / 25.0
+                    if f > 1.0:
+                        f = 1.0
+                    dust = f * (0.5 + 0.5 * fbm_(u * 40.0, v * 40.0, seed_k + 21, 3))
+                    cr = cr * (1.0 - 0.3 * dust) + 0.05 * dust
+                    cg = cg * (1.0 - 0.3 * dust) + 0.045 * dust
+                    cb = cb * (1.0 - 0.3 * dust) + 0.04 * dust
+                    rough += 0.3 * dust
+                    height -= 0.1 * dust
+            elif is_amber:
+                # A seam is a thin strip: the core runs along its length, bright on the centre line.
+                if size_w < size_h:
+                    across = lu_cm / size_w if size_w > 1e-9 else 0.5
+                    along = lv_cm / size_h if size_h > 1e-9 else 0.0
+                else:
+                    across = lv_cm / size_h if size_h > 1e-9 else 0.5
+                    along = lu_cm / size_w if size_w > 1e-9 else 0.0
+                core = 1.0 - abs(across - 0.5) * 2.0
+                if core < 0.0:
+                    core = 0.0
+                flicker = fbm_(u * 40.0, v * 40.0, seed_k + 9, 3)
+                glow = 0.55 + 0.45 * core
+                cr = AMBER_KEY[0] * glow * (0.85 + 0.15 * flicker)
+                cg = AMBER_KEY[1] * glow * (0.85 + 0.15 * flicker)
+                cb = AMBER_KEY[2] * glow * 0.9
+                metallic = 0.0
+                rough = 0.26 + (1.0 - core) * 0.2
+                emissive = 0.55 + 0.45 * core
+                height = -0.2 * (1.0 - core)
+                if r_caster:
+                    # Muzzle heat carrier: G gradient along the slot, 0 at the breech, 1 at the muzzle.
+                    sg = along
+                    if sg < 0.0:
+                        sg = 0.0
+                    elif sg > 1.0:
+                        sg = 1.0
             elif is_status:
                 cr, cg, cb = STATUS_BASE
                 metallic = 0.0
@@ -750,6 +893,21 @@ def _bake_chart(job: ChartJob, res: BakeResult, density: float, gutter: int, ext
                     sg = 1.0
             if r_coupling or r_status_generic:
                 sg = 1.0
+            if vc is not None:
+                # Unit StateMask: R mirrors the authored COLOR_0.R (molt sweep order; COLOR_0 stays
+                # authoritative). G is the translucent core blend for the 80-tick window: on new
+                # growth (G or B set in COLOR_0) a soft field that peaks at the chart centre, so the
+                # skin reads as forming from a core outward; elsewhere 0.
+                sr = vc[0]
+                if vc[1] > 0.5 or vc[2] > 0.5:
+                    cxn = (lu_cm / size_w - 0.5) * 2.0 if size_w > 1e-9 else 0.0
+                    cyn = (lv_cm / size_h - 0.5) * 2.0 if size_h > 1e-9 else 0.0
+                    rr = cxn * cxn + cyn * cyn
+                    sg = 1.0 - rr
+                    if sg < 0.0:
+                        sg = 0.0
+            if job.team:
+                sb = 1.0
 
             if extra_height is not None:
                 height += extra_height(job, px, py, lu_cm, lv_cm, (Px, Py, Pz))
@@ -796,6 +954,8 @@ def _bake_chart(job: ChartJob, res: BakeResult, density: float, gutter: int, ext
             else:
                 gstatus[gi] = 2
                 gq[gi] = 255
+                if mre_loc[i * 3 + 2] > 0:
+                    res.emissive_polygon_px += 1
             left = h_loc[i - 1] if lx > 0 else h_loc[i]
             right = h_loc[i + 1] if lx < W - 1 else h_loc[i]
             up = h_loc[ym + lx]
@@ -936,6 +1096,12 @@ def write_outputs(res: BakeResult, out_dir: str, asset_id: str, maps, manifest_p
             "gutter_pixels": gutter_px,
             "manifest_used_fraction": manifest.get("atlas", {}).get("used_fraction"),
         },
+        "emissive": {
+            "polygon_pixels_with_emissive_mask": res.emissive_polygon_px,
+            "fraction_of_painted_polygon_area": round(res.emissive_polygon_px / max(1, polygon_px), 6),
+            "note": ("At uniform texel density this is the emissive fraction by world surface area, "
+                     "measured on the BAKED mask rather than inferred from slot geometry."),
+        },
         "charts_total": res.charts_total,
         "rule_counts": dict(sorted(res.rule_counts.items())),
         "charts_unmatched": res.unmatched,
@@ -946,10 +1112,42 @@ def write_outputs(res: BakeResult, out_dir: str, asset_id: str, maps, manifest_p
             "basecolor": "sRGB-encoded",
             "normal": "tangent-space, DirectX/Unreal (+G = tilt toward +v_dir, image down); flat = (128,128,255)",
             "mre": "R metallic, G roughness, B emissive mask (linear)",
-            "statemask": "R collar segment k/8, G pulse/indicator, B team mask (linear)",
+            "statemask": ("R collar segment k/8 (structures) or molt sweep order mirrored from COLOR_0 (units), "
+                          "G pulse/indicator (structures) or translucent core blend (units), B team mask (linear)"),
             "noise_space": "world cm projected on chart u_dir/v_dir, period 256 cm",
         },
     }
+    blend_size = int(manifest.get("molt_blend_size", 0) or 0)
+    if blend_size and "statemask" in buffers:
+        # The card's secondary translucent core blending skin mask: the StateMask box-filtered to
+        # blend_size^2 (R sweep order, G core blend, B team), written as its own map.
+        src = buffers["statemask"]
+        S = res.size
+        k = max(1, S // blend_size)
+        out = bytearray(blend_size * blend_size * 3)
+        inv = 1.0 / (k * k)
+        for by in range(blend_size):
+            for bx in range(blend_size):
+                acc0 = acc1 = acc2 = 0
+                for yy in range(by * k, by * k + k):
+                    row = yy * S
+                    for xx in range(bx * k, bx * k + k):
+                        i3 = (row + xx) * 3
+                        acc0 += src[i3]
+                        acc1 += src[i3 + 1]
+                        acc2 += src[i3 + 2]
+                o3 = (by * blend_size + bx) * 3
+                out[o3] = int(acc0 * inv + 0.5)
+                out[o3 + 1] = int(acc1 * inv + 0.5)
+                out[o3 + 2] = int(acc2 * inv + 0.5)
+        png = encode_png_rgb(out, blend_size, blend_size)
+        fname = f"{prefix}_MoltBlend.png"
+        with open(os.path.join(out_dir, fname), "wb") as fh:
+            fh.write(png)
+        report_maps["moltblend"] = {"file": fname, "bytes": len(png), "sha256": sha256_bytes(png),
+                                    "channels": channel_stats(out), "size": blend_size,
+                                    "derivation": f"StateMask box-filtered {S} -> {blend_size}"}
+        report["maps"] = report_maps
     report_path = os.path.join(out_dir, "bake-report.json")
     with open(report_path, "w", encoding="utf-8") as fh:
         json.dump(report, fh, indent=2, sort_keys=False)
