@@ -1270,5 +1270,18 @@
    "how_to_obtain": "Announce the change in the coordination lane and get an acknowledgement, or hold a recorded lock, before the next shared-tool change.",
    "risk_accepted_this_time": "The change is additive and opt-in: with no vertex colours supplied no attribute is written, and all 21 packages verified byte-identical. A concurrent editor would conflict in git rather than silently lose work."
   }
+ },
+ "missing_capability": {
+  "as_of": "2026-09-07",
+  "capability": "A DCC for sculpted geometry and high-to-low texture baking (none installed; Blender 5.2.1 is installable via brew cask, not installed without the owner's yes).",
+  "what_it_blocks": "ART_ALPHA on every package: the ladder's exit ('primary proportions, materials, rig and key states faithfully match the approved source') needs bevelled, faceted, organic forms and authored surface detail that the mesh kit (boxes, prisms, tubes) and the procedural baker cannot supply. BLOCKOUT and GAMEPLAY_PROXY do not need it.",
+  "what_the_pipeline_still_does": "Contract layer: traced proportions, budgets, sockets, LODs, states, emissive ceilings by area, vertex-ID channels, unique UV atlases, deterministic exports, headless import and in-engine capture. The blockouts are the scaffold a DCC pass starts from, not throwaway.",
+  "paths": {
+   "A_blender_headless": "Install Blender; a bpy stage ingests each blockout GLB, applies per-component bevel/subdivision/displacement recipes by family, bakes normal/AO/curvature from the high-poly onto the existing atlas UVs, exports back with sockets and rig intact; proof on one unit first. Deterministic and scriptable; still not hand-painted art.",
+   "B_procedural_only": "Extend the kit (bevels, facet booleans, displacement) and the baker (curvature/AO/dirt). Cheaper, stays pure Python, will not reach the concepts' finish.",
+   "C_artist": "A human artist takes the blockouts as scaffolds; the pipeline remains the verification layer. Reaches the concepts; not automatable here."
+  },
+  "recommendation": "A, proven on the Riftstalker before committing the other twenty; B as the fallback if A is refused.",
+  "texture_sweep": "PAUSED across the other twenty packages pending the decision: procedural surfaces that a DCC pass would re-author are the wrong investment."
  }
 }
