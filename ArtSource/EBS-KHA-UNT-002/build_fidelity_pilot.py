@@ -38,8 +38,10 @@ def generate(out):
     out.mkdir(parents=True,exist_ok=True)
     report={'author':base.AUTHOR,'creator':base.AUTHOR,'revision':REVISION,
         'status':'GEOMETRY_PILOT_NOT_ACCEPTED','meshes':[],
-        'limits':'New rig pose, UVs, geometry and motions require fresh Unreal verification. Five experimental clips; sidestep and remaining production actions pending.'}
+        'limits':'New rig pose, UVs, geometry and motions require fresh Unreal verification. Applicable authored action set requires engine and gameplay-distance verification.'}
     skeleton=base.build_skeleton();clips=fidelity_motion.clips(base)
+    report['motion_contract']=fidelity_motion.motion_contract()
+    report['animations']=[{'name':c.name,'duration_s':c.duration_s,'loop':c.loop,'purpose':c.purpose} for c in clips]
     meshes={(state,lod):assemble(lod,state) for state in base.STATES for lod in (0,1)}
     atlas=base.kit.pack_atlas([(m,lod) for (state,lod),m in meshes.items()],size=2048)
     base.kit.write_bake_manifest(str(out/'bake-manifest.json'),atlas,extras={

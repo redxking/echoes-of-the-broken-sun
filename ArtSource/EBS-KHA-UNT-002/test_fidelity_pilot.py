@@ -40,7 +40,7 @@ class FidelityChecks(unittest.TestCase):
                 self.assertEqual(len(g['skins'][0]['joints']),22)
                 names={node.get('name') for node in g['nodes']}
                 self.assertTrue({'SOCKET_'+n for n in b.SOCKETS}<=names)
-                self.assertEqual({a['name'] for a in g['animations']},{'idle','move','fire_on_the_move','molt','death'})
+                self.assertEqual({a['name'] for a in g['animations']},{'idle','move','fire_on_the_move','molt','death','turn_left','turn_right','acquire','windup','attack','recovery','hit','selection_ack'})
                 for prim in g['meshes'][0]['primitives']:
                     self.assertIn('COLOR_0',prim['attributes']);self.assertIn('JOINTS_0',prim['attributes'])
                 self.assertFalse(any(str(name).startswith(('UBX_','UCX_','USP_','UCP_')) for name in names))
