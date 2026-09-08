@@ -682,3 +682,21 @@ asset nor the other twenty packages is promoted to production acceptance by this
 The machine-readable receipt now identifies production21 at its root. Earlier iteration12 facts are
 preserved under `historical_passes`, so consumers cannot mistake old five-clip/import-pending records
 for the current thirteen-clip sandbox evidence.
+
+### Pending clay form study — form28
+
+The current generator source contains an **unaccepted clay study**, while `production21` remains the
+last selected imported checkpoint. Form28 flattens the pyramidal armor, uses blunt fractured
+terminations, removes loose mantle overlays and cuts fracture fields into the plate surfaces. It
+preserves Amber and foot landmarks, the existing rig, sockets and action definitions. Forms26–27 and
+the source snapshots are retained in the same evidence root; no concept artwork was replaced.
+
+Three focused source tests and all six GLB contract checks pass. The CPU preview shows clearer slab
+edges but still overly regular geometry; it does not establish concept fidelity. Full animation ground
+sampling, new UV/material transfer and Unreal appearance remain unverified. The previous production21
+checks do not transfer to this new geometry. `form28/pending-review.json` records exact counts and hashes.
+
+`capture_fidelity_clay_inengine.py` prepares matched neutral-clay views in the isolated sandbox,
+including the prior mesh and new mesh under identical settings. Its syntax was checked; it has not
+executed. `form28/import-job.json` is ready. Unreal/Blender/GPU launch is waiting for Backend Chat to
+release its integration reservation; this lane has not launched a conflicting job.

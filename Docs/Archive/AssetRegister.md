@@ -1040,3 +1040,11 @@ the sandbox shard; no external artwork, training asset, downloaded model, or gen
 concept was added. Source21 geometry and material evidence, including rejected earlier captures, is
 recorded in the same Riftstalker README and receipt. Epic module availability is a tooling dependency,
 not a rights transfer or a statement that the final art/performance gates passed.
+
+
+Riftstalker form28 clay study (2026-09-08): project-authored procedural geometry in
+`ArtSource/EBS-KHA-UNT-002/fidelity_geometry.py`, derived from the same selected Riftstalker concept,
+with source snapshots and output hashes under `BuildArtifacts/Evidence/riftstalker-production-20260908/form28`.
+Creator: Angelis Pseftis. No new third-party artwork or generative model input. The new
+`capture_fidelity_clay_inengine.py` is a sandbox-only review script, syntax checked but not engine-run.
+This study is pending review; production21 remains the prior selected checkpoint.

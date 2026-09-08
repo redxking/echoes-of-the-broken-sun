@@ -29,11 +29,19 @@ def build(kit, cfg, lod, state):
         u,v=norm(u),norm(v); n=norm(cross(u,v))
         # Longitudinal ridge and broad shoulders, then a swept needle point.
         # Plate edges have unequal fracture breaks; detail follows the plate's flow.
+        preserve_landmark = slot == ember or component.endswith('_foot')
         stations=[(-.50,.11,.08),(-.35,.36,.62),(-.06,.49,1.),(.23,.32,.60),(.54,.025,.025)]
+        if not preserve_landmark:
+            # Blunt fractured slabs: broad shoulders and an offset termination,
+            # with a plateau instead of the earlier pyramidal leaf ridge.
+            stations=[(-.50,.19,.20),(-.32,.47,.84),(.04,.46,1.),(.32,.30,.80),(.54,.08,.18)]
         transverse=[-1,-.48,0,.51,1]
         if not fine or slot == ember:
             stations=[stations[0],stations[2],stations[-1]];transverse=[-1,0,1]
-        elif transverse_count == 3:
+        elif not preserve_landmark:
+            stations=[stations[0],stations[2],stations[-1]]
+            transverse=[-1,-.48,0,.51,1] if component.startswith('shell_') else [-1,0,1]
+        elif transverse_count == 3 and preserve_landmark:
             # Large shields retain their long swept silhouette but leave the
             # triangle budget for actual overlapping mineral scales.
             transverse=[-1,0,1]
@@ -42,14 +50,36 @@ def build(kit, cfg, lod, state):
             row=[]
             for k,t in enumerate(transverse):
                 shift=rng.uniform(-.035,.035) if abs(t)==1 else 0
+                if not preserve_landmark and 0<j<len(stations)-1:
+                    shift += rng.uniform(-.045,.045)
                 z=rise*h*(1-abs(t)**1.1)*(.96+rng.uniform(-.04,.04))
+                if not preserve_landmark:
+                    # Flat fractured upper planes, bevel at the perimeter.
+                    shoulder = .13 if abs(t)==1 else (1.-.28*abs(t))
+                    z=rise*.72*h*shoulder
+                    if 0 < j < len(stations)-1 and abs(t)<1:
+                        z += rise*.065*math.sin(j*2.4+k*1.7)
                 row.append(add(center,add(mul(u,(x+shift)*length),add(mul(v,t*w*width),mul(n,z)))))
             grid.append(row)
         faces=[]
         for j in range(len(grid)-1):
             for k in range(len(transverse)-1):
                 a,b,c,d=grid[j][k],grid[j+1][k],grid[j+1][k+1],grid[j][k+1]
-                faces.extend([[a,b,c],[a,c,d]])
+                if fine and not preserve_landmark:
+                    # Carve the plate's surface into seated fracture fields.
+                    # Each field shares the original envelope and extends into
+                    # the common solid; these are not floating overlay scales.
+                    corners=[a,b,c,d]
+                    mid=tuple(sum(q[axis] for q in corners)/4 for axis in range(3))
+                    inner=[add(mul(q,.94),mul(mid,.06)) for q in corners]
+                    lift=1.0+((j*3+k*7)%5)*.28
+                    inner=[add(q,mul(n,lift)) for q in inner]
+                    faces.extend([[inner[0],inner[1],inner[2]],[inner[0],inner[2],inner[3]]])
+                    for edge in range(4):
+                        nxt=(edge+1)%4
+                        faces.append([corners[edge],corners[nxt],inner[nxt],inner[edge]])
+                else:
+                    faces.extend([[a,b,c],[a,c,d]])
         boundary=grid[0]+[row[-1] for row in grid[1:]]+list(reversed(grid[-1][:-1]))+[row[0] for row in reversed(grid[1:-1])]
         # Rock shields need a credible broken-stone rim.  The old 0.7--1.1 cm
         # edge thickness made the broad plates read as cardboard in profile.
@@ -120,28 +150,8 @@ def build(kit, cfg, lod, state):
         if heavy:
             plate((x-8,0,z+12),length*.90,broad*.88,15,f'molt_plate_{i+1:02d}')
 
-    # The mantle's secondary forms are a deliberate shingle hierarchy: two
-    # swept side scales per primary shield, then a broken crown over the three
-    # largest plates.  They overlap their hosts by 2--4 cm, never float.
-    if fine:
-        for index,(x,z,length,width) in enumerate(profiles):
-            for side in (-1,1):
-                scale((x+length*.015,side*width*.15,z+13.5),length*.43,width*.29,6.0,
-                      f'shell_{index+1:02d}',u=(1,side*.11,-.11),v=(0,1,side*.18))
-        for index,dx,dy,extent,lean in ((1,-20,-8,.34,-.14), (1,17,11,.30,.11),
-                                        (2,-14,9,.39,-.10), (2,22,-7,.31,.14),
-                                        (3,-12,5,.34,-.08), (3,20,-9,.27,.12),
-                                        (2,3,-2,.25,.03), (1,5,2,.23,-.04)):
-            x,z,length,width=profiles[index]
-            scale((x+dx,dy,z+14.72),length*extent,width*(.22+extent*.12),5.8,
-                  f'shell_{index+1:02d}',u=(1,lean,-.13),v=(0,1,lean*.22))
-    else:
-        # Six large scales preserve the layered read at RTS LOD1 without
-        # spending triangles on the close-up crown.
-        for index,side in ((0,-1),(1,-1),(1,1),(2,-1),(2,1),(4,1)):
-            x,z,length,width=profiles[index]
-            scale((x+length*.02,side*width*.13,z+13),length*.40,width*.27,5.5,
-                  f'shell_{index+1:02d}',u=(1,side*.10,-.10),v=(0,1,side*.16))
+    # Surface hierarchy is modeled into the shields themselves. Previous
+    # free-standing secondary overlays made the mantle read as loose tiles.
 
     # The keel is tapered and segmented, exposed only between the large shell shields.
     segment((-119,0,145),(76,0,136),[(0,16),(.30,35),(.72,30),(1,13)],'underbody')
