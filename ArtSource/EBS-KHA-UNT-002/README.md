@@ -514,7 +514,7 @@ roughness, and compares state-mask and Amber-pixel hashes before/after. The revi
 baked roughness directly; it no longer conceals low roughness with a shader clamp. This does not
 implement an Unreal faction master material or close the team/molt rendering gate.
 
-The active evidence output is `BuildArtifacts/Evidence/riftstalker-fidelity-20260908/iteration12`.
+The historical iteration12 evidence output is `BuildArtifacts/Evidence/riftstalker-fidelity-20260908/iteration12`; the continuation below records the current pass.
 The shared atlas remains a limitation: 8,944 per-face charts, 0.8861 px/cm, and two-pixel gutters.
 A more efficient production unwrap and texture validation through mip/LOD transitions remain open.
 No prior Unreal import receipt applies to these changed surfaces and rest joints.
@@ -571,3 +571,82 @@ geometric improvement do not close full animation, UV efficiency, state communic
 capture or owner acceptance.
 
 Saved-file read-back passed: one mesh, 22 bones, five sockets, five actions and all five maps packed; scene author/creator both identify Angelis Pseftis. `iteration12/editable-readback.json` retains that check. The blend is an editable refinement, not an accepted production package.
+
+
+## 11. Production continuation — 2026-09-08
+
+**Art acceptance remains open. This is not a production-ready asset.** The owner requested continued
+refinement through completion. The current geometry still shows broad plate surfaces compared with the
+selected concept, so successful source/import checks do not close the art gate. Further source refinement
+continues on this isolated branch; the other twenty packages have not been promoted through production.
+
+Evidence root: `BuildArtifacts/Evidence/riftstalker-production-20260908` in the workspace supporting
+location. The sandbox is `Sandbox/EBSRiftProduction.uproject`; no game project Content, Source, Config,
+map, workflow, or gameplay data was changed. Main checkout HUD edits observed during this pass belong
+to other development and were preserved.
+
+The latest fully source-tested geometry checkpoint is `source21`, committed as `c404d85` (surface/UV
+source subsequently recorded in `a1fea0a`). Its UV-applied exports are in `production21`:
+
+| State | LOD0 triangles | LOD1 triangles |
+|---|---:|---:|
+| Baseline | 6,476 | 2,832 |
+| Carapace | 6,876 | 2,992 |
+| Striker | 6,636 | 2,896 |
+
+Eight source tests pass (`source21-full-tests.log`, 368.866 s), including all state/LOD animation ground
+checks and repeatability. Six motion-contract tests separately pass. Thirteen named clips cover the
+applicable unit actions; an invented active ability is not added to this passive Slipfire unit. Movement
+is authored against 410 cm/s, with the Carapace playback multiplier specified separately. Firing retains
+the locomotion leg tracks. Facing-settle clips return to neutral because simulation owns actual facing.
+The death body lowers 110 cm while the feet remain grounded in source sampling.
+
+`final21-import.json` reports no errors: three SkeletalMeshes, three Skeletons, and 39 sequences.
+`final21-physics-lod/physics-lod-report.json` reports two authored LODs per mesh, full-precision UVs on
+both, and assigned compatible engine-generated PhysicsAssets. Generated physics bodies are **not**
+ragdoll/contact acceptance. Authored LOD import is **not** automatic reduction or transition acceptance.
+The 22-bone amendment is recorded in this branch's Requirements.md under the owner's standing ruling;
+it has not been merged into main by this pass.
+
+### Texture transfer and rendered checks
+
+`uv21/uv-qa.json` reports zero positive-area overlaps on all six layouts. The shared layout has 1,647
+islands and about 1.08 px/cm over unique representative geometry; the earlier under-1,000-island target
+was not met. The experimental tree unwrap was rejected for overlaps. The Cycles transfer route was
+withdrawn after it produced empty masks and a flat normal map despite completing. Its entry point now
+refuses that route rather than silently returning a bake.
+
+`transfer_fidelity_textures.py` transfers matching polygon UVs directly, with 2x raster supersampling,
+normal tangent-frame conversion, and two output pixels of dilation. It checks that emissive, team, core,
+and normal data survive. Twelve source triangles with degenerate source UVs use explicitly reported
+geometric normals; micro-normal detail on those triangles is not claimed. `production21/textures/`
+contains the maps and transfer report. The surface check records one remaining zero Amber caster
+centroid and sampled source/color boundary issues. The source bake's charcoal-range check must not be
+misrepresented as complete transferred-atlas compliance.
+
+`final21-capture/art-capture-report.json` has zero reported connection/evaluation errors, 30 material
+frames and 57 animation poses. A previous capture was rejected because a Clamp input connection failed
+and poses stayed at rest. Changing away from single-node mode before each override forces the sequence
+and sample time to reinitialize; the receipt now checks the actual 110 cm death displacement. Earlier
+captures with empty maps and temporary checker materials remain as failure evidence.
+
+These are sandbox camera/lighting studies, not in-game tactical-camera qualification. The material's
+core treatment is opaque-pass subsurface transmission from the 512px mask, not see-through geometry;
+its interpretation against the translucent-core requirement remains open. Team ownership uses the
+separate StateMask band and TeamColor parameter, never COLOR_0. Material damage is a presentation
+parameter, not new simulation behavior. Art fidelity, practical team/state readability and performance
+remain pending.
+
+### Shard effect
+
+The editor-only `ArtSource/tools/RiftNiagaraAuthoring` bridge authors an actual Niagara graph from a
+factory emitter with explicit modules. It is installed only in this sandbox. The effect bursts one
+velocity-aligned Amber shard at 1,200 cm/s, lasts 0.5 s, disables renderer/system shadows, and bounds
+flight in all directions. `vfx-socket-launch/` measures +X, +Y and -X motion and captures a launch from
+`VFX_Muzzle_Shard_01` at approximately (94, 0, 176) cm. Explicit material recompilation in the rendered
+editor was required to replace the temporary checker material. No gameplay weapon binding, allocation
+profiling, multiplayer load/performance acceptance, or finished molt Niagara effect is claimed.
+
+The next gate is visual refinement against the actual concept, followed by representative camera and
+state review. Texture readiness, rig/animation correctness, physics behavior, LOD transitions, performance,
+provenance handoff and eventual authorized game integration remain separate gates.

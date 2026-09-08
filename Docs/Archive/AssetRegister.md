@@ -1015,3 +1015,28 @@ remain unchanged. Final refinement evidence is `riftstalker-fidelity-20260908/it
 work in the isolated art worktree, not production acceptance, runtime integration or release evidence.
 
 Source `9e29e93` additionally seats the Carapace growth in the mantle and packs all five texture/interface maps in the editable Blender pilot. It removes importer-created bone-display meshes by their rig references before saving. No third-party art source or rights status changes.
+
+
+Riftstalker production continuation, 2026-09-08 (author/creator Angelis Pseftis):
+`fidelity_mineral_detail.py`, `fidelity_uv_finish.py`, `export_fidelity_uv.py`,
+`capture_fidelity_material_inengine.py` and `qualify_fidelity_physics_lod.py` extend
+the registered owner-selected concept derivation above. These are package-local
+source tools; no replacement concept or third-party model is introduced.
+Dependencies are the existing Python/NumPy/Pillow toolchain, Blender and Unreal;
+their existing dependency/license records remain applicable. New engine output is
+confined to `BuildArtifacts/Evidence/riftstalker-production-20260908/Sandbox`.
+The updated animation set contains thirteen applicable clips. The uv13 face-tree
+unwrap and its transferred textures failed overlap QA and must not be imported
+as production evidence. The rig-count ruling is recorded only in the isolated
+art branch. None of this constitutes production acceptance or main integration.
+
+`transfer_fidelity_textures.py` now owns direct UV-layout texture transfer after the Cycles route
+produced empty masks in uv18; that shader-bake entry point is disabled. `roundtrip_fidelity_inengine.py`
+reads back sandbox GLB attributes and `package_fidelity_blend.py` checks the thirteen actions. The
+editor-only `ArtSource/tools/RiftNiagaraAuthoring` plugin is owner-project source built against Epic's
+installed Unreal/Niagara editor APIs and factory modules under the existing Unreal license. It is not
+installed in the game project. `author_fidelity_vfx.py` and `verify_fidelity_vfx.py` create and measure
+the sandbox shard; no external artwork, training asset, downloaded model, or generated replacement
+concept was added. Source21 geometry and material evidence, including rejected earlier captures, is
+recorded in the same Riftstalker README and receipt. Epic module availability is a tooling dependency,
+not a rights transfer or a statement that the final art/performance gates passed.

@@ -194,5 +194,65 @@
     "Riftstalker_fidelity_editable.blend": "2fdf018c72d032b4b365221a62cce6243f724b82847255472279cd1ef2acafc2",
     "baseline_lod0_threequarter.png": "30c09b6092bdf28a6f5cabf3cd3fe5de07023e746585266fbcbc4469de15b694",
     "pose_move_threequarter.png": "05c99f2dc7a44e9d1a0d997cbea8ce33e267dc840a9aabe2c59166f35fb6ca7e"
+  },
+  "continuation_20260908": {
+    "author": "Angelis Pseftis",
+    "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/riftstalker-production-20260908",
+    "latest_source_qualified_checkpoint": "source21",
+    "geometry_commit": "c404d85",
+    "status": "ART_GATE_OPEN_NOT_PRODUCTION",
+    "mesh_triangles": {
+      "baseline": [
+        6476,
+        2832
+      ],
+      "carapace_molt": [
+        6876,
+        2992
+      ],
+      "striker_molt": [
+        6636,
+        2896
+      ]
+    },
+    "source_tests": {
+      "passed": 8,
+      "seconds": 368.866,
+      "report": "source21-full-tests.log"
+    },
+    "engine_import": {
+      "report": "final21-import.json",
+      "skeletal_meshes": 3,
+      "skeletons": 3,
+      "animations": 39,
+      "errors": []
+    },
+    "physics_lod_report": "final21-physics-lod/physics-lod-report.json",
+    "uv_report": "uv21/uv-qa.json",
+    "texture_transfer_report": "production21/textures/transfer-report.json",
+    "texture_sample_report": "production21/textures/surface-transfer-check.json",
+    "render_report": "final21-capture/art-capture-report.json",
+    "vfx_report": "vfx-socket-launch/niagara-simulation-report.json",
+    "editable_package": "production21/Riftstalker_fidelity_editable.blend",
+    "editable_readback": "production21/editable-readback.json",
+    "open_gates": [
+      "Concept fidelity: broad plate forms remain below visual target",
+      "Transferred atlas boundary and tiny-face sampling defects",
+      "Subsurface core interpretation against translucent-core clause",
+      "Practical team/state readability at representative gameplay camera",
+      "Physics and LOD-transition behavior",
+      "Performance including Niagara allocation/pooling under load",
+      "Molt VFX completion if required by finalized reference package",
+      "Owner art/gameplay/technical review",
+      "Separately authorized game integration"
+    ],
+    "failures_retained": [
+      "Overlapping experimental UV13 layout",
+      "Empty masks and flat normals from Cycles transfer; route withdrawn",
+      "Rejected Clamp input connection",
+      "Animation captures stayed at rest before forced sequence reinitialization",
+      "Niagara temporary checker material before explicit rendered recompilation"
+    ],
+    "non_interference": "Only isolated art worktree and fresh sandbox; no main runtime or gameplay data changes"
   }
 }
