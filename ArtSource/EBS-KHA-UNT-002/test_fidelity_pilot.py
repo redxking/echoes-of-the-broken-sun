@@ -45,6 +45,13 @@ class FidelityChecks(unittest.TestCase):
                     self.assertIn('COLOR_0',prim['attributes']);self.assertIn('JOINTS_0',prim['attributes'])
                 self.assertFalse(any(str(name).startswith(('UBX_','UCX_','USP_','UCP_')) for name in names))
 
+    def test_lod_preserves_exact_amber_landmark_geometry(self):
+        for state in b.STATES:
+            meshes=[p.assemble(lod,state) for lod in (0,1)]
+            def amber(m):
+                return sorted((q.component,tuple(sorted(q.points))) for q in m.polygons if q.slot==m.slots.index(b.AMBER))
+            self.assertEqual(amber(meshes[0]),amber(meshes[1]))
+
     def test_firing_preserves_limb_motion(self):
         clips={c.name:c for c in p.fidelity_motion.clips(b)}
         for bone in clips['move'].tracks:

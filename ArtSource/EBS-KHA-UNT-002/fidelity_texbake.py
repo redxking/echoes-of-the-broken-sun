@@ -29,7 +29,7 @@ import numpy as np
 from PIL import Image
 
 AUTHOR = "Angelis Pseftis"
-REVISION = "ebs-riftstalker-mineral-refine-v1"
+REVISION = "ebs-riftstalker-mineral-refine-v2"
 
 HERE = Path(__file__).resolve().parent
 TOOLS = HERE.parent / "tools"
@@ -169,22 +169,27 @@ def _refine_obsidian(res: baker.BakeResult, jobs: list[baker.ChartJob], density:
         # world-up direction around the creature, rather than restarting in
         # each triangle's arbitrary local UV frame.
         bend = (_noise(wx / 115.0, wy / 115.0, 31.0) - 0.5) * 11.0
-        strata_phase = (wz + bend) / 43.0
+        strata_phase = (wz + bend) / 38.0
         strata = 0.5 + 0.5 * np.sin(math.tau * strata_phase)
         broad = _noise(wx / 170.0, wz / 170.0, 47.0) - 0.5
-        grit = _noise(wx / 13.0, wy / 13.0, 59.0) - 0.5
+        # 5.2 cm lamination remains resolvable at the ~0.9 px/cm atlas
+        # density.  It is a directional mineral layer, not isotropic speckle.
+        lam_bend = (_noise(wx / 32.0, wy / 32.0, 53.0) - 0.5) * 2.2
+        lamination = 0.5 + 0.5 * np.sin(math.tau * ((wz + lam_bend) / 5.2))
+        grit = _noise(wx / 5.8, wy / 5.8, 59.0) - 0.5
 
         # Sparse, interrupted fissures follow the strata direction.  They are
         # intentionally few and attenuated by a low-frequency gate.
-        fissure_path = np.abs(np.sin(math.tau * ((wz + bend * 1.8 + wx * 0.085) / 93.0)))
+        fissure_path = np.abs(np.sin(math.tau * ((wz + bend * 1.8 + wx * 0.085) / 79.0)))
         gate = _noise(wx / 92.0, wy / 92.0, 71.0)
-        fissure = np.clip((0.031 - fissure_path) / 0.031, 0.0, 1.0)
-        fissure *= np.clip((gate - 0.68) / 0.22, 0.0, 1.0)
+        fissure = np.clip((0.060 - fissure_path) / 0.060, 0.0, 1.0)
+        fissure *= np.clip((gate - 0.62) / 0.28, 0.0, 1.0)
 
         # Charcoal is measured in linear space.  No amber tint, metallic or
         # emissive is introduced on obsidian.  The strict 0.02..0.07 anchor is
         # enforced before sRGB encoding.
-        lum = 0.039 + strata * 0.016 + broad * 0.008 + grit * 0.004 - fissure * 0.009
+        lum = (0.030 + strata * 0.028 + broad * 0.014 +
+               lamination * 0.010 + grit * 0.006 - fissure * 0.012)
         lum = np.clip(lum, 0.022, 0.068)
         rgb_linear = np.stack((lum * 0.94, lum * 0.98, lum * 1.02), axis=1)
         rgb_linear = np.clip(rgb_linear, 0.020, 0.070)
@@ -193,36 +198,37 @@ def _refine_obsidian(res: baker.BakeResult, jobs: list[baker.ChartJob], density:
                         1.055 * np.power(rgb_linear, 1.0 / 2.4) - 0.055)
         base[ys, xs] = np.rint(np.clip(srgb * 255.0, 0.0, 255.0)).astype(np.uint8)
 
-        # A shallow height response supports the strata at close range while
-        # retaining a matte, non-cartoon surface at tactical distance.
-        height = strata * 0.16 + broad * 0.045 + grit * 0.025 - fissure * 0.16
+        # The normal carries the broad layers and readable fine laminations.
+        # It stays shallow enough to avoid a tiled-cell silhouette.
         # Per-point finite differences in the same directional field.  The
         # analytic derivatives avoid accidental atlas-axis seams.
         eps = 0.35
         def h_at(xx: np.ndarray, yy: np.ndarray, zz: np.ndarray) -> np.ndarray:
             bb = (_noise(xx / 115.0, yy / 115.0, 31.0) - 0.5) * 11.0
-            st = 0.5 + 0.5 * np.sin(math.tau * ((zz + bb) / 43.0))
+            st = 0.5 + 0.5 * np.sin(math.tau * ((zz + bb) / 38.0))
             br = _noise(xx / 170.0, zz / 170.0, 47.0) - 0.5
-            gr = _noise(xx / 13.0, yy / 13.0, 59.0) - 0.5
-            path = np.abs(np.sin(math.tau * ((zz + bb * 1.8 + xx * 0.085) / 93.0)))
+            lb = (_noise(xx / 32.0, yy / 32.0, 53.0) - 0.5) * 2.2
+            lam = 0.5 + 0.5 * np.sin(math.tau * ((zz + lb) / 5.2))
+            gr = _noise(xx / 5.8, yy / 5.8, 59.0) - 0.5
+            path = np.abs(np.sin(math.tau * ((zz + bb * 1.8 + xx * 0.085) / 79.0)))
             gg = _noise(xx / 92.0, yy / 92.0, 71.0)
-            fi = np.clip((0.031 - path) / 0.031, 0.0, 1.0) * np.clip((gg - 0.68) / 0.22, 0.0, 1.0)
-            return st * 0.16 + br * 0.045 + gr * 0.025 - fi * 0.16
+            fi = np.clip((0.060 - path) / 0.060, 0.0, 1.0) * np.clip((gg - 0.62) / 0.28, 0.0, 1.0)
+            return st * 0.23 + br * 0.065 + lam * 0.070 + gr * 0.035 - fi * 0.20
         ux, uy, uz = job.u_dir
         vx, vy, vz = job.v_dir
         ds = (h_at(wx + ux * eps, wy + uy * eps, wz + uz * eps) -
               h_at(wx - ux * eps, wy - uy * eps, wz - uz * eps)) / (2.0 * eps)
         dt = (h_at(wx + vx * eps, wy + vy * eps, wz + vz * eps) -
               h_at(wx - vx * eps, wy - vy * eps, wz - vz * eps)) / (2.0 * eps)
-        nx = -ds * 2.1
-        ny = -dt * 2.1
+        nx = -ds * 3.0
+        ny = -dt * 3.0
         nz = np.ones_like(nx)
         inv_len = 1.0 / np.sqrt(nx * nx + ny * ny + nz * nz)
         normal[ys, xs, 0] = np.rint((nx * inv_len * 0.5 + 0.5) * 255.0).astype(np.uint8)
         normal[ys, xs, 1] = np.rint((ny * inv_len * 0.5 + 0.5) * 255.0).astype(np.uint8)
         normal[ys, xs, 2] = np.rint((nz * inv_len * 0.5 + 0.5) * 255.0).astype(np.uint8)
 
-        roughness = np.clip(0.875 + (1.0 - strata) * 0.050 + fissure * 0.045 + grit * 0.015,
+        roughness = np.clip(0.860 + (1.0 - strata) * 0.075 + fissure * 0.045 + grit * 0.020,
                             217.0 / 255.0, 0.985)
         mre[ys, xs, 0] = 0
         mre[ys, xs, 1] = np.rint(roughness * 255.0).astype(np.uint8)

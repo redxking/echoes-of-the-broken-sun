@@ -31,7 +31,7 @@ def build(kit, cfg, lod, state):
         # Plate edges have unequal fracture breaks; detail follows the plate's flow.
         stations=[(-.50,.11,.08),(-.35,.36,.62),(-.06,.49,1.),(.23,.32,.60),(.54,.025,.025)]
         transverse=[-1,-.48,0,.51,1]
-        if not fine:
+        if not fine or slot == ember:
             stations=[stations[0],stations[2],stations[-1]];transverse=[-1,0,1]
         grid=[]
         for j,(x,w,h) in enumerate(stations):
@@ -81,9 +81,8 @@ def build(kit, cfg, lod, state):
             if fine and i in (1,3):
                 plate((x-20,side*broad*.18,z+5),length*.43,broad*.32,4,comp,
                       u=(1,side*.12,-.06))
-            if fine:
-                plate((x+13,side*broad*.26,z-3),length*.43,.85,.3,
-                      f"seam_{i+1:02d}_{'l' if side<0 else 'r'}",u=(1,side*.12,-.2),slot=ember)
+            plate((x+13,side*broad*.26,z-3),length*.43,.85,.3,
+                  f"seam_{i+1:02d}_{'l' if side<0 else 'r'}",u=(1,side*.12,-.2),slot=ember)
         if heavy:
             plate((x-8,0,z+23),length*.90,broad*.88,15,f'molt_plate_{i+1:02d}')
 
@@ -104,8 +103,7 @@ def build(kit, cfg, lod, state):
     for side in (-1,1):
         plate((48,side*15,177),94,23,10,'caster_housing',u=(1,side*.025,-.01))
         plate((49,side*17,169),90,22,8,'caster_housing',u=(1,0,.04),v=(0,1,-side*.3))
-        if fine:
-            plate((67,side*7,176),52,1.7,.4,'caster_slot',u=(1,0,0),slot=ember)
+        plate((67,side*7,176),52,1.7,.4,'caster_slot',u=(1,0,0),slot=ember)
     # A fractured aperture insert, not an engineered square muzzle block.
     aperture=[(-5.5,-1.2),(-3.4,-2.1),(4.2,-1.5),(5.8,.8),(2.2,1.7),(-4.4,1.3)]
     front=[(94,y,176+z) for y,z in aperture];back=[(92,y,176+z) for y,z in aperture]
