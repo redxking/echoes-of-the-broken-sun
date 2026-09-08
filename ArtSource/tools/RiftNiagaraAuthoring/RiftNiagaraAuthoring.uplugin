@@ -1,0 +1,23 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1.0",
+  "FriendlyName": "Rift Niagara Authoring",
+  "Description": "Sandbox-only editor bridge that authors the EBS Riftstalker shard Niagara system.",
+  "Category": "Echoes Art Tools",
+  "CreatedBy": "Angelis Pseftis",
+  "CanContainContent": false,
+  "Modules": [
+    {
+      "Name": "RiftNiagaraAuthoring",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "Niagara",
+      "Enabled": true
+    }
+  ]
+}
