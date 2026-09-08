@@ -736,3 +736,16 @@ The old UV texture transfer and physics/LOD receipts do not qualify this new top
 The new form has only CPU preview evidence. Unreal/Blender/GPU remains reserved by Backend Chat
 for Power Link integration qualification. No conflicting editor was launched. Form29–30 sources and
 previews remain as studies; production21 remains the last selected imported checkpoint.
+
+
+**Form31 full source verification:** all eight `test_fidelity_pilot` tests passed in 279.696 seconds
+on source commit `2035e2b`, with file hashes checked afterward. The sweep evaluates 7,566 poses
+(three states × two LODs × thirteen clips × 97 samples), and also checks rig/socket/channel exports,
+exact Amber LOD geometry, firing-leg identity, unreachable-target refusal and repeatable generation.
+`form31/full-tests.log` and `full-tests-receipt.json` retain the results. The attempted process-priority
+adjustment was denied by the sandbox; the single Python process still ran and completed normally.
+
+Offline firing and death poses are retained in `form31/cpu-poses/`. The death pose still has a raised
+rear knee: passing ground clearance does not resolve collapse readability. The pending engine job
+now includes baseline, Carapace and Striker plus the prior selected baseline, for sixteen matched
+clay views. Backend Chat has not released its Power Link integration/editor reservation for that job.

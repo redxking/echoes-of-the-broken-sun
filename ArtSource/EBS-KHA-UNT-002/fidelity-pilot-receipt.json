@@ -568,13 +568,28 @@
       "export_contract": "six GLBs:22bones/5sockets/13clips/COLOR_0",
       "sampled_ground_poses": 234,
       "engine": "NOT_RUN_FOR_FORM31",
-      "full_pose_sweep": "NOT_RUN_FOR_FORM31"
+      "full_pose_sweep": {
+        "status": "PASS",
+        "samples": 7566,
+        "log": "full-tests.log",
+        "receipt": "full-tests-receipt.json",
+        "test_count": 8,
+        "test_seconds": 279.696
+      }
     },
     "visual_judgment": "CPU clay preview shows dominant/subordinate mantle, separated prow and shorter shin covers; irregular mineral fidelity and engine appearance remain unaccepted.",
     "resource_boundary": "Backend Chat retains editor/GPU for Power Link defect qualification; no conflicting launch",
     "previous_selected_checkpoint": "production21",
     "method": "Authored chipped slab perimeters replace repeated triangular panels; dorsal-only subordinate lobes, single lateral wraps, shorter caster/prow runs and distal covers",
-    "review": "Bounded read-only expert review of concept and form30 informed mantle/prow/limb changes; not owner acceptance"
+    "review": "Bounded read-only expert review of concept and form30 informed mantle/prow/limb changes; not owner acceptance",
+    "additional_visual_evidence": {
+      "cpu_pose_frames": [
+        "cpu-poses/fire_on_the_move.png",
+        "cpu-poses/death.png"
+      ],
+      "limit": "Offline pose review, not engine animation verification",
+      "open_finding": "Rear knee remains raised in death pose; ground clearance does not close collapse readability"
+    }
   },
   "historical_form_studies": [
     {
