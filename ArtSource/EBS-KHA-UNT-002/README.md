@@ -577,8 +577,8 @@ Saved-file read-back passed: one mesh, 22 bones, five sockets, five actions and 
 
 **Art acceptance remains open. This is not a production-ready asset.** The owner requested continued
 refinement through completion. The current geometry still shows broad plate surfaces compared with the
-selected concept, so successful source/import checks do not close the art gate. Further source refinement
-continues on this isolated branch; the other twenty packages have not been promoted through production.
+selected concept, so successful source/import checks do not close the art gate. The selected source remains on this isolated branch; the other twenty packages have not been promoted
+through production.
 
 Evidence root: `BuildArtifacts/Evidence/riftstalker-production-20260908` in the workspace supporting
 location. The sandbox is `Sandbox/EBSRiftProduction.uproject`; no game project Content, Source, Config,
@@ -662,3 +662,23 @@ close the art or performance gate. Daylight emissive brackets retain 20/100/500/
 Inherited template lights are removed from the unsaved review scene so the declared gold/indigo setup
 is the lighting actually used. The current material enforces the charcoal base range and a 0.85
 roughness floor; those shader guarantees do not erase the recorded transferred-texture boundary defects.
+
+### Selected checkpoint and rejected studies
+
+The selected geometry is restored byte-for-byte to `c404d85` (source21). Later source22–25 clay
+studies were rejected: extra armor was buried, stood upright as scraps, or read as separate tiles.
+Those studies did not improve concept fidelity, even where structural tests passed. Their artifacts
+remain in the evidence root, with the selection rationale in `visual-decision.json`. Exact uncommitted
+generator snapshots for source22–24 were not retained; their meshes/renders are historical evidence,
+not reproducible source checkpoints. Source25 retains its pre-build source snapshot.
+
+The current procedural method has not reached the selected concept's sculpted quality. Continuing
+to add plates or bevels is not demonstrated to close that gap. The editable source21 Blender package
+is the retained handoff for deliberate form modeling and retopology, followed by fresh transfer and
+verification. It contains the baseline mesh, 22-bone rig, five sockets, thirteen actions and five packed
+maps; adaptation exports remain separate GLBs. This is an incomplete production pilot. Neither this
+asset nor the other twenty packages is promoted to production acceptance by this record.
+
+The machine-readable receipt now identifies production21 at its root. Earlier iteration12 facts are
+preserved under `historical_passes`, so consumers cannot mistake old five-clip/import-pending records
+for the current thirteen-clip sandbox evidence.
