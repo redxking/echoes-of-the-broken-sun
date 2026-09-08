@@ -47,8 +47,18 @@ def build(kit, cfg, lod, state):
                 a,b,c,d=grid[j][k],grid[j+1][k],grid[j+1][k+1],grid[j][k+1]
                 faces.extend([[a,b,c],[a,c,d]])
         boundary=grid[0]+[row[-1] for row in grid[1:]]+list(reversed(grid[-1][:-1]))+[row[0] for row in reversed(grid[1:-1])]
-        bottom=add(center,mul(n,-max(1.,rise*.12)))
-        lower=[add(p,mul(n,-max(.7,rise*.07))) for p in boundary]
+        # Rock shields need a credible broken-stone rim.  The old 0.7--1.1 cm
+        # edge thickness made the broad plates read as cardboard in profile.
+        # Amber slots are contract landmarks, so their original geometry stays
+        # byte-for-byte position-compatible across both LODs.
+        if slot == ember or component.endswith('_foot'):
+            rim_depth=max(.7,rise*.07)
+            root_depth=max(1.,rise*.12)
+        else:
+            rim_depth=min(4.0,max(2.2,rise*.19))
+            root_depth=min(4.0,max(2.8,rise*.25))
+        bottom=add(center,mul(n,-root_depth))
+        lower=[add(p,mul(n,-rim_depth)) for p in boundary]
         for i,p in enumerate(boundary):
             j=(i+1)%len(boundary)
             faces.extend([[p,lower[i],lower[j],boundary[j]],[lower[j],lower[i],bottom]])
@@ -78,13 +88,20 @@ def build(kit, cfg, lod, state):
         for side in (-1,1):
             plate((x+4,side*broad*.28,z-8),length*.90,broad*.63,11,comp,
                   u=(1,side*.19,-.30),v=(0,1,-side*.88))
-            if fine and i in (1,3):
-                plate((x-20,side*broad*.18,z+5),length*.43,broad*.32,4,comp,
-                      u=(1,side*.12,-.06))
             plate((x+13,side*broad*.26,z-3),length*.43,.85,.3,
                   f"seam_{i+1:02d}_{'l' if side<0 else 'r'}",u=(1,side*.12,-.2),slot=ember)
         if heavy:
             plate((x-8,0,z+12),length*.90,broad*.88,15,f'molt_plate_{i+1:02d}')
+
+    # Four asymmetric, attached relief scales break the broad mantle planes.
+    # They replace the previous uniform side spikes and sit into their parent
+    # shields, so they read as fractured layers instead of floating armour.
+    if fine:
+        for index,dx,dy,scale,lean in ((0,-13,-8,.36,-.10), (1,12,9,.42,.08),
+                                       (2,-18,6,.34,-.13), (3,19,-10,.31,.11)):
+            x,z,length,width=profiles[index]
+            plate((x+dx,dy,z+15),length*scale,width*(.30+scale*.10),5.5,
+                  f'shell_{index+1:02d}',u=(1,lean,-.08),v=(0,1,lean*.45))
 
     # The keel is tapered and segmented, exposed only between the large shell shields.
     segment((-119,0,145),(76,0,136),[(0,16),(.30,35),(.72,30),(1,13)],'underbody')
@@ -133,6 +150,12 @@ def build(kit, cfg, lod, state):
                 c=add(add(p0,mul(sub(p1,p0),t)),(0,side*(19 if part=='upper' else 11),0))
                 plate(c,math.sqrt(sum(q*q for q in sub(p1,p0)))*(.66 if part=='lower' else 1.10),ww*(1-.45*t),6,
                       f'{tag}_{part}',u=axis,v=v)
+                # One low broken scale per upper limb is enough to give the
+                # large cover a mineral second form without a row of spikes.
+                if fine and part=='upper':
+                    surface_n=norm(cross(axis,v))
+                    plate(add(c,mul(surface_n,3.7)),math.sqrt(sum(q*q for q in sub(p1,p0)))*.39,
+                          ww*.30,5.0,f'{tag}_{part}',u=axis,v=v)
         # Separate toes grow from a common foot root; their lowest point stays above ground.
         for toe in (-1,0,1):
             p=(fx+8,fy+toe*5,3.1)

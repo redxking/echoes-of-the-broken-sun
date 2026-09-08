@@ -123,11 +123,11 @@ def clips(base):
 
     for name, direction in (("turn_left", 1.0), ("turn_right", -1.0)):
         turn = new(name, 13.0 / 30.0, False, f"Acquire a new facing with a {name.split('_')[1]}-biased carapace settle.")
-        for t, yaw in ((0.0, 0.0), (0.20, 28.0 * direction), (13.0 / 30.0, 56.0 * direction)):
+        for t, yaw in ((0.0, 0.0), (0.20, 6.0 * direction), (13.0 / 30.0, 0.0)):
             key_body(turn, t, yaw=yaw); _key_neutral_legs(turn, base, t)
 
     acquire = new("acquire", 10.0 / 30.0, False, "Caster searches and settles on an acquired hostile; no simulation target is inferred.")
-    for t, yaw, pitch in ((0.0, 0.0, 0.0), (0.16, 16.0, -4.0), (10.0 / 30.0, 20.0, -5.0)):
+    for t, yaw, pitch in ((0.0, 0.0, 0.0), (0.16, 16.0, -4.0), (10.0 / 30.0, 0.0, 0.0)):
         key_body(acquire, t); acquire.key("caster_yaw", t, (0.0, yaw, 0.0)); acquire.key("caster_pitch", t, (pitch, 0.0, 0.0)); _key_neutral_legs(acquire, base, t)
 
     windup = new("windup", 7.0 / 30.0, False, "Caster retracts before an authoritative shard-spike attack.")
@@ -151,7 +151,7 @@ def clips(base):
     death = new("death", 1.8, False, "Legs fold under the body into a non-colliding cosmetic remains pose.")
     for i in range(13):
         u, t = i / 12.0, i / 12.0 * death.duration_s
-        body_z = -44.0 * (u * u * (3.0 - 2.0 * u))
+        body_z = -110.0 * (u * u * (3.0 - 2.0 * u))
         key_body(death, t, body_z); _key_neutral_legs(death, base, t, body_z)
         death.key("caster_pitch", t, (7.0 * u, 0.0, 0.0))
 

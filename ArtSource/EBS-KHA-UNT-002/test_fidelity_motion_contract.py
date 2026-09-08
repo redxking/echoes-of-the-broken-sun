@@ -50,8 +50,12 @@ class FidelityMotionContractChecks(unittest.TestCase):
     def test_action_endpoints_are_meaningful(self):
         def span(name, bone, axis=0):
             return max(key.rotation_deg[axis] for key in self.by_name[name].tracks[bone]) - min(key.rotation_deg[axis] for key in self.by_name[name].tracks[bone])
-        self.assertGreater(abs(self.by_name["turn_left"].tracks["body"][-1].rotation_deg[1]), 45.0)
-        self.assertLess(self.by_name["turn_right"].tracks["body"][-1].rotation_deg[1], -45.0)
+        # Runtime owns facing. A fixed terminal yaw would double-apply its turn.
+        for name in ("turn_left","turn_right"):
+            self.assertEqual(self.by_name[name].tracks["body"][-1].rotation_deg[1],0.0)
+            self.assertGreater(span(name,"body",axis=1),0.0)
+        self.assertGreater(self.by_name["turn_left"].tracks["body"][1].rotation_deg[1],0.0)
+        self.assertLess(self.by_name["turn_right"].tracks["body"][1].rotation_deg[1],0.0)
         for name in ("acquire", "windup", "attack", "recovery", "selection_ack"):
             self.assertGreater(span(name, "caster_pitch"), 0.0, name)
         self.assertGreater(span("hit", "body", axis=1), 0.0)
