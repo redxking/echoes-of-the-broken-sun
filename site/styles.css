@@ -112,6 +112,11 @@ a:focus-visible, button:focus-visible {
 }
 
 .home-page .site-nav {
+  position: sticky;
+  top: 0;
+  left: auto;
+  transform: none;
+  z-index: 25;
   width: 100%;
   padding: 0 max(32px, calc((100% - var(--content)) / 2));
   background: #0b1420;
@@ -151,7 +156,7 @@ a:focus-visible, button:focus-visible {
   position: relative;
   width: min(var(--content), calc(100% - 64px));
   margin: 0 auto;
-  padding: 174px 0 76px;
+  padding: 88px 0 76px;
 }
 
 .eyebrow, .section-kicker, label {
@@ -287,7 +292,7 @@ blockquote small {
   margin-top: 60px;
 }
 
-.portal-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.portal-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 
 .cards article {
   min-height: 280px;
@@ -781,6 +786,16 @@ blockquote small {
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   gap: 28px;
   align-items: start;
+}
+
+.faction-intel-panel {
+  min-width: 0;
+}
+
+.faction-display-panel {
+  min-width: 0;
+  position: sticky;
+  top: 60px;
 }
 
 .doctrine-card {
@@ -1376,5 +1391,109 @@ blockquote small {
   .well-visualizer {
     margin: 10px auto 20px;
   }
+  .faction-display-panel {
+    position: static;
+  }
+  .cols {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .portal-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
+/* ==========================================================================
+   WORLD GALLERY & UI SHOWCASE
+   ========================================================================== */
+
+.world-gallery-section,
+.ui-showcase-section {
+  margin-top: 0;
+}
+
+/* Gallery Thumbnail Strip — shared by both galleries */
+.gallery-thumb-strip,
+.ui-showcase-thumb-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.gallery-thumb-btn {
+  flex: 1 1 150px;
+  padding: 12px 16px;
+  background: #0e1622;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 3px solid #334155;
+  color: #94a3b8;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  font-family: 'Space Grotesk', sans-serif;
+  border-radius: 2px;
+}
+
+.gallery-thumb-btn:hover {
+  background: #142030;
+  color: #f1f5f9;
+  border-color: rgba(0, 242, 255, 0.3);
+}
+
+.gallery-thumb-btn.active {
+  border-top-color: #00f2ff;
+  background: rgba(0, 242, 255, 0.08);
+  color: #00f2ff;
+  box-shadow: 0 0 16px rgba(0, 242, 255, 0.15);
+}
+
+.gallery-thumb-btn b {
+  display: block;
+  font-size: 13px;
+  line-height: 1.3;
+  color: inherit;
+}
+
+/* Gallery Display Area — large image + info panel */
+.gallery-display-area {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.gallery-display-area .evidence-figure img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 3px;
+}
+
+.gallery-info-panel {
+  padding: 24px;
+  background: #0d1520;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.gallery-info-panel p {
+  margin: 0 0 20px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #cbd5e1;
+}
+
+.gallery-info-panel .lab-btn {
+  gap: 6px;
+}
+
+/* Responsive */
+@media (max-width: 860px) {
+  .gallery-display-area {
+    grid-template-columns: 1fr;
+  }
+  .gallery-thumb-btn {
+    flex: 1 1 130px;
+  }
+}

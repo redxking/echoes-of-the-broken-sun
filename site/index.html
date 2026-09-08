@@ -46,7 +46,7 @@
       <h1>Every future<br><em>has a cost.</em></h1>
       <p class="hero-lede">Soryn is a broken world where lost possibilities still burn beneath the ground. Build a force, lead people through a war of survival, and decide what deserves to remain real.</p>
       <a class="button" href="story.html">Enter the world archive ↗</a>
-      <aside class="hero-note tac-panel">
+      <aside class="hero-note">
         <strong>DEVELOPMENT STATUS</strong>
         There is no public playable release. Every current Meridian, Kharuun, and Hollow Choir unit and structure now has a distinct first-pass Unreal mesh. The Future Well and seven Glass Scar world pieces are also visible in the development build. Characters, animation, production terrain, detailed textures, effects, and audio remain unfinished. Every concept figure on this site carries a “Concept target” label, and the painted backdrop behind this text is concept art too; none of it is a screenshot.
       </aside>
@@ -106,9 +106,39 @@
       </div>
     </section>
 
+    <!-- Interactive World Map & Glass Scar Recon Gallery -->
+    <section id="world-gallery-terminal" class="world-gallery-section light">
+      <span class="section-kicker">02 / Recon Gallery</span>
+      <div class="cols">
+        <h2>Map the surface.<br><em>Read the terrain.</em></h2>
+        <p>From the continental cartography to the first battlefield's three diverging routes — every tactical advantage on Soryn begins with knowing the ground. Compare concept targets against the current Unreal Engine build.</p>
+      </div>
+
+      <div class="tac-panel">
+        <div class="gallery-thumb-strip" role="tablist"></div>
+        
+        <div class="gallery-display-area">
+          <figure class="evidence-figure" id="gallery-display-figure">
+            <span class="evidence-badge" id="gallery-display-badge" aria-hidden="true">Concept target</span>
+            <img id="gallery-display-img" src="assets/concepts/soryn-world-map.webp" loading="lazy" decoding="async" alt="Soryn Continental Map">
+            <figcaption>
+              <b id="gallery-display-title">Soryn Continental Map</b>
+              <span id="gallery-display-register">CONCEPT-006</span>
+            </figcaption>
+          </figure>
+          <div class="gallery-info-panel">
+            <p id="gallery-display-desc">Six biomes, four continental plates, and fifteen campaign battlefields connected by arterial roads across the shattered surface of Soryn.</p>
+            <button id="gallery-compare-toggle" class="lab-btn" style="display: none;">
+              <span>⇆</span> Toggle Concept vs Engine
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Interactive Faction War Room -->
     <section id="faction-war-room" class="faction-terminal light" data-active-faction="meridian">
-      <span class="section-kicker">02 / Strategic War Room</span>
+      <span class="section-kicker">03 / Strategic War Room</span>
       <div class="cols">
         <h2>Three factions.<br><em>One broken sun.</em></h2>
         <p>No faction is simply good or evil. The Meridian Compact trusts systems that can be measured. The Kharuun Assemblies protect a living chain of memory. The Hollow Choir speaks for futures that were erased.</p>
@@ -132,6 +162,8 @@
 
         <div class="faction-war-room-grid">
           <div class="faction-intel-panel">
+            <h3 id="faction-display-name" style="margin: 0 0 2px; font-size: 28px; color: #fff;">Meridian Compact</h3>
+            <div id="faction-display-motto" style="font: 600 12px 'DM Mono', monospace; text-transform: uppercase; color: var(--current-faction-accent, #00f2ff); margin-bottom: 20px; letter-spacing: 0.06em;">Build. Connect. Endure.</div>
             <div class="doctrine-card">
               <h3 id="faction-doctrine-title">Logistics Grid & Precision Defense</h3>
               <p id="faction-doctrine-body">A culturally plural alliance joined by Dawnshard accounting, civic engineering, and collective defense. Anchors and Power Links generate an interconnected energy web that powers defensive Aegis posts, rapid repair hubs, and long-range rail rifles.</p>
@@ -152,6 +184,11 @@
               </picture>
               <figcaption><b>Architecture Target</b><span>Concept target · not gameplay</span></figcaption>
             </figure>
+            <figure class="evidence-figure" id="faction-engine-roster-figure" data-evidence="engine-capture">
+              <span class="evidence-badge" aria-hidden="true">Engine capture · UI hidden</span>
+              <img id="faction-engine-roster-img" src="assets/engine/meridian-roster-in-engine.png" loading="lazy" decoding="async" alt="Current in-engine roster render">
+              <figcaption><b>Current In-Engine Roster</b><span>Engine capture · UI hidden</span></figcaption>
+            </figure>
           </div>
         </div>
       </div>
@@ -161,7 +198,7 @@
     <section id="well-simulator" class="well-sim-wrapper dark">
       <div class="well-sim-header">
         <div>
-          <span class="section-kicker">03 / Tactical Core Simulator</span>
+          <span class="section-kicker">04 / Tactical Core Simulator</span>
           <h2>The Future Well</h2>
         </div>
         <div class="well-ctrl-group" role="group" aria-label="Future Well Protocols">
@@ -224,7 +261,7 @@
 
     <!-- Interactive Character Command Dossiers -->
     <section id="character-dossier-terminal" class="character-terminal light">
-      <span class="section-kicker">04 / The Command Roster</span>
+      <span class="section-kicker">05 / The Command Roster</span>
       <div class="cols">
         <h2>Five lives.<br><em>No complete truth.</em></h2>
         <p>The war is fought by commanders, scholars, and survivors making defensible choices under existential collapse—discovering that survival often justifies control, concealment, or erasure.</p>
@@ -294,7 +331,7 @@
 
     <!-- Interactive Interface Lab -->
     <section id="interface-comparison-lab" class="interface-lab-container dark">
-      <span class="section-kicker">05 / Tactical Architecture</span>
+      <span class="section-kicker">06 / Tactical Architecture</span>
       <div class="cols">
         <h2>Beyond the clone trap.<br><em>Tactical clarity for a modern RTS.</em></h2>
         <p>StarCraft II proved the power of high contrast. But copying its 1998 three-box bottom console robs an RTS of screen space. Echoes replaces the bottom shelf with an elegant floating contextual command arc, vector contour radar, and diegetic command bridges.</p>
@@ -383,9 +420,36 @@
       </div>
     </section>
 
+    <!-- UI Design Concept Art Showcase -->
+    <section id="ui-showcase-terminal" class="ui-showcase-section light">
+      <span class="section-kicker">07 / UI Design Archive</span>
+      <div class="cols">
+        <h2>Every screen<br><em>tells a story.</em></h2>
+        <p>From faction selection to post-match debriefing, every interface in Echoes is designed as a diegetic artifact within the world of Soryn — not a generic shell menu. Explore every UI concept target.</p>
+      </div>
+
+      <div class="tac-panel">
+        <div class="ui-showcase-thumb-strip" role="tablist"></div>
+        
+        <div class="gallery-display-area">
+          <figure class="evidence-figure" id="ui-showcase-display-figure">
+            <span class="evidence-badge" id="ui-showcase-display-badge" aria-hidden="true">Concept target</span>
+            <img id="ui-showcase-display-img" src="assets/concepts/echoes-faction-selection.webp" loading="lazy" decoding="async" alt="Faction Selection War Room">
+            <figcaption>
+              <b id="ui-showcase-display-title">Faction Selection War Room</b>
+              <span id="ui-showcase-display-register">CONCEPT-015</span>
+            </figcaption>
+          </figure>
+          <div class="gallery-info-panel">
+            <p id="ui-showcase-display-desc">Three faction crests orbit a central strategic hologram. Players choose their doctrine before entering the campaign or skirmish theater.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Development Path -->
     <section id="roadmap" class="light">
-      <span class="section-kicker">06 / Development path</span>
+      <span class="section-kicker">08 / Development path</span>
       <div class="cols">
         <h2>A foundation first.<br><em>A living world next.</em></h2>
         <p>The project is building deterministic strategy systems and a bounded campaign arc before claiming finished presentation. Fifteen linked campaign operations, first-pass meshes for the current roster, a four-state Future Well, and seven authored Glass Scar world assets now exist; production terrain, textures, effects, animation, audio, and a public release are still ahead.</p>

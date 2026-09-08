@@ -112,6 +112,11 @@ a:focus-visible, button:focus-visible {
 }
 
 .home-page .site-nav {
+  position: sticky;
+  top: 0;
+  left: auto;
+  transform: none;
+  z-index: 25;
   width: 100%;
   padding: 0 max(32px, calc((100% - var(--content)) / 2));
   background: #0b1420;
@@ -151,7 +156,7 @@ a:focus-visible, button:focus-visible {
   position: relative;
   width: min(var(--content), calc(100% - 64px));
   margin: 0 auto;
-  padding: 174px 0 76px;
+  padding: 88px 0 76px;
 }
 
 .eyebrow, .section-kicker, label {
@@ -287,7 +292,7 @@ blockquote small {
   margin-top: 60px;
 }
 
-.portal-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.portal-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 
 .cards article {
   min-height: 280px;
@@ -585,4 +590,910 @@ blockquote small {
   .evidence-figure figcaption { flex-direction: column; align-items: flex-start; }
   .evidence-figure figcaption span { text-align: left; }
   .site-footer .footer-meta { justify-items: start; }
+}
+
+/* ==========================================================================
+   INTERACTIVE TACTICAL TERMINAL & GAME FEEL STYLES
+   ========================================================================== */
+
+:root {
+  --current-faction-accent: #00f2ff;
+  --current-faction-glow: rgba(0, 242, 255, 0.4);
+}
+
+/* Top Tactical Status Bar */
+.tactical-hud-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 24px;
+  background: rgba(5, 9, 14, 0.95);
+  border-bottom: 1px solid rgba(0, 242, 255, 0.2);
+  font: 500 11px/1.4 'DM Mono', monospace;
+  color: #94a3b8;
+  position: relative;
+  z-index: 30;
+}
+
+.tactical-hud-bar .status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tactical-hud-bar .pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00f2ff;
+  box-shadow: 0 0 8px #00f2ff;
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.audio-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  background: rgba(18, 28, 40, 0.8);
+  color: #cbd5e1;
+  font: 600 11px 'DM Mono', monospace;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.audio-toggle-btn:hover {
+  border-color: #00f2ff;
+  color: #ffffff;
+  background: rgba(0, 242, 255, 0.1);
+}
+
+.audio-toggle-btn.active {
+  border-color: #00f2ff;
+  color: #00f2ff;
+  box-shadow: 0 0 10px rgba(0, 242, 255, 0.25);
+}
+
+/* Canvas Particle Hero */
+.hero {
+  position: relative;
+  overflow: hidden;
+}
+
+#broken-sun-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+/* Sci-Fi Decorative Corner Brackets */
+.tac-panel {
+  position: relative;
+  background: #0b1118;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 28px;
+  border-radius: 4px;
+}
+
+.tac-panel::before,
+.tac-panel::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: var(--current-faction-accent, #00f2ff);
+  pointer-events: none;
+}
+
+.tac-panel::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+.tac-panel::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+
+/* Interactive Faction War Room */
+.faction-terminal {
+  margin-top: 36px;
+}
+
+.faction-tab-nav {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.faction-tab {
+  flex: 1 1 200px;
+  padding: 16px 20px;
+  background: #0d1520;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 3px solid #334155;
+  color: #94a3b8;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  font-family: 'Space Grotesk', sans-serif;
+  border-radius: 2px;
+}
+
+.faction-tab:hover {
+  background: #131e2d;
+  color: #f1f5f9;
+}
+
+.faction-tab b {
+  display: block;
+  font-size: 17px;
+  color: #f1f5f9;
+  margin-bottom: 4px;
+}
+
+.faction-tab span {
+  font: 500 12px 'DM Mono', monospace;
+  text-transform: uppercase;
+}
+
+.faction-tab[data-faction='meridian'].active {
+  border-top-color: #00f2ff;
+  background: rgba(0, 242, 255, 0.08);
+  box-shadow: 0 0 20px rgba(0, 242, 255, 0.15);
+  color: #00f2ff;
+}
+
+.faction-tab[data-faction='kharuun'].active {
+  border-top-color: #ffb300;
+  background: rgba(255, 179, 0, 0.08);
+  box-shadow: 0 0 20px rgba(255, 179, 0, 0.15);
+  color: #ffb300;
+}
+
+.faction-tab[data-faction='choir'].active {
+  border-top-color: #e056fd;
+  background: rgba(224, 86, 253, 0.08);
+  box-shadow: 0 0 20px rgba(224, 86, 253, 0.15);
+  color: #e056fd;
+}
+
+.faction-war-room-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.faction-intel-panel {
+  min-width: 0;
+}
+
+.faction-display-panel {
+  min-width: 0;
+  position: sticky;
+  top: 60px;
+}
+
+.doctrine-card {
+  padding: 24px;
+  background: #0e1622;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 4px solid var(--current-faction-accent, #00f2ff);
+  margin-bottom: 24px;
+}
+
+.doctrine-card h3 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  color: #ffffff;
+}
+
+.doctrine-card p {
+  margin: 0 0 16px;
+  color: #cbd5e1;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.doctrine-quote {
+  font-style: italic;
+  color: var(--current-faction-accent, #00f2ff);
+  font-size: 14px;
+  padding-left: 12px;
+  border-left: 2px solid var(--current-faction-accent, #00f2ff);
+}
+
+.roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.roster-card {
+  padding: 14px;
+  background: #111a26;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.roster-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--current-faction-accent, #00f2ff);
+}
+
+.roster-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.roster-name {
+  font: 700 15px 'Space Grotesk', sans-serif;
+  color: #ffffff;
+}
+
+.roster-role {
+  font: 500 11px 'DM Mono', monospace;
+  color: #94a3b8;
+  text-align: right;
+}
+
+.roster-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+/* Interactive Future Well Simulator */
+.well-sim-wrapper {
+  margin-top: 36px;
+  background: #080d14;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.well-sim-header {
+  padding: 18px 24px;
+  background: #0e1520;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.well-ctrl-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.well-ctrl-btn {
+  padding: 8px 16px;
+  background: #131d2b;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cbd5e1;
+  font: 600 12px 'DM Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 2px;
+}
+
+.well-ctrl-btn:hover {
+  background: #1b293c;
+  color: #ffffff;
+  border-color: #00f2ff;
+}
+
+.well-ctrl-btn.active[data-well-state='dormant'] {
+  background: rgba(255, 215, 0, 0.15);
+  border-color: #ffd700;
+  color: #ffd700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.25);
+}
+
+.well-ctrl-btn.active[data-well-state='harvest'] {
+  background: rgba(255, 68, 68, 0.15);
+  border-color: #ff4444;
+  color: #ff4444;
+  box-shadow: 0 0 12px rgba(255, 68, 68, 0.25);
+}
+
+.well-ctrl-btn.active[data-well-state='preserve'] {
+  background: rgba(0, 242, 255, 0.15);
+  border-color: #00f2ff;
+  color: #00f2ff;
+  box-shadow: 0 0 12px rgba(0, 242, 255, 0.25);
+}
+
+.well-ctrl-btn.active[data-well-state='reshape'] {
+  background: rgba(224, 86, 253, 0.15);
+  border-color: #e056fd;
+  color: #e056fd;
+  box-shadow: 0 0 12px rgba(224, 86, 253, 0.25);
+}
+
+.well-sim-body {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 24px;
+  padding: 28px;
+  align-items: center;
+}
+
+.well-visualizer {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.well-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+.well-ring-outer {
+  width: 210px;
+  height: 210px;
+  animation: spin-clockwise 30s linear infinite;
+  border-color: rgba(0, 242, 255, 0.4);
+}
+
+.well-ring-mid {
+  width: 150px;
+  height: 150px;
+  animation: spin-counter 18s linear infinite;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.well-ring-inner {
+  width: 90px;
+  height: 90px;
+  animation: spin-clockwise 10s linear infinite;
+  border-color: rgba(255, 179, 0, 0.5);
+}
+
+#well-visual-core {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffd700 0%, rgba(10, 15, 25, 0.9) 70%);
+  box-shadow: 0 0 16px #ffd700;
+  transition: all 0.4s ease;
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes spin-clockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spin-counter {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.well-telemetry-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.telemetry-tag {
+  font: 600 12px 'DM Mono', monospace;
+  color: #ffb300;
+  text-transform: uppercase;
+}
+
+.well-telemetry-panel h3 {
+  margin: 0;
+  font-size: 26px;
+  color: #ffffff;
+}
+
+.telemetry-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.telemetry-metric {
+  padding: 12px 16px;
+  background: #0f1824;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.telemetry-metric small {
+  display: block;
+  font: 500 11px 'DM Mono', monospace;
+  color: #94a3b8;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.telemetry-metric strong {
+  font-size: 15px;
+  color: #f1f5f9;
+}
+
+.well-lore-box {
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border-left: 3px solid #64748b;
+  color: #cbd5e1;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.well-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 0 28px 28px;
+}
+
+/* Tactical Atlas Terminal */
+.atlas-terminal {
+  margin-top: 36px;
+}
+
+.atlas-sector-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.atlas-sector-btn {
+  padding: 10px 18px;
+  background: #0e1622;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  font: 600 12px 'DM Mono', monospace;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 2px;
+}
+
+.atlas-sector-btn:hover {
+  background: #142030;
+  color: #ffffff;
+  border-color: #00f2ff;
+}
+
+.atlas-sector-btn.active {
+  background: rgba(0, 242, 255, 0.12);
+  border-color: #00f2ff;
+  color: #00f2ff;
+  box-shadow: 0 0 14px rgba(0, 242, 255, 0.2);
+}
+
+.atlas-view-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.atlas-brief-card {
+  padding: 24px;
+  background: #0d1520;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.atlas-brief-header {
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.atlas-brief-header small {
+  display: block;
+  font: 500 11px 'DM Mono', monospace;
+  color: #00f2ff;
+  margin-bottom: 4px;
+}
+
+.atlas-brief-header h3 {
+  margin: 0;
+  font-size: 24px;
+  color: #ffffff;
+}
+
+.atlas-metrics-list {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.atlas-metric-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.atlas-metric-item span {
+  color: #94a3b8;
+  font-family: 'DM Mono', monospace;
+}
+
+.atlas-metric-item strong {
+  color: #f1f5f9;
+  text-align: right;
+}
+
+.atlas-brief-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #cbd5e1;
+  margin: 0 0 16px;
+}
+
+.atlas-coords {
+  font: 500 11px 'DM Mono', monospace;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+/* Character Command Dossiers */
+.character-terminal {
+  margin-top: 36px;
+}
+
+.character-tab-nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.character-tab {
+  flex: 1 1 180px;
+  padding: 14px 16px;
+  background: #0d1520;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  border-radius: 2px;
+}
+
+.character-tab:hover {
+  background: #142030;
+  color: #f1f5f9;
+}
+
+.character-tab.active {
+  border-color: #00f2ff;
+  background: rgba(0, 242, 255, 0.08);
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(0, 242, 255, 0.15);
+}
+
+.character-tab b {
+  display: block;
+  font-size: 15px;
+  color: #f1f5f9;
+  margin-bottom: 2px;
+}
+
+.character-tab span {
+  font: 500 11px 'DM Mono', monospace;
+  text-transform: uppercase;
+}
+
+.dossier-card {
+  padding: 28px;
+  background: #0c131d;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.dossier-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dossier-crest {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  background: #121c2b;
+  border: 1px solid rgba(0, 242, 255, 0.3);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 20px 'DM Mono', monospace;
+  color: #00f2ff;
+}
+
+.dossier-meta h3 {
+  margin: 0 0 4px;
+  font-size: 26px;
+  color: #ffffff;
+}
+
+.dossier-meta .faction-tag {
+  font: 600 12px 'DM Mono', monospace;
+  text-transform: uppercase;
+  margin-right: 12px;
+}
+
+.dossier-meta .role-tag {
+  font: 500 12px 'DM Mono', monospace;
+  color: #94a3b8;
+}
+
+.dossier-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.spec-box {
+  padding: 16px;
+  background: #101926;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+.spec-box small {
+  display: block;
+  font: 600 11px 'DM Mono', monospace;
+  color: #ffb300;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.spec-box p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.dossier-quote-box {
+  padding: 20px;
+  background: rgba(0, 242, 255, 0.05);
+  border-left: 3px solid #00f2ff;
+  border-radius: 0 4px 4px 0;
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #e2e8f0;
+}
+
+/* Interface Comparison Lab */
+.interface-lab-container {
+  margin-top: 36px;
+}
+
+.lab-toggle-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.lab-btn {
+  padding: 10px 20px;
+  background: #0e1622;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  font: 600 12px 'DM Mono', monospace;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 2px;
+}
+
+.lab-btn:hover {
+  background: #152234;
+  color: #ffffff;
+  border-color: #00f2ff;
+}
+
+.lab-btn.active {
+  background: rgba(0, 242, 255, 0.15);
+  border-color: #00f2ff;
+  color: #00f2ff;
+  box-shadow: 0 0 14px rgba(0, 242, 255, 0.2);
+}
+
+.lab-features-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.lab-feature-item {
+  padding: 16px;
+  background: #0d1520;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+.lab-feature-item b {
+  display: block;
+  color: #00f2ff;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.lab-feature-item p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+@media (max-width: 860px) {
+  .faction-war-room-grid,
+  .well-sim-body,
+  .atlas-view-grid,
+  .well-compare-grid {
+    grid-template-columns: 1fr;
+  }
+  .well-visualizer {
+    margin: 10px auto 20px;
+  }
+  .faction-display-panel {
+    position: static;
+  }
+  .cols {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .portal-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ==========================================================================
+   WORLD GALLERY & UI SHOWCASE
+   ========================================================================== */
+
+.world-gallery-section,
+.ui-showcase-section {
+  margin-top: 0;
+}
+
+/* Gallery Thumbnail Strip — shared by both galleries */
+.gallery-thumb-strip,
+.ui-showcase-thumb-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.gallery-thumb-btn {
+  flex: 1 1 150px;
+  padding: 12px 16px;
+  background: #0e1622;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 3px solid #334155;
+  color: #94a3b8;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  font-family: 'Space Grotesk', sans-serif;
+  border-radius: 2px;
+}
+
+.gallery-thumb-btn:hover {
+  background: #142030;
+  color: #f1f5f9;
+  border-color: rgba(0, 242, 255, 0.3);
+}
+
+.gallery-thumb-btn.active {
+  border-top-color: #00f2ff;
+  background: rgba(0, 242, 255, 0.08);
+  color: #00f2ff;
+  box-shadow: 0 0 16px rgba(0, 242, 255, 0.15);
+}
+
+.gallery-thumb-btn b {
+  display: block;
+  font-size: 13px;
+  line-height: 1.3;
+  color: inherit;
+}
+
+/* Gallery Display Area — large image + info panel */
+.gallery-display-area {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.gallery-display-area .evidence-figure img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 3px;
+}
+
+.gallery-info-panel {
+  padding: 24px;
+  background: #0d1520;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.gallery-info-panel p {
+  margin: 0 0 20px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #cbd5e1;
+}
+
+.gallery-info-panel .lab-btn {
+  gap: 6px;
+}
+
+/* Responsive */
+@media (max-width: 860px) {
+  .gallery-display-area {
+    grid-template-columns: 1fr;
+  }
+  .gallery-thumb-btn {
+    flex: 1 1 130px;
+  }
 }
