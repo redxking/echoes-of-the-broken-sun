@@ -527,7 +527,7 @@
   },
   "pending_form_study": {
     "author": "Angelis Pseftis",
-    "status": "CLAY_STUDY_ENGINE_REVIEW_PENDING",
+    "status": "ENGINE_RENDERED_ART_GATE_OPEN",
     "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/riftstalker-production-20260908/form28",
     "geometry_sha256": "e88dec9708118c7109fff5a19420ae82e707064ea75a7f7731b9acf9da947323",
     "meshes": [
@@ -565,11 +565,18 @@
     "checks": {
       "targeted_tests": 3,
       "export_contract": "six GLBs, 22 bones, five sockets, thirteen clips, COLOR_0 present",
-      "engine": "NOT_RUN",
+      "engine": {
+        "import_report": "form28/import-report.json",
+        "errors": 0,
+        "skeletal_meshes": 3,
+        "animations": 39,
+        "clay_report": "form28/unreal-clay/clay-report.json",
+        "clay_frames": 8
+      },
       "full_pose_sweep": "NOT_RUN"
     },
-    "resource_boundary": "Backend Chat reserves Unreal/editor/GPU for integration; no conflicting launch",
-    "visual_judgment": "Cleaner slab edges in CPU preview, still too regular; no fidelity acceptance",
+    "resource_boundary": "Bounded render window granted by Backend Chat, completed and released",
+    "visual_judgment": "Unreal matched views show flatter slabs and clearer edges, but repeated triangular fields read manufactured rather than grown mineral. Not accepted as concept-faithful.",
     "previous_selected_checkpoint": "production21 at c404d85 geometry"
   }
 }

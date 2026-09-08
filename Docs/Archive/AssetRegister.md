@@ -1048,3 +1048,7 @@ with source snapshots and output hashes under `BuildArtifacts/Evidence/riftstalk
 Creator: Angelis Pseftis. No new third-party artwork or generative model input. The new
 `capture_fidelity_clay_inengine.py` is a sandbox-only review script, syntax checked but not engine-run.
 This study is pending review; production21 remains the prior selected checkpoint.
+
+Form28 follow-through: `capture_fidelity_clay_inengine.py` subsequently executed successfully in
+the isolated sandbox at 16:32 UTC, producing eight matched views. Import inspection reports zero
+errors. This supersedes the earlier execution-pending note only; art acceptance remains open.

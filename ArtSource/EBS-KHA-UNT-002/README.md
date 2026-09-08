@@ -700,3 +700,15 @@ checks do not transfer to this new geometry. `form28/pending-review.json` record
 including the prior mesh and new mesh under identical settings. Its syntax was checked; it has not
 executed. `form28/import-job.json` is ready. Unreal/Blender/GPU launch is waiting for Backend Chat to
 release its integration reservation; this lane has not launched a conflicting job.
+
+
+**Form28 engine follow-through, 16:32 UTC:** Backend Chat released a bounded render window.
+The isolated editor imported all three states with zero inspection errors (three SkeletalMeshes and
+39 animation sequences), then rendered eight matched neutral-clay views: before/after three-quarter,
+side, front and distant tactical study. `form28/unreal-clay/clay-report.json` and PNGs retain the
+comparison. The editor exited normally at 16:32:41 UTC and the resource reservation was released.
+
+Visual review of all eight frames: flatter slab faces and clearer edge breaks are visible, but repeated
+triangular fields look manufactured. The concept's irregular layered mineral form is not achieved.
+Neither this clay material nor the distant camera study qualifies final materials or gameplay
+readability. Form28 remains an unaccepted study; production21 remains the prior selected checkpoint.
