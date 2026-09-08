@@ -23,25 +23,65 @@ def build(kit, cfg, lod, state):
     def norm(a):
         n=math.sqrt(sum(x*x for x in a));return mul(a,1/n)
 
+    def mineral_slab(center, length, width, rise, component, u, v):
+        """Closed chipped slab with a broad crown and unequal fractured edges.
+
+        The perimeter is authored in growth direction, not a rectangular field
+        grid. A narrow bevel joins the crown to the split edge. No smoothing.
+        """
+        rng=random.Random(hashlib.sha256(repr((center,component)).encode()).digest())
+        u,v=norm(u),norm(v);n=norm(cross(u,v))
+        outline=[(-.52,-.08),(-.31,-.43),(.08,-.40),(.30,-.19),
+                 (.54,-.05),(.17,.38),(-.11,.29),(-.38,.32)]
+        if not fine:outline=[outline[i] for i in (0,1,2,4,5,7)]
+        def point(x,y,z):return add(center,add(mul(u,x*length),add(mul(v,y*width),mul(n,z))))
+        rim=[];crown=[];lower=[]
+        for x,y in outline:
+            drift=rng.uniform(-.012,.012)
+            height=rise*(.59+.15*(.5-x))+rng.uniform(-.55,.55)
+            rim.append(point(x,y,height*.62))
+            crown.append(point(x*(.89+drift),y*(.89-drift),height))
+            lower.append(point(x*.94,y*.94,-2.8))
+        top=point(-.07,.015,rise*.77);bottom=point(-.04,0,-3.2)
+        faces=[]
+        for i in range(len(rim)):
+            j=(i+1)%len(rim)
+            faces.append([top,crown[i],crown[j]])
+            if fine:
+                faces.append([crown[i],rim[i],rim[j],crown[j]])
+                faces.append([rim[i],lower[i],lower[j],rim[j]])
+            else:
+                faces.append([crown[i],lower[i],lower[j],crown[j]])
+            faces.append([bottom,lower[j],lower[i]])
+        m.add_convex_solid(faces,rock,component)
+
     def plate(center, length, width, rise, component, u=(1,0,0), v=(0,1,0), slot=rock, transverse_count=5):
-        """Closed asymmetric lanceolate plate with broad planar facets and a sharp lip."""
+        """Dispatch modeled stone slabs; preserve exact authored foot and Amber landmarks."""
+        if slot == rock and not component.endswith('_foot'):
+            if fine and component.startswith('shell_') and abs(center[1])<.01:
+                # A dominant dorsal mantle and a smaller descending termination.
+                # Lateral wraps are single slabs, not repeating twin roof rows.
+                axis=norm(u);normal=norm(cross(u,v))
+                mineral_slab(add(center,mul(axis,-length*.06)),length*.84,width,rise*.94,component,u,v)
+                mineral_slab(add(add(center,mul(axis,length*.25)),mul(normal,-2.5)),
+                             length*.49,width*.65,rise*.65,component,u,v)
+            elif fine and component.endswith('_upper') and length>50:
+                axis=norm(u)
+                mineral_slab(add(center,mul(axis,-length*.16)),length*.70,width,rise*.94,component,u,v)
+                mineral_slab(add(add(center,mul(axis,length*.17)),mul(norm(cross(u,v)),2.)),
+                             length*.69,width*.85,rise*.72,component,u,v)
+            else:
+                mineral_slab(center,length,width,rise,component,u,v)
+            return
         rng=random.Random(hashlib.sha256(repr((component,center,length,width,rise,u,v)).encode()).digest())
         u,v=norm(u),norm(v); n=norm(cross(u,v))
         # Longitudinal ridge and broad shoulders, then a swept needle point.
         # Plate edges have unequal fracture breaks; detail follows the plate's flow.
-        preserve_landmark = slot == ember or component.endswith('_foot')
         stations=[(-.50,.11,.08),(-.35,.36,.62),(-.06,.49,1.),(.23,.32,.60),(.54,.025,.025)]
-        if not preserve_landmark:
-            # Blunt fractured slabs: broad shoulders and an offset termination,
-            # with a plateau instead of the earlier pyramidal leaf ridge.
-            stations=[(-.50,.19,.20),(-.32,.47,.84),(.04,.46,1.),(.32,.30,.80),(.54,.08,.18)]
         transverse=[-1,-.48,0,.51,1]
         if not fine or slot == ember:
             stations=[stations[0],stations[2],stations[-1]];transverse=[-1,0,1]
-        elif not preserve_landmark:
-            stations=[stations[0],stations[2],stations[-1]]
-            transverse=[-1,-.48,0,.51,1] if component.startswith('shell_') else [-1,0,1]
-        elif transverse_count == 3 and preserve_landmark:
+        elif transverse_count == 3:
             # Large shields retain their long swept silhouette but leave the
             # triangle budget for actual overlapping mineral scales.
             transverse=[-1,0,1]
@@ -50,36 +90,14 @@ def build(kit, cfg, lod, state):
             row=[]
             for k,t in enumerate(transverse):
                 shift=rng.uniform(-.035,.035) if abs(t)==1 else 0
-                if not preserve_landmark and 0<j<len(stations)-1:
-                    shift += rng.uniform(-.045,.045)
                 z=rise*h*(1-abs(t)**1.1)*(.96+rng.uniform(-.04,.04))
-                if not preserve_landmark:
-                    # Flat fractured upper planes, bevel at the perimeter.
-                    shoulder = .13 if abs(t)==1 else (1.-.28*abs(t))
-                    z=rise*.72*h*shoulder
-                    if 0 < j < len(stations)-1 and abs(t)<1:
-                        z += rise*.065*math.sin(j*2.4+k*1.7)
                 row.append(add(center,add(mul(u,(x+shift)*length),add(mul(v,t*w*width),mul(n,z)))))
             grid.append(row)
         faces=[]
         for j in range(len(grid)-1):
             for k in range(len(transverse)-1):
                 a,b,c,d=grid[j][k],grid[j+1][k],grid[j+1][k+1],grid[j][k+1]
-                if fine and not preserve_landmark:
-                    # Carve the plate's surface into seated fracture fields.
-                    # Each field shares the original envelope and extends into
-                    # the common solid; these are not floating overlay scales.
-                    corners=[a,b,c,d]
-                    mid=tuple(sum(q[axis] for q in corners)/4 for axis in range(3))
-                    inner=[add(mul(q,.94),mul(mid,.06)) for q in corners]
-                    lift=1.0+((j*3+k*7)%5)*.28
-                    inner=[add(q,mul(n,lift)) for q in inner]
-                    faces.extend([[inner[0],inner[1],inner[2]],[inner[0],inner[2],inner[3]]])
-                    for edge in range(4):
-                        nxt=(edge+1)%4
-                        faces.append([corners[edge],corners[nxt],inner[nxt],inner[edge]])
-                else:
-                    faces.extend([[a,b,c],[a,c,d]])
+                faces.extend([[a,b,c],[a,c,d]])
         boundary=grid[0]+[row[-1] for row in grid[1:]]+list(reversed(grid[-1][:-1]))+[row[0] for row in reversed(grid[1:-1])]
         # Rock shields need a credible broken-stone rim.  The old 0.7--1.1 cm
         # edge thickness made the broad plates read as cardboard in profile.
@@ -97,29 +115,6 @@ def build(kit, cfg, lod, state):
             j=(i+1)%len(boundary)
             faces.extend([[p,lower[i],lower[j],boundary[j]],[lower[j],lower[i],bottom]])
         m.add_convex_solid(faces,slot,component)
-
-    def scale(center, length, width, rise, component, u=(1,0,0), v=(0,1,0)):
-        """A low-poly, closed, asymmetric mineral scale seated into its host.
-
-        Six broad broken edges and one displaced ridge are intentional: each
-        scale reads as a chipped slab, rather than a smooth leaf or a pebble.
-        The closed lower volume makes its overlap cast a real shadow.
-        """
-        u,v=norm(u),norm(v); n=norm(cross(u,v))
-        outline=[(-.52,.05),(-.31,.62),(.10,.50),(.55,.04),(.29,-.38),(-.13,-.60)]
-        top=[add(center,add(mul(u,a*length),mul(v,b*width))) for a,b in outline]
-        ridge=add(add(center,mul(u,.035*length)),mul(n,rise))
-        rim=min(3.2,max(2.1,rise*.28))
-        root=min(3.8,max(2.6,rise*.38))
-        lower=[add(p,mul(n,-rim)) for p in top]
-        bottom=add(center,mul(n,-root))
-        faces=[]
-        for i,p in enumerate(top):
-            j=(i+1)%len(top)
-            faces.append([ridge,p,top[j]])
-            faces.append([p,lower[i],lower[j],top[j]])
-            faces.append([lower[j],lower[i],bottom])
-        m.add_convex_solid(faces,rock,component)
 
     def segment(p0,p1,radii,component):
         """Tapered angular limb with a bulged muscle/root and narrow mineral tendon."""
@@ -160,16 +155,16 @@ def build(kit, cfg, lod, state):
             plate((-95+j*54,side*30,143),55,33,8,'underbody',u=(.95,side*.1,-.25),v=(0,1,side*.8))
 
     # The lower prow sweeps under the caster. It must not obscure the muzzle.
-    plate((86,0,143),98,58,13,'prow',u=(1,0,-.30))
+    plate((86,0,135),98,58,13,'prow',u=(1,0,-.30))
     for side in (-1,1):
-        plate((88,side*21,148),95,33,9,'prow',u=(1,side*.09,-.38),v=(0,1,-side*.3))
+        plate((88,side*15,142),72,29,9,'prow',u=(1,side*.09,-.38),v=(0,1,-side*.3))
 
     # Shoulder-embedded paired mineral rails leave a deliberate amber firing channel.
     # Muzzle remains at the contracted socket x=94, z=176. The prow stays beneath it.
     striker=state=='striker_molt'
     for side in (-1,1):
-        plate((48,side*15,177),94,23,10,'caster_housing',u=(1,side*.025,-.01))
-        plate((49,side*17,169),90,22,8,'caster_housing',u=(1,0,.04),v=(0,1,-side*.3))
+        plate((61,side*15,180),72,23,10,'caster_housing',u=(1,side*.025,-.01))
+        plate((61,side*17,170),72,22,8,'caster_housing',u=(1,0,.04),v=(0,1,-side*.3))
         plate((67,side*7,176),52,1.7,.4,'caster_slot',u=(1,0,0),slot=ember)
     # A fractured aperture insert, not an engineered square muzzle block.
     aperture=[(-5.5,-1.2),(-3.4,-2.1),(4.2,-1.5),(5.8,.8),(2.2,1.7),(-4.4,1.3)]
@@ -196,9 +191,9 @@ def build(kit, cfg, lod, state):
             axis=norm(sub(p1,p0));v=norm(cross((0,1,0),axis))
             if cross(axis,v)[1]*side<0:v=mul(v,-1)
             for j in range(num):
-                t=.26+.36*j/max(1,num-1)
+                t=(.22+.48*j/max(1,num-1)) if part=='lower' else .26
                 c=add(add(p0,mul(sub(p1,p0),t)),(0,side*(19 if part=='upper' else 11),0))
-                plate(c,math.sqrt(sum(q*q for q in sub(p1,p0)))*(.66 if part=='lower' else 1.10),ww*(1-.45*t),6,
+                plate(c,math.sqrt(sum(q*q for q in sub(p1,p0)))*(.40 if part=='lower' else .90),ww*(1-.45*t)*(0.80 if part=='lower' and j else 1.),6,
                       f'{tag}_{part}',u=axis,v=v)
                 # One low broken scale per upper limb is enough to give the
                 # large cover a mineral second form without a row of spikes.

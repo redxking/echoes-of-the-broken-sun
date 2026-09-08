@@ -712,3 +712,27 @@ Visual review of all eight frames: flatter slab faces and clearer edge breaks ar
 triangular fields look manufactured. The concept's irregular layered mineral form is not achieved.
 Neither this clay material nor the distant camera study qualifies final materials or gameplay
 readability. Form28 remains an unaccepted study; production21 remains the prior selected checkpoint.
+
+### Form31 — mantle, prow and distal-leg refinement
+
+Form31 is the current **source-checked, engine-pending study**. Authored chipped slab perimeters
+replace the repeated triangular fields. Only the dorsal mantle uses a dominant slab and a smaller
+forward-descending lobe; lateral wraps remain single pieces. The lower prow drops 8 cm, its side
+plates and caster housings shorten, and the shin covers shorten to expose the narrow lower limbs.
+Bone coordinates, sockets, Amber geometry, feet and gameplay data remain unchanged. A bounded
+read-only review of the actual concept and form30 previews informed these three changes.
+
+| State | LOD0 triangles | LOD1 triangles |
+|---|---:|---:|
+| Baseline | 5,232 | 2,352 |
+| Carapace | 5,472 | 2,472 |
+| Striker | 5,328 | 2,400 |
+
+`form31/` retains six GLB/OBJ exports, source snapshot/hash, CPU clay preview, import job, and checks.
+Three focused tests pass; all six exports retain 22 bones, five sockets, thirteen clips and COLOR_0.
+All 234 endpoint/midpoint ground samples pass. This is not the full interpolated animation sweep.
+The old UV texture transfer and physics/LOD receipts do not qualify this new topology.
+
+The new form has only CPU preview evidence. Unreal/Blender/GPU remains reserved by Backend Chat
+for Power Link integration qualification. No conflicting editor was launched. Form29–30 sources and
+previews remain as studies; production21 remains the last selected imported checkpoint.

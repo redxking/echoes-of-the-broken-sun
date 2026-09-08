@@ -527,56 +527,109 @@
   },
   "pending_form_study": {
     "author": "Angelis Pseftis",
-    "status": "ENGINE_RENDERED_ART_GATE_OPEN",
-    "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/riftstalker-production-20260908/form28",
-    "geometry_sha256": "e88dec9708118c7109fff5a19420ae82e707064ea75a7f7731b9acf9da947323",
+    "status": "SOURCE_CHECKED_ENGINE_REVIEW_PENDING",
+    "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/riftstalker-production-20260908/form31",
+    "source_base_commit": "52e1468",
+    "geometry_sha256": "1d5307f7bf889b8160d9a21c278d2acde7480cb89575eb2860afefab91632f9e",
     "meshes": [
       {
         "state": "baseline",
         "lod": 0,
-        "triangles": 6412
+        "triangles": 5232
       },
       {
         "state": "baseline",
         "lod": 1,
-        "triangles": 2688
+        "triangles": 2352
       },
       {
         "state": "carapace_molt",
         "lod": 0,
-        "triangles": 6732
+        "triangles": 5472
       },
       {
         "state": "carapace_molt",
         "lod": 1,
-        "triangles": 2848
+        "triangles": 2472
       },
       {
         "state": "striker_molt",
         "lod": 0,
-        "triangles": 6540
+        "triangles": 5328
       },
       {
         "state": "striker_molt",
         "lod": 1,
-        "triangles": 2752
+        "triangles": 2400
       }
     ],
     "checks": {
       "targeted_tests": 3,
-      "export_contract": "six GLBs, 22 bones, five sockets, thirteen clips, COLOR_0 present",
-      "engine": {
-        "import_report": "form28/import-report.json",
-        "errors": 0,
-        "skeletal_meshes": 3,
-        "animations": 39,
-        "clay_report": "form28/unreal-clay/clay-report.json",
-        "clay_frames": 8
-      },
-      "full_pose_sweep": "NOT_RUN"
+      "export_contract": "six GLBs:22bones/5sockets/13clips/COLOR_0",
+      "sampled_ground_poses": 234,
+      "engine": "NOT_RUN_FOR_FORM31",
+      "full_pose_sweep": "NOT_RUN_FOR_FORM31"
     },
-    "resource_boundary": "Bounded render window granted by Backend Chat, completed and released",
-    "visual_judgment": "Unreal matched views show flatter slabs and clearer edges, but repeated triangular fields read manufactured rather than grown mineral. Not accepted as concept-faithful.",
-    "previous_selected_checkpoint": "production21 at c404d85 geometry"
-  }
+    "visual_judgment": "CPU clay preview shows dominant/subordinate mantle, separated prow and shorter shin covers; irregular mineral fidelity and engine appearance remain unaccepted.",
+    "resource_boundary": "Backend Chat retains editor/GPU for Power Link defect qualification; no conflicting launch",
+    "previous_selected_checkpoint": "production21",
+    "method": "Authored chipped slab perimeters replace repeated triangular panels; dorsal-only subordinate lobes, single lateral wraps, shorter caster/prow runs and distal covers",
+    "review": "Bounded read-only expert review of concept and form30 informed mantle/prow/limb changes; not owner acceptance"
+  },
+  "historical_form_studies": [
+    {
+      "author": "Angelis Pseftis",
+      "status": "ENGINE_RENDERED_ART_GATE_OPEN",
+      "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/riftstalker-production-20260908/form28",
+      "geometry_sha256": "e88dec9708118c7109fff5a19420ae82e707064ea75a7f7731b9acf9da947323",
+      "meshes": [
+        {
+          "state": "baseline",
+          "lod": 0,
+          "triangles": 6412
+        },
+        {
+          "state": "baseline",
+          "lod": 1,
+          "triangles": 2688
+        },
+        {
+          "state": "carapace_molt",
+          "lod": 0,
+          "triangles": 6732
+        },
+        {
+          "state": "carapace_molt",
+          "lod": 1,
+          "triangles": 2848
+        },
+        {
+          "state": "striker_molt",
+          "lod": 0,
+          "triangles": 6540
+        },
+        {
+          "state": "striker_molt",
+          "lod": 1,
+          "triangles": 2752
+        }
+      ],
+      "checks": {
+        "targeted_tests": 3,
+        "export_contract": "six GLBs, 22 bones, five sockets, thirteen clips, COLOR_0 present",
+        "engine": {
+          "import_report": "form28/import-report.json",
+          "errors": 0,
+          "skeletal_meshes": 3,
+          "animations": 39,
+          "clay_report": "form28/unreal-clay/clay-report.json",
+          "clay_frames": 8
+        },
+        "full_pose_sweep": "NOT_RUN"
+      },
+      "resource_boundary": "Bounded render window granted by Backend Chat, completed and released",
+      "visual_judgment": "Unreal matched views show flatter slabs and clearer edges, but repeated triangular fields read manufactured rather than grown mineral. Not accepted as concept-faithful.",
+      "previous_selected_checkpoint": "production21 at c404d85 geometry"
+    }
+  ]
 }

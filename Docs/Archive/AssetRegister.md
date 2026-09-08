@@ -1052,3 +1052,9 @@ This study is pending review; production21 remains the prior selected checkpoint
 Form28 follow-through: `capture_fidelity_clay_inengine.py` subsequently executed successfully in
 the isolated sandbox at 16:32 UTC, producing eight matched views. Import inspection reports zero
 errors. This supersedes the earlier execution-pending note only; art acceptance remains open.
+
+Riftstalker form31 (2026-09-08): authored chipped slabs and mantle/prow/distal-cover changes remain
+project-procedural work by Angelis Pseftis from the same selected concept. Source is the registered
+`fidelity_geometry.py`; complete source snapshots and output identities are in the existing evidence
+root's `form29`, `form30`, and `form31` studies. No new third-party asset or generated artwork. Form31
+source/export checks pass within their recorded scope; engine and art acceptance remain pending.
