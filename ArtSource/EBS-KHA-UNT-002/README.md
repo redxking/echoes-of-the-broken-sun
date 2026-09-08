@@ -650,3 +650,15 @@ profiling, multiplayer load/performance acceptance, or finished molt Niagara eff
 The next gate is visual refinement against the actual concept, followed by representative camera and
 state review. Texture readiness, rig/animation correctness, physics behavior, LOD transitions, performance,
 provenance handoff and eventual authorized game integration remain separate gates.
+
+
+The subsequent `final21-core` check replaces the earlier opaque core approximation with
+`M_EBS_KHA_Core`, a translucent surface-forward material in the existing second material section.
+Its 512px mask controls localized opacity through the molt window. Both saved section assignments
+were read back, and the rendered capture report records no material-connection or pose errors.
+Transparency sorting, overdraw and gameplay-distance clarity are still review items; this does not
+close the art or performance gate. Daylight emissive brackets retain 20/100/500/2000 comparisons;
+100 is the current provisional setting after the higher values washed the aperture toward white.
+Inherited template lights are removed from the unsaved review scene so the declared gold/indigo setup
+is the lighting actually used. The current material enforces the charcoal base range and a 0.85
+roughness floor; those shader guarantees do not erase the recorded transferred-texture boundary defects.

@@ -187,7 +187,10 @@ report["material_scope"]={"core":"opaque-pass subsurface transmission controlled
 
 # normal, roughness, metallic straight from the stack
 connect_prop(normal, "", unreal.MaterialProperty.MP_NORMAL)
-connect_prop(mre, "G", unreal.MaterialProperty.MP_ROUGHNESS)
+rough_floor=lib.create_material_expression(mat,unreal.MaterialExpressionMax)
+rough_floor.set_editor_property("const_b",.85)
+connect(mre,"G",rough_floor,"A")
+connect_prop(rough_floor, "", unreal.MaterialProperty.MP_ROUGHNESS)
 connect_prop(mre, "R", unreal.MaterialProperty.MP_METALLIC)
 
 # emissive: MRE.B x Broken-Sun Amber x strength; brighter through the window (swept x (1-p))
@@ -195,7 +198,7 @@ amber = lib.create_material_expression(mat, unreal.MaterialExpressionConstant3Ve
 amber.set_editor_property("constant", unreal.LinearColor(AMBER[0], AMBER[1], AMBER[2], 1.0))
 strength = lib.create_material_expression(mat, unreal.MaterialExpressionScalarParameter, -900, 250)
 strength.set_editor_property("parameter_name", "EmissiveStrength")
-strength.set_editor_property("default_value", 20.0)  # Provisional daylight calibration; rendered amber/area review required.
+strength.set_editor_property("default_value", 100.0)  # Provisional daylight calibration; rendered amber/area review required.
 e1 = lib.create_material_expression(mat, unreal.MaterialExpressionMultiply, -650, 180)
 connect(mre, "B", e1, "A")
 connect(amber, "", e1, "B")
@@ -217,6 +220,17 @@ if report["connections"]["failed"]:
 report["parameters"] = {"scalar": [str(p) for p in lib.get_scalar_parameter_names(mat)],
                         "vector": [str(p) for p in lib.get_vector_parameter_names(mat)]}
 
+# Core uses the existing second material section; no section/geometry contract change.
+core_path=f"{MAT_DIR}/M_EBS_KHA_Core"
+if unreal.EditorAssetLibrary.does_asset_exist(core_path):unreal.EditorAssetLibrary.delete_asset(core_path)
+core_material=tools.duplicate_asset("M_EBS_KHA_Core",MAT_DIR,mat)
+core_material.set_editor_property("blend_mode",unreal.BlendMode.BLEND_TRANSLUCENT)
+core_material.set_editor_property("shading_model",unreal.MaterialShadingModel.MSM_DEFAULT_LIT)
+core_material.set_editor_property("translucency_lighting_mode",unreal.TranslucencyLightingMode.TLM_SURFACE_PER_PIXEL_LIGHTING)
+lib.recompile_material(core_material);unreal.EditorAssetLibrary.save_loaded_asset(core_material)
+report["material_scope"]["core"]="Translucent surface-forward material on existing Amber/core section; opacity reads localized 512px MoltBlend.G and MoltActive"
+report["core_material"]=core_material.get_path_name()
+core_instances={}
 # --- instances per progress value ------------------------------------------------------------
 instances = {}
 for tick in TICKS:
@@ -230,10 +244,20 @@ for tick in TICKS:
     lib.set_material_instance_scalar_parameter_value(mic, "MoltActive", 1.0 if 0 < tick < 80 else 0.0)
     unreal.EditorAssetLibrary.save_loaded_asset(mic)
     instances[tick] = mic
+    core_name=f"MI_Core_t{tick:03d}"
+    if unreal.EditorAssetLibrary.does_asset_exist(f"{MAT_DIR}/{core_name}"):unreal.EditorAssetLibrary.delete_asset(f"{MAT_DIR}/{core_name}")
+    core_mic=tools.create_asset(core_name,MAT_DIR,unreal.MaterialInstanceConstant,unreal.MaterialInstanceConstantFactoryNew())
+    lib.set_material_instance_parent(core_mic,core_material)
+    lib.set_material_instance_scalar_parameter_value(core_mic,"MoltProgress",tick/WINDOW)
+    lib.set_material_instance_scalar_parameter_value(core_mic,"MoltActive",1.0 if 0<tick<80 else 0.0)
+    unreal.EditorAssetLibrary.save_loaded_asset(core_mic);core_instances[tick]=core_mic
 
 # --- scene ----------------------------------------------------------------------------------
 sub = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 world = sub.get_editor_world()
+# Isolated preview lighting: remove inherited template lights from this unsaved sandbox scene.
+for inherited in unreal.EditorLevelLibrary.get_all_level_actors():
+    if isinstance(inherited,unreal.Light):unreal.EditorLevelLibrary.destroy_actor(inherited)
 reg = unreal.AssetRegistryHelpers.get_asset_registry()
 unreal.SystemLibrary.execute_console_command(world,"r.AntiAliasingMethod 1")
 rt = unreal.RenderingLibrary.create_render_target2d(world, 1280, 800, unreal.TextureRenderTargetFormat.RTF_RGBA8)
@@ -257,7 +281,7 @@ comp.set_editor_property("post_process_settings", pp)
 comp.set_editor_property("post_process_blend_weight", 1.0)
 
 light = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.DirectionalLight, unreal.Vector(0, 0, 900))
-light.set_actor_rotation(unreal.MathLibrary.find_look_at_rotation(unreal.Vector(-600, -500, 900), unreal.Vector(0, 0, 100)), False)
+light.set_actor_rotation(unreal.MathLibrary.find_look_at_rotation(unreal.Vector(600, -500, 900), unreal.Vector(0, 0, 100)), False)
 light.light_component.set_intensity(6000.0)
 light.light_component.set_light_color(unreal.LinearColor(1.0, 0.82, 0.62, 1.0))
 sky = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.SkyLight, unreal.Vector(0, 0, 700))
@@ -265,7 +289,7 @@ sky.light_component.set_intensity(0.6)
 sky.light_component.set_light_color(unreal.LinearColor(0.48, 0.60, 0.88, 1.0))
 
 fill = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.DirectionalLight, unreal.Vector(0,0,700))
-fill.set_actor_rotation(unreal.MathLibrary.find_look_at_rotation(unreal.Vector(500,600,500),unreal.Vector(0,0,110)),False)
+fill.set_actor_rotation(unreal.MathLibrary.find_look_at_rotation(unreal.Vector(-500,600,500),unreal.Vector(0,0,110)),False)
 fill.light_component.set_intensity(2000.0)
 fill.light_component.set_light_color(unreal.LinearColor(.48,.60,.88,1))
 fill.light_component.set_cast_shadows(False)
@@ -281,10 +305,11 @@ for state in STATES:
     actor = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.SkeletalMeshActor, unreal.Vector(0, 0, 0))
     # SkeletalMaterial entries are copies: rebuild and read the asset array back.
     bound_materials=list(mesh.get_editor_property("materials"))
-    for entry in bound_materials:entry.set_editor_property("material_interface",instances[0])
+    assert len(bound_materials)==2,"Unexpected material section contract"
+    for i,entry in enumerate(bound_materials):entry.set_editor_property("material_interface",core_instances[0] if i==1 else instances[0])
     mesh.set_editor_property("materials",bound_materials)
     actual=[entry.get_editor_property("material_interface").get_path_name() for entry in mesh.get_editor_property("materials")]
-    if any(path!=instances[0].get_path_name() for path in actual):raise RuntimeError("Material assignment did not persist")
+    if actual!=[instances[0].get_path_name(),core_instances[0].get_path_name()]:raise RuntimeError("Material assignment did not persist")
     unreal.EditorAssetLibrary.save_loaded_asset(mesh)
     report.setdefault("mesh_material_bindings",{})[state]=actual
     actor.skeletal_mesh_component.set_skeletal_mesh_asset(mesh)
@@ -322,7 +347,7 @@ def show(state, tick):
         actor.skeletal_mesh_component.set_visibility(other == state, True)
     c = actors[state].skeletal_mesh_component
     for i in range(c.get_num_materials()):
-        c.set_material(i, instances[tick])
+        c.set_material(i, core_instances[tick] if i==1 else instances[tick])
     return c
 
 def creature_lum():
@@ -403,6 +428,16 @@ for state in STATES:
             report["frames"].append({"file": name, "state": state, "tick": tick, "framing": label,
                                      "material": c.get_material(0).get_name()})
 # Pose actual imported sequences; OverrideAnimationData evaluates and refreshes bones.
+# Daylight emissive bracket; comparison evidence, no automatic visual acceptance.
+report["emissive_bracket"]=[]
+c=show("baseline",0);aim(520,-18)
+for level in (20.0,100.0,500.0,2000.0):
+    for mi in (instances[0],core_instances[0]):lib.set_material_instance_scalar_parameter_value(mi,"EmissiveStrength",level)
+    for _ in range(3):comp.capture_scene()
+    file=f"emissive_{int(level):04d}.png"
+    unreal.RenderingLibrary.export_render_target(world,rt,OUT,file)
+    report["emissive_bracket"].append({"file":file,"strength":level})
+for mi in (instances[0],core_instances[0]):lib.set_material_instance_scalar_parameter_value(mi,"EmissiveStrength",100.0)
 report["animation_frames"]=[]
 import_receipt=json.load(open(os.environ["EBS_IMPORT_REPORT"]))
 for state in STATES:
