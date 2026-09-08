@@ -84,7 +84,7 @@ def build(kit, cfg, lod, state):
             plate((x+13,side*broad*.26,z-3),length*.43,.85,.3,
                   f"seam_{i+1:02d}_{'l' if side<0 else 'r'}",u=(1,side*.12,-.2),slot=ember)
         if heavy:
-            plate((x-8,0,z+23),length*.90,broad*.88,15,f'molt_plate_{i+1:02d}')
+            plate((x-8,0,z+12),length*.90,broad*.88,15,f'molt_plate_{i+1:02d}')
 
     # The keel is tapered and segmented, exposed only between the large shell shields.
     segment((-119,0,145),(76,0,136),[(0,16),(.30,35),(.72,30),(1,13)],'underbody')
