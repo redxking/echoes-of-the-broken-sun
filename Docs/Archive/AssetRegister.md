@@ -1004,3 +1004,14 @@ meshes, UV manifest and offline geometry/pose renders in
 `BuildArtifacts/Evidence/riftstalker-fidelity-20260908/`. Source hashes, generated payload hashes and
 observed checks belong in that folder's receipt. Status: isolated geometry pilot, not production
 acceptance, Unreal integration, performance qualification or release-rights certification.
+
+
+Riftstalker refinement follow-up, 2026-09-08: source commits `936a9e2` and `9bf0d01` replace the
+pilot's repetitive mantle/straight stance, expose the contracted caster aperture and retain identical
+Amber landmarks across both LODs. Package-local `fidelity_texbake.py` recipe v2 derives the mineral
+surface from project-authored world-space fields; the shared baker, original concept and source art
+remain unchanged. Final refinement evidence is `riftstalker-fidelity-20260908/iteration12`; the current
+`fidelity-pilot-receipt.json` links source/generated hashes and bounded checks. This is refinement
+work in the isolated art worktree, not production acceptance, runtime integration or release evidence.
+
+Source `9e29e93` additionally seats the Carapace growth in the mantle and packs all five texture/interface maps in the editable Blender pilot. It removes importer-created bone-display meshes by their rig references before saving. No third-party art source or rights status changes.

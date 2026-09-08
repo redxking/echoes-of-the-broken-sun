@@ -439,7 +439,7 @@ amendment remains distinct from these visual studies. No other asset is promoted
 this pilot and this method is not yet approved for scaling across the other twenty packages.
 
 
-### Pilot receipt and visual disposition
+### First pilot receipt and visual disposition (iteration06, historical)
 
 The seven checks in `test_fidelity_pilot.py` passed, including 2,910 sampled mesh poses across
 three states, two LODs and five experimental clips. Repeat exports are byte-identical. Baseline
@@ -481,3 +481,93 @@ Bake with the existing `ArtSource/tools/ebs_texbake.py` CLI against that output'
 baseline rig with those review materials. These commands create pilot artifacts only; they do not
 write production Unreal assets. The reconciliation audit found **eleven** provisional cards in the
 current source bundle, not the handoff's ten; no normative card or lifecycle status was changed here.
+
+
+### Current refinement — iteration12, source 9e29e93
+
+The owner requested a substantially better model after reviewing the first pilot. The current
+geometry replaces the repeated small roof plates with five larger ridged shields and swept side
+leaves, folds the knees, lowers the prow beneath an exposed firing channel, replaces the square
+muzzle insert with a fractured aperture, and covers the ankle shafts. These are authored mesh
+changes. Existing gameplay data, placement rules, original exports and the other twenty packages
+remain untouched.
+
+Front knee rest heads are now X=4, Y=±82, Z=97 cm; rear heads X=-106, Y=±82, Z=106 cm. Hip and
+ankle attachment points remain unchanged. The 22-bone hierarchy and five socket names remain. The
+firing aperture terminates at the existing muzzle socket, X=94, Z=176 cm. Iteration07's knees crossed
+in side view and its toe edges went slightly below ground; that candidate is retained as rejected
+comparison evidence. Iteration08 corrected the stance; iteration09 covered the ankles; iteration10
+replaced the engineered-looking muzzle insert.
+
+The final geometry passes the seven pilot tests in `refinement-tests-final.log` (126.497 seconds),
+including all 2,910 sampled poses and byte-identical repeat generation. This is structural evidence,
+not visual animation acceptance. Before the final LOD correction, baseline LOD0/LOD1 were 7,040/2,304 triangles; Carapace 7,440/2,464;
+Striker 7,200/2,368. Iteration11 retains identical Amber landmark geometry at both LODs, reducing
+over-subdivided thin LOD0 seams and restoring the missing LOD1 seams. Current counts are
+6,464/2,688 baseline, 6,864/2,848 Carapace and 6,624/2,752 Striker, against 7,500/3,200. The five experimental clips remain incomplete relative to the
+production action contract.
+
+`fidelity_texbake.py` is a package-local surface adapter. It preserves the shared baker and replaces
+only obsidian BaseColor, tangent normal and MRE pixels with a common world-space strata field,
+sparse interrupted fissures and fine grit. It validates the decoded encoded colour and baked
+roughness, and compares state-mask and Amber-pixel hashes before/after. The review shader now reads
+baked roughness directly; it no longer conceals low roughness with a shader clamp. This does not
+implement an Unreal faction master material or close the team/molt rendering gate.
+
+The active evidence output is `BuildArtifacts/Evidence/riftstalker-fidelity-20260908/iteration12`.
+The shared atlas remains a limitation: 8,944 per-face charts, 0.8861 px/cm, and two-pixel gutters.
+A more efficient production unwrap and texture validation through mip/LOD transitions remain open.
+No prior Unreal import receipt applies to these changed surfaces and rest joints.
+
+
+Iteration10's first strata texture met the numeric limits but still read as flat clay in its actual
+render. Recipe `ebs-riftstalker-mineral-refine-v2` increases tonal variation within the charcoal range,
+adds 5.2 cm lamination and 5.8 cm grit, and keeps fissures dark and interrupted. The final LOD change
+passes four targeted checks in `landmark-tests.log`, including exact Amber geometry correspondence,
+component binding/budgets, GLB contract fields and repeatability. These supplement the earlier full
+pose sweep; they do not establish game-camera readability or texture mip acceptance.
+
+
+The full 2048² recipe-v2 bake passes its encoded-pixel checks: obsidian colour spans
+0.020289–0.068478 linear, roughness never falls below 217/255, and obsidian emissive is zero.
+StateMask and Amber pixel hashes match before and after replacement. Source/output hashes and
+measurements are retained in `iteration11/textures/fidelity-texture-refinement-report.json`.
+These results close the pilot's baked charcoal-roughness defect; they do not accept overall material
+quality or the Unreal shader. The original recipe-v1 full bake and its weak-looking render remain
+in iteration10 rather than being overwritten.
+
+
+The adaptation review caught a visible attachment defect in iteration11: its added Carapace shields
+read as a suspended cap. Iteration12 lowers their bases by 11 cm so they intersect the underlying
+mantle. Triangle counts and named channels remain unchanged; `landmark-tests-final.log` repeats the
+four affected export/LOD checks successfully. The earlier full pose sweep remains applicable to the
+unchanged joints and clips; the added plating is rigid to the body and remains high on the chassis.
+The baseline and Striker geometry are unchanged by this final attachment adjustment.
+
+For the current surface recipe, bake with the package-local adapter (the shared baker alone recreates
+the earlier surface). With `EBS_PILOT_OUT` set to a fresh evidence directory:
+
+```sh
+python3 -B ArtSource/EBS-KHA-UNT-002/build_fidelity_pilot.py --out "$EBS_PILOT_OUT"
+/Users/angelispseftis/.venvs/ebs-art/bin/python ArtSource/EBS-KHA-UNT-002/fidelity_texbake.py \
+  --manifest "$EBS_PILOT_OUT/bake-manifest.json" --out "$EBS_PILOT_OUT/textures" --size 2048
+/Applications/Blender.app/Contents/MacOS/Blender --background --threads 4 --python-exit-code 1 \
+  --python ArtSource/EBS-KHA-UNT-002/render_fidelity_pilot.py -- "$EBS_PILOT_OUT" baseline_lod0
+/Applications/Blender.app/Contents/MacOS/Blender --background --threads 4 --python-exit-code 1 \
+  --python ArtSource/EBS-KHA-UNT-002/package_fidelity_blend.py -- "$EBS_PILOT_OUT"
+```
+
+The editable Blender artifact packs StateMask and MoltBlend alongside BaseColor, Normal and MRE.
+Importer-created bone-display helpers are removed by their actual rig references, preventing them
+from being mistaken for an export mesh. All gameplay-facing material bindings still need Unreal
+implementation and verification.
+
+
+The final iteration12 full-resolution bake repeats the encoded range and roughness results above,
+with 1,037,449 painted obsidian pixels checked. `refinement-bake-seated.log` and the iteration12
+refinement report retain this result separately. The preview study uses a 16 m orthographic frame
+for the distant view; it is a camera study, not the game's validated tactical camera. Material and
+geometric improvement do not close full animation, UV efficiency, state communication, in-engine
+capture or owner acceptance.
+
+Saved-file read-back passed: one mesh, 22 bones, five sockets, five actions and all five maps packed; scene author/creator both identify Angelis Pseftis. `iteration12/editable-readback.json` retains that check. The blend is an editable refinement, not an accepted production package.

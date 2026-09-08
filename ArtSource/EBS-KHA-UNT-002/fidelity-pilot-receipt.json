@@ -1,158 +1,198 @@
 {
   "author": "Angelis Pseftis",
   "creator": "Angelis Pseftis",
-  "status": "PILOT_ART_GATE_NOT_PASSED",
+  "status": "REFINED_PILOT_NOT_PRODUCTION_ACCEPTED",
   "production_asset_id": "EBS-KHA-UNT-002",
   "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/riftstalker-fidelity-20260908",
   "meshes": [
     {
       "state": "baseline",
       "lod": 0,
-      "triangles": 4216,
+      "triangles": 6464,
       "bounds_cm": [
         [
-          -148.38246783503422,
-          -128.1,
-          0.10683216857956568
+          -149.16976947432804,
+          -97.2102015252526,
+          0.14472967355479738
         ],
         [
-          147.23768331893302,
-          128.1,
-          205.27339474080367
+          137.90647336840124,
+          96.86948302832218,
+          200.87885560226374
         ]
       ],
-      "sha256": "28ddb6c9223dfa130f3e71fc25f72c70fbbf60c98484bc491aab819fbf82127f",
-      "glb_sha256": "9e1e90fc13bcd56036b14a283e1434b608198f22738bac5b96074e399b79dc5f"
+      "sha256": "06115f2c65a8150db77e68bdbe1310aff0c7f3e2c729733d6fbfc0d67ed190fe",
+      "glb_sha256": "6e1b68c844dae9d6cfe5664dbb0a31555ed6ca7655931f23128ae4f21c1e271d"
     },
     {
       "state": "baseline",
       "lod": 1,
-      "triangles": 1368,
+      "triangles": 2688,
       "bounds_cm": [
         [
-          -148.38246783503422,
-          -113.53129556590814,
-          0.10683216857956568
+          -148.92912123210417,
+          -97.13309002814876,
+          0.1895905391553112
         ],
         [
-          147.23768331893302,
-          111.63714961221052,
-          205.34722695159704
+          138.57113457947355,
+          97.15742572753467,
+          199.65026306903783
         ]
       ],
-      "sha256": "77cd1c0917960b38373f9c016b4409561ae1c409ba78eb973f4cb191f4768629",
-      "glb_sha256": "6470f693bd81b1e729821ae585f9a656fa1d95db015756592b43419b578ce1de"
+      "sha256": "be1491815f989980038284fe23ded73e069087f8b2ae4d963bbd59d8e094c2d8",
+      "glb_sha256": "25a06ca6c903d3f37c784eed58b0a768eab1926b051acfc5ce9745410561d6eb"
     },
     {
       "state": "carapace_molt",
       "lod": 0,
-      "triangles": 4376,
+      "triangles": 6864,
       "bounds_cm": [
         [
-          -148.38246783503422,
-          -128.1,
-          0.10683216857956568
+          -149.16976947432804,
+          -97.2102015252526,
+          0.14472967355479738
         ],
         [
-          147.23768331893302,
-          128.1,
-          219.0
+          137.90647336840124,
+          96.86948302832218,
+          210.55346085803984
         ]
       ],
-      "sha256": "352bc3b47357048783d687ef8c4f2abed9e64d3392c8f664f78eab75cb845f0b",
-      "glb_sha256": "bcdadfafe3363415888aab76214313b3cc8c6e2db9bdb73bc651e88267b3f555"
+      "sha256": "0d8e75d35b80eaa63d4dc8f6156064ca3e69c5ef51d7db7d9a5eaae1ab6eb27e",
+      "glb_sha256": "5ffd7bf3f741c355cb63f6cea140df45c9cb65a09b0423a76f3623ced2f18b45"
     },
     {
       "state": "carapace_molt",
       "lod": 1,
-      "triangles": 1448,
+      "triangles": 2848,
       "bounds_cm": [
         [
-          -148.38246783503422,
-          -113.53129556590814,
-          0.10683216857956568
+          -148.92912123210417,
+          -97.13309002814876,
+          0.1895905391553112
         ],
         [
-          147.23768331893302,
-          111.63714961221052,
-          219.0
+          138.57113457947355,
+          97.15742572753467,
+          210.6600133852276
         ]
       ],
-      "sha256": "0c87deb699f58eefd9b3f558662f9c213ac8fec368b735312e3bc07cf571f7ea",
-      "glb_sha256": "7401727ed3219007be6c00a240698cfbb0179f1d941ec2a304492cdad9c3227a"
+      "sha256": "7fdf7441a7fdcf928c1179d38ba29b7b2f888dc8a348cab9b4e5c02d4090a113",
+      "glb_sha256": "0579690bdcceb964ecac2458243c62dcfdee56a596124f35b100087094c28da6"
     },
     {
       "state": "striker_molt",
       "lod": 0,
-      "triangles": 4280,
+      "triangles": 6624,
       "bounds_cm": [
         [
-          -148.38246783503422,
-          -128.1,
-          0.10683216857956568
+          -149.16976947432804,
+          -97.2102015252526,
+          0.14472967355479738
         ],
         [
-          147.23768331893302,
-          128.1,
-          205.27339474080367
+          137.90647336840124,
+          96.86948302832218,
+          200.87885560226374
         ]
       ],
-      "sha256": "083fb6599dc7d2cb90c2d64242399672cc4887945918b64e200fa3cb666dd5cd",
-      "glb_sha256": "299c320ca90f309730879593306a1d105f17015131143ed5c996185f182e15c6"
+      "sha256": "e6e39eeabd08795fa00978886563310755e10a1bddd027da52b6a797437162a4",
+      "glb_sha256": "347ba4331399221a7ab34fdd4cbdcd1e1a1179b102eaaeab9e307b009718f865"
     },
     {
       "state": "striker_molt",
       "lod": 1,
-      "triangles": 1400,
+      "triangles": 2752,
       "bounds_cm": [
         [
-          -148.38246783503422,
-          -113.53129556590814,
-          0.10683216857956568
+          -148.92912123210417,
+          -97.13309002814876,
+          0.1895905391553112
         ],
         [
-          147.23768331893302,
-          111.63714961221052,
-          205.34722695159704
+          138.57113457947355,
+          97.15742572753467,
+          199.65026306903783
         ]
       ],
-      "sha256": "4300c222bd8ae8bf0950eb1dd1e18487412845e9ff4a7e0f4f70eee9c63311ea",
-      "glb_sha256": "7310871997ca69fc10762a8cc2504babea8452967422338852946e00e2b8b9f5"
+      "sha256": "0d353153e94c74452affe59c27a00dc7dc9d1276162a29fc833921f4979781b9",
+      "glb_sha256": "6c612a57390c7716945106c2320987cbf07dd69f75366ac109b862df766067bc"
     }
   ],
   "uv": {
     "size": 2048,
-    "density_px_per_cm": 1.1018,
+    "density_px_per_cm": 0.8861,
     "gutter_px": 2,
-    "used_fraction": 0.6588,
-    "charts": 5686
+    "used_fraction": 0.6276,
+    "charts": 8944
   },
   "verification": {
-    "structural_tests": 7,
-    "result": "PASS",
-    "sampled_mesh_poses": 2910,
-    "blender_import": "one skinned mesh, 22 bones, five sockets, five actions; baseline only",
+    "full_geometry_pose_checks": {
+      "count": 7,
+      "result": "PASS",
+      "log": "refinement-tests-final.log",
+      "scope": "iteration10 rest joints, allstates/LODs and fiveclips;2910sampledposes"
+    },
+    "final_lod_landmark_checks": {
+      "count": 4,
+      "result": "PASS",
+      "log": "landmark-tests-final.log",
+      "scope": "iteration12 seatedCarapace, exactAmberLODgeometry, budgets/binding, exportedcontract and deterministicgeneration"
+    },
+    "baked_colour_roughness": "PASS_ENCODED_PIXELS",
+    "blender_import": "PASS_SAVED_FILE_READBACK: one mesh,22bones,5sockets,5actions,5packedmaps",
     "unreal_import": "NOT_RUN_FOR_NEW_GEOMETRY",
-    "art_gate": "NOT_PASSED",
+    "art_gate": "NOT_ACCEPTED",
     "gameplay_gate": "NOT_RUN",
-    "technical_gate": "NOT_PASSED"
+    "technical_gate": "NOT_PASSED",
+    "saved_file_readback": "iteration12/editable-readback.json"
   },
   "open_findings": [
-    "Caster reads as beak rather than shoulder-embedded weapon",
-    "Distal limbs remain stilt-like",
-    "Mantle plate size hierarchy remains too uniform",
-    "Baked roughness below 0.85 charcoal floor; only preview shader clamps it",
-    "LODs have different lateral bounds; transition readability not evaluated",
-    "Full production animation set, physics, team/molt rendering, VFX, Unreal and game integration pending"
+    "Further concept fidelity and joint/plate overlap judgments need review",
+    "UV atlas uses8944per-face charts; production UV efficiency and mip/LOD validation pending",
+    "Fiveexperimentalclips are not complete production animation contract",
+    "Blender preview does not qualify Unreal team/molt response",
+    "Fresh Unreal import, physics, VFX and game integration pending"
   ],
   "source_hashes": {
-    "build_fidelity_pilot.py": "ab3105a640ab49cd700b540f363a2237b700c5725f50a3b6b273a3e057bf7520",
-    "fidelity_geometry.py": "9508051181a832fbf3a96186d6120e63fafd13799b32452027c2a54174339293",
+    "build_fidelity_pilot.py": "2b8f36ef1c65a33e2b343350f244f3d6615fd7095533098171f56207e77d0057",
+    "fidelity_geometry.py": "97738208f484c8b523396eee00500a5ba1ffbdbda97d88704a340ed55c1abfaf",
     "fidelity_motion.py": "eb166fa78142e0e666b0a377de5b3660c9d5c2ceefb26de095e25a3d5d8e8b92",
-    "package_fidelity_blend.py": "96a145123474dbe406d054f998ad4f86108c318ce702755760a4493fdff2cf94",
-    "render_fidelity_pilot.py": "d0f69e35d7d0addcbeb57f4a36a8840237959071fee7cd499f4e62e16ab60904",
-    "test_fidelity_pilot.py": "908e4c8dfb1ead00c6df66e5d96dd160b387f186e65cff0a779ebbdb5e0965a4"
+    "fidelity_texbake.py": "06a1e701ed3ade06469f18d5edb51357df46b29758cd9f5bfe1cee70650e28a4",
+    "package_fidelity_blend.py": "cae299409bdf5520fd0b6e94cef3888ae44d4743a3a06f114c2119325e3c7eef",
+    "render_fidelity_pilot.py": "71dfb615762e81b45ec4aaf77c78bfab5ec85d1e504a170c2891df58d542f811",
+    "test_fidelity_pilot.py": "669b25bd27a8ce6d065764e2d2a58455e9469b7329f5c8d176bd6ba5acee9809"
   },
   "concept_sha256": "26b9095a837ed3a100b784f3846cddebd222a95a2d6c9e6c93e13277f1ac0a6b",
-  "source_commit": "d509fa8"
+  "source_commit": "9e29e93",
+  "active_iteration": "iteration12",
+  "texture_measurements": {
+    "obsidian_final_pixels_including_gutter": 2528910,
+    "painted_obsidian_polygon_pixels": 1037449,
+    "obsidian_chart_count": 8408,
+    "authored_charcoal_linear_min": 0.02068,
+    "authored_charcoal_linear_max": 0.06936,
+    "encoded_charcoal_linear_min": 0.020289,
+    "encoded_charcoal_linear_max": 0.068478,
+    "painted_obsidian_roughness_min_u8": 217,
+    "painted_obsidian_roughness_min_linear": 0.85098,
+    "painted_obsidian_emissive_max_u8": 0
+  },
+  "texture_preservation_verified": true,
+  "resolved_pilot_findings": [
+    "Repeated roof shingles replaced with larger ridged shields",
+    "Stilt stance replaced with folded directional knees",
+    "Caster firing channel exposed above lowered prow",
+    "Squaremuzzle insert replaced with fracturedaperture",
+    "Ankle shafts covered with mineralarmour",
+    "Baked charcoal roughness defect corrected",
+    "Amber landmarks retained geometrically at bothLODs",
+    "Floating Carapace cap lowered into mantle"
+  ],
+  "artifact_hashes": {
+    "Riftstalker_fidelity_editable.blend": "2fdf018c72d032b4b365221a62cce6243f724b82847255472279cd1ef2acafc2",
+    "baseline_lod0_threequarter.png": "30c09b6092bdf28a6f5cabf3cd3fe5de07023e746585266fbcbc4469de15b694",
+    "pose_move_threequarter.png": "05c99f2dc7a44e9d1a0d997cbea8ce33e267dc840a9aabe2c59166f35fb6ca7e"
+  }
 }
