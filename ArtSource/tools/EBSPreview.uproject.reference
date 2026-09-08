@@ -1,0 +1,53 @@
+{
+ "FileVersion": 3,
+ "EngineAssociation": "5.8",
+ "Category": "Tools",
+ "Description": "Isolated asset import and inspection sandbox for Echoes of the Broken Sun ArtSource packages. Author: Angelis Pseftis. Not the game project; nothing here integrates into the shared game.",
+ "Modules": [],
+ "Plugins": [
+  {
+   "Name": "PythonScriptPlugin",
+   "Enabled": true,
+   "TargetAllowList": [
+    "Editor"
+   ]
+  },
+  {
+   "Name": "Interchange",
+   "Enabled": true
+  },
+  {
+   "Name": "InterchangeEditor",
+   "Enabled": true,
+   "TargetAllowList": [
+    "Editor"
+   ]
+  },
+  {
+   "Name": "EditorScriptingUtilities",
+   "Enabled": true,
+   "TargetAllowList": [
+    "Editor"
+   ]
+  },
+  {
+   "Name": "GeometryScripting",
+   "Enabled": true
+  },
+  {
+   "Name": "GeometryProcessing",
+   "Enabled": true
+  },
+  {
+   "Name": "MeshModelingToolset",
+   "Enabled": true
+  },
+  {
+   "Name": "MeshModelingToolsetExp",
+   "Enabled": true
+  }
+ ],
+ "TargetPlatforms": [
+  "Mac"
+ ]
+}

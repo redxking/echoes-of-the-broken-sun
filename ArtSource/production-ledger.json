@@ -943,6 +943,34 @@
    "package": "EBS-PKG-KHA-RIFTSTALKER",
    "finding": "Three captures of the textured Riftstalker reported a 'lifted, greenish body' at 0.8-0.9x the ground's brightness. A lit-shading bisection (flat 0.045 albedo -> baked base -> +normal -> +MRE -> +specular 0) rendered the body dark and warm in every variant (0.18-0.29x the ground), and a bisection of the ART graph itself (base+normal+MRE, +team lerp, +window lerp, +emissive) showed the team lerp driven by StateMask.B was the single step that lifted it. StateMask.B was correct: shell_01, the crest, was a whole-shell team carrier and rendered the team colour BY DESIGN - and the fixed probe region sat on it. Off the crest the body measured 0.33-0.42x the ground; the crest 1.9x.",
    "rule": "Bisect by WIRING, not only by parameters: instance-parameter variants (team black, emissive 0) could not isolate a lerp whose alpha is a texture channel. Place probes on surfaces that are not state or ownership carriers, or read the carrier deliberately. And a whole-shell team carrier deletes the surface identity on the most visible face: carry ownership on a BAND (shell_01 middle 40%) plus the prow."
+  },
+  {
+   "id": "PF-021",
+   "date": "2026-09-08",
+   "package": "pipeline",
+   "finding": "Unreal 5.8 ships Geometry Script, and with the plugin enabled in the sandbox project its Python surface covers the whole detail chain: weld, remove hidden triangles, polygroups from crease angle, polygroup bevel, tessellation, Perlin displacement, bone-weight transfer, vertex-colour transfer, simplification, new SkeletalMesh assets, and high-to-low baking of tangent normal / AO / curvature. No DCC install, no third-party service and no C++ module is needed for a procedural detail pass.",
+   "rule": "Enable GeometryScripting in the sandbox .uproject; drive it from the same headless Python path as the imports."
+  },
+  {
+   "id": "PF-022",
+   "date": "2026-09-08",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "ebs_meshkit writes UNINDEXED triangles: the Riftstalker LOD0 is 542 triangles across 1626 vertices with no shared edges. Polygroup bevel on that triangle soup is a SILENT NO-OP - it returns its mesh with the counts unchanged and no error. Welding first takes the mesh to 351 vertices and bevel then produces real geometry (542 -> 3907 triangles after hidden-face removal).",
+   "rule": "Weld before any topological operation, and assert the triangle count CHANGED rather than trusting a call that returned."
+  },
+  {
+   "id": "PF-023",
+   "date": "2026-09-08",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "The blockouts are assembled from INTERPENETRATING solids, so faces buried inside other boxes ship as geometry: remove_hidden_triangles took the Riftstalker from 542 to 403 triangles. Those buried faces also bake as fully-occluded black, which is what dominated the first AO bake.",
+   "rule": "Remove hidden triangles before baking ambient occlusion, and before counting a triangle budget."
+  },
+  {
+   "id": "PF-024",
+   "date": "2026-09-08",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "Polygroup bevel PRESERVES UV0 on the original faces but gives the NEW bevel faces UVs that land in unpainted atlas space. Rendered with the production atlas material the chamfers read as pale strips - the geometry is right and the texturing is not.",
+   "rule": "A topology change invalidates a chart-packed atlas. Regenerate UVs on the detailed mesh and transfer the source textures onto them with a texture-type bake, rather than assuming the old atlas still applies."
   }
  ],
  "owner_rulings": [
@@ -1282,6 +1310,7 @@
    "C_artist": "A human artist takes the blockouts as scaffolds; the pipeline remains the verification layer. Reaches the concepts; not automatable here."
   },
   "recommendation": "A, proven on the Riftstalker before committing the other twenty; B as the fallback if A is refused.",
-  "texture_sweep": "PAUSED across the other twenty packages pending the decision: procedural surfaces that a DCC pass would re-author are the wrong investment."
+  "texture_sweep": "PAUSED across the other twenty packages pending the decision: procedural surfaces that a DCC pass would re-author are the wrong investment.",
+  "resolved_2026_09_08": "SUPERSEDED for the procedural tier. Unreal's own Geometry Script supplies weld, bevel, tessellation, displacement, hidden-face removal, rig and vertex-colour transfer, simplification and high-to-low baking, driven from the same headless Python path as the imports. No DCC install, third-party service or C++ module is required for path B. Paths A (Blender) and C (artist) remain open for the tier ABOVE procedural: hand-sculpted forms and painted surfaces are still outside any of this."
  }
 }
