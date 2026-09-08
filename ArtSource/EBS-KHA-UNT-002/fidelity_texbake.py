@@ -3,9 +3,8 @@
 
 This does not modify :mod:`ebs_texbake`.  It asks the shared baker for the
 complete atlas first, then replaces only the final, visible
-``kharuun_obsidian`` chart pixels.  Amber, StateMask, team/molt data and all
-non-obsidian material families remain byte-for-byte as supplied by the shared
-baker.
+``kharuun_obsidian`` chart pixels.  Amber and molt channels remain as supplied by the shared baker. A final
+source-space team stripe replaces the old per-chart team markings.
 
 The replacement is intentionally restrained: broad directional strata, small
 value drift and sparse interrupted fissures.  It removes the earlier cellular
@@ -29,12 +28,13 @@ import numpy as np
 from PIL import Image
 
 AUTHOR = "Angelis Pseftis"
-REVISION = "ebs-riftstalker-mineral-refine-v2"
+REVISION = "ebs-riftstalker-mineral-refine-v4"
 
 HERE = Path(__file__).resolve().parent
 TOOLS = HERE.parent / "tools"
 sys.path.insert(0, str(TOOLS))
 import ebs_texbake as baker  # noqa: E402
+from fidelity_mineral_detail import mineral_detail
 
 
 def sha256(data: bytes | bytearray) -> str:
@@ -136,6 +136,26 @@ def _chart_coordinates(job: baker.ChartJob, x: np.ndarray, y: np.ndarray, densit
     return lu, lv, px, py, pz
 
 
+def _continuous_team_band(res, jobs, density, gutter):
+    """Replace per-facet chart stripes with one source-space dorsal marking."""
+    owner=_ownership(jobs,res.size,gutter)
+    state=np.frombuffer(res.state,dtype=np.uint8).reshape(res.size,res.size,3)
+    before=sha256(state[:,:,:2].tobytes())
+    for ji,job in enumerate(jobs):
+        x0,y0,x1,y1=_job_window(job,res.size,gutter)
+        yy,xx=np.nonzero(owner[y0:y1,x0:x1]==ji); yy+=y0;xx+=x0
+        if not len(xx): continue
+        state[yy,xx,2]=0
+        if job.component != 'shell_03': continue
+        _,_,px,py,pz=_chart_coordinates(job,xx,yy,density)
+        # A single 16cm dorsal stripe; continuous through all faceted chart frames.
+        band=(np.abs(py)<8.0)&(pz>170.0)
+        state[yy[band],xx[band],2]=255
+    assert sha256(state[:,:,:2].tobytes())==before
+    return {'method':'source-space dorsal stripe on shell_03; abs(Y)<8cm and Z>170cm',
+            'rg_preserved_sha256':before,'team_pixels':int(np.count_nonzero(state[:,:,2]))}
+
+
 def _refine_obsidian(res: baker.BakeResult, jobs: list[baker.ChartJob], density: float, gutter: int) -> dict:
     """Replace only final obsidian pixels and return direct texture measurements."""
     size = res.size
@@ -171,7 +191,7 @@ def _refine_obsidian(res: baker.BakeResult, jobs: list[baker.ChartJob], density:
         bend = (_noise(wx / 115.0, wy / 115.0, 31.0) - 0.5) * 11.0
         strata_phase = (wz + bend) / 38.0
         strata = 0.5 + 0.5 * np.sin(math.tau * strata_phase)
-        broad = _noise(wx / 170.0, wz / 170.0, 47.0) - 0.5
+        broad = _noise(wx / 27.0 + wy / 61.0, wz / 24.0, 47.0) - 0.5
         # 5.2 cm lamination remains resolvable at the ~0.9 px/cm atlas
         # density.  It is a directional mineral layer, not isotropic speckle.
         lam_bend = (_noise(wx / 32.0, wy / 32.0, 53.0) - 0.5) * 2.2
@@ -188,9 +208,10 @@ def _refine_obsidian(res: baker.BakeResult, jobs: list[baker.ChartJob], density:
         # Charcoal is measured in linear space.  No amber tint, metallic or
         # emissive is introduced on obsidian.  The strict 0.02..0.07 anchor is
         # enforced before sRGB encoding.
-        lum = (0.030 + strata * 0.028 + broad * 0.014 +
-               lamination * 0.010 + grit * 0.006 - fissure * 0.012)
-        lum = np.clip(lum, 0.022, 0.068)
+        lum = (0.038 + strata * 0.004 + broad * 0.028 +
+               lamination * 0.002 + grit * 0.016 - fissure * 0.012)
+        detail_height, detail_value = mineral_detail(wx,wy,wz)
+        lum = np.clip(lum + detail_value, 0.022, 0.068)
         rgb_linear = np.stack((lum * 0.94, lum * 0.98, lum * 1.02), axis=1)
         rgb_linear = np.clip(rgb_linear, 0.020, 0.070)
         linear_values.append(rgb_linear)
@@ -213,7 +234,8 @@ def _refine_obsidian(res: baker.BakeResult, jobs: list[baker.ChartJob], density:
             path = np.abs(np.sin(math.tau * ((zz + bb * 1.8 + xx * 0.085) / 79.0)))
             gg = _noise(xx / 92.0, yy / 92.0, 71.0)
             fi = np.clip((0.060 - path) / 0.060, 0.0, 1.0) * np.clip((gg - 0.62) / 0.28, 0.0, 1.0)
-            return st * 0.23 + br * 0.065 + lam * 0.070 + gr * 0.035 - fi * 0.20
+            detail,_=mineral_detail(xx,yy,zz)
+            return st * 0.12 + br * 0.04 + detail
         ux, uy, uz = job.u_dir
         vx, vy, vz = job.v_dir
         ds = (h_at(wx + ux * eps, wy + uy * eps, wz + uz * eps) -
@@ -309,6 +331,7 @@ def run(manifest_path: str, out_dir: str, size: int) -> dict:
         if image.size != (size, size):
             raise AssertionError("Pillow image-size validation failed")
 
+    team_measurement = _continuous_team_band(res,jobs,density,gutter)
     asset_id = str(manifest.get("production_asset_id", "EBS_ASSET"))
     report = baker.write_outputs(res, out_dir, asset_id, baker.ALL_MAPS, manifest_path,
                                  manifest, time.perf_counter() - started)
@@ -326,10 +349,12 @@ def run(manifest_path: str, out_dir: str, size: int) -> dict:
         "size": size,
         "method": "shared complete bake followed by final visible kharuun_obsidian replacement only",
         "removed_pattern": "cellular Voronoi crack grid",
-        "added_pattern": "directional warped strata with sparse interrupted fissures",
+        "team_band":team_measurement,
+        "added_pattern": "world-space oblique fractured planes, jagged lamination and small chipped facets",
         "preserved_before": preserved_before,
         "preserved_after": preserved_after,
-        "preservation_verified": preserved_before == preserved_after,
+        "surface_pass_preservation_verified": preserved_before == preserved_after,
+        "preservation_verified": "Amber and StateMask RG preserved; team B deliberately replaced",
         "measurements": measurements,
         "base_baker_report": os.path.join(out_dir, "bake-report.json"),
         "base_baker_written_map_checksums": {name: item["sha256"] for name, item in report["maps"].items()},

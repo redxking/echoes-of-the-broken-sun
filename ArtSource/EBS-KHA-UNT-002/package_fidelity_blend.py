@@ -12,6 +12,8 @@ meshes=[o for o in bpy.context.scene.objects if o.type=='MESH' and any(m.type=='
 rigs=[o for o in bpy.context.scene.objects if o.type=='ARMATURE']
 assert len(meshes)==1 and len(rigs)==1,([o.name for o in meshes],[o.name for o in rigs])
 assert len(rigs[0].data.bones)==22,len(rigs[0].data.bones)
+expected={'idle','move','fire_on_the_move','turn_left','turn_right','acquire','windup','attack','recovery','hit','molt','death','selection_ack'}
+assert {a.name for a in bpy.data.actions}==expected,sorted(a.name for a in bpy.data.actions)
 # Remove only importer-created bone-display meshes, avoiding accidental later export.
 helpers={pb.custom_shape for pb in rigs[0].pose.bones if pb.custom_shape is not None}
 helper_names=sorted(o.name for o in helpers)

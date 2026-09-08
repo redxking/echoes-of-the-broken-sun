@@ -34,7 +34,7 @@ if textured:
         links.new(split.outputs['Red'],p.inputs['Metallic'])
         links.new(split.outputs['Green'],p.inputs['Roughness'])
         p.inputs['Emission Color'].default_value=(.50,.22,.06,1);links.new(split.outputs['Blue'],p.inputs['Emission Strength'])
-        normal=tex('Normal',False);nm=nodes.new('ShaderNodeNormalMap');nm.inputs['Strength'].default_value=.5
+        normal=tex('Normal',False);nm=nodes.new('ShaderNodeNormalMap');nm.inputs['Strength'].default_value=1.0
         # Source normal map is DirectX; Blender tangent normals require the opposite green sign.
         ns=nodes.new('ShaderNodeSeparateColor');links.new(normal.outputs['Color'],ns.inputs['Color'])
         inv=nodes.new('ShaderNodeMath');inv.operation='SUBTRACT';inv.inputs[0].default_value=1
