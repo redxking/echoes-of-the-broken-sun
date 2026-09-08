@@ -92,6 +92,24 @@ if report.get("after_bevel", {}).get("triangles", 0) > P["budget"]:
 stage("transfer_bone_weights", lambda: BW.transfer_bone_weights_from_mesh(low, mesh))
 stage("transfer_vertex_colors", lambda: VC.transfer_vertex_colors_from_mesh(low, mesh))
 stage("normals", lambda: NR.recompute_normals(mesh, unreal.GeometryScriptCalculateNormalsOptions()))
+
+# --- UVs -------------------------------------------------------------------------------------
+# Bevel preserves UV0 on the ORIGINAL faces but gives the NEW bevel faces UVs in unpainted atlas
+# space, so the chamfers render as pale strips. Regenerate UV0 for the whole detailed mesh; the
+# source textures are transferred onto the new layout by a texture-type bake (ue_detail_bake.py).
+if P.get("regenerate_uvs", True):
+    uv_options = unreal.GeometryScriptPatchBuilderOptions()
+    for key, value in (("initial_patch_count", P.get("uv_patch_count", 220)),
+                       ("merging_threshold", 1.5), ("max_distortion", 5.0),
+                       ("min_patch_size", 2), ("auto_pack", True),
+                       ("packing_target_width", P.get("uv_resolution", 2048))):
+        try:
+            uv_options.set_editor_property(key, value)
+        except Exception as error:
+            report["errors"].append(f"patch_builder.{key}: {error}")
+    report["patch_builder_props"] = sorted(x for x in dir(uv_options) if not x.startswith("_"))
+    stage("regenerate_uv0", lambda: UV.auto_generate_patch_builder_mesh_u_vs(mesh, 0, uv_options))
+    counts(mesh, "after_uv")
 counts(mesh, "final")
 
 name = "SK_EBS_KHA_UNT_002_Detail"

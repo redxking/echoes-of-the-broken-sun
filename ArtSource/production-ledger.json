@@ -971,6 +971,20 @@
    "package": "EBS-PKG-KHA-RIFTSTALKER",
    "finding": "Polygroup bevel PRESERVES UV0 on the original faces but gives the NEW bevel faces UVs that land in unpainted atlas space. Rendered with the production atlas material the chamfers read as pale strips - the geometry is right and the texturing is not.",
    "rule": "A topology change invalidates a chart-packed atlas. Regenerate UVs on the detailed mesh and transfer the source textures onto them with a texture-type bake, rather than assuming the old atlas still applies."
+  },
+  {
+   "id": "PF-025",
+   "date": "2026-09-08",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "The atlas maps transfer cleanly onto a retopologised mesh's regenerated UVs with a texture-type bake (make_bake_type_texture), so a chart-packed atlas is NOT a dead end after a topology change. But the regenerated layout redistributes texel area: the team band, authored as the crest's middle 40% in the blockout's chart, covers a visibly larger fraction of the crest on the new UVs.",
+   "rule": "After a UV regeneration, re-measure every area-based rule the cards state - the emissive ceiling and the team band - on the NEW layout. Area fractions are a property of the UV layout, not of the source texture."
+  },
+  {
+   "id": "PF-026",
+   "date": "2026-09-08",
+   "package": "EBS-PKG-KHA-RIFTSTALKER",
+   "finding": "Lifting base colour by (curvature - 0.5) x 1.1 to highlight the chamfers blew the bevel rims to near-white and lifted the whole body: the shell measured 0.37x the ground against the blockout's 0.33x, losing the charcoal discipline that was measured into the previous render.",
+   "rule": "Treat a curvature lift as an emissive-style ceiling: measure the body against the ground after adding it, and keep the gain low enough that the anchor still holds. A visual improvement that breaks a measured rule is a regression."
   }
  ],
  "owner_rulings": [
@@ -1280,7 +1294,8 @@
    "Riftstalker vertex ID channels: CLEARED through export and import for all three molt states. Outstanding only: an in-engine capture of M_EBS_KHA_UNT_002_MoltPhase under a real RHI.",
    "Runtime verification of simultaneous locomotion and firing.",
    "Detail judgements at gameplay distance, in-engine capture, gate reviews, owner acceptance.",
-   "Riftstalker: textured and rendered in engine at BLOCKOUT; simulation integration, a production master material, a real TeamColor, and gate-review judgements at gameplay distance remain."
+   "Riftstalker: textured and rendered in engine at BLOCKOUT; simulation integration, a production master material, a real TeamColor, and gate-review judgements at gameplay distance remain.",
+   "Riftstalker detail tier: the in-Unreal chain (bevel, hidden-face removal, UV regeneration, texture transfer, high-to-low bake) works end to end and produces a 3,907-triangle chamfered mesh inside the 7,500 ceiling. NOT accepted: the chamfer rims are blown out (PF-026) and the team band's area grew on the new UVs (PF-025). Tuning and re-measurement pending."
   ]
  },
  "write_coordination": {
