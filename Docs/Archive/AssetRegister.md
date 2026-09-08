@@ -989,3 +989,18 @@ Runtime integration uses inert children of the existing body transform, shared f
 M01 deployment-part runtime follow-up, 2026-09-05: generated Bulwark revision `m01-bulwark-deployment-parts-v1` was bound in loaded module8594. Native084912Z derivative/pool/deployment checks pass with zero warnings/errors; I1 sampled frames1–8 show attached packed/unfolded/folding geometry and consistent facing. These are bounded native/EDT observations, not final locomotion, combat, material, package or owner acceptance. The linked qualification and source/generated/module hashes remain in `BuildArtifacts/Evidence/m01-visual-completion-20260905T024342Z` and `m01-motion-tested-actors-live-comparison-20260905T085741Z-3CB1DBE3`. No asset rights or authorship claim changes.
 
 M01 public-bank material binding follow-up, 2026-09-05: the existing `M_EchoesCliffSurface` now shades M01 `BiomeHorizon`; horizontal exterior substrate retains its ground material. No new asset or rights source was introduced. The two existing placement courses receive independent deterministic variation and distinct outside-play depth bands; their124 total instances and inert roles remain. Native101237Z verifies bounds/material separation and non-M01 controls. Loaded4481 L2 all ten normal-camera samples show the material/depth correction, with repeated cap shapes and bare lanes still open asV042. This is source/native/bounded EDT progress, not finished bank composition or owner acceptance.
+
+
+## Riftstalker fidelity pilot — 2026-09-08
+
+Author and owner: Angelis Pseftis. Method: deterministic project-authored procedural modeling; no
+third-party mesh, generated replacement concept, or external service used. Production source:
+`ArtSource/EBS-KHA-UNT-002/fidelity_geometry.py`, `fidelity_motion.py`, `build_fidelity_pilot.py`.
+Review renderer: `render_fidelity_pilot.py` in the same directory, using the installed Blender CPU renderer.
+The input is the owner-selected Riftstalker candidate retained in
+`BuildArtifacts/Evidence/concept-discovery-20260906/riftstalker-review/riftstalker-candidate.png` in the
+workspace. The existing concept provenance remains controlling. Output: six pilot GLB/OBJ state/LOD
+meshes, UV manifest and offline geometry/pose renders in
+`BuildArtifacts/Evidence/riftstalker-fidelity-20260908/`. Source hashes, generated payload hashes and
+observed checks belong in that folder's receipt. Status: isolated geometry pilot, not production
+acceptance, Unreal integration, performance qualification or release-rights certification.

@@ -1,0 +1,158 @@
+{
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "status": "PILOT_ART_GATE_NOT_PASSED",
+  "production_asset_id": "EBS-KHA-UNT-002",
+  "evidence_root": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/riftstalker-fidelity-20260908",
+  "meshes": [
+    {
+      "state": "baseline",
+      "lod": 0,
+      "triangles": 4216,
+      "bounds_cm": [
+        [
+          -148.38246783503422,
+          -128.1,
+          0.10683216857956568
+        ],
+        [
+          147.23768331893302,
+          128.1,
+          205.27339474080367
+        ]
+      ],
+      "sha256": "28ddb6c9223dfa130f3e71fc25f72c70fbbf60c98484bc491aab819fbf82127f",
+      "glb_sha256": "9e1e90fc13bcd56036b14a283e1434b608198f22738bac5b96074e399b79dc5f"
+    },
+    {
+      "state": "baseline",
+      "lod": 1,
+      "triangles": 1368,
+      "bounds_cm": [
+        [
+          -148.38246783503422,
+          -113.53129556590814,
+          0.10683216857956568
+        ],
+        [
+          147.23768331893302,
+          111.63714961221052,
+          205.34722695159704
+        ]
+      ],
+      "sha256": "77cd1c0917960b38373f9c016b4409561ae1c409ba78eb973f4cb191f4768629",
+      "glb_sha256": "6470f693bd81b1e729821ae585f9a656fa1d95db015756592b43419b578ce1de"
+    },
+    {
+      "state": "carapace_molt",
+      "lod": 0,
+      "triangles": 4376,
+      "bounds_cm": [
+        [
+          -148.38246783503422,
+          -128.1,
+          0.10683216857956568
+        ],
+        [
+          147.23768331893302,
+          128.1,
+          219.0
+        ]
+      ],
+      "sha256": "352bc3b47357048783d687ef8c4f2abed9e64d3392c8f664f78eab75cb845f0b",
+      "glb_sha256": "bcdadfafe3363415888aab76214313b3cc8c6e2db9bdb73bc651e88267b3f555"
+    },
+    {
+      "state": "carapace_molt",
+      "lod": 1,
+      "triangles": 1448,
+      "bounds_cm": [
+        [
+          -148.38246783503422,
+          -113.53129556590814,
+          0.10683216857956568
+        ],
+        [
+          147.23768331893302,
+          111.63714961221052,
+          219.0
+        ]
+      ],
+      "sha256": "0c87deb699f58eefd9b3f558662f9c213ac8fec368b735312e3bc07cf571f7ea",
+      "glb_sha256": "7401727ed3219007be6c00a240698cfbb0179f1d941ec2a304492cdad9c3227a"
+    },
+    {
+      "state": "striker_molt",
+      "lod": 0,
+      "triangles": 4280,
+      "bounds_cm": [
+        [
+          -148.38246783503422,
+          -128.1,
+          0.10683216857956568
+        ],
+        [
+          147.23768331893302,
+          128.1,
+          205.27339474080367
+        ]
+      ],
+      "sha256": "083fb6599dc7d2cb90c2d64242399672cc4887945918b64e200fa3cb666dd5cd",
+      "glb_sha256": "299c320ca90f309730879593306a1d105f17015131143ed5c996185f182e15c6"
+    },
+    {
+      "state": "striker_molt",
+      "lod": 1,
+      "triangles": 1400,
+      "bounds_cm": [
+        [
+          -148.38246783503422,
+          -113.53129556590814,
+          0.10683216857956568
+        ],
+        [
+          147.23768331893302,
+          111.63714961221052,
+          205.34722695159704
+        ]
+      ],
+      "sha256": "4300c222bd8ae8bf0950eb1dd1e18487412845e9ff4a7e0f4f70eee9c63311ea",
+      "glb_sha256": "7310871997ca69fc10762a8cc2504babea8452967422338852946e00e2b8b9f5"
+    }
+  ],
+  "uv": {
+    "size": 2048,
+    "density_px_per_cm": 1.1018,
+    "gutter_px": 2,
+    "used_fraction": 0.6588,
+    "charts": 5686
+  },
+  "verification": {
+    "structural_tests": 7,
+    "result": "PASS",
+    "sampled_mesh_poses": 2910,
+    "blender_import": "one skinned mesh, 22 bones, five sockets, five actions; baseline only",
+    "unreal_import": "NOT_RUN_FOR_NEW_GEOMETRY",
+    "art_gate": "NOT_PASSED",
+    "gameplay_gate": "NOT_RUN",
+    "technical_gate": "NOT_PASSED"
+  },
+  "open_findings": [
+    "Caster reads as beak rather than shoulder-embedded weapon",
+    "Distal limbs remain stilt-like",
+    "Mantle plate size hierarchy remains too uniform",
+    "Baked roughness below 0.85 charcoal floor; only preview shader clamps it",
+    "LODs have different lateral bounds; transition readability not evaluated",
+    "Full production animation set, physics, team/molt rendering, VFX, Unreal and game integration pending"
+  ],
+  "source_hashes": {
+    "build_fidelity_pilot.py": "ab3105a640ab49cd700b540f363a2237b700c5725f50a3b6b273a3e057bf7520",
+    "fidelity_geometry.py": "9508051181a832fbf3a96186d6120e63fafd13799b32452027c2a54174339293",
+    "fidelity_motion.py": "eb166fa78142e0e666b0a377de5b3660c9d5c2ceefb26de095e25a3d5d8e8b92",
+    "package_fidelity_blend.py": "96a145123474dbe406d054f998ad4f86108c318ce702755760a4493fdff2cf94",
+    "render_fidelity_pilot.py": "d0f69e35d7d0addcbeb57f4a36a8840237959071fee7cd499f4e62e16ab60904",
+    "test_fidelity_pilot.py": "908e4c8dfb1ead00c6df66e5d96dd160b387f186e65cff0a779ebbdb5e0965a4"
+  },
+  "concept_sha256": "26b9095a837ed3a100b784f3846cddebd222a95a2d6c9e6c93e13277f1ac0a6b",
+  "source_commit": "d509fa8"
+}

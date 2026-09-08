@@ -394,3 +394,90 @@ card says 14, the selected concept is four-legged, and the owner has selected th
    prerequisite, and three verifications remain after it: the channel present in the export, surviving
    the import into vertex colours, and read by a molt-phase material with visibly distinct phases. A
    test asserts the mapping exists and that `verified` is false, so this cannot quietly become "done".
+
+
+## Fidelity production pilot — 2026-09-08
+
+**Author and owner:** Angelis Pseftis. Status: **GEOMETRY PILOT; NOT PRODUCTION OR ACCEPTED**.
+
+The owner handed off all 21 packages for production, starting with Riftstalker. The source work is
+isolated in `Worktrees/art-concept-fidelity-production` at base `dbe4ddb`; the previous art worktree's
+three dirty files and original blockout exports remain unchanged. The existing master requirements,
+creative canon and owner decisions still govern. This section is the current pilot record, edited in
+place; historical blockout and detail-pass receipts above retain their original scope.
+
+The selected `riftstalker-review/riftstalker-candidate.png` was visually compared with the previous
+in-Unreal chamfered-box render. The dominant problem was the silhouette and construction of the forms,
+not unused triangle budget. `fidelity_geometry.py` now authors closed faceted tapered plates,
+wrapped side armor, joint covers and tapered limb cores. `build_fidelity_pilot.py` preserves component
+identities, the 22 selected bone names, five socket names and separate adaptation channels in six
+candidate GLB/OBJ exports (three states, two LODs). These exports do not replace the prior deliverables.
+
+The pilot changes knee rest height from 152 to 112 cm to remove the nearly horizontal upper limbs;
+it retains the bone hierarchy but is not animation-compatible merely because names match.
+`fidelity_motion.py` therefore supplies five experimental clips using explicit ankle targets.
+The first solver used the wrong pitch sign and failed floor checks; its failed measurements remain in
+the evidence folder. The correction uses the mesh kit's actual positive-pitch convention. Sidestep and
+the remaining production actions are pending; no placeholder clip claims their behavior is implemented.
+The original clips remain with the original blockout.
+
+The shell ordering is explicitly corrected in the pilot: shell_01 is at the tail, shell_05 at the nose.
+Higher R starts earlier, so their R values now rise from 0.30 at the tail to 0.60 at the nose. G/B
+remain adaptation membership, alpha stays 1.0, and team identification stays in a separate texture band.
+Shape variation is seeded per plate identity and dimensions so inserting a molt plate cannot change
+unrelated limbs through random-stream advancement. A fresh UV atlas binds all six geometry variants;
+old textures and old Unreal round-trip receipts do not validate these new outputs.
+
+Evidence is retained at `BuildArtifacts/Evidence/riftstalker-fidelity-20260908/` in the enclosing workspace.
+Iterations 01–05 retain failed or superseded comparisons; iteration06 contains the current six source exports and fresh atlas bake.
+Blender renders use baked atlas maps, a preview-only roughness floor of 0.85, DirectX-to-Blender normal conversion, and controlled CPU rendering. They are actual renders of
+modeled geometry, not generated concept pictures, and are not Unreal or packaged-game evidence.
+
+The pilot still needs source-to-Unreal verification, material/texture qualification, full motion and
+transitions, LOD readability, physics/VFX, gameplay binding, formal gates and owner review. The rig
+amendment remains distinct from these visual studies. No other asset is promoted on the strength of
+this pilot and this method is not yet approved for scaling across the other twenty packages.
+
+
+### Pilot receipt and visual disposition
+
+The seven checks in `test_fidelity_pilot.py` passed, including 2,910 sampled mesh poses across
+three states, two LODs and five experimental clips. Repeat exports are byte-identical. Baseline
+LOD0/LOD1 are 4,216/1,368 triangles; Carapace 4,376/1,448; Striker 4,280/1,400. These counts
+meet the card ceilings but do not establish adequate modeling. The baseline Blender import has one
+skinned mesh, 22 bones, five exact socket objects and five named actions. Its importer-created
+Icosphere is a bone display helper, not a second skinned asset.
+
+`fidelity-pilot-receipt.json` records source/concept/generated hashes and bounded test results.
+`iteration06/Riftstalker_fidelity_editable.blend` is an editable rigged pilot with packed preview
+maps. The six GLBs carry skinning, animations, UVs and vertex channels; their texture maps are separate.
+The static `baseline_lod0_review.blend` is a render scene, not the editable rig package.
+
+**Art gate not passed; do not scale this recipe to the remaining twenty assets.** The current
+plate generator improves the shoulder crown but does not finish the concept: the caster still reads
+as a beak, distal legs remain too straight, and similarly sized shingles obscure the hierarchy of
+large mantle shields and subordinate fracture plates. The next modeling operation must explicitly
+resolve those three forms before adding surface detail. A read-only independent visual review
+reached the same disposition. None of the other twenty packages was promoted or modified.
+
+The fresh 2,048 atlas has 5,686 charts, 1.1018 px/cm density and 2 px gutters. The baker reports
+2.0911% emissive painted polygon area over the combined atlas; this is not separate per-state
+surface-area qualification. The pre-existing baker's mineral roughness recipe is below the supplied
+0.85 charcoal floor. The preview clamps roughness; the texture files remain nonconforming. The
+albedo-only diagnostic establishes correct base-color UV mapping, not final shaded appearance.
+Full material, LOD, motion and engine acceptance remain open. No new Unreal import or game capture
+was performed, and old engine receipts cannot validate this changed geometry or rest pose.
+
+Reproduce from this worktree using a new evidence output directory:
+
+```sh
+python3 -B ArtSource/EBS-KHA-UNT-002/build_fidelity_pilot.py --out "$EBS_PILOT_OUT"
+python3 -B ArtSource/EBS-KHA-UNT-002/test_fidelity_pilot.py
+```
+
+Bake with the existing `ArtSource/tools/ebs_texbake.py` CLI against that output's
+`bake-manifest.json`, then run Blender in background CPU mode with `render_fidelity_pilot.py --
+<output-directory> baseline_lod0`. `package_fidelity_blend.py -- <output-directory>` packages the
+baseline rig with those review materials. These commands create pilot artifacts only; they do not
+write production Unreal assets. The reconciliation audit found **eleven** provisional cards in the
+current source bundle, not the handoff's ten; no normative card or lifecycle status was changed here.
