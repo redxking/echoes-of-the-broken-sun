@@ -2927,3 +2927,15 @@ Retain actual screenshots and event receipts, fix any reproducible game defect, 
 against a new source receipt only if code changes. The See Loop capture path works, but Gemini still needs
 a valid locally configured API key; no key value is stored in the evidence. P3 curriculum/mastery awards,
 P4 packaged journey/owner play and P7 distribution remain their own packages.
+
+
+### 2026-09-08 — isolated art branch Riftstalker rig reconciliation
+
+Author: Angelis Pseftis. The owner-selected 22-bone quadruped rig is recorded in
+`REL-ART-005.KA.RIFTSTALKER.ANIM_RIG` on `art/concept-fidelity-production`.
+Authority is the owner’s art-production handoff in Art Chat: “the owner selected the
+22-bone rig.” Only the bone count and chassis description change; required socket
+names, movement, accessibility, budgets and gameplay behavior are unchanged.
+This does not amend main, integrate an asset, waive any gate, or mark a requirement
+COMPLETE. Rendered art fidelity, full animation behavior and final technical
+qualification remain subject to their own evidence and owner acceptance.
