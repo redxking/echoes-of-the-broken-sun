@@ -23,7 +23,7 @@ def build(kit, cfg, lod, state):
     def norm(a):
         n=math.sqrt(sum(x*x for x in a));return mul(a,1/n)
 
-    def plate(center, length, width, rise, component, u=(1,0,0), v=(0,1,0), slot=rock):
+    def plate(center, length, width, rise, component, u=(1,0,0), v=(0,1,0), slot=rock, transverse_count=5):
         """Closed asymmetric lanceolate plate with broad planar facets and a sharp lip."""
         rng=random.Random(hashlib.sha256(repr((component,center,length,width,rise,u,v)).encode()).digest())
         u,v=norm(u),norm(v); n=norm(cross(u,v))
@@ -33,6 +33,10 @@ def build(kit, cfg, lod, state):
         transverse=[-1,-.48,0,.51,1]
         if not fine or slot == ember:
             stations=[stations[0],stations[2],stations[-1]];transverse=[-1,0,1]
+        elif transverse_count == 3:
+            # Large shields retain their long swept silhouette but leave the
+            # triangle budget for actual overlapping mineral scales.
+            transverse=[-1,0,1]
         grid=[]
         for j,(x,w,h) in enumerate(stations):
             row=[]
@@ -64,6 +68,29 @@ def build(kit, cfg, lod, state):
             faces.extend([[p,lower[i],lower[j],boundary[j]],[lower[j],lower[i],bottom]])
         m.add_convex_solid(faces,slot,component)
 
+    def scale(center, length, width, rise, component, u=(1,0,0), v=(0,1,0)):
+        """A low-poly, closed, asymmetric mineral scale seated into its host.
+
+        Six broad broken edges and one displaced ridge are intentional: each
+        scale reads as a chipped slab, rather than a smooth leaf or a pebble.
+        The closed lower volume makes its overlap cast a real shadow.
+        """
+        u,v=norm(u),norm(v); n=norm(cross(u,v))
+        outline=[(-.52,.05),(-.31,.62),(.10,.50),(.55,.04),(.29,-.38),(-.13,-.60)]
+        top=[add(center,add(mul(u,a*length),mul(v,b*width))) for a,b in outline]
+        ridge=add(add(center,mul(u,.035*length)),mul(n,rise))
+        rim=min(3.2,max(2.1,rise*.28))
+        root=min(3.8,max(2.6,rise*.38))
+        lower=[add(p,mul(n,-rim)) for p in top]
+        bottom=add(center,mul(n,-root))
+        faces=[]
+        for i,p in enumerate(top):
+            j=(i+1)%len(top)
+            faces.append([ridge,p,top[j]])
+            faces.append([p,lower[i],lower[j],top[j]])
+            faces.append([lower[j],lower[i],bottom])
+        m.add_convex_solid(faces,rock,component)
+
     def segment(p0,p1,radii,component):
         """Tapered angular limb with a bulged muscle/root and narrow mineral tendon."""
         axis=norm(sub(p1,p0)); ref=(0,0,1) if abs(axis[2])<.93 else (0,1,0)
@@ -84,24 +111,37 @@ def build(kit, cfg, lod, state):
     for i,(x,z,length,width) in enumerate(profiles):
         broad=width*(1.0 if not heavy else 1.16)
         comp=f'shell_{i+1:02d}'
-        plate((x,0,z),length,broad,16,comp,u=(1,0,-.035))
+        plate((x,0,z),length,broad,16,comp,u=(1,0,-.035),transverse_count=3)
         for side in (-1,1):
             plate((x+4,side*broad*.28,z-8),length*.90,broad*.63,11,comp,
-                  u=(1,side*.19,-.30),v=(0,1,-side*.88))
+                  u=(1,side*.19,-.30),v=(0,1,-side*.88),transverse_count=3)
             plate((x+13,side*broad*.26,z-3),length*.43,.85,.3,
                   f"seam_{i+1:02d}_{'l' if side<0 else 'r'}",u=(1,side*.12,-.2),slot=ember)
         if heavy:
             plate((x-8,0,z+12),length*.90,broad*.88,15,f'molt_plate_{i+1:02d}')
 
-    # Four asymmetric, attached relief scales break the broad mantle planes.
-    # They replace the previous uniform side spikes and sit into their parent
-    # shields, so they read as fractured layers instead of floating armour.
+    # The mantle's secondary forms are a deliberate shingle hierarchy: two
+    # swept side scales per primary shield, then a broken crown over the three
+    # largest plates.  They overlap their hosts by 2--4 cm, never float.
     if fine:
-        for index,dx,dy,scale,lean in ((0,-13,-8,.36,-.10), (1,12,9,.42,.08),
-                                       (2,-18,6,.34,-.13), (3,19,-10,.31,.11)):
+        for index,(x,z,length,width) in enumerate(profiles):
+            for side in (-1,1):
+                scale((x+length*.015,side*width*.15,z+13.5),length*.43,width*.29,6.0,
+                      f'shell_{index+1:02d}',u=(1,side*.11,-.11),v=(0,1,side*.18))
+        for index,dx,dy,extent,lean in ((1,-20,-8,.34,-.14), (1,17,11,.30,.11),
+                                        (2,-14,9,.39,-.10), (2,22,-7,.31,.14),
+                                        (3,-12,5,.34,-.08), (3,20,-9,.27,.12),
+                                        (2,3,-2,.25,.03), (1,5,2,.23,-.04)):
             x,z,length,width=profiles[index]
-            plate((x+dx,dy,z+15),length*scale,width*(.30+scale*.10),5.5,
-                  f'shell_{index+1:02d}',u=(1,lean,-.08),v=(0,1,lean*.45))
+            scale((x+dx,dy,z+14.72),length*extent,width*(.22+extent*.12),5.8,
+                  f'shell_{index+1:02d}',u=(1,lean,-.13),v=(0,1,lean*.22))
+    else:
+        # Six large scales preserve the layered read at RTS LOD1 without
+        # spending triangles on the close-up crown.
+        for index,side in ((0,-1),(1,-1),(1,1),(2,-1),(2,1),(4,1)):
+            x,z,length,width=profiles[index]
+            scale((x+length*.02,side*width*.13,z+13),length*.40,width*.27,5.5,
+                  f'shell_{index+1:02d}',u=(1,side*.10,-.10),v=(0,1,side*.16))
 
     # The keel is tapered and segmented, exposed only between the large shell shields.
     segment((-119,0,145),(76,0,136),[(0,16),(.30,35),(.72,30),(1,13)],'underbody')
