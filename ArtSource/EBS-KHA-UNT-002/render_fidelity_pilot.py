@@ -9,7 +9,7 @@ def material(name,color,rough=.85,emission=False):
     p=m.node_tree.nodes.get('Principled BSDF');p.inputs['Base Color'].default_value=(*color,1);p.inputs['Roughness'].default_value=rough
     if emission:p.inputs['Emission Color'].default_value=(*color,1);p.inputs['Emission Strength'].default_value=.6
     return m
-stone=material('Charcoal faceted mineral - review material',(.048,.043,.038))
+stone=material('Charcoal faceted mineral - review material',(.040,.042,.045))
 amber=material('Amber seam - review material',(.40,.18,.035),emission=True)
 mesh=bpy.data.meshes.new('Riftstalker fidelity source');mesh.from_pydata([tuple(c/100 for c in v) for v in d['vertices']],[],[f['vertices'] for f in d['faces']]);mesh.update()
 obj=bpy.data.objects.new('Riftstalker',mesh);bpy.context.collection.objects.link(obj)
@@ -32,8 +32,7 @@ if textured:
         base=tex('BaseColor',True);links.new(base.outputs['Color'],p.inputs['Base Color'])
         mre=tex('MRE',False);split=nodes.new('ShaderNodeSeparateColor');links.new(mre.outputs['Color'],split.inputs['Color'])
         links.new(split.outputs['Red'],p.inputs['Metallic'])
-        floor=nodes.new('ShaderNodeMath');floor.operation='MAXIMUM';floor.inputs[1].default_value=.85
-        links.new(split.outputs['Green'],floor.inputs[0]);links.new(floor.outputs[0],p.inputs['Roughness'])
+        links.new(split.outputs['Green'],p.inputs['Roughness'])
         p.inputs['Emission Color'].default_value=(.50,.22,.06,1);links.new(split.outputs['Blue'],p.inputs['Emission Strength'])
         normal=tex('Normal',False);nm=nodes.new('ShaderNodeNormalMap');nm.inputs['Strength'].default_value=.5
         # Source normal map is DirectX; Blender tangent normals require the opposite green sign.
@@ -55,6 +54,9 @@ s=bpy.context.scene;s.camera=cam;s.render.engine='CYCLES';s.cycles.device='CPU';
 s.render.threads_mode='FIXED';s.render.threads=4;s.render.resolution_x=1200;s.render.resolution_y=900;s.render.resolution_percentage=100
 s.world.color=(.12,.12,.12);s.view_settings.view_transform='AgX';s.render.image_settings.file_format='PNG'
 s['author']='Angelis Pseftis';s['creator']='Angelis Pseftis';s['evidence']='Blender offline review only; not production accepted'
+if '--tactical' in args:
+    cam.location=(7,-9,12);aim(cam,(0,0,.8));cam.data.ortho_scale=16
+    state=state+'_tactical'
 if textured: bpy.ops.file.pack_all()
 if '--albedo' in args:
     s.view_settings.view_transform='Standard'
@@ -65,4 +67,5 @@ if '--albedo' in args:
         links.new(em.outputs[0],nodes.get('Material Output').inputs['Surface'])
     state=state+'_albedo'
 s.render.filepath=str(root/(state+'_threequarter.png'));bpy.ops.wm.save_as_mainfile(filepath=str(root/(state+'_review.blend')));bpy.ops.render.render(write_still=True)
-cam.location=(0,-7,2.4);aim(cam,(0,0,1.05));s.render.filepath=str(root/(state+'_side.png'));bpy.ops.render.render(write_still=True)
+if '--tactical' not in args:
+    cam.location=(0,-7,2.4);aim(cam,(0,0,1.05));s.render.filepath=str(root/(state+'_side.png'));bpy.ops.render.render(write_still=True)

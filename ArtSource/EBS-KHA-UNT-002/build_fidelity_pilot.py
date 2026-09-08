@@ -5,9 +5,13 @@ import fidelity_geometry
 import fidelity_motion
 
 # Trial rest joints; the previous blockout and its exports remain unchanged.
-base.KNEE_Z = 112.0
-base.BONES = [(n,p,(h[0],h[1],112.0) if n.endswith('_lower') else h,why) for n,p,h,why in base.BONES]
-REVISION='ebs-riftstalker-fidelity-pilot-v1'
+# Folded directional knees are authored rest joints, not skin-only decoration.
+base.KNEE_Z = 97.0
+base.BONES = [(n,p, ((4. if n.startswith('f') else -106.),
+                    (-82. if n.startswith(('fl','rl')) else 82.),
+                    (97. if n.startswith('f') else 106.)) if n.endswith('_lower') else h,why)
+              for n,p,h,why in base.BONES]
+REVISION='ebs-riftstalker-fidelity-pilot-v2'
 
 def assemble(lod,state):
     m=fidelity_geometry.build(base.kit,base,lod,state)

@@ -25,7 +25,7 @@ report={'author':'Angelis Pseftis','status':'EDITABLE_PILOT_NOT_PRODUCTION',
  'sockets':socket_names,'actions':sorted(a.name for a in bpy.data.actions),
  'uv_layers':[u.name for u in m.data.uv_layers],
  'color_attributes':[a.name for a in m.data.color_attributes],
- 'limits':'Preview material clamps roughness to 0.85; baked maps remain unqualified. No Unreal evidence. Molt/team shaders not bound in Blender.'}
+ 'limits':'Preview uses baked MRE roughness directly; no shader clamp. No Unreal evidence. Molt/team shaders not bound in Blender.'}
 bpy.context.scene['author']='Angelis Pseftis';bpy.context.scene['creator']='Angelis Pseftis'
 bpy.context.scene['status']=report['status']
 bpy.ops.file.pack_all()
