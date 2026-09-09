@@ -54,10 +54,13 @@ class BuildIdentityTests(unittest.TestCase):
         protocol_match = re.search(r"kProtocolVersion\s*=\s*(\d+)\s*;", protocol_header)
         self.assertIsNotNone(protocol_match)
         protocol_version = protocol_match.group(1)
+        view_match = re.search(r"kPlayerViewSchemaVersion\s*=\s*(\d+)\s*;", protocol_header)
+        self.assertIsNotNone(view_match)
+        view_version = view_match.group(1)
         self.assertEqual(
             material,
             f"EchoesOfTheBrokenSun:{project_version}:protocol-{protocol_version}:"
-            f"snapshot-{snapshot_version}:view-2",
+            f"snapshot-{snapshot_version}:view-{view_version}",
         )
 
         digest_match = re.search(

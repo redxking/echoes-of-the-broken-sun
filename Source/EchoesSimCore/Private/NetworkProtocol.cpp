@@ -23,7 +23,7 @@ constexpr std::size_t kCommandIntentBytes =
 constexpr std::size_t kCommandBatchMinimumBytes =
     kHeaderBytes + sizeof(std::uint64_t) + 2 * sizeof(std::uint16_t) +
     kIntegrityBytes;
-constexpr std::size_t kScopedEntityBytes = 52;
+constexpr std::size_t kScopedEntityBytes = 69;
 constexpr std::size_t kScopedKeyframeMinimumBytes = 90;
 constexpr std::size_t kScopedTileChangeBytes = 5;
 constexpr std::size_t kScopedDeltaMinimumBytes = 102;
@@ -324,6 +324,23 @@ void WriteCommandIntent(Writer& writer, const CommandIntent& intent) {
 
 [[nodiscard]] bool IsValidScopedOwner(PlayerId player) {
     return IsValidScopedPlayer(player) || player == kNeutralPlayer;
+}
+
+[[nodiscard]] bool IsValidScopedBulwarkState(const ScopedEntityState& entity, Tick tick) {
+    const auto x = entity.deploymentFacing.x.Raw();
+    const auto y = entity.deploymentFacing.y.Raw();
+    if (!((x == 0 && (y == kFixedScale || y == -kFixedScale)) ||
+          (y == 0 && (x == kFixedScale || x == -kFixedScale)))) return false;
+    if (entity.deploymentPhase == BulwarkDeploymentPhase::None)
+        return entity.deploymentTransitionUntilTick == 0;
+    if (entity.deploymentPhase != BulwarkDeploymentPhase::Deploying &&
+        entity.deploymentPhase != BulwarkDeploymentPhase::Packing) return false;
+    const auto duration = entity.deploymentPhase == BulwarkDeploymentPhase::Deploying
+        ? kBulwarkDeployTicks : kBulwarkPackTicks;
+    return entity.faction == Faction::MeridianCompact && entity.type == EntityType::HeavyUnit &&
+        entity.completed && entity.deploymentTransitionUntilTick > tick &&
+        entity.deploymentTransitionUntilTick - tick <= duration &&
+        entity.deployed == (entity.deploymentPhase == BulwarkDeploymentPhase::Packing);
 }
 
 [[nodiscard]] bool IsValidScopedChoirState(const ScopedEntityState& entity,
@@ -797,7 +814,10 @@ bool BuildScopedViewKeyframe(const PlayerView& view,
              entity.choirIdentityState,
              entity.choirIdentityResolveAtTick,
              entity.choirIdentityNextAvailableTick,
-             entity.choirCoherenceNextChargeTick});
+             entity.choirCoherenceNextChargeTick,
+             entity.deploymentFacing,
+             entity.deploymentPhase,
+             entity.deploymentTransitionUntilTick});
     }
     std::sort(
         built.entities.begin(), built.entities.end(),
@@ -888,7 +908,8 @@ std::vector<std::uint8_t> EncodeScopedViewKeyframe(
                 static_cast<std::uint8_t>(entity.waystoneMode)) ||
             !IsValidWarformAdaptationEncoding(
                 static_cast<std::uint8_t>(entity.warformAdaptation)) ||
-            !IsValidScopedChoirState(entity, keyframe.simulationTick)) {
+            !IsValidScopedChoirState(entity, keyframe.simulationTick) ||
+            !IsValidScopedBulwarkState(entity, keyframe.simulationTick)) {
             return {};
         }
         priorEntity = entity.id;
@@ -910,6 +931,10 @@ std::vector<std::uint8_t> EncodeScopedViewKeyframe(
         writer.U64(entity.choirIdentityResolveAtTick);
         writer.U64(entity.choirIdentityNextAvailableTick);
         writer.U64(entity.choirCoherenceNextChargeTick);
+        writer.I32(entity.deploymentFacing.x.Raw());
+        writer.I32(entity.deploymentFacing.y.Raw());
+        writer.U8(static_cast<std::uint8_t>(entity.deploymentPhase));
+        writer.U64(entity.deploymentTransitionUntilTick);
     }
     Vec2 priorSignature = Vec2::FromRaw(-1, -1);
     for (const VibrationSignature& signature :
@@ -1026,6 +1051,8 @@ DecodeStatus DecodeScopedViewKeyframe(std::span<const std::uint8_t> bytes,
         std::uint8_t waystoneMode = 0;
         std::uint8_t adaptation = 0;
         std::uint8_t choirIdentity = 0;
+        std::uint8_t deploymentPhase = 0;
+        std::int32_t facingX = 0, facingY = 0;
         std::int32_t positionX = 0;
         std::int32_t positionY = 0;
         if (!reader.U32(entity.id) || !reader.U8(entity.owner) ||
@@ -1037,7 +1064,9 @@ DecodeStatus DecodeScopedViewKeyframe(std::span<const std::uint8_t> bytes,
             !reader.U8(adaptation) || !reader.U8(choirIdentity) ||
             !reader.U64(entity.choirIdentityResolveAtTick) ||
             !reader.U64(entity.choirIdentityNextAvailableTick) ||
-            !reader.U64(entity.choirCoherenceNextChargeTick) || entity.id == 0 ||
+            !reader.U64(entity.choirCoherenceNextChargeTick) ||
+            !reader.I32(facingX) || !reader.I32(facingY) ||
+            !reader.U8(deploymentPhase) || !reader.U64(entity.deploymentTransitionUntilTick) || entity.id == 0 ||
             entity.id <= priorEntity || !IsValidScopedOwner(entity.owner) ||
             !IsValidFactionEncoding(factionValue) ||
             !IsValidEntityTypeEncoding(type) || (flags & 0xf8U) != 0 ||
@@ -1055,6 +1084,8 @@ DecodeStatus DecodeScopedViewKeyframe(std::span<const std::uint8_t> bytes,
         entity.position = Vec2::FromRaw(positionX, positionY);
         entity.completed = (flags & 0x01U) != 0;
         entity.deployed = (flags & 0x02U) != 0;
+        entity.deploymentFacing = Vec2::FromRaw(facingX, facingY);
+        entity.deploymentPhase = static_cast<BulwarkDeploymentPhase>(deploymentPhase);
         entity.aegisPowered = (flags & 0x04U) != 0;
         entity.wellChoice = static_cast<FutureWellChoice>(wellChoice);
         entity.waystoneMode = static_cast<WaystoneMode>(waystoneMode);
@@ -1062,7 +1093,8 @@ DecodeStatus DecodeScopedViewKeyframe(std::span<const std::uint8_t> bytes,
             static_cast<WarformAdaptation>(adaptation);
         entity.choirIdentityState =
             static_cast<ChoirIdentityState>(choirIdentity);
-        if (!IsValidScopedChoirState(entity, decoded.simulationTick)) {
+        if (!IsValidScopedChoirState(entity, decoded.simulationTick) ||
+            !IsValidScopedBulwarkState(entity, decoded.simulationTick)) {
             return DecodeStatus::InvalidEncoding;
         }
         decoded.entities.push_back(entity);
@@ -1267,7 +1299,8 @@ std::vector<std::uint8_t> EncodeScopedViewDelta(
                 static_cast<std::uint8_t>(entity.waystoneMode)) ||
             !IsValidWarformAdaptationEncoding(
                 static_cast<std::uint8_t>(entity.warformAdaptation)) ||
-            !IsValidScopedChoirState(entity, delta.simulationTick)) {
+            !IsValidScopedChoirState(entity, delta.simulationTick) ||
+            !IsValidScopedBulwarkState(entity, delta.simulationTick)) {
             return {};
         }
         priorEntity = entity.id;
@@ -1289,6 +1322,10 @@ std::vector<std::uint8_t> EncodeScopedViewDelta(
         writer.U64(entity.choirIdentityResolveAtTick);
         writer.U64(entity.choirIdentityNextAvailableTick);
         writer.U64(entity.choirCoherenceNextChargeTick);
+        writer.I32(entity.deploymentFacing.x.Raw());
+        writer.I32(entity.deploymentFacing.y.Raw());
+        writer.U8(static_cast<std::uint8_t>(entity.deploymentPhase));
+        writer.U64(entity.deploymentTransitionUntilTick);
     }
 
     EntityId priorRemoved = 0;
@@ -1446,6 +1483,8 @@ DecodeStatus DecodeScopedViewDelta(std::span<const std::uint8_t> bytes,
         std::uint8_t waystoneMode = 0;
         std::uint8_t adaptation = 0;
         std::uint8_t choirIdentity = 0;
+        std::uint8_t deploymentPhase = 0;
+        std::int32_t facingX = 0, facingY = 0;
         std::int32_t positionX = 0;
         std::int32_t positionY = 0;
         if (!reader.U32(entity.id) || !reader.U8(entity.owner) ||
@@ -1457,7 +1496,9 @@ DecodeStatus DecodeScopedViewDelta(std::span<const std::uint8_t> bytes,
             !reader.U8(adaptation) || !reader.U8(choirIdentity) ||
             !reader.U64(entity.choirIdentityResolveAtTick) ||
             !reader.U64(entity.choirIdentityNextAvailableTick) ||
-            !reader.U64(entity.choirCoherenceNextChargeTick) || entity.id == 0 ||
+            !reader.U64(entity.choirCoherenceNextChargeTick) ||
+            !reader.I32(facingX) || !reader.I32(facingY) ||
+            !reader.U8(deploymentPhase) || !reader.U64(entity.deploymentTransitionUntilTick) || entity.id == 0 ||
             entity.id <= priorEntity || !IsValidScopedOwner(entity.owner) ||
             !IsValidFactionEncoding(factionValue) ||
             !IsValidEntityTypeEncoding(type) || (flags & 0xf8U) != 0 ||
@@ -1475,6 +1516,8 @@ DecodeStatus DecodeScopedViewDelta(std::span<const std::uint8_t> bytes,
         entity.position = Vec2::FromRaw(positionX, positionY);
         entity.completed = (flags & 0x01U) != 0;
         entity.deployed = (flags & 0x02U) != 0;
+        entity.deploymentFacing = Vec2::FromRaw(facingX, facingY);
+        entity.deploymentPhase = static_cast<BulwarkDeploymentPhase>(deploymentPhase);
         entity.aegisPowered = (flags & 0x04U) != 0;
         entity.wellChoice = static_cast<FutureWellChoice>(wellChoice);
         entity.waystoneMode = static_cast<WaystoneMode>(waystoneMode);
@@ -1482,7 +1525,8 @@ DecodeStatus DecodeScopedViewDelta(std::span<const std::uint8_t> bytes,
             static_cast<WarformAdaptation>(adaptation);
         entity.choirIdentityState =
             static_cast<ChoirIdentityState>(choirIdentity);
-        if (!IsValidScopedChoirState(entity, decoded.simulationTick)) {
+        if (!IsValidScopedChoirState(entity, decoded.simulationTick) ||
+            !IsValidScopedBulwarkState(entity, decoded.simulationTick)) {
             return DecodeStatus::InvalidEncoding;
         }
         decoded.entityUpserts.push_back(entity);

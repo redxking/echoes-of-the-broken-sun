@@ -1,0 +1,31 @@
+{
+  "snapshot_version": 31,
+  "replay_version": 28,
+  "final_tick": 3,
+  "final_checksum": 11158670247431818854,
+  "build_tick1_checksum": 15184406205934481610,
+  "revived_site": 5,
+  "revived_health": 100,
+  "resurrection_tick2_checksum": 6147976594409906386,
+  "stale_created_site": 6,
+  "refunded_material": 1972,
+  "refunded_dawnshards": 500,
+  "final_material": 1862,
+  "final_dawnshards": 500,
+  "continued_tick4_checksum": 11730326658415312458,
+  "self_verified": true,
+  "author": "Angelis Pseftis",
+  "creator": "Angelis Pseftis",
+  "created": "2026-09-09T14:14:08.446644+00:00",
+  "provenance": "Compiled and executed against archived candidate36 source, not the repaired current writer",
+  "compiler": "clang++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -O0 -g",
+  "writer": "historical_schema31_assist_writer.cpp",
+  "writer_sha256": "561f865841bde13d12455e0f2f9980d1a06ee64866e2618a3bc7375f6b8cc0f6",
+  "baseline_sha256": "b74c21c721ab928fef57f81b7c0f590993959a7b383e5f01de401b71d17b5890",
+  "archived_source_sha256": {
+    "Source/EchoesSimCore/Private/NetworkProtocol.cpp": "6ca8ce519211266c57853f6fc6b5cdda22d879a44c79c2ab0ba430e57c8514f4",
+    "Source/EchoesSimCore/Private/Simulation.cpp": "a8221e9704c4accc50fb1d73984769ffb9cf4221f8314b15977b4031d5be7895",
+    "Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h": "dc1e5dfdf5b06628824eb25d71f7ae3980dbcf3c546aea55006f71213d73699c",
+    "Source/EchoesSimCore/Public/EchoesSimCore/NetworkProtocol.h": "90d24fab018ccfac0efdfd3092bd2006a403a2ddf268efd0cabfbd314dbc5171"
+  }
+}

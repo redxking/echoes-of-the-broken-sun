@@ -1,5 +1,8 @@
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimCore/NetworkProtocol.h"
+#include "../../Source/EchoesOfTheBrokenSun/Public/EchoesNetworkActionDispatch.h"
+#include "../../Source/EchoesOfTheBrokenSun/Public/EchoesNetworkSnapshotFlow.h"
+#include "../../Source/EchoesOfTheBrokenSun/Public/EchoesGameplayFeedback.h"
 
 #include <algorithm>
 #include <fstream>
@@ -364,6 +367,35 @@ std::size_t SnapshotSchema30AppendOffset(
             bytes, offset, rallyCount, kSerializedQueuedOrderBytes);
     }
     return offset;
+}
+
+std::vector<std::uint8_t> ConvertSnapshotV31ToV30(
+    const std::vector<std::uint8_t>& current, std::size_t mapTileCount) {
+    REQUIRE(ReadU32(current, 4) == 31);
+    const auto link = SnapshotSchema30AppendOffset(current, mapTileCount);
+    const auto count = ReadU32(current, link + 8U);
+    std::size_t offset = link + 12U;
+    for (std::uint32_t index = 0; index < count; ++index) {
+        REQUIRE(offset <= current.size() && current.size() - offset >= 38U);
+        offset = SerializedSpanEnd(current, offset + 38U, current[offset + 12U], 8U);
+    }
+    const auto append = offset;
+    REQUIRE(ReadU32(current, offset) == count);
+    offset += 4U;
+    for (std::uint32_t index = 0; index < count; ++index) {
+        REQUIRE(offset <= current.size() && current.size() - offset >= 13U);
+        // Downgrading an active commitment would silently erase its outcome.
+        REQUIRE(current[offset + 4U] == 0);
+        REQUIRE(ReadU64(current, offset + 5U) == 0);
+        offset += 13U;
+    }
+    REQUIRE(offset + 8U == current.size());
+    std::vector<std::uint8_t> prior(current.begin(), current.begin() + append);
+    prior.resize(prior.size() + 8U);
+    WriteU32(prior, 4, 30);
+    ResignSnapshot(prior);
+    REQUIRE(Simulation::LoadSnapshot(prior).has_value());
+    return prior;
 }
 
 std::vector<std::uint8_t> ConvertSnapshotV30ToV29(
@@ -2389,7 +2421,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
 
     const std::vector<std::uint8_t> v28 =
         ConvertSnapshotV29ToV28(
-            ConvertSnapshotV30ToV29(snapshot, kMapTiles), kMapTiles);
+            ConvertSnapshotV30ToV29(ConvertSnapshotV31ToV30(snapshot, kMapTiles), kMapTiles), kMapTiles);
     REQUIRE(Simulation::LoadSnapshot(v28, &error).has_value());
     const std::vector<std::uint8_t> v27 =
         ConvertSnapshotV28ToV27(v28, kMapTiles);
@@ -2848,6 +2880,174 @@ void TestCompleteRosterEntityTypesAndProduction() {
     REQUIRE(restored->StateChecksum() == simulation.StateChecksum());
 }
 
+void TestBulwarkDeploymentCommitmentTiming() {
+    Simulation simulation({24, 24, 20, 0x42554c5741524bULL});
+    AddTwoPlayers(simulation, {0, 0}, {0, 0});
+    const auto bulwark = simulation.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::HeavyUnit, Vec2::FromTiles(10, 10));
+    REQUIRE(bulwark != 0);
+    simulation.CaptureReplayBaseline();
+    auto deploy = MakeCommand(0, 0, 1, CommandType::ToggleDeploy, bulwark);
+    deploy.position = Vec2::FromTiles(12, 10);
+    REQUIRE(simulation.QueueCommand(deploy));
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(bulwark) != nullptr);
+    // REL-FAC-005: a request must not grant the completed shield instantly.
+    REQUIRE(!simulation.FindEntity(bulwark)->deployed);
+    simulation.Step(18);
+    REQUIRE(!simulation.FindEntity(bulwark)->deployed);
+    simulation.Step();
+    REQUIRE(simulation.FindEntity(bulwark)->deployed);
+    auto pack = MakeCommand(simulation.CurrentTick(), 0, 2,
+        CommandType::ToggleDeploy, bulwark);
+    REQUIRE(simulation.QueueCommand(pack));
+    simulation.Step(14);
+    REQUIRE(simulation.FindEntity(bulwark)->deployed);
+    simulation.Step();
+    REQUIRE(!simulation.FindEntity(bulwark)->deployed);
+    std::string error;
+    auto replayed = Simulation::ReplayToEnd(simulation.ExportReplay(), &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == simulation.StateChecksum());
+}
+
+void TestBulwarkFrontArcBoundary() {
+    // At forward=4, lateral=6 is inside 60 degrees; lateral=7 is outside.
+    // Mirror across both axes so cardinal facing cannot accidentally reverse cover.
+    for (int axis = 0; axis < 2; ++axis) {
+        for (int sign : {-1, 1}) {
+            for (int lateral : {-7, -6, 6, 7}) {
+                SimulationConfig config{40, 40, 20, 120};
+                auto& attackerRules = config.rules.archetypes[static_cast<size_t>(Faction::KharuunAssemblies)]
+                    [static_cast<size_t>(EntityType::Soldier)];
+                attackerRules.attackRangeRaw = 12 * kFixedScale;
+                attackerRules.visionTiles = 20;
+                attackerRules.attackDamage = 100;
+                Simulation simulation(config);
+                AddTwoPlayers(simulation, {0, 0}, {0, 0});
+                const auto vector = [axis](int x, int y) {
+                    return axis == 0 ? Vec2::FromTiles(x, y) : Vec2::FromTiles(y, x);
+                };
+                const auto shield = simulation.SpawnEntity(0, Faction::MeridianCompact,
+                    EntityType::HeavyUnit, vector(20, 20));
+                REQUIRE(shield != 0);
+                auto deploy = MakeCommand(0, 0, 1, CommandType::ToggleDeploy, shield);
+                deploy.position = vector(20 + sign, 20);
+                REQUIRE(simulation.QueueCommand(deploy));
+                simulation.Step(kBulwarkDeployTicks);
+                REQUIRE(simulation.FindEntity(shield)->deployed);
+                const auto target = simulation.SpawnEntity(0, Faction::MeridianCompact,
+                    EntityType::Soldier, vector(20 - sign, 20));
+                const auto attacker = simulation.SpawnEntity(1, Faction::KharuunAssemblies,
+                    EntityType::Soldier, vector(20 + sign * 4, 20 + lateral));
+                REQUIRE(target != 0 && attacker != 0);
+                const auto initialHealth = simulation.FindEntity(target)->hitPoints;
+                simulation.CaptureReplayBaseline();
+                auto attack = MakeCommand(simulation.CurrentTick(), 1, 1, CommandType::Attack, attacker);
+                attack.target = target;
+                REQUIRE(simulation.QueueCommand(attack));
+                simulation.Step();
+                REQUIRE(simulation.FindEntity(target) != nullptr);
+                const auto expectedDamage = (lateral == 6 || lateral == -6) ? 60 : 100;
+                REQUIRE(simulation.FindEntity(target)->hitPoints == initialHealth - expectedDamage);
+                std::string error;
+                REQUIRE(Simulation::ReplayToEnd(simulation.ExportReplay(), &error).has_value());
+            }
+        }
+    }
+}
+
+void TestBulwarkTransitionPersistenceAndWire() {
+    using namespace echoes::sim::net;
+    Simulation simulation({24, 24, 20, 29});
+    AddTwoPlayers(simulation, {0, 0}, {0, 0});
+    const auto id = simulation.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::HeavyUnit, Vec2::FromTiles(10, 10));
+    REQUIRE(id != 0);
+    simulation.CaptureReplayBaseline();
+    auto deploy = MakeCommand(0, 0, 1, CommandType::ToggleDeploy, id);
+    deploy.position = Vec2::FromTiles(10, 12);
+    REQUIRE(simulation.QueueCommand(deploy));
+    simulation.Step(7);
+    const auto snapshot = simulation.SaveSnapshot();
+    auto restored = Simulation::LoadSnapshot(snapshot);
+    REQUIRE(restored.has_value());
+    REQUIRE(restored->SaveSnapshot() == snapshot);
+    REQUIRE(restored->FindEntity(id)->deploymentPhase == BulwarkDeploymentPhase::Deploying);
+    REQUIRE(restored->FindEntity(id)->deploymentTransitionUntilTick == 20);
+    const auto view = simulation.CreatePlayerView(0);
+    REQUIRE(view.has_value());
+    ScopedViewKeyframe frame;
+    REQUIRE(BuildScopedViewKeyframe(*view, 1, 1, frame));
+    REQUIRE(frame.entities.size() == 1);
+    REQUIRE(frame.entities[0].deploymentFacing == Vec2::FromRaw(0, kFixedScale));
+    REQUIRE(frame.entities[0].deploymentPhase == BulwarkDeploymentPhase::Deploying);
+    REQUIRE(frame.entities[0].deploymentTransitionUntilTick == 20);
+    const auto encoded = EncodeScopedViewKeyframe(frame);
+    REQUIRE(!encoded.empty());
+    ScopedViewKeyframe decoded;
+    REQUIRE(DecodeScopedViewKeyframe(encoded, decoded) == DecodeStatus::Ok);
+    REQUIRE(decoded == frame);
+    auto invalidFrame = frame;
+    invalidFrame.entities[0].deploymentTransitionUntilTick = 0;
+    REQUIRE(EncodeScopedViewKeyframe(invalidFrame).empty());
+    invalidFrame = frame;
+    invalidFrame.entities[0].deploymentFacing = Vec2::FromRaw(1, 1);
+    REQUIRE(EncodeScopedViewKeyframe(invalidFrame).empty());
+
+    // Repeated requests cannot restart, accelerate or reverse a commitment.
+    auto repeated = deploy;
+    repeated.executeTick = simulation.CurrentTick(); repeated.sequence = 2;
+    REQUIRE(simulation.QueueCommand(repeated));
+    simulation.Step();
+    restored->Step();
+    REQUIRE(simulation.FindEntity(id)->deploymentTransitionUntilTick == 20);
+    REQUIRE(simulation.FindEntity(id)->deploymentPhase == BulwarkDeploymentPhase::Deploying);
+    simulation.Step(12); restored->Step(12);
+    REQUIRE(simulation.FindEntity(id)->deployed && restored->FindEntity(id)->deployed);
+    const auto completeView = simulation.CreatePlayerView(0);
+    REQUIRE(completeView.has_value());
+    ScopedViewKeyframe complete;
+    REQUIRE(BuildScopedViewKeyframe(*completeView, 2, 2, complete));
+    ScopedViewDelta delta;
+    REQUIRE(BuildScopedViewDelta(frame, complete, delta));
+    const auto deltaBytes = EncodeScopedViewDelta(delta);
+    REQUIRE(!deltaBytes.empty());
+    ScopedViewDelta decodedDelta;
+    REQUIRE(DecodeScopedViewDelta(deltaBytes, decodedDelta) == DecodeStatus::Ok);
+    REQUIRE(decodedDelta == delta);
+    REQUIRE(decodedDelta.entityUpserts.size() == 1);
+    REQUIRE(decodedDelta.entityUpserts[0].deployed);
+    REQUIRE(decodedDelta.entityUpserts[0].deploymentPhase == BulwarkDeploymentPhase::None);
+
+    // Schema31 tail: count then ordered id/phase/deadline. Invalid prerequisites
+    // must fail loading rather than creating an immortal or contradictory phase.
+    const auto append = snapshot.size() - 8U - 4U - 13U;
+    for (int mode = 0; mode < 5; ++mode) {
+        auto invalid = snapshot;
+        if (mode == 0) invalid[append + 8U] = 3; // unknown phase
+        if (mode == 1) WriteU64(invalid, append + 9U, 7); // already due
+        if (mode == 2) WriteU64(invalid, append + 9U, 1000); // impossible duration
+        if (mode == 3) invalid[append + 8U] = 2; // packing without deployed endpoint
+        if (mode == 4) WriteU32(invalid, append + 4U, id + 1); // wrong owner record
+        ResignSnapshot(invalid);
+        std::string error;
+        REQUIRE(!Simulation::LoadSnapshot(invalid, &error).has_value());
+        REQUIRE(!error.empty());
+    }
+    auto pack = MakeCommand(simulation.CurrentTick(), 0, 3, CommandType::ToggleDeploy, id);
+    REQUIRE(simulation.QueueCommand(pack));
+    simulation.Step(5);
+    auto packing = Simulation::LoadSnapshot(simulation.SaveSnapshot());
+    REQUIRE(packing.has_value());
+    REQUIRE(packing->FindEntity(id)->deploymentPhase == BulwarkDeploymentPhase::Packing);
+    packing->Step(10); simulation.Step(10);
+    REQUIRE(!packing->FindEntity(id)->deployed);
+    REQUIRE(packing->StateChecksum() == simulation.StateChecksum());
+    std::string error;
+    REQUIRE(Simulation::ReplayToEnd(simulation.ExportReplay(), &error).has_value());
+}
+
 void TestBulwarkDirectionalCoverDeployment() {
     Simulation simulation({24, 24, 20, 0x42554c5741524bULL});
     AddTwoPlayers(simulation, {0, 0}, {0, 0});
@@ -2856,6 +3056,12 @@ void TestBulwarkDirectionalCoverDeployment() {
         Faction::MeridianCompact,
         EntityType::HeavyUnit,
         Vec2::FromTiles(10, 10));
+    REQUIRE(bulwark != 0);
+    auto prepare = MakeCommand(0, 0, 1, CommandType::ToggleDeploy, bulwark);
+    prepare.position = Vec2::FromTiles(12, 10);
+    REQUIRE(simulation.QueueCommand(prepare));
+    simulation.Step(kBulwarkDeployTicks);
+    REQUIRE(simulation.FindEntity(bulwark)->deployed);
     const EntityId protectedLancer = simulation.SpawnEntity(
         0,
         Faction::MeridianCompact,
@@ -2870,13 +3076,9 @@ void TestBulwarkDirectionalCoverDeployment() {
     REQUIRE(bulwark != 0 && protectedLancer != 0 && attacker != 0);
     simulation.CaptureReplayBaseline();
 
-    Command deploy =
-        MakeCommand(0, 0, 1, CommandType::ToggleDeploy, bulwark);
-    deploy.position = Vec2::FromTiles(12, 10);
     Command attack =
-        MakeCommand(0, 1, 1, CommandType::Attack, attacker);
+        MakeCommand(simulation.CurrentTick(), 1, 1, CommandType::Attack, attacker);
     attack.target = protectedLancer;
-    REQUIRE(simulation.QueueCommand(deploy));
     REQUIRE(simulation.QueueCommand(attack));
     const std::int32_t healthBefore =
         simulation.FindEntity(protectedLancer)->hitPoints;
@@ -2936,10 +3138,11 @@ void TestBulwarkDirectionalCoverDeployment() {
     Command undeploy = MakeCommand(
         simulation.CurrentTick(), 0, 3, CommandType::ToggleDeploy, bulwark);
     REQUIRE(simulation.QueueCommand(undeploy));
+    simulation.Step(kBulwarkPackTicks);
+    REQUIRE(!simulation.FindEntity(bulwark)->deployed);
     const std::int32_t undeployedStartX =
         simulation.FindEntity(bulwark)->position.x.Raw();
     simulation.Step();
-    REQUIRE(!simulation.FindEntity(bulwark)->deployed);
     REQUIRE(simulation.FindEntity(bulwark)->position.x.Raw() - undeployedStartX ==
             baseMovement);
 
@@ -2953,6 +3156,12 @@ void TestBulwarkDirectionalCoverDeployment() {
     const EntityId flankBulwark = flank.SpawnEntity(
         0, Faction::MeridianCompact, EntityType::HeavyUnit,
         Vec2::FromTiles(10, 10));
+    REQUIRE(flankBulwark != 0);
+    Command faceEast = MakeCommand(0, 0, 1, CommandType::ToggleDeploy, flankBulwark);
+    faceEast.position = Vec2::FromTiles(12, 10);
+    REQUIRE(flank.QueueCommand(faceEast));
+    flank.Step(kBulwarkDeployTicks);
+    REQUIRE(flank.FindEntity(flankBulwark)->deployed);
     const EntityId flankLancer = flank.SpawnEntity(
         0, Faction::MeridianCompact, EntityType::Soldier,
         Vec2::FromRaw(9 * kFixedScale + kFixedScale / 2,
@@ -2961,13 +3170,9 @@ void TestBulwarkDirectionalCoverDeployment() {
         1, Faction::KharuunAssemblies, EntityType::Soldier,
         Vec2::FromRaw(9 * kFixedScale + kFixedScale / 2,
                       11 * kFixedScale));
-    Command faceEast =
-        MakeCommand(0, 0, 1, CommandType::ToggleDeploy, flankBulwark);
-    faceEast.position = Vec2::FromTiles(12, 10);
     Command flankAttack =
-        MakeCommand(0, 1, 1, CommandType::Attack, flankAttacker);
+        MakeCommand(flank.CurrentTick(), 1, 1, CommandType::Attack, flankAttacker);
     flankAttack.target = flankLancer;
-    REQUIRE(flank.QueueCommand(faceEast));
     REQUIRE(flank.QueueCommand(flankAttack));
     const std::int32_t flankHealth = flank.FindEntity(flankLancer)->hitPoints;
     flank.Step();
@@ -3036,6 +3241,7 @@ void TestRelaySupplyExtensionLifecycle() {
 
     const std::optional<PlayerView> opponentView = simulation.CreatePlayerView(1);
     REQUIRE(opponentView.has_value());
+    REQUIRE(opponentView->ConnectedRelayUnits().empty());
     const auto observedRelay = std::find_if(
         opponentView->Entities().begin(),
         opponentView->Entities().end(),
@@ -6281,6 +6487,48 @@ void TestSmartCastSingleUnitDispatch() {
     REQUIRE(caster3 == cFar);
 }
 
+void TestSmartCastRelaySupplyDispatch() {
+    Simulation sim(SimulationConfig{64, 64, 20, 0x52454C4159ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, {1000, 500}));
+    const auto core = sim.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::CommandCore, Vec2::FromTiles(10, 10));
+    const auto link = sim.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::Dropoff, Vec2::FromTiles(13, 12));
+    const auto first = sim.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::ScoutUnit, Vec2::FromTiles(12, 10));
+    const auto second = sim.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::ScoutUnit, Vec2::FromTiles(15, 10));
+    const auto isolated = sim.SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::ScoutUnit, Vec2::FromTiles(30, 30));
+    REQUIRE(core && link && first && second && isolated);
+    REQUIRE(sim.ValidateRelaySupply(0, first) == RelaySupplyResult::Valid);
+    REQUIRE(sim.ValidateRelaySupply(0, second) == RelaySupplyResult::Valid);
+    REQUIRE(sim.ValidateRelaySupply(0, isolated) == RelaySupplyResult::Disconnected);
+    const std::vector<EntityId> group{link, isolated, second, first};
+    // A closer Power Link is not a caster. Selection must satisfy the same
+    // admission rules as the command that will actually be queued.
+    REQUIRE(sim.FindSmartCastCaster(0, CommandType::ActivateRelaySupply,
+        Vec2::FromTiles(13, 12), 0, group) == first);
+    REQUIRE(sim.FindSmartCastCaster(0, CommandType::ActivateRelaySupply,
+        Vec2::FromTiles(30, 30), 0, group) == second);
+    sim.CaptureReplayBaseline();
+    REQUIRE(sim.QueueCommand(MakeCommand(sim.CurrentTick(), 0, 1,
+        CommandType::ActivateRelaySupply, first)));
+    sim.Step();
+    REQUIRE(sim.FindEntity(first) != nullptr && sim.FindEntity(first)->relaySupplyActive);
+    REQUIRE(sim.FindSmartCastCaster(0, CommandType::ActivateRelaySupply,
+        Vec2::FromTiles(13, 12), 0, group) == second);
+    REQUIRE(sim.QueueCommand(MakeCommand(sim.CurrentTick(), 0, 2,
+        CommandType::ActivateRelaySupply, second)));
+    sim.Step();
+    REQUIRE(sim.FindSmartCastCaster(0, CommandType::ActivateRelaySupply,
+        Vec2::FromTiles(13, 12), 0, group) == 0);
+    std::string error;
+    const auto replayed = Simulation::ReplayToEnd(sim.ExportReplay(), &error);
+    REQUIRE(replayed.has_value());
+    REQUIRE(replayed->StateChecksum() == sim.StateChecksum());
+}
+
 void TestAttackMoveThreatFiltering() {
     // SPEC-CMD-014: Attack-Move Intelligent Threat Filtering
     Simulation sim(SimulationConfig{64, 64, 20, 0x474EULL});
@@ -8814,7 +9062,7 @@ void TestExplicitHostilityAndLegacyReplay() {
         REQUIRE(!Simulation::LoadSnapshot(bad, &error).has_value());
     }
     const auto v28 = ConvertSnapshotV29ToV28(
-        ConvertSnapshotV30ToV29(snapshot, 32 * 32), 32 * 32);
+        ConvertSnapshotV30ToV29(ConvertSnapshotV31ToV30(snapshot, 32 * 32), 32 * 32), 32 * 32);
     const auto legacy = ConvertSnapshotV28ToV27(v28, 32 * 32);
     const auto generic = Simulation::LoadSnapshot(legacy, &error);
     const auto mission = Simulation::LoadSnapshot(legacy, &error, config.hostilityMasks);
@@ -8863,7 +9111,7 @@ void TestExplicitHostilityAndLegacyReplay() {
     REQUIRE(!unsafeLegacy.Projectiles().empty());
     const auto unsafeV28 = ConvertSnapshotV29ToV28(
         ConvertSnapshotV30ToV29(
-            unsafeLegacy.SaveSnapshot(), 32 * 32),
+            ConvertSnapshotV31ToV30(unsafeLegacy.SaveSnapshot(), 32 * 32), 32 * 32),
         32 * 32);
     const auto unsafeBytes = ConvertSnapshotV28ToV27(unsafeV28, 32 * 32);
     auto sanitized = Simulation::LoadSnapshot(unsafeBytes, &error, config.hostilityMasks);
@@ -8892,7 +9140,7 @@ void TestExplicitHostilityAndLegacyReplay() {
     oldReplay.initialSnapshot = ConvertSnapshotV28ToV27(
         ConvertSnapshotV29ToV28(
             ConvertSnapshotV30ToV29(
-                currentReplay.initialSnapshot, 32 * 32),
+                ConvertSnapshotV31ToV30(currentReplay.initialSnapshot, 32 * 32), 32 * 32),
             32 * 32),
         32 * 32);
     oldReplay.finalChecksum = 7947105480651690908ULL;
@@ -8995,7 +9243,7 @@ void TestAuthenticSchema24And25ReplayCompatibility() {
     schema28Replay.version = kForfeitReplayVersion;
     schema28Replay.initialSnapshot = ConvertSnapshotV29ToV28(
         ConvertSnapshotV30ToV29(
-            schema28World.SaveSnapshot(), 16 * 16),
+            ConvertSnapshotV31ToV30(schema28World.SaveSnapshot(), 16 * 16), 16 * 16),
         16 * 16);
     schema28Replay.finalTick = schema28World.CurrentTick() + 100;
     std::string error;
@@ -9011,6 +9259,67 @@ void TestAuthenticSchema24And25ReplayCompatibility() {
     REQUIRE(schema28Playback->FindEntity(3) != nullptr);
     REQUIRE(schema28Playback->FindEntity(3)->position ==
             Vec2::FromTiles(0, 0));
+}
+
+void TestAuthenticSchema30BulwarkReplay() {
+    ReplayRecord replay;
+    replay.version = kLinkMechanicsReplayVersion;
+    replay.initialSnapshot = ReadLegacyReplayFixture("schema30-bulwark-baseline.bin");
+    replay.finalTick = 2;
+    replay.finalChecksum = 17785241889350991135ULL;
+    auto deploy = MakeCommand(0, 0, 1, CommandType::ToggleDeploy, 1);
+    deploy.position = Vec2::FromTiles(12, 10);
+    auto attack = MakeCommand(0, 1, 1, CommandType::Attack, 3);
+    attack.target = 2;
+    auto pack = deploy;
+    pack.executeTick = 1;
+    pack.sequence = 2;
+    replay.commands = {deploy, attack, pack};
+    std::string error;
+    auto playback = Simulation::BeginReplaySimulation(replay, &error);
+    REQUIRE(playback.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(playback->QueueCommand(deploy));
+    REQUIRE(playback->QueueCommand(attack));
+    playback->Step();
+    REQUIRE(playback->FindEntity(1) != nullptr);
+    REQUIRE(playback->FindEntity(2) != nullptr);
+    REQUIRE(playback->FindEntity(1)->deployed);
+    REQUIRE(playback->FindEntity(2)->hitPoints == 105);
+    REQUIRE(playback->ReplayStateChecksum() == 17379539004213711755ULL);
+    auto result = Simulation::ReplayToEnd(replay, &error);
+    REQUIRE(result.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(result->FindEntity(1) != nullptr);
+    REQUIRE(!result->FindEntity(1)->deployed);
+    REQUIRE(result->ReplayStateChecksum() == replay.finalChecksum);
+}
+
+void TestLegacyRelayScopedConnectivity() {
+    ReplayRecord replay;
+    replay.version = kProductionReplayVersion;
+    replay.initialSnapshot = ReadLegacyReplayFixture("schema29-network-baseline.bin");
+    replay.finalTick = 0;
+    replay.finalChecksum = 2870429037547598980ULL;
+    std::string error;
+    auto simulation = Simulation::BeginReplaySimulation(replay, &error);
+    REQUIRE(simulation.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(simulation->ReplayStateChecksum() == replay.finalChecksum);
+    // Preserve the historical oracle above; these newly spawned probes test
+    // observation under its authenticated legacy policy, not historic content.
+    const auto link = simulation->SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::Dropoff, Vec2::FromTiles(20, 20));
+    const auto relay = simulation->SpawnEntity(0, Faction::MeridianCompact,
+        EntityType::ScoutUnit, Vec2::FromTiles(21, 20));
+    REQUIRE(link != 0 && relay != 0);
+    REQUIRE(simulation->FindEntity(link) != nullptr);
+    REQUIRE(!simulation->FindEntity(link)->networkOperational);
+    REQUIRE(simulation->ValidateRelaySupply(0, relay) == RelaySupplyResult::Valid);
+    const auto view = simulation->CreatePlayerView(0);
+    REQUIRE(view.has_value());
+    REQUIRE(std::find(view->ConnectedRelayUnits().begin(),
+        view->ConnectedRelayUnits().end(), relay) != view->ConnectedRelayUnits().end());
 }
 
 void TestAuthenticSchema29ZeroTickNetworkReplay() {
@@ -9298,7 +9607,7 @@ void TestLinkRepairConstructionAndProductionIdentity() {
     REQUIRE(restored->ProducerQueueStateFor(0, foundry) ==
             sim.ProducerQueueStateFor(0, foundry));
     const ReplayRecord replay = sim.ExportReplay(&error);
-    REQUIRE(replay.version == kLinkMechanicsReplayVersion);
+    REQUIRE(replay.version == kMaintenanceReplayVersion);
     const auto replayed = Simulation::ReplayToEnd(replay, &error);
     REQUIRE(replayed.has_value());
     REQUIRE(replayed->StateChecksum() == sim.StateChecksum());
@@ -9321,6 +9630,10 @@ void TestLinkRepairConstructionAndProductionIdentity() {
 
 #include "ReplayReportTests.h"
 
+#include "NetworkActionDispatchTests.inl"
+#include "WorkerMaintenanceTests.inl"
+#include "GameplayFeedbackTests.inl"
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -9332,6 +9645,18 @@ int main(int argc, char** argv) {
         return 2;
     }
     const std::vector<std::pair<std::string, std::function<void()>>> tests{
+        {"construction assist cancellation race", TestConstructionAssistCancellationRace},
+        {"authentic schema31 construction assist replay", TestAuthenticSchema31ConstructionAssistReplay},
+        {"worker maintenance admission and assist", TestWorkerMaintenanceAdmissionAndAssist},
+        {"network Bulwark gesture dispatch", TestNetworkBulwarkGestureDispatch},
+        {"network Bulwark pending recovery", TestNetworkBulwarkPendingRecovery},
+        {"network Bulwark arithmetic bounds", TestNetworkBulwarkArithmeticBounds},
+        {"gameplay feedback command resolution and bounds", TestGameplayFeedbackCommandResolutionAndBounds},
+        {"gameplay feedback construction and repair deltas", TestGameplayFeedbackConstructionAndRepairDeltas},
+        {"gameplay feedback blocked production recovery", TestGameplayFeedbackBlockedProductionRecovery},
+        {"gameplay feedback remote lineage and loss", TestGameplayFeedbackRemoteLineageAndLoss},
+        {"gameplay feedback execution horizon", TestGameplayFeedbackExecutionHorizon},
+        {"network snapshot acknowledgement backpressure", TestNetworkSnapshotAcknowledgementBackpressure},
         {"projectile persistence and malformed snapshot bounds", TestProjectilePersistenceRegression},
         {"ballistic cover interception and moving-target tracking", TestBallisticCoverAndTrackingRegression},
         {"harvest reservations travel depletion and persistence", TestHarvestReservationRegression},
@@ -9428,6 +9753,8 @@ int main(int argc, char** argv) {
          TestShiftQueueDepthAndImmediateInterrupt},
         {"smart-cast single-unit dispatch",
          TestSmartCastSingleUnitDispatch},
+        {"smart-cast Relay Supply admission",
+         TestSmartCastRelaySupplyDispatch},
         {"attack-move threat filtering",
          TestAttackMoveThreatFiltering},
         {"focus-fire chase leashing",
@@ -9527,6 +9854,11 @@ int main(int argc, char** argv) {
          TestAuthenticSchema24And25ReplayCompatibility},
         {"Link repair construction network and production identity",
          TestLinkRepairConstructionAndProductionIdentity},
+        {"Bulwark deployment commitment timing", TestBulwarkDeploymentCommitmentTiming},
+        {"Bulwark transition persistence and wire", TestBulwarkTransitionPersistenceAndWire},
+        {"Bulwark front arc boundary", TestBulwarkFrontArcBoundary},
+        {"authentic schema30 Bulwark replay", TestAuthenticSchema30BulwarkReplay},
+        {"legacy Relay scoped connectivity", TestLegacyRelayScopedConnectivity},
         {"authentic schema29 zero-tick network replay",
          TestAuthenticSchema29ZeroTickNetworkReplay},
     };

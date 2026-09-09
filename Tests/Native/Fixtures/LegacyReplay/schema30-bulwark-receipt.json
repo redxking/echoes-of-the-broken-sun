@@ -1,0 +1,20 @@
+{
+  "snapshot_version": 30,
+  "replay_version": 27,
+  "final_tick": 2,
+  "final_checksum": 17785241889350991135,
+  "deployed_tick1_checksum": 17379539004213711755,
+  "covered_lancer_health": 105,
+  "self_verified": true,
+  "author": "Angelis Pseftis",
+  "base_commit": "6b559889a4e7b0ed7fd86aee37b64728bd516017",
+  "source_kind": "dirty candidate28 simulation captured before Bulwark repair; not a released build",
+  "sha256": {
+    "Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h": "1b1e12aa80b87f25a08843c8e9d1a1863bca3711535315de9a03e63c394ef29c",
+    "Source/EchoesSimCore/Private/Simulation.cpp": "d17bec51f5c4a5388c5c9e36d47d86fc790f29982c7a76a1f923b3291072f5eb"
+  },
+  "baseline_sha256": "f36ad5257bdeff34e0c124acd321236c80c6d775ba23c49502bcfb73d929c120",
+  "driver_sha256": "aba8619dd503357cac0d62d142736e499f5afaa49221cf7a0a48a8392b8559b6",
+  "source_archive": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/tutorial-redesign-20260908/bulwark-writer-29",
+  "scope": "Pre-repair candidate28 schema30/replay27 instant deploy, cover and pack; captured before mechanics changes, not a released-build claim."
+}

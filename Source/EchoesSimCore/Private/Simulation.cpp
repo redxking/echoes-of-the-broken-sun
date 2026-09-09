@@ -42,6 +42,7 @@ constexpr std::uint32_t kFutureWellLifecycleSnapshotVersion = 27;
 constexpr std::uint32_t kHostilitySnapshotVersion = 28;
 constexpr std::uint32_t kProductionPipelineSnapshotVersion = 29;
 constexpr std::uint32_t kLinkMechanicsSnapshotVersion = 30;
+constexpr std::uint32_t kBulwarkCommitmentSnapshotVersion = 31;
 constexpr std::size_t kSerializedRememberedObjectBytes = 24;
 constexpr std::size_t kLegacyFactionCount = 2;
 constexpr std::size_t kLegacyResearchTypeCount = 5;
@@ -2116,6 +2117,46 @@ bool Simulation::IsRelayConnected(const Entity& relay) const {
         });
 }
 
+RepairResult Simulation::ValidateRepair(
+    PlayerId player, EntityId workerId, EntityId targetId) const {
+    const Entity* worker = FindEntity(workerId);
+    const Entity* target = FindEntity(targetId);
+    if (FindPlayer(player) == nullptr || worker == nullptr ||
+        worker->owner != player || !worker->completed || worker->hitPoints <= 0 ||
+        worker->type != EntityType::Worker) {
+        return RepairResult::InvalidWorker;
+    }
+    if (target == nullptr || target->hitPoints <= 0 || targetId == workerId ||
+        target->owner == kNeutralPlayer || config_.IsHostile(player, target->owner) ||
+        (!target->completed && !IsBuilding(target->type)) ||
+        (worker->faction != Faction::MeridianCompact &&
+         (!target->completed || !IsBuilding(target->type)))) {
+        return RepairResult::InvalidTarget;
+    }
+    if (!IsEntityVisibleTo(player, targetId)) return RepairResult::TargetNotVisible;
+    if (target->hitPoints >= target->maxHitPoints) return RepairResult::Undamaged;
+    if (worker->faction == Faction::MeridianCompact &&
+        !IsPositionInMeridianNetwork(player, worker->position)) {
+        return RepairResult::Disconnected;
+    }
+    return RepairResult::Valid;
+}
+
+ConstructionAssistResult Simulation::ValidateConstructionAssist(
+    PlayerId player, EntityId workerId, EntityId siteId) const {
+    const Entity* worker = FindEntity(workerId);
+    const Entity* site = FindEntity(siteId);
+    if (FindPlayer(player) == nullptr || worker == nullptr || worker->owner != player ||
+        !worker->completed || worker->hitPoints <= 0 || worker->type != EntityType::Worker) {
+        return ConstructionAssistResult::InvalidWorker;
+    }
+    if (worker->order.type == OrderType::Build) return ConstructionAssistResult::WorkerBusy;
+    if (site == nullptr || site->owner != player || site->hitPoints <= 0 ||
+        !IsBuilding(site->type)) return ConstructionAssistResult::InvalidSite;
+    if (site->completed) return ConstructionAssistResult::SiteComplete;
+    return ConstructionAssistResult::Valid;
+}
+
 RelaySupplyResult Simulation::ValidateRelaySupply(
     PlayerId player,
     EntityId actor) const {
@@ -2466,6 +2507,10 @@ PlacementResult Simulation::ValidatePlacement(PlayerId player,
         }
     }
     return PlacementResult::Valid;
+}
+
+bool Simulation::IsExecutableCommandTick(Tick tick) {
+    return tick < kMaximumSupportedTick;
 }
 
 bool Simulation::QueueCommand(const Command& command, std::string* rejectionReason) {
@@ -3479,16 +3524,17 @@ EntityId Simulation::FindSmartCastCaster(
             }
             case CommandType::ToggleDeploy: {
                 if (entity.faction != Faction::MeridianCompact ||
-                    entity.type != EntityType::HeavyUnit || entity.deployed) {
+                    entity.type != EntityType::HeavyUnit ||
+                    entity.deploymentPhase != BulwarkDeploymentPhase::None) {
                     return;
                 }
                 break;
             }
             case CommandType::ActivateRelaySupply: {
-                if (entity.faction != Faction::MeridianCompact ||
-                    entity.type != EntityType::Dropoff ||
-                    entity.relaySupplyActive ||
-                    entity.relaySupplyCooldownUntilTick > currentTick_) {
+                // Choose only a caster the authoritative command can admit,
+                // including connection and cooldown, rather than a lookalike
+                // infrastructure type or an unreachable nearer Skiff.
+                if (ValidateRelaySupply(player, entity.id) != RelaySupplyResult::Valid) {
                     return;
                 }
                 break;
@@ -3566,6 +3612,17 @@ std::int32_t Simulation::DamageAfterDirectionalCover(
             targetBehind > rules.coverDepthRaw ||
             targetLateral > rules.coverHalfWidthRaw) {
             continue;
+        }
+        if (!legacyBulwarkReplaySemantics_) {
+            const auto lateral = static_cast<std::uint64_t>(Abs64(
+                bulwark.deploymentFacing.x.Raw() != 0 ? attackerDeltaY : attackerDeltaX));
+            const auto forward = static_cast<std::uint64_t>(attackerForward);
+            // Half-angle 60 degrees: lateral^2 <= 3 * forward^2.
+            // Divide instead of tripling to avoid overflow even at int32 extrema.
+            const auto lateralSquared = lateral * lateral;
+            const auto minimumForwardSquared = lateralSquared / 3U +
+                (lateralSquared % 3U != 0 ? 1U : 0U);
+            if (forward * forward < minimumForwardSquared) continue;
         }
         return std::max(
             1,
@@ -4120,7 +4177,24 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
                 actor->order.type == OrderType::Build) {
                 return;
             }
-            // Multi-builder assist (REL-BLD-004): if targeting an existing incomplete building site
+            // A targeted Build is assist-only. Invalid or cancelled sites must
+            // never fall through to placement, payment, or site resurrection.
+            // Replay <=28 retains its historical assist behavior below.
+            if (command.target != 0 && !legacyConstructionAssistReplaySemantics_) {
+                if (ValidateConstructionAssist(command.player, command.actor,
+                        command.target) != ConstructionAssistResult::Valid) {
+                    return;
+                }
+                const Entity* siteTarget = FindEntity(command.target);
+                actor->order.type = OrderType::Build;
+                actor->order.target = siteTarget->id;
+                actor->order.anchor = actor->position;
+                actor->order.destination = siteTarget->position;
+                actor->order.buildType = siteTarget->type;
+                outcome = CommandResolutionOutcome::Applied;
+                return;
+            }
+            // Multi-builder assist (REL-BLD-004): historical replay path.
             if (command.target != 0) {
                 const Entity* siteTarget = FindEntity(command.target);
                 if (siteTarget != nullptr && siteTarget->owner == command.player &&
@@ -4173,18 +4247,8 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
         }
         case CommandType::Repair: {
             const Entity* target = FindEntity(command.target);
-            if (actor->type != EntityType::Worker || target == nullptr ||
-                target->hitPoints <= 0 || target->id == actor->id ||
-                target->owner == kNeutralPlayer ||
-                config_.IsHostile(command.player, target->owner) ||
-                !IsEntityVisibleTo(command.player, target->id) ||
-                target->hitPoints >= target->maxHitPoints ||
-                (!target->completed && !IsBuilding(target->type)) ||
-                (actor->faction != Faction::MeridianCompact &&
-                 (!target->completed || !IsBuilding(target->type))) ||
-                (actor->faction == Faction::MeridianCompact &&
-                 !IsPositionInMeridianNetwork(
-                     command.player, actor->position))) {
+            if (ValidateRepair(command.player, command.actor, command.target) !=
+                RepairResult::Valid) {
                 return;
             }
             if (command.queue && actor->order.type != OrderType::None) {
@@ -4671,8 +4735,18 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
                 actor->type != EntityType::HeavyUnit) {
                 return;
             }
+            if (actor->deploymentPhase != BulwarkDeploymentPhase::None) {
+                return;
+            }
+            if (!legacyBulwarkReplaySemantics_ && currentTick_ > kMaximumSupportedTick -
+                    (actor->deployed ? kBulwarkPackTicks : kBulwarkDeployTicks)) return;
             if (actor->deployed) {
-                actor->deployed = false;
+                if (legacyBulwarkReplaySemantics_) {
+                    actor->deployed = false;
+                } else {
+                    actor->deploymentPhase = BulwarkDeploymentPhase::Packing;
+                    actor->deploymentTransitionUntilTick = currentTick_ + kBulwarkPackTicks;
+                }
                 outcome = CommandResolutionOutcome::Applied;
                 return;
             }
@@ -4694,7 +4768,12 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
                     0,
                     deltaY >= 0 ? kFixedScale : -kFixedScale);
             }
-            actor->deployed = true;
+            if (legacyBulwarkReplaySemantics_) {
+                actor->deployed = true;
+            } else {
+                actor->deploymentPhase = BulwarkDeploymentPhase::Deploying;
+                actor->deploymentTransitionUntilTick = currentTick_ + kBulwarkDeployTicks;
+            }
             outcome = CommandResolutionOutcome::Applied;
             return;
         }
@@ -5054,6 +5133,7 @@ void Simulation::ProcessDeliver(Entity& worker) {
 void Simulation::ProcessBuild(Entity& worker) {
     Entity* site = MutableEntity(worker.order.target);
     if (site == nullptr || site->owner != worker.owner || site->completed ||
+        (!legacyConstructionAssistReplaySemantics_ && site->hitPoints <= 0) ||
         !IsBuilding(site->type)) {
         worker.order = {};
         return;
@@ -6313,6 +6393,17 @@ void Simulation::ResolveExpiredRelaySupply() {
     }
 }
 
+void Simulation::ResolveBulwarkTransitions() {
+    for (Entity& entity : entities_) {
+        if (entity.deploymentPhase != BulwarkDeploymentPhase::None &&
+            currentTick_ >= entity.deploymentTransitionUntilTick) {
+            entity.deployed = entity.deploymentPhase == BulwarkDeploymentPhase::Deploying;
+            entity.deploymentPhase = BulwarkDeploymentPhase::None;
+            entity.deploymentTransitionUntilTick = 0;
+        }
+    }
+}
+
 void Simulation::ResolveWaystoneTransitions() {
     for (Entity& entity : entities_) {
         if (entity.waystoneMode == WaystoneMode::Uprooting &&
@@ -6642,6 +6733,7 @@ void Simulation::Step(
     for (auto& receipts : productionTransitionReceipts_) receipts.clear();
     ResolveExpiredRelaySupply();
     ResolveWaystoneTransitions();
+    ResolveBulwarkTransitions();
     ResolveWarformMolts();
     ResolveMineralCovers();
     ResolveChoirIdentities();
@@ -6661,6 +6753,7 @@ void Simulation::Step(
     PruneCommandResolutionReceipts();
     ResolveExpiredRelaySupply();
     ResolveWaystoneTransitions();
+    ResolveBulwarkTransitions();
     ResolveWarformMolts();
     ResolveMineralCovers();
     ResolveChoirIdentities();
@@ -6956,6 +7049,7 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
     view.config_ = config_;
     view.config_.randomSeed = 0;
     view.currentTick_ = currentTick_;
+    view.usesBulwarkCommitmentRules_ = !legacyBulwarkReplaySemantics_;
     view.player_ = *playerState;
     view.decisionSeed_ = config_.randomSeed;
     view.populationUsed_ = PopulationUsed(player);
@@ -6966,6 +7060,11 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
     view.productionTransitions_ = productionTransitionReceipts_[player];
     view.publicFutureWellTelegraphs_ = PublicFutureWellTelegraphs();
     for (const Entity& entity : entities_) {
+        if (entity.owner == player && entity.completed && entity.hitPoints > 0 &&
+            entity.faction == Faction::MeridianCompact &&
+            entity.type == EntityType::ScoutUnit && IsRelayConnected(entity)) {
+            view.connectedRelayUnits_.push_back(entity.id);
+        }
         if (const std::optional<ProducerQueueState> producerState =
                 ProducerQueueStateFor(player, entity.id);
             producerState.has_value()) {
@@ -8226,6 +8325,14 @@ void Simulation::WriteSnapshotPayload(Writer& writer, std::uint32_t version) con
             writer.U8(entity.networkOperational ? 1 : 0);
         }
     }
+    if (version >= kBulwarkCommitmentSnapshotVersion) {
+        writer.U32(static_cast<std::uint32_t>(entities_.size()));
+        for (const Entity& entity : entities_) {
+            writer.U32(entity.id);
+            writer.U8(static_cast<std::uint8_t>(entity.deploymentPhase));
+            writer.U64(entity.deploymentTransitionUntilTick);
+        }
+    }
 }
 
 std::vector<std::uint8_t> Simulation::SaveSnapshot(
@@ -8326,6 +8433,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         return std::nullopt;
     }
     if (version != kSnapshotVersion &&
+        version != kLinkMechanicsSnapshotVersion &&
         version != kProductionPipelineSnapshotVersion &&
         version != kHostilitySnapshotVersion &&
         version != kFutureWellLifecycleSnapshotVersion &&
@@ -9859,6 +9967,39 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         simulation.legacyLinkReplaySemantics_ = false;
         simulation.ResolveAegisPower();
     }
+    if (version >= kBulwarkCommitmentSnapshotVersion) {
+        std::uint32_t count = 0;
+        if (!reader.U32(count) || count != simulation.entities_.size()) {
+            SetError(error, "snapshot Bulwark transition count is invalid");
+            return std::nullopt;
+        }
+        for (Entity& entity : simulation.entities_) {
+            EntityId id = 0;
+            std::uint8_t phase = 0;
+            Tick until = 0;
+            if (!reader.U32(id) || !reader.U8(phase) || !reader.U64(until) ||
+                id != entity.id || phase > static_cast<std::uint8_t>(BulwarkDeploymentPhase::Packing)) {
+                SetError(error, "snapshot Bulwark transition record is invalid");
+                return std::nullopt;
+            }
+            const auto decoded = static_cast<BulwarkDeploymentPhase>(phase);
+            const Tick duration = decoded == BulwarkDeploymentPhase::Deploying
+                ? kBulwarkDeployTicks : kBulwarkPackTicks;
+            if ((decoded == BulwarkDeploymentPhase::None && until != 0) ||
+                (decoded != BulwarkDeploymentPhase::None &&
+                 (entity.faction != Faction::MeridianCompact ||
+                  entity.type != EntityType::HeavyUnit || !entity.completed ||
+                  until <= simulation.currentTick_ ||
+                  until - simulation.currentTick_ > duration ||
+                  until > kMaximumSupportedTick ||
+                  entity.deployed != (decoded == BulwarkDeploymentPhase::Packing)))) {
+                SetError(error, "snapshot Bulwark transition state is inconsistent");
+                return std::nullopt;
+            }
+            entity.deploymentPhase = decoded;
+            entity.deploymentTransitionUntilTick = until;
+        }
+    }
     if (!reader.AtEnd()) {
         SetError(error, "snapshot contains trailing payload data");
         return std::nullopt;
@@ -9896,6 +10037,8 @@ void Simulation::CaptureReplayBaseline() {
     replayChecksumSnapshotVersion_ = kSnapshotVersion;
     legacyProductionReplaySemantics_ = false;
     legacyLinkReplaySemantics_ = false;
+    legacyBulwarkReplaySemantics_ = false;
+    legacyConstructionAssistReplaySemantics_ = false;
     replayForfeitingPlayer_ = kNeutralPlayer;
 }
 
@@ -9930,6 +10073,10 @@ bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
         prefix.version < kProductionReplayVersion;
     restored.legacyLinkReplaySemantics_ =
         prefix.version < kLinkMechanicsReplayVersion;
+    restored.legacyBulwarkReplaySemantics_ =
+        prefix.version < kBulwarkCommitmentReplayVersion;
+    restored.legacyConstructionAssistReplaySemantics_ =
+        prefix.version < kMaintenanceReplayVersion;
     restored.ResolveAegisPower();
     if (replayed->StateChecksum() != restored.StateChecksum()) {
         SetError(error, "replay prefix state does not match restored state");
@@ -9977,6 +10124,8 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
     if (replay.version != kLegacyReplayVersion &&
         replay.version != kForfeitReplayVersion &&
         replay.version != kProductionReplayVersion &&
+        replay.version != kLinkMechanicsReplayVersion &&
+        replay.version != kBulwarkCommitmentReplayVersion &&
         replay.version != kReplayVersion) {
         SetError(error, "replay version is unsupported");
         return std::nullopt;
@@ -10001,6 +10150,10 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
         replay.version < kProductionReplayVersion;
     simulation->legacyLinkReplaySemantics_ =
         replay.version < kLinkMechanicsReplayVersion;
+    simulation->legacyBulwarkReplaySemantics_ =
+        replay.version < kBulwarkCommitmentReplayVersion;
+    simulation->legacyConstructionAssistReplaySemantics_ =
+        replay.version < kMaintenanceReplayVersion;
     // Loading a save applies current network rules. Playback must restore the
     // original rules before its first checksum, including zero-tick records.
     simulation->ResolveAegisPower();
@@ -10022,6 +10175,8 @@ std::optional<Simulation> Simulation::ReplayToEnd(const ReplayRecord& replay,
     if (replay.version != kLegacyReplayVersion &&
         replay.version != kForfeitReplayVersion &&
         replay.version != kProductionReplayVersion &&
+        replay.version != kLinkMechanicsReplayVersion &&
+        replay.version != kBulwarkCommitmentReplayVersion &&
         replay.version != kReplayVersion) {
         SetError(error, "replay version is unsupported");
         return std::nullopt;
@@ -10153,6 +10308,8 @@ std::optional<MatchReport> Simulation::BuildMatchReport(
     if (replay.version != kLegacyReplayVersion &&
         replay.version != kForfeitReplayVersion &&
         replay.version != kProductionReplayVersion &&
+        replay.version != kLinkMechanicsReplayVersion &&
+        replay.version != kBulwarkCommitmentReplayVersion &&
         replay.version != kReplayVersion) {
         SetError(error, "replay version is unsupported");
         return std::nullopt;

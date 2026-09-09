@@ -40,12 +40,18 @@ inline constexpr Tick kCommandResolutionReceiptRetentionTicks = 1200;
 // Schema 30 appends Link repair/network authority and stable production item
 // identities. Replay v26 remains the fixed production-queue cutoff; replay
 // v27 selects Link mechanics and identity-checked cancellation.
-inline constexpr std::uint32_t kSnapshotVersion = 30;
+inline constexpr std::uint32_t kSnapshotVersion = 31;
 inline constexpr std::uint32_t kLegacyReplayVersion = 24;
 inline constexpr std::uint32_t kForfeitReplayVersion = 25;
 inline constexpr std::uint32_t kProductionReplayVersion = 26;
 inline constexpr std::uint32_t kLinkMechanicsReplayVersion = 27;
-inline constexpr std::uint32_t kReplayVersion = kLinkMechanicsReplayVersion;
+inline constexpr std::uint32_t kBulwarkCommitmentReplayVersion = 28;
+inline constexpr std::uint32_t kMaintenanceReplayVersion = 29;
+inline constexpr std::uint32_t kReplayVersion = kMaintenanceReplayVersion;
+// SPEC-UNIT-003/REL-FAC-005 fixed-step commitments, independent of render rate.
+inline constexpr Tick kBulwarkDeployTicks = 20;
+inline constexpr Tick kBulwarkPackTicks = 15;
+enum class BulwarkDeploymentPhase : std::uint8_t { None, Deploying, Packing };
 
 // Remembered permanent objects are bounded so a long match cannot grow an
 // unserializable ledger. When the bound is reached the oldest observation is
@@ -328,6 +334,15 @@ enum class ResearchResult : std::uint8_t {
     AlreadyCompleted = 7,
     PrerequisiteMissing = 8,
     InsufficientResources = 9,
+};
+
+// Query results only; not serialized or used as simulation state.
+enum class RepairResult : std::uint8_t {
+    Valid, InvalidWorker, InvalidTarget, TargetNotVisible, Undamaged, Disconnected,
+};
+
+enum class ConstructionAssistResult : std::uint8_t {
+    Valid, InvalidWorker, WorkerBusy, InvalidSite, SiteComplete,
 };
 
 enum class RelaySupplyResult : std::uint8_t {
@@ -704,6 +719,9 @@ struct Entity final {
     static constexpr std::size_t kMaxRallyOrders = kMaxQueuedOrders;
     std::vector<Order> rallyRoute{};
     bool deployed = false;
+    // Stable endpoint remains authoritative until the requested transition ends.
+    BulwarkDeploymentPhase deploymentPhase = BulwarkDeploymentPhase::None;
+    Tick deploymentTransitionUntilTick = 0;
     Vec2 deploymentFacing = Vec2::FromRaw(kFixedScale, 0);
     bool relaySupplyActive = false;
     Tick relaySupplyUntilTick = 0;
@@ -956,6 +974,11 @@ class ECHOESSIMCORE_API PlayerView final {
 public:
     [[nodiscard]] const SimulationConfig& Config() const { return config_; }
     [[nodiscard]] Tick CurrentTick() const { return currentTick_; }
+    // Presentation policy for the resumed simulation, not a save-version guess.
+    // Transient only: this observation never enters snapshots or checksums.
+    [[nodiscard]] bool UsesBulwarkCommitmentRules() const {
+        return usesBulwarkCommitmentRules_;
+    }
     [[nodiscard]] const PlayerState& Player() const { return player_; }
     [[nodiscard]] std::uint64_t DecisionSeed() const { return decisionSeed_; }
     [[nodiscard]] std::int32_t PopulationUsed() const { return populationUsed_; }
@@ -963,6 +986,11 @@ public:
         return populationCapacity_;
     }
     [[nodiscard]] const std::vector<Entity>& Entities() const { return entities_; }
+    // Owner-only, transient presentation state evaluated by simulation rules,
+    // including historical replay compatibility. Never serialized or hashed.
+    [[nodiscard]] const std::vector<EntityId>& ConnectedRelayUnits() const {
+        return connectedRelayUnits_;
+    }
     [[nodiscard]] const std::vector<FutureWellTelegraph>& PublicFutureWellTelegraphs() const {
         return publicFutureWellTelegraphs_;
     }
@@ -1001,12 +1029,14 @@ private:
 
     SimulationConfig config_{};
     Tick currentTick_ = 0;
+    bool usesBulwarkCommitmentRules_ = true;
     PlayerState player_{};
     std::uint64_t decisionSeed_ = 0;
     std::int32_t populationUsed_ = 0;
     std::int32_t populationCapacity_ = 0;
     std::vector<PlayerViewTile> tiles_{};
     std::vector<Entity> entities_{};
+    std::vector<EntityId> connectedRelayUnits_{};
     std::vector<VibrationSignature> vibrationSignatures_{};
     std::vector<MaterialDeliveryReceipt> materialDeliveries_{};
     std::vector<ProducerQueueState> producerQueues_{};
@@ -1146,6 +1176,9 @@ public:
 
     [[nodiscard]] const SimulationConfig& Config() const { return config_; }
     [[nodiscard]] Tick CurrentTick() const { return currentTick_; }
+    /** Live adapters must not schedule a tick that Step cannot execute.
+     *  QueueCommand retains historical envelope bounds for old replay data. */
+    [[nodiscard]] static bool IsExecutableCommandTick(Tick tick);
     [[nodiscard]] const std::vector<Entity>& Entities() const { return entities_; }
     [[nodiscard]] const std::vector<Projectile>& Projectiles() const { return projectiles_; }
     [[nodiscard]] const std::vector<Command>& CommandLog() const {
@@ -1242,6 +1275,10 @@ public:
     [[nodiscard]] RelaySupplyResult ValidateRelaySupply(
         PlayerId player,
         EntityId actor) const;
+    [[nodiscard]] RepairResult ValidateRepair(
+        PlayerId player, EntityId worker, EntityId target) const;
+    [[nodiscard]] ConstructionAssistResult ValidateConstructionAssist(
+        PlayerId player, EntityId worker, EntityId site) const;
     [[nodiscard]] WaystoneRootResult ValidateWaystoneRoot(
         PlayerId player,
         EntityId actor) const;
@@ -1475,6 +1512,7 @@ private:
     void ResolveExpiredReshapes();
     void ResolveExpiredRelaySupply();
     void ResolveWaystoneTransitions();
+    void ResolveBulwarkTransitions();
     void ResolveWarformMolts();
     void ResolveMineralCovers();
     void ResolveAegisPower();
@@ -1582,6 +1620,8 @@ private:
     EntityId nextProjectileId_ = 1;
     bool legacyProductionReplaySemantics_ = false;
     bool legacyLinkReplaySemantics_ = false;
+    bool legacyBulwarkReplaySemantics_ = false;
+    bool legacyConstructionAssistReplaySemantics_ = false;
     void UpdateProjectiles();
     void SpawnBallisticProjectile(const Entity& attacker, const Entity& target, std::int32_t damage);
 };

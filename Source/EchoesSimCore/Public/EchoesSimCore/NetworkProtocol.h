@@ -11,8 +11,12 @@
 namespace echoes::sim::net {
 
 inline constexpr std::uint16_t kEnvelopeVersion = 1;
-inline constexpr std::uint32_t kProtocolVersion = 4;
-inline constexpr std::uint32_t kPlayerViewSchemaVersion = 2;
+inline constexpr std::uint32_t kProtocolVersion = 5;
+// Exact-match compatibility capability for replay-29 targeted Build semantics.
+// The existing manifest carries this bit; no wire or snapshot layout changes.
+inline constexpr std::uint64_t kMaintenanceCommandSemanticsFeature = 1ULL << 0U;
+inline constexpr std::uint64_t kGameplayFeedbackStreamFeature = 1ULL << 1U;
+inline constexpr std::uint32_t kPlayerViewSchemaVersion = 3;
 inline constexpr std::size_t kDigestBytes = 32;
 inline constexpr std::size_t kMaximumPacketBytes = 512;
 inline constexpr std::size_t kMaximumCommandBatchBytes = 16 * 1024;
@@ -196,6 +200,9 @@ struct ScopedEntityState final {
     Tick choirIdentityResolveAtTick = 0;
     Tick choirIdentityNextAvailableTick = 0;
     Tick choirCoherenceNextChargeTick = 0;
+    Vec2 deploymentFacing = Vec2::FromRaw(kFixedScale, 0);
+    BulwarkDeploymentPhase deploymentPhase = BulwarkDeploymentPhase::None;
+    Tick deploymentTransitionUntilTick = 0;
 
     friend bool operator==(const ScopedEntityState&,
                            const ScopedEntityState&) = default;
