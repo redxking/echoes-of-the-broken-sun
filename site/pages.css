@@ -721,8 +721,8 @@
 
 .scar-page-hero {
   background:
-    linear-gradient(115deg, rgba(245, 243, 235, .97), rgba(245, 243, 235, .86)),
-    radial-gradient(circle at 82% 22%, rgba(139, 78, 104, .18), transparent 34%);
+    radial-gradient(circle at 82% 22%, rgba(179, 65, 122, .22), transparent 34%),
+    linear-gradient(180deg, #070c14 0%, #0d1522 100%);
 }
 
 .scar-spotlight {
