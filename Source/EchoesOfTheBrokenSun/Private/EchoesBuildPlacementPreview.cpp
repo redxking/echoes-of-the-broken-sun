@@ -146,7 +146,38 @@ FEchoesBuildPlacementEvaluation FEchoesBuildPlacementModel::Evaluate(
         return Result;
     }
     Result.Validity = EEchoesBuildPreviewValidity::Valid;
+    Result.bNetworkRelevant = View.Player().faction == echoes::sim::Faction::MeridianCompact &&
+        BuildingType != echoes::sim::EntityType::UtilityStructure;
+    if (Result.bNetworkRelevant)
+    {
+        Result.ConnectionRadiusRaw = View.Config().rules.poweredAegis.connectionRadiusRaw;
+        const int64 Radius = Result.ConnectionRadiusRaw;
+        for (const auto& Node : View.Entities())
+        {
+            if (Node.owner != View.Player().id || Node.faction != View.Player().faction ||
+                !Node.completed || Node.hitPoints <= 0 || !Node.networkOperational ||
+                (Node.type != echoes::sim::EntityType::CommandCore &&
+                 Node.type != echoes::sim::EntityType::Dropoff && Node.type != echoes::sim::EntityType::Barracks)) continue;
+            const int64 DX = int64(Position.x.Raw()) - Node.position.x.Raw();
+            const int64 DY = int64(Position.y.Raw()) - Node.position.y.Raw();
+            if (DX * DX + DY * DY <= Radius * Radius)
+            {
+                Result.bWillConnect = true;
+                Result.ConnectionNodeId = Node.id;
+                break;
+            }
+        }
+    }
     return Result;
+}
+
+FString FEchoesBuildPlacementModel::Guidance(const FEchoesBuildPlacementEvaluation& Evaluation)
+{
+    if (!Evaluation.IsValid()) return FString(TEXT("Cannot place here. ")) + Feedback(Evaluation.Validity);
+    if (!Evaluation.bNetworkRelevant) return Feedback(Evaluation.Validity);
+    return FString::Printf(TEXT("Placement valid — %s. Network reach: %g tiles, center to center. Left-click places; right-click cancels."),
+        Evaluation.bWillConnect ? TEXT("connects when completed") : TEXT("outside the active network"),
+        double(Evaluation.ConnectionRadiusRaw) / echoes::sim::kFixedScale);
 }
 
 const TCHAR* FEchoesBuildPlacementModel::Feedback(
@@ -234,7 +265,7 @@ void AEchoesBuildPlacementPreview::RebuildGrid(
     }
     if (GridMaterial != nullptr)
     {
-        GridMaterial->SetVectorParameterValue(TEXT("BaseColor"), Color);
+        GridMaterial->SetVectorParameterValue(TintParameterName(), Color);
         GridMaterial->SetScalarParameterValue(
             TEXT("EmissiveStrength"), bValid ? 1.65f : 2.1f);
     }

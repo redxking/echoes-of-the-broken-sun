@@ -881,26 +881,43 @@ bool AEchoesRTSCameraPawn::CenterOnLocalBase()
     {
         if (Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId ||
             Entity.type != echoes::sim::EntityType::CommandCore || Entity.hitPoints <= 0) continue;
-        const FVector Base = Bridge->SimToWorld(Entity.position);
-        ForwardInput = RightInput = 0.0f;
-        bEdgePanArmed = false;
-        CancelPointerPan();
-        PanToWorld(Base);
-        SpringArm->bEnableCameraLag = false;
-        SpringArm->TickComponent(0.0f, LEVELTICK_All, nullptr);
-        // Correct the ground-plane offset introduced by the elevated camera
-        // pivot; its XY location alone is not the projected ground center.
-        TArray<FVector> Corners;
-        if (GetBattlefieldFootprint(FVector2D(1280.0f, 720.0f), Corners) && Corners.Num() == 4)
-        {
-            const FVector GroundCenter = (Corners[0] + Corners[1] + Corners[2] + Corners[3]) * 0.25f;
-            PanToWorld(GetActorLocation() + Base - GroundCenter);
-            SpringArm->TickComponent(0.0f, LEVELTICK_All, nullptr);
-        }
-        bLastNavigationPlayerDriven = false;
-        return true;
+        return FrameGroundPoint(Bridge->SimToWorld(Entity.position), false);
     }
     return false;
+}
+
+bool AEchoesRTSCameraPawn::FrameGroundPoint(const FVector& WorldPosition, bool bPlayerDriven)
+{
+    if (WorldPosition.ContainsNaN() || !SpringArm || !Camera) return false;
+    const uint64 PriorRevision = NavigationRevision;
+    const FVector GroundPoint(WorldPosition.X, WorldPosition.Y, 0.0);
+    FVector2D ViewportSize(1280.0f, 720.0f);
+    if (const auto* Controller = Cast<APlayerController>(GetController()))
+    {
+        int32 Width = 0, Height = 0;
+        Controller->GetViewportSize(Width, Height);
+        if (Width > 0 && Height > 0) ViewportSize = FVector2D(Width, Height);
+    }
+    const auto* Settings = UEchoesGameUserSettings::Get();
+    const FVector2D ScreenTarget = FEchoesHudLayout::KeyboardTargetPoint(
+        ViewportSize, Settings ? Settings->GetHudScale() : 1.0f, FVector2D::ZeroVector);
+    TArray<FVector> Corners;
+    if (!GetBattlefieldFootprint(ViewportSize, Corners) || Corners.Num() != 4) return false;
+    // Orthographic ground projection is affine: move by the difference between
+    // the real clear-screen ground center and the requested visible target.
+    const FVector GroundCenter = FMath::Lerp(
+        (Corners[0] + Corners[1]) * 0.5f,
+        (Corners[2] + Corners[3]) * 0.5f, ScreenTarget.Y / ViewportSize.Y);
+    // Resolve the complete projection before touching navigation or input state.
+    // A missing/invalid footprint must leave the previous player view intact.
+    ForwardInput = RightInput = 0.0f;
+    bEdgePanArmed = false;
+    CancelPointerPan();
+    SpringArm->bEnableCameraLag = false;
+    PanToWorld(GetActorLocation() + GroundPoint - GroundCenter);
+    SpringArm->TickComponent(0.0f, LEVELTICK_All, nullptr);
+    bLastNavigationPlayerDriven = bPlayerDriven && NavigationRevision != PriorRevision;
+    return true;
 }
 
 void AEchoesRTSCameraPawn::PanByScreenDelta(const FVector2D& DeltaPixels, float ViewportWidth)

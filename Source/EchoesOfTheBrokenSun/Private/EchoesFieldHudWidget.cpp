@@ -2,10 +2,17 @@
 
 #include "EchoesInterfaceAudioSubsystem.h"
 #include "EchoesPlayerController.h"
+#include "EchoesHudLayout.h"
+#include "EchoesHudGlyph.h"
+#include "Components/ProgressBar.h"
+#include "Components/SizeBox.h"
+#include "Brushes/SlateColorBrush.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/Border.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Components/ButtonSlot.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
@@ -29,6 +36,15 @@ FLinearColor PanelColor(bool bHighContrast)
     return bHighContrast
         ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
         : FLinearColor(0.015f, 0.027f, 0.038f, 0.93f);
+}
+
+FLinearColor ConsoleBackingColor(bool bHighContrast)
+{
+    // The instrument-bar frame should reveal the battlefield between its
+    // readable panel islands. Individual panel backings retain PanelColor.
+    return bHighContrast
+        ? FLinearColor(0.0f, 0.0f, 0.0f, 0.98f)
+        : FLinearColor(0.015f, 0.027f, 0.038f, 0.18f);
 }
 
 FLinearColor TextColor(bool bHighContrast)
@@ -86,7 +102,7 @@ void ConfigureText(
     Text->SetAutoWrapText(true);
     Text->SetVisibility(ESlateVisibility::HitTestInvisible);
     FSlateFontInfo Font = Text->GetFont();
-    Font.Size = FMath::Clamp(FMath::RoundToInt(BaseSize * Scale), 10, 28);
+    Font.Size = FMath::Clamp(FMath::RoundToInt(BaseSize * Scale), 10, 36);
     Text->SetFont(Font);
 }
 
@@ -104,6 +120,77 @@ FText JoinedLine(const FEchoesFieldHudLine& Line)
         NSLOCTEXT("EchoesFieldHud", "JoinedLine", "{0}  {1}"),
         Line.Label,
         Line.Value);
+}
+
+/**
+ * SPEC-HUD-003 asks the selection card to answer purpose, strong use, limitation
+ * and counterplay. The bottom console only has room for the full answer when one
+ * thing is selected; a mixed selection keeps the per-entry vitals readable and
+ * shows purpose alone, which is the part that still identifies each entry.
+ */
+FText SelectionDetails(
+    const FEchoesFieldHudSelectionEntry& Entry,
+    const bool bSingleSelection)
+{
+    FText Summary = FText::Format(
+        NSLOCTEXT("EchoesFieldHud", "SelectionVitals",
+            "{0}   ARMOR {1}   DAMAGE {2}"),
+        Entry.Order, Entry.Armor, Entry.Damage);
+    if (!Entry.Role.IsEmpty())
+    {
+        Summary = FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "SelectionRole",
+                "ROLE  {0}\n{1}"),
+            Entry.Role, Summary);
+    }
+    if (!Entry.Purpose.IsEmpty())
+    {
+        Summary = FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "SelectionPurpose",
+                "{0}\nPURPOSE  {1}"),
+            Summary, Entry.Purpose);
+    }
+    if (bSingleSelection)
+    {
+        if (!Entry.StrongUse.IsEmpty())
+        {
+            Summary = FText::Format(
+                NSLOCTEXT("EchoesFieldHud", "SelectionStrongUse",
+                    "{0}\nSTRONG USE  {1}"),
+                Summary, Entry.StrongUse);
+        }
+        if (!Entry.Limitation.IsEmpty())
+        {
+            Summary = FText::Format(
+                NSLOCTEXT("EchoesFieldHud", "SelectionLimitation",
+                    "{0}\nLIMITATION  {1}"),
+                Summary, Entry.Limitation);
+        }
+        if (!Entry.Counterplay.IsEmpty())
+        {
+            Summary = FText::Format(
+                NSLOCTEXT("EchoesFieldHud", "SelectionCounterplay",
+                    "{0}\nCOUNTERPLAY  {1}"),
+                Summary, Entry.Counterplay);
+        }
+    }
+    if (!Entry.Production.IsEmpty())
+    {
+        Summary = FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "SelectionProduction",
+                "{0}\nPRODUCTION  {1}  {2}%"),
+            Summary, Entry.Production, Entry.ProductionPercent);
+    }
+    if (Entry.CargoCapacity > 0)
+    {
+        Summary = FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "SelectionCargo",
+                "{0}\nCARGO  {1}/{2}"),
+            Summary, Entry.Cargo, Entry.CargoCapacity);
+    }
+    if (!Entry.Faction.IsEmpty())
+        Summary = FText::Format(NSLOCTEXT("EchoesFieldHud", "SelectionFaction", "{0}  ·  {1}"), Entry.Faction, Summary);
+    return Summary;
 }
 
 void DrawLine(
@@ -262,24 +349,28 @@ void UEchoesFieldHudActionButton::Configure(
     bHighContrast = bInHighContrast;
     SetIsEnabled(InControl.bEnabled);
     OnReceivedFocus.BindUObject(this, &UEchoesFieldHudActionButton::HandleReceivedFocus);
+    OnLostFocus.BindUObject(this, &UEchoesFieldHudActionButton::HandleLostFocus);
     OnClicked.AddUniqueDynamic(this, &UEchoesFieldHudActionButton::HandleClicked);
     OnHovered.AddUniqueDynamic(this, &UEchoesFieldHudActionButton::HandleHovered);
     OnUnhovered.AddUniqueDynamic(this, &UEchoesFieldHudActionButton::HandleUnhovered);
 
-    const FLinearColor Accent = AccentColor(bHighContrast);
-    FButtonStyle Style = GetStyle();
-    Style.Normal.TintColor = FSlateColor(
-        InControl.bFocused
-            ? Accent
-            : FLinearColor(0.035f, 0.065f, 0.082f, 0.98f));
-    Style.Hovered.TintColor = FSlateColor(Accent);
-    Style.Pressed.TintColor = FSlateColor(
-        FLinearColor(0.025f, 0.42f, 0.54f, 1.0f));
-    Style.Disabled.TintColor = FSlateColor(
-        FLinearColor(0.02f, 0.028f, 0.032f, 0.78f));
+    // Dark focus fill keeps ceramic labels legible; the border and focus marker
+    // carry the accent instead of washing out the entire control.
+    FButtonStyle Style;
+    Style.Hovered = FSlateRoundedBoxBrush(FLinearColor(.055f,.10f,.12f,1), 1.f, AccentColor(bHighContrast), 2.f);
+    Style.Pressed = FSlateRoundedBoxBrush(FLinearColor(.16f,.13f,.075f,1), 1.f, FLinearColor(.9f,.65f,.25f,1), 2.f);
+    Style.Disabled = FSlateColorBrush(FLinearColor(.025f,.03f,.032f,1));
+    // The ledger already owns scaled padding. Its monitor action wraps the
+    // whole readout, so ordinary fixed button padding would overflow at 80%
+    // and 100%, and pressed padding would shift the telemetry while clicking.
+    const bool bResourceMonitor = Action == EEchoesFieldHudAction::OpenResourceMonitor;
+    Style.NormalPadding = bResourceMonitor ? FMargin(0) : FMargin(6, 5);
+    Style.PressedPadding = bResourceMonitor ? FMargin(0) : FMargin(6, 6, 6, 4);
     SetStyle(Style);
+    RefreshKeyboardPresentation();
 
-    if (UTextBlock* Label = Cast<UTextBlock>(GetContent()))
+    UTextBlock* Label = PresentationLabel ? PresentationLabel.Get() : Cast<UTextBlock>(GetContent());
+    if (Label)
     {
         FText Text = InControl.Detail.IsEmpty()
             ? InControl.Label
@@ -287,7 +378,7 @@ void UEchoesFieldHudActionButton::Configure(
                 NSLOCTEXT("EchoesFieldHud", "ControlWithDetail", "{0}\n{1}"),
                 InControl.Label,
                 InControl.Detail);
-        ConfigureText(Label, Text, 13, InScale, TextColor(bHighContrast));
+        ConfigureText(Label, Text, 18, InScale, TextColor(bHighContrast));
     }
 }
 
@@ -325,6 +416,8 @@ void UEchoesFieldHudActionButton::HandleUnhovered()
 
 void UEchoesFieldHudActionButton::HandleReceivedFocus()
 {
+    bKeyboardFocused = true;
+    RefreshKeyboardPresentation();
     if (UEchoesFieldHudWidget* Current = Owner.Get())
     {
         Current->NotifyButtonFocused(this);
@@ -333,6 +426,26 @@ void UEchoesFieldHudActionButton::HandleReceivedFocus()
     {
         PlayFieldInterfaceCue(this, EEchoesInterfaceCue::Hover);
     }
+}
+
+void UEchoesFieldHudActionButton::HandleLostFocus()
+{
+    bKeyboardFocused = false;
+    RefreshKeyboardPresentation();
+}
+
+void UEchoesFieldHudActionButton::RefreshKeyboardPresentation()
+{
+    FButtonStyle Style = GetStyle();
+    const FLinearColor Resting = bFocusedPresentation
+        ? FLinearColor(.055f,.11f,.13f,1) : FLinearColor(.035f,.047f,.052f,1);
+    const FLinearColor Edge = bKeyboardFocused
+        ? (bHighContrast ? FLinearColor::Yellow : FLinearColor(.95f,.68f,.25f,1))
+        : bFocusedPresentation ? AccentColor(bHighContrast) : FLinearColor(.16f,.25f,.27f,1);
+    Style.Normal = FSlateRoundedBoxBrush(bKeyboardFocused
+        ? FLinearColor(.13f,.105f,.055f,1) : Resting, 1.f, Edge,
+        bKeyboardFocused ? 2.f : 1.f);
+    SetStyle(Style);
 }
 
 void UEchoesFieldHudEndpointBox::Configure(
@@ -420,7 +533,8 @@ void UEchoesFieldHudSectionWidget::SetContent(
     bool bShowEndpoint,
     const FText& Endpoint)
 {
-    const bool bRefresh = CanRefreshInPlace(
+    const bool bRefresh = bHighContrast == bInHighContrast &&
+        FMath::IsNearlyEqual(Scale, FMath::Clamp(InScale, .8f, 1.5f)) && CanRefreshInPlace(
         InLines,
         InControls,
         bShowEndpoint);
@@ -438,19 +552,20 @@ void UEchoesFieldHudSectionWidget::SetContent(
     }
 
     const bool bCompact = Section == EEchoesFieldHudSection::Status ||
-        Section == EEchoesFieldHudSection::Subtitle;
+        Section == EEchoesFieldHudSection::Subtitle ||
+        Section == EEchoesFieldHudSection::ResourceLedger;
     RootBorder->SetPadding(bCompact
         ? FMargin(8.0f * Scale, 4.0f * Scale)
         : FMargin(10.0f * Scale));
     RootBorder->SetBrushColor(PanelColor(bHighContrast));
     if (TitleText != nullptr)
     {
-        ConfigureText(TitleText, Title, bCompact ? 11 : 15, Scale,
+        ConfigureText(TitleText, Title, bCompact ? 14 : 16, Scale,
             AccentColor(bHighContrast));
     }
     for (int32 Index = 0; Index < Lines.Num(); ++Index)
     {
-        ConfigureText(LineTexts[Index], Lines[Index], 12, Scale, TextColor(bHighContrast));
+        ConfigureText(LineTexts[Index], Lines[Index], 18, Scale, TextColor(bHighContrast));
     }
     for (int32 Index = 0; Index < Controls.Num(); ++Index)
     {
@@ -461,6 +576,80 @@ void UEchoesFieldHudSectionWidget::SetContent(
     {
         EndpointBox->Configure(Owner.Get(), EndpointText);
     }
+}
+
+void UEchoesFieldHudSectionWidget::SetResourceTelemetry(const FEchoesFieldHudResourceView& Resources)
+{
+    ResourceTelemetry = Resources;
+    if (Section != EEchoesFieldHudSection::ResourceLedger) return;
+    if (RootBorder && ResourceValues.Num() != 3) RebuildContent();
+    if (ResourceValues.Num() != 3 || ResourceIdentityText == nullptr ||
+        ResourceSummaryText == nullptr) return;
+    ResourceValues[0]->SetText(FText::AsNumber(Resources.Matter));
+    ResourceValues[1]->SetText(FText::AsNumber(Resources.Dawn));
+    ResourceValues[2]->SetText(FText::Format(NSLOCTEXT("EchoesFieldHud", "LogisticsValue", "{0}/{1}"),
+        Resources.PopulationUsed, Resources.PopulationCapacity));
+    ResourceValues[2]->SetColorAndOpacity(Resources.PopulationUsed > Resources.PopulationCapacity
+        ? ToneColor(EEchoesFieldHudTone::Warning, bHighContrast) : TextColor(bHighContrast));
+    TArray<FText> Factions{Resources.LocalFaction, Resources.OpponentFaction};
+    Factions.RemoveAll([](const FText& Text) { return Text.IsEmpty(); });
+    ResourceIdentityText->SetText(FText::Join(FText::FromString(TEXT("  //  ")), Factions));
+    TArray<FText> Summary{Resources.MatchState, Resources.ResearchStatus};
+    Summary.RemoveAll([](const FText& Text) { return Text.IsEmpty(); });
+    ResourceSummaryText->SetText(FText::Join(FText::FromString(TEXT("  //  ")), Summary));
+    const FText ResourceTooltip = FText::Format(
+        NSLOCTEXT("EchoesFieldHud", "ResourceContext", "{0}\nMatter {1}; Dawn {2}; Logistics {3}/{4}\n{5}"),
+        ResourceIdentityText->GetText(), Resources.Matter, Resources.Dawn,
+        Resources.PopulationUsed, Resources.PopulationCapacity, ResourceSummaryText->GetText());
+    if (ResourceActionButton != nullptr)
+    {
+        ResourceActionButton->SetToolTipText(FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "ResourceActionTooltip", "{0}\n\n{1}"),
+            ResourceTooltip, ResourceTelemetry.MonitorControl.Label));
+    }
+    else
+    {
+        SetToolTipText(ResourceTooltip);
+    }
+}
+
+void UEchoesFieldHudSectionWidget::SetSelectionTelemetry(const FEchoesFieldHudSelectionView& Selection)
+{
+    bool bRebuild = SelectionEntries.Num() != Selection.Entries.Num();
+    for (int32 I = 0; !bRebuild && I < SelectionEntries.Num(); ++I)
+        bRebuild = SelectionEntries[I].EntityId != Selection.Entries[I].EntityId;
+    SelectionEntries = Selection.Entries;
+    if (bRebuild && RootBorder) RebuildContent();
+    for (int32 I = 0; I < SelectionEntries.Num() && I < HealthBars.Num(); ++I)
+    {
+        const auto& Entry = SelectionEntries[I];
+        TelemetryDetails[I]->SetText(
+            SelectionDetails(Entry, SelectionEntries.Num() == 1));
+        TelemetryLabels[I]->SetText(FText::Format(NSLOCTEXT("EchoesFieldHud", "HealthTelemetry", "{0}  ×{1}     HEALTH {2}/{3}"),
+            Entry.Name, Entry.Count, Entry.HitPoints, Entry.MaxHitPoints));
+        HealthBars[I]->SetPercent(Entry.MaxHitPoints > 0
+            ? FMath::Clamp(static_cast<float>(Entry.HitPoints) / Entry.MaxHitPoints, 0.f, 1.f) : 0.f);
+        HealthBars[I]->SetFillColorAndOpacity(AccentColor(bHighContrast));
+    }
+}
+
+int32 UEchoesFieldHudSectionWidget::NativePaint(const FPaintArgs& Args, const FGeometry& Geometry,
+    const FSlateRect& Clip, FSlateWindowElementList& Elements, int32 Layer,
+    const FWidgetStyle& Style, bool bEnabled) const
+{
+    const int32 Base = Super::NativePaint(Args, Geometry, Clip, Elements, Layer, Style, bEnabled);
+    const FVector2D Size = Geometry.GetLocalSize();
+    if (Size.X < 20 || Size.Y < 10) return Base;
+    const float Cut = FMath::Min(10.f * Scale, static_cast<float>(Size.Y / 4));
+    const FLinearColor Edge = bHighContrast ? FLinearColor::White : FLinearColor(.13f,.30f,.33f,1);
+    TArray<FVector2D> Frame{{1,Cut},{Cut,1},{Size.X-2,1},{Size.X-2,Size.Y-Cut},
+        {Size.X-Cut,Size.Y-2},{1,Size.Y-2},{1,Cut}};
+    FSlateDrawElement::MakeLines(Elements, Base + 1, Geometry.ToPaintGeometry(), Frame,
+        ESlateDrawEffect::None, Edge, true, 1.f);
+    DrawLine(Elements, Base + 1, Geometry, {{Cut+5,1}, {FMath::Min(Size.X-5.,80.*Scale),1}},
+        Section == EEchoesFieldHudSection::Objectives || Section == EEchoesFieldHudSection::Status
+            ? FLinearColor(.85f,.55f,.18f,1) : AccentColor(bHighContrast), 2.f);
+    return Base + 1;
 }
 
 void UEchoesFieldHudSectionWidget::RebuildContent()
@@ -475,7 +664,8 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
         WidgetTree->RootWidget = RootBorder;
     }
     const bool bCompact = Section == EEchoesFieldHudSection::Status ||
-        Section == EEchoesFieldHudSection::Subtitle;
+        Section == EEchoesFieldHudSection::Subtitle ||
+        Section == EEchoesFieldHudSection::ResourceLedger;
     // Keep an in-progress direct-connect edit alive when a semantic refresh
     // changes the surrounding status lines or action shape. Rebuilding the
     // panel must not replace the editor with a fresh copy of the last
@@ -509,21 +699,119 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
         ? FMargin(8.0f * Scale, 4.0f * Scale)
         : FMargin(10.0f * Scale));
     RootBorder->SetBrushColor(PanelColor(bHighContrast));
+    RootBorder->SetClipping(Section == EEchoesFieldHudSection::ResourceLedger
+        ? EWidgetClipping::ClipToBounds : EWidgetClipping::Inherit);
     RootBorder->SetVisibility(ESlateVisibility::Visible);
     TitleText = nullptr;
-    if (Section != EEchoesFieldHudSection::Status)
+    if (Section != EEchoesFieldHudSection::Status && Section != EEchoesFieldHudSection::ResourceLedger)
     {
         TitleText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
-        ConfigureText(TitleText, Title, bCompact ? 11 : 15, Scale,
+        ConfigureText(TitleText, Title, bCompact ? 14 : 16, Scale,
             AccentColor(bHighContrast));
         ContentBox->AddChildToVerticalBox(TitleText)->SetPadding(
             FMargin(0, 0, 0, bCompact ? 2.0f * Scale : 5.0f));
     }
 
+    ResourceLabels.Reset();
+    ResourceValues.Reset();
+    ResourceIdentityText = nullptr;
+    ResourceSummaryText = nullptr;
+    ResourceActionButton = nullptr;
+    if (Section == EEchoesFieldHudSection::ResourceLedger)
+    {
+        UHorizontalBox* ResourceRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+        ContentBox->AddChildToVerticalBox(ResourceRow);
+        const FText Labels[] = {
+            NSLOCTEXT("EchoesFieldHud", "MatterLabel", "MATTER"),
+            NSLOCTEXT("EchoesFieldHud", "DawnLabel", "DAWN"),
+            NSLOCTEXT("EchoesFieldHud", "LogisticsLabel", "LOGISTICS")};
+        for (int32 Index = 0; Index < 3; ++Index)
+        {
+            UHorizontalBox* Column = WidgetTree->ConstructWidget<UHorizontalBox>();
+            auto* ColumnSlot = ResourceRow->AddChildToHorizontalBox(Column);
+            ColumnSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            ColumnSlot->SetPadding(FMargin(2 * Scale, 0));
+            UTextBlock* Label = WidgetTree->ConstructWidget<UTextBlock>();
+            ConfigureText(Label, Labels[Index], 14, Scale,
+                Index == 0 ? AccentColor(bHighContrast) : Index == 1
+                    ? ToneColor(EEchoesFieldHudTone::Warning, bHighContrast) : TextColor(bHighContrast));
+            Column->AddChildToHorizontalBox(Label)->SetPadding(FMargin(0, 0, 3 * Scale, 0));
+            ResourceLabels.Add(Label);
+            UTextBlock* Value = WidgetTree->ConstructWidget<UTextBlock>();
+            ConfigureText(Value, FText::GetEmpty(), 18, Scale, TextColor(bHighContrast));
+            Column->AddChildToHorizontalBox(Value);
+            ResourceValues.Add(Value);
+        }
+        ResourceIdentityText = WidgetTree->ConstructWidget<UTextBlock>();
+        ConfigureText(ResourceIdentityText, FText::GetEmpty(), 14, Scale,
+            ToneColor(EEchoesFieldHudTone::Muted, bHighContrast));
+        ResourceIdentityText->SetAutoWrapText(false);
+        ContentBox->AddChildToVerticalBox(ResourceIdentityText);
+        ResourceSummaryText = WidgetTree->ConstructWidget<UTextBlock>();
+        ConfigureText(ResourceSummaryText, FText::GetEmpty(), 14, Scale,
+            ToneColor(EEchoesFieldHudTone::Muted, bHighContrast));
+        ResourceSummaryText->SetAutoWrapText(false);
+        ContentBox->AddChildToVerticalBox(ResourceSummaryText);
+        SetResourceTelemetry(ResourceTelemetry);
+        if (Controls.Num() == 1 &&
+            Controls[0].Action != EEchoesFieldHudAction::None)
+        {
+            // Preserve the compact readout tree: its one semantic action wraps
+            // every existing telemetry child instead of adding a second label.
+            ResourceActionButton = WidgetTree->ConstructWidget<UEchoesFieldHudActionButton>(
+                UEchoesFieldHudActionButton::StaticClass(), TEXT("ResourceMonitorAction"));
+            ContentBox->RemoveFromParent();
+            ResourceActionButton->SetContent(ContentBox);
+            if (UButtonSlot* ContentSlot = Cast<UButtonSlot>(ContentBox->Slot))
+            {
+                ContentSlot->SetHorizontalAlignment(HAlign_Fill);
+                ContentSlot->SetVerticalAlignment(VAlign_Fill);
+            }
+            ResourceActionButton->Configure(
+                Owner.Get(), Controls[0], bHighContrast, Scale);
+            ResourceActionButton->SetToolTipText(FText::Format(
+                NSLOCTEXT("EchoesFieldHud", "ResourceMonitorTooltip", "{0}. {1}"),
+                Controls[0].Label, Controls[0].Detail));
+            RootBorder->SetContent(ResourceActionButton);
+            ActionButtons.Add(ResourceActionButton);
+        }
+    }
+
+    TelemetryLabels.Reset();
+    TelemetryDetails.Reset();
+    HealthBars.Reset();
+    for (const auto& Entry : SelectionEntries)
+    {
+        UTextBlock* Readout = WidgetTree->ConstructWidget<UTextBlock>();
+        ConfigureText(Readout, FText::Format(NSLOCTEXT("EchoesFieldHud", "HealthTelemetry", "{0}  ×{1}     HEALTH {2}/{3}"),
+            Entry.Name, Entry.Count, Entry.HitPoints, Entry.MaxHitPoints), 18, Scale, TextColor(bHighContrast));
+        ContentBox->AddChildToVerticalBox(Readout)->SetPadding(FMargin(0, 2, 0, 4));
+        TelemetryLabels.Add(Readout);
+        UProgressBar* Health = WidgetTree->ConstructWidget<UProgressBar>();
+        Health->SetVisibility(ESlateVisibility::HitTestInvisible);
+        FProgressBarStyle TrackStyle;
+        TrackStyle.BackgroundImage = FSlateColorBrush(FLinearColor(.055f,.07f,.075f,1));
+        TrackStyle.FillImage = FSlateColorBrush(FLinearColor::White);
+        Health->SetWidgetStyle(TrackStyle);
+        Health->SetBorderPadding(FVector2D::ZeroVector);
+        Health->SetPercent(Entry.MaxHitPoints > 0 ? FMath::Clamp(static_cast<float>(Entry.HitPoints) / Entry.MaxHitPoints, 0.f, 1.f) : 0.f);
+        Health->SetFillColorAndOpacity(AccentColor(bHighContrast));
+        USizeBox* Track = WidgetTree->ConstructWidget<USizeBox>();
+        Track->SetHeightOverride(5.f * Scale);
+        Track->SetContent(Health);
+        ContentBox->AddChildToVerticalBox(Track)->SetPadding(FMargin(0, 0, 0, 9 * Scale));
+        HealthBars.Add(Health);
+        UTextBlock* Detail = WidgetTree->ConstructWidget<UTextBlock>();
+        ConfigureText(Detail, SelectionDetails(Entry, SelectionEntries.Num() == 1),
+            16, Scale, TextColor(bHighContrast));
+        ContentBox->AddChildToVerticalBox(Detail)->SetPadding(FMargin(0, 0, 0, 10 * Scale));
+        TelemetryDetails.Add(Detail);
+    }
+
     for (const FText& Line : Lines)
     {
         UTextBlock* Text = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
-        ConfigureText(Text, Line, 12, Scale, TextColor(bHighContrast));
+        ConfigureText(Text, Line, 18, Scale, TextColor(bHighContrast));
         ContentBox->AddChildToVerticalBox(Text)->SetPadding(FMargin(0, 1));
         LineTexts.Add(Text);
     }
@@ -540,7 +828,7 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
     }
 
     UUniformGridPanel* Grid = nullptr;
-    if (!Controls.IsEmpty())
+    if (!Controls.IsEmpty() && Section != EEchoesFieldHudSection::ResourceLedger)
     {
         Grid = WidgetTree->ConstructWidget<UUniformGridPanel>(
             UUniformGridPanel::StaticClass());
@@ -548,7 +836,9 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
         ContentBox->AddChildToVerticalBox(Grid)->SetPadding(FMargin(0, 6, 0, 0));
     }
     const int32 Columns = Section == EEchoesFieldHudSection::CommandCard ? 3 : 2;
-    for (int32 Index = 0; Index < Controls.Num(); ++Index)
+    for (int32 Index = 0;
+         Section != EEchoesFieldHudSection::ResourceLedger && Index < Controls.Num();
+         ++Index)
     {
         const FEchoesFieldHudControl& Control = Controls[Index];
         UEchoesFieldHudActionButton* Button =
@@ -556,7 +846,23 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
                 UEchoesFieldHudActionButton::StaticClass());
         UTextBlock* Label = WidgetTree->ConstructWidget<UTextBlock>(
             UTextBlock::StaticClass());
-        Button->SetContent(Label);
+        Button->SetPresentationLabel(Label);
+        if (Section == EEchoesFieldHudSection::CommandCard)
+        {
+            UVerticalBox* Tile = WidgetTree->ConstructWidget<UVerticalBox>();
+            UEchoesHudGlyph* Glyph = WidgetTree->ConstructWidget<UEchoesHudGlyph>();
+            Glyph->SetControl(Control, bHighContrast);
+            USizeBox* IconBox = WidgetTree->ConstructWidget<USizeBox>();
+            IconBox->SetHeightOverride(42.f * Scale);
+            IconBox->SetContent(Glyph);
+            Tile->AddChildToVerticalBox(IconBox);
+            Label->SetJustification(ETextJustify::Center);
+            Tile->AddChildToVerticalBox(Label)->SetPadding(FMargin(2, 3, 2, 2));
+            Button->SetContent(Tile);
+        }
+        else Button->SetContent(Label);
+        if (UButtonSlot* ContentSlot = Cast<UButtonSlot>(Button->GetContent()->Slot))
+            ContentSlot->SetHorizontalAlignment(HAlign_Fill);
         Button->Configure(Owner.Get(), Control, bHighContrast, Scale);
         Grid->AddChildToUniformGrid(Button, Index / Columns, Index % Columns);
         ActionButtons.Add(Button);
@@ -818,7 +1124,9 @@ int32 UEchoesFieldHudMinimapWidget::NativePaint(
         DrawLine(OutDrawElements, BaseLayer + 6, AllottedGeometry,
             Frustum, FLinearColor::White, 1.5f, true);
     }
-    return BaseLayer + 6;
+    DrawLine(OutDrawElements, BaseLayer + 7, AllottedGeometry,
+        {{1,1},{Size.X-1,1},{Size.X-1,Size.Y-1},{1,Size.Y-1}}, AccentColor(bHighContrast), 1.5f, true);
+    return BaseLayer + 7;
 }
 
 bool UEchoesFieldHudMinimapWidget::DispatchPointer(
@@ -1282,6 +1590,17 @@ bool UEchoesFieldHudWidget::IsPointerOverChrome(
 {
     const FGeometry RootGeometry = GetCachedGeometry();
     const float ViewportScale = UWidgetLayoutLibrary::GetViewportScale(this);
+    if (View.Surface == EEchoesFieldHudSurface::Battlefield || View.Surface == EEchoesFieldHudSurface::Replay)
+    {
+        const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
+            RootGeometry.GetLocalSize() * ViewportScale, View.HudScale, !View.Status.IsEmpty());
+        if ((Layout.bBottomBarVisible &&
+             Layout.BottomBar.IsInsideOrOn(ScreenPosition)) ||
+            (Layout.bMenuVisible && Layout.MenuPanel.IsInsideOrOn(ScreenPosition)))
+        {
+            return true;
+        }
+    }
     if (View.bTutorialActive && !View.TutorialSkipModal.bVisible)
     {
         const float PanelWidth = 190.0f;
@@ -1389,6 +1708,39 @@ void UEchoesFieldHudWidget::BuildStableTree()
     RootCanvas->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
     WidgetTree->RootWidget = RootCanvas;
 
+    // SObjectWidget paints children before NativePaint. Put the backing in
+    // the canvas itself so it cannot be composited over text and controls.
+    ConsoleBacking = WidgetTree->ConstructWidget<UBorder>(
+        UBorder::StaticClass(), TEXT("ConsoleBacking"));
+    ConsoleBacking->SetVisibility(ESlateVisibility::Collapsed);
+    auto* BackingSlot = RootCanvas->AddChildToCanvas(ConsoleBacking);
+    BackingSlot->SetZOrder(-100);
+
+    MenuButton = WidgetTree->ConstructWidget<UEchoesFieldHudActionButton>(
+        UEchoesFieldHudActionButton::StaticClass(), TEXT("BattlefieldMenuButton"));
+    UTextBlock* MenuLabel = WidgetTree->ConstructWidget<UTextBlock>(
+        UTextBlock::StaticClass(), TEXT("BattlefieldMenuLabel"));
+    MenuButton->SetContent(MenuLabel);
+    MenuButton->SetPresentationLabel(MenuLabel);
+    MenuButton->SetVisibility(ESlateVisibility::Collapsed);
+    UCanvasPanelSlot* MenuSlot = RootCanvas->AddChildToCanvas(MenuButton);
+    MenuSlot->SetZOrder(90);
+
+    // NativePaint does not register mouse targets. This transparent child
+    // supplies the exact painted skip rectangle to Slate's hit-test path;
+    // its unhandled press bubbles to our existing hold/capture handler.
+    TutorialSkipHitTarget = WidgetTree->ConstructWidget<UBorder>(
+        UBorder::StaticClass(), TEXT("TutorialSkipHitTarget"));
+    TutorialSkipHitTarget->SetBrushColor(FLinearColor::Transparent);
+    TutorialSkipHitTarget->SetToolTipText(NSLOCTEXT("EchoesFieldHud", "SkipHoldHelp",
+        "Hold Space, or hold the left mouse button here, to review tutorial skip options."));
+    TutorialSkipHitTarget->SetVisibility(ESlateVisibility::Collapsed);
+    auto* SkipSlot = RootCanvas->AddChildToCanvas(TutorialSkipHitTarget);
+    SkipSlot->SetAnchors(FAnchors(1, 0));
+    SkipSlot->SetOffsets(FMargin(-210, 16, 190, 34));
+    SkipSlot->SetZOrder(100);
+
+
     AddSection(EEchoesFieldHudSection::ResourceLedger,
         FAnchors(0.58f, 0.02f, 0.98f, 0.22f), FMargin(0));
     AddSection(EEchoesFieldHudSection::Objectives,
@@ -1466,6 +1818,13 @@ void UEchoesFieldHudWidget::RefreshContactWidgets()
         Contact->SetVisibility(ESlateVisibility::HitTestInvisible);
         RootCanvas->AddChildToCanvas(Contact);
         ContactWidgets.Add(Contact);
+    }
+    // The pass below consumes one widget per valid contact. A hidden surface
+    // requires none, so the array was just emptied; walking the contacts anyway
+    // would index element zero of an empty array and abort the process.
+    if (ContactWidgets.IsEmpty())
+    {
+        return;
     }
     int32 WidgetIndex = 0;
     for (const FEchoesFieldHudContact& Contact : View.Minimap.Contacts)
@@ -1604,60 +1963,35 @@ void UEchoesFieldHudWidget::ApplyView()
     {
         return;
     }
+    if (TutorialSkipHitTarget)
+        TutorialSkipHitTarget->SetVisibility(View.bTutorialActive && !View.TutorialSkipModal.bVisible
+            ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
     const float Scale = FMath::Clamp(View.HudScale, 0.8f, 1.5f);
     const bool bBattlefield =
         View.Surface == EEchoesFieldHudSurface::Battlefield ||
         View.Surface == EEchoesFieldHudSurface::Replay;
 
+    if (MenuButton != nullptr)
+    {
+        MenuButton->Configure(this, View.Menu.Control, View.bHighContrast, Scale);
+        MenuButton->SetVisibility(bBattlefield && View.Menu.bVisible
+            ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+    }
+
     TArray<FText> Lines;
     UEchoesFieldHudSectionWidget* Panel = GetSection(
         EEchoesFieldHudSection::ResourceLedger);
-    Lines = {
-        FText::Format(NSLOCTEXT("EchoesFieldHud", "ResourceSummary",
-            "MATTER {0}   DAWN {1}   LOGISTICS {2}/{3}"),
-            View.Resources.Matter, View.Resources.Dawn,
-            View.Resources.PopulationUsed, View.Resources.PopulationCapacity),
-        View.Resources.MatchState,
-        View.Resources.ResearchStatus,
-        FText::Format(NSLOCTEXT("EchoesFieldHud", "Forces", "{0} / {1}"),
-            View.Resources.LocalFaction, View.Resources.OpponentFaction)};
-    Lines.RemoveAll([](const FText& Text) { return Text.IsEmpty(); });
-    Panel->SetContent(NSLOCTEXT("EchoesFieldHud", "Ledger", "FIELD LEDGER"),
-        Lines, {}, View.bHighContrast, Scale);
+    TArray<FEchoesFieldHudControl> ResourceControls;
+    if (View.Resources.MonitorControl.Action != EEchoesFieldHudAction::None)
+    {
+        ResourceControls.Add(View.Resources.MonitorControl);
+    }
+    Panel->SetContent(FText::GetEmpty(), {}, ResourceControls, View.bHighContrast, Scale);
+    Panel->SetResourceTelemetry(View.Resources);
     Panel->SetVisibility(bBattlefield && View.Resources.bVisible
         ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 
     Lines.Reset();
-    for (const FEchoesFieldHudSelectionEntry& Entry : View.Selection.Entries)
-    {
-        FText Summary = FText::Format(
-            NSLOCTEXT("EchoesFieldHud", "SelectionEntry",
-                "{0} x{1}  HP {2}/{3}  ARM {4}  DMG {5}  {6}"),
-            Entry.Name, Entry.Count, Entry.HitPoints, Entry.MaxHitPoints,
-            Entry.Armor, Entry.Damage, Entry.Order);
-        if (!Entry.Purpose.IsEmpty())
-        {
-            Summary = FText::Format(
-                NSLOCTEXT("EchoesFieldHud", "SelectionPurpose",
-                    "{0}\nPURPOSE  {1}"),
-                Summary, Entry.Purpose);
-        }
-        if (!Entry.Production.IsEmpty())
-        {
-            Summary = FText::Format(
-                NSLOCTEXT("EchoesFieldHud", "SelectionProduction",
-                    "{0}\nPRODUCTION  {1}  {2}%"),
-                Summary, Entry.Production, Entry.ProductionPercent);
-        }
-        if (Entry.CargoCapacity > 0)
-        {
-            Summary = FText::Format(
-                NSLOCTEXT("EchoesFieldHud", "SelectionCargo",
-                    "{0}\nCARGO  {1}/{2}"),
-                Summary, Entry.Cargo, Entry.CargoCapacity);
-        }
-        Lines.Add(Summary);
-    }
     if (View.Production.bVisible)
     {
         if (View.Production.Cancellation.bVisible)
@@ -1753,6 +2087,7 @@ void UEchoesFieldHudWidget::ApplyView()
         }
     }
     Panel = GetSection(EEchoesFieldHudSection::Selection);
+    Panel->SetSelectionTelemetry(View.Selection);
     Panel->SetContent(NSLOCTEXT("EchoesFieldHud", "Selection", "SELECTION"),
         Lines, View.Production.Controls, View.bHighContrast, Scale);
     Panel->SetVisibility(bBattlefield && View.Selection.bVisible
@@ -1764,8 +2099,19 @@ void UEchoesFieldHudWidget::ApplyView()
         : TArray<FText>{FText::Format(
             NSLOCTEXT("EchoesFieldHud", "Formation", "FORMATION  {0}"),
             View.Commands.Formation)};
+    if (!View.Commands.AbilityStatus.IsEmpty()) Lines.Add(View.Commands.AbilityStatus);
+    auto CommandControls = View.Commands.Controls;
+    for (auto& Control : CommandControls)
+    {
+        // Availability is readable text outside the disabled input subtree.
+        // Timers must not resize buttons or shift adjacent command targets.
+        if (Control.Action == EEchoesFieldHudAction::ActivateRelaySupply ||
+            (Control.Action == EEchoesFieldHudAction::CommandDeck &&
+             Control.Argument == static_cast<int32>(EEchoesCommandDeckAction::ToggleBulwarkDeployment)))
+            Control.Detail = FText::GetEmpty();
+    }
     Panel->SetContent(NSLOCTEXT("EchoesFieldHud", "Commands", "COMMAND CARD"),
-        Lines, View.Commands.Controls, View.bHighContrast, Scale);
+        Lines, CommandControls, View.bHighContrast, Scale);
     Panel->SetVisibility(bBattlefield && View.Commands.bVisible
         ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 
@@ -1775,23 +2121,27 @@ void UEchoesFieldHudWidget::ApplyView()
         Lines.Add(JoinedLine(Line));
     }
     Panel = GetSection(EEchoesFieldHudSection::Objectives);
+    // Captions remain readable in the console without hiding objective controls.
+    if (!View.Subtitle.IsEmpty())
+        Lines.Insert(FText::Format(NSLOCTEXT("EchoesFieldHud", "CaptionInConsole", "{0}: {1}"),
+            View.SubtitleSpeaker, View.Subtitle), 0);
+    if (View.bTutorialActive && !View.Status.IsEmpty()) Lines.Add(View.Status);
     Panel->SetContent(View.ObjectiveTitle, Lines, View.ObjectiveControls, View.bHighContrast, Scale);
-    Panel->SetVisibility(bBattlefield && View.bObjectiveVisible
+    Panel->SetVisibility(bBattlefield && (View.bObjectiveVisible || !View.Subtitle.IsEmpty() || (View.bTutorialActive && !View.Status.IsEmpty()))
         ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 
     Panel = GetSection(EEchoesFieldHudSection::Status);
     Panel->SetContent(NSLOCTEXT("EchoesFieldHud", "Status", "STATUS"),
         View.Status.IsEmpty() ? TArray<FText>{} : TArray<FText>{View.Status},
         {}, View.bHighContrast, Scale);
-    Panel->SetVisibility(bBattlefield && !View.Status.IsEmpty()
+    Panel->SetVisibility(bBattlefield && !View.bTutorialActive && !View.Status.IsEmpty()
         ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 
     Panel = GetSection(EEchoesFieldHudSection::Subtitle);
     Panel->SetContent(View.SubtitleSpeaker,
         View.Subtitle.IsEmpty() ? TArray<FText>{} : TArray<FText>{View.Subtitle},
         {}, View.bHighContrast, Scale);
-    Panel->SetVisibility(bBattlefield && !View.Subtitle.IsEmpty()
-        ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+    Panel->SetVisibility(ESlateVisibility::Collapsed); // Caption is published with objectives above.
 
     TArray<FEchoesFieldHudControl> TechnologyControls =
         View.Technology.Controls;
@@ -1907,6 +2257,11 @@ void UEchoesFieldHudWidget::GatherActionButtons(
     TArray<UEchoesFieldHudActionButton*>& OutButtons) const
 {
     OutButtons.Reset();
+    if (MenuButton != nullptr &&
+        MenuButton->GetVisibility() != ESlateVisibility::Collapsed)
+    {
+        OutButtons.Add(MenuButton);
+    }
     for (UEchoesFieldHudSectionWidget* Section : Sections)
     {
         if (Section == nullptr || Section->GetVisibility() == ESlateVisibility::Collapsed)
@@ -2166,11 +2521,54 @@ FReply UEchoesFieldHudWidget::NativeOnKeyUp(
     return Super::NativeOnKeyUp(InGeometry, InKeyEvent);
 }
 
+void UEchoesFieldHudWidget::ApplyConsoleLayout(const FVector2D& ViewportPixels)
+{
+    // Arrange from this frame's viewport size, not last frame's child geometry.
+    // Convert the shared physical-pixel contract exactly once for UMG DPI.
+    const float Dpi = FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this));
+    const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
+        ViewportPixels, View.HudScale, !View.Status.IsEmpty());
+    const bool bField = View.Surface == EEchoesFieldHudSurface::Battlefield ||
+        View.Surface == EEchoesFieldHudSurface::Replay;
+    const auto Place = [Dpi, bField](UWidget* Widget, const FBox2D& Rect, bool bVisible)
+    {
+        auto* Slot = Widget ? Cast<UCanvasPanelSlot>(Widget->Slot) : nullptr;
+        if (!Slot) return;
+        Widget->SetVisibility(bField && bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+        Slot->SetAnchors(FAnchors(0, 0));
+        Slot->SetPosition(Rect.Min / Dpi);
+        Slot->SetSize(FVector2D(FMath::Max(0.0, Rect.GetSize().X), FMath::Max(0.0, Rect.GetSize().Y)) / Dpi);
+    };
+    if (ConsoleBacking)
+    {
+        ConsoleBacking->SetBrushColor(ConsoleBackingColor(View.bHighContrast));
+        Place(ConsoleBacking, Layout.BottomBar, Layout.bBottomBarVisible);
+    }
+    Place(MenuButton, Layout.MenuPanel,
+        Layout.bMenuVisible && View.Menu.bVisible);
+    Place(GetSection(EEchoesFieldHudSection::ResourceLedger), Layout.ResourcePanel,
+        Layout.bResourceVisible && View.Resources.bVisible);
+    Place(GetSection(EEchoesFieldHudSection::Objectives), Layout.ObjectivePanel,
+        Layout.bObjectiveVisible && (View.bObjectiveVisible || !View.Subtitle.IsEmpty() ||
+            (View.bTutorialActive && !View.Status.IsEmpty())));
+    Place(GetSection(EEchoesFieldHudSection::Selection), Layout.SelectionPanel,
+        Layout.bSelectionVisible && View.Selection.bVisible);
+    Place(GetSection(EEchoesFieldHudSection::CommandCard), Layout.CommandDeckPanel,
+        Layout.bCommandDeckVisible && View.Commands.bVisible);
+    Place(GetSection(EEchoesFieldHudSection::Status), Layout.StatusPanel,
+        Layout.bStatusVisible && !View.bTutorialActive);
+    Place(MinimapWidget, Layout.MinimapPanel, Layout.bMinimapVisible && View.Minimap.bVisible);
+
+}
+
 void UEchoesFieldHudWidget::NativeTick(
     const FGeometry& MyGeometry,
     float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
+
+    ApplyConsoleLayout(MyGeometry.GetLocalSize() *
+        FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this)));
 
     if (View.bTutorialActive && !View.TutorialSkipModal.bVisible)
     {
@@ -2182,6 +2580,9 @@ void UEchoesFieldHudWidget::NativeTick(
                 HoldToSkipCurrentSeconds = 0.0f;
                 bHoldToSkipPointerPressed = false;
                 bHoldToSkipSpacePressed = false;
+                // The hold is complete; the modal must receive the next click.
+                if (HasMouseCapture() && FSlateApplication::IsInitialized())
+                    FSlateApplication::Get().ReleaseAllPointerCapture();
                 DispatchAction(EEchoesFieldHudAction::OpenTutorialSkipModal, 0);
             }
         }
@@ -2210,6 +2611,47 @@ int32 UEchoesFieldHudWidget::NativePaint(
     int32 MaxLayer = Super::NativePaint(
         Args, AllottedGeometry, MyCullingRect, OutDrawElements,
         LayerId, InWidgetStyle, bParentEnabled);
+
+    // Project live, player-scoped geometry each paint so camera movement cannot
+    // leave stale ranges on screen. Clip it above the console; it owns no input.
+    if (APlayerController* Player = GetOwningPlayer(); Player && !View.NetworkCoverage.IsEmpty())
+    {
+        const FVector2D Size = AllottedGeometry.GetLocalSize();
+        const float Scale = FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this));
+        const FEchoesHudLayout Layout = FEchoesHudLayout::Build(Size * Scale, View.HudScale, !View.Status.IsEmpty());
+        OutDrawElements.PushClip(FSlateClippingZone(AllottedGeometry.ToPaintGeometry(
+            FVector2D(Size.X, Layout.BottomBar.Min.Y / Scale), FSlateLayoutTransform())));
+        const auto Line = [&](const FVector& A, const FVector& B, const FLinearColor& Color)
+        {
+            FVector2D PA, PB;
+            if (Player->ProjectWorldLocationToScreen(A, PA, true) &&
+                Player->ProjectWorldLocationToScreen(B, PB, true))
+            {
+                TArray<FVector2D> Points{PA / Scale, PB / Scale};
+                FSlateDrawElement::MakeLines(OutDrawElements, MaxLayer + 1,
+                    AllottedGeometry.ToPaintGeometry(), Points, ESlateDrawEffect::None,
+                    Color, true, 2.0f);
+            }
+        };
+        for (const FEchoesNetworkConnectionView& Link : View.NetworkConnections)
+            Line(Link.From, Link.To, FLinearColor(0.1f, 0.85f, 1.0f, 0.9f));
+        for (const FEchoesNetworkCoverageView& Coverage : View.NetworkCoverage)
+        {
+            constexpr int32 Segments = 96;
+            for (int32 I = 0; I < Segments; ++I)
+            {
+                // Broken white outline means potential range only; solid cyan is live.
+                if (!Coverage.bOperational && I % 2) continue;
+                const float A = 2.0f * PI * I / Segments;
+                const float B = 2.0f * PI * (I + 1) / Segments;
+                Line(Coverage.Center + FVector(FMath::Cos(A), FMath::Sin(A), 0) * Coverage.Radius,
+                     Coverage.Center + FVector(FMath::Cos(B), FMath::Sin(B), 0) * Coverage.Radius,
+                     Coverage.bOperational ? FLinearColor(0.1f, 0.85f, 1.0f, 0.95f) : FLinearColor(1, 1, 1, 0.8f));
+            }
+        }
+        OutDrawElements.PopClip();
+        ++MaxLayer;
+    }
 
     if (!View.bTutorialActive)
     {
@@ -2374,7 +2816,7 @@ int32 UEchoesFieldHudWidget::NativePaint(
             BorderCol, 1.2f, true);
 
         // Text
-        const FSlateFontInfo SkipFont = FCoreStyle::GetDefaultFontStyle("Regular", 10);
+        const FSlateFontInfo SkipFont = FCoreStyle::GetDefaultFontStyle("Regular", 12);
         const FLinearColor TextCol = View.bHighContrast
             ? FLinearColor::White
             : FLinearColor(0.72f, 0.78f, 0.82f, 0.90f);
@@ -2384,7 +2826,7 @@ int32 UEchoesFieldHudWidget::NativePaint(
             AllottedGeometry.ToPaintGeometry(
                 FVector2D(135.0f, 20.0f),
                 FSlateLayoutTransform(SkipPos + FVector2D(10.0f, 9.0f))),
-            TEXT("HOLD TO SKIP"),
+            NSLOCTEXT("EchoesFieldHud", "HoldSpaceToSkip", "HOLD SPACE TO SKIP").ToString(),
             SkipFont,
             ESlateDrawEffect::None,
             TextCol);
@@ -2434,7 +2876,9 @@ int32 UEchoesFieldHudWidget::NativePaint(
 
         const float BannerWidth = FMath::Clamp(LocalSize.X * 0.52f, 460.0f, 680.0f);
         const float BannerHeight = 52.0f;
-        const FVector2D BannerPos((LocalSize.X - BannerWidth) * 0.5f, 12.0f);
+        const float Dpi = FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this));
+        const FEchoesHudLayout Layout = FEchoesHudLayout::Build(LocalSize * Dpi, View.HudScale, true);
+        const FVector2D BannerPos((LocalSize.X - BannerWidth) * 0.5f, Layout.StatusPanel.Min.Y / Dpi);
 
         // Dark high-contrast background
         const FLinearColor BannerBg = View.bHighContrast

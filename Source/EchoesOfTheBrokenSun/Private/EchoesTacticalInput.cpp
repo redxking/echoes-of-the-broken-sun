@@ -1,5 +1,7 @@
 #include "EchoesPlayerController.h"
 #include "EchoesBuildPlacementPreview.h"
+#include "EchoesPlacementDiagnostics.h"
+#include "EchoesOfTheBrokenSun.h"
 #include "EchoesContextCursorWidget.h"
 #include "EchoesEntityView.h"
 #include "EchoesRTSCameraPawn.h"
@@ -158,6 +160,23 @@ void AEchoesPlayerController::UpdateTacticalInputPresentation()
                 ? EEchoesBuildPreviewValidity::InvalidWorker
                 : EEchoesBuildPreviewValidity::OutsideMap;
         }
+        if (FEchoesPlacementDiagnostics::Enabled() && ScopedView.has_value())
+        {
+            LastBuildPlacementDiagnostic = FEchoesPlacementDiagnostics::Preview(
+                *ScopedView, BuildPlacementWorkerId, BuildPlacementType,
+                Bridge->WorldToSim(BuildPlacementWorldPosition), Pointer, ViewportSize,
+                BuildPlacementWorldPosition, Evaluation, bHasGround);
+            const FString Semantic = FString::Printf(TEXT("%d:%d:%u:%u"), bHasGround,
+                Evaluation.bWillConnect, Evaluation.ConnectionNodeId, static_cast<uint32>(Evaluation.Validity));
+            const double Now = FPlatformTime::Seconds();
+            if (Semantic != LastBuildPlacementSemantic || Now - LastBuildPlacementLogTime >= 0.25)
+            {
+                UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] attempt=%s stage=preview %s"), *BuildPlacementAttempt, *LastBuildPlacementDiagnostic);
+                LastBuildPlacementSemantic = Semantic;
+                LastBuildPlacementLogTime = Now;
+            }
+        }
+        BuildPlacementGuidance = FEchoesBuildPlacementModel::Guidance(Evaluation);
         bBuildPlacementValid = Evaluation.IsValid();
         BuildPlacementHalfExtentRaw = Evaluation.FootprintHalfExtentRaw;
         Facts.bPlacementValid = bBuildPlacementValid;
@@ -292,6 +311,10 @@ void AEchoesPlayerController::BeginBuildPlacement(
     BuildPlacementHalfExtentRaw = 0;
     bBuildPlacementValid = false;
     bBuildPlacementActive = true;
+    BuildPlacementAttempt = FGuid::NewGuid().ToString(EGuidFormats::Digits);
+    LastBuildPlacementDiagnostic = TEXT("preview=unavailable");
+    LastBuildPlacementSemantic.Reset();
+    LastBuildPlacementLogTime = -1.0;
     ArmedDeckAction = EEchoesCommandDeckAction::None;
     SetStatusMessage(LOCTEXT("PlacementInstructions", "Move the blueprint to visible clear ground. Left-click confirms; right-click cancels.").ToString(), 12.0f);
     UpdateTacticalInputPresentation();
@@ -313,7 +336,11 @@ bool AEchoesPlayerController::ConfirmBuildPlacement()
         SetStatusMessage(LOCTEXT("ReplayConstructionReadOnly", "REPLAY VIEW — construction is read-only.").ToString());
         return false;
     }
+    if (FEchoesPlacementDiagnostics::Enabled())
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] attempt=%s stage=click_previous_preview %s"), *BuildPlacementAttempt, *LastBuildPlacementDiagnostic);
     UpdateTacticalInputPresentation();
+    if (FEchoesPlacementDiagnostics::Enabled())
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] attempt=%s stage=click_resolved active=%d %s"), *BuildPlacementAttempt, bBuildPlacementActive, *LastBuildPlacementDiagnostic);
     if (!bBuildPlacementValid)
     {
         UEchoesSimulationSubsystem* Bridge =
@@ -333,6 +360,8 @@ bool AEchoesPlayerController::ConfirmBuildPlacement()
                       BuildPlacementType,
                       Bridge->WorldToSim(BuildPlacementWorldPosition))
                 : FEchoesBuildPlacementEvaluation{};
+        if (FEchoesPlacementDiagnostics::Enabled())
+            UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] attempt=%s stage=preview_rejected detail=%s"), *BuildPlacementAttempt, FEchoesBuildPlacementModel::Feedback(Evaluation.Validity));
         SetStatusMessage(FEchoesBuildPlacementModel::Feedback(
             Evaluation.Validity));
         return false;
@@ -349,11 +378,16 @@ bool AEchoesPlayerController::ConfirmBuildPlacement()
             BuildPlacementWorldPosition,
             Feedback))
     {
+        if (FEchoesPlacementDiagnostics::Enabled())
+            UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] attempt=%s stage=queue_rejected detail=%s"), *BuildPlacementAttempt, *Feedback);
         SetStatusMessage(Feedback.IsEmpty()
             ? LOCTEXT("PlacementRejected", "[BUILD_PLACEMENT_REJECTED] Choose another location.").ToString()
             : Feedback);
         return false;
     }
+    if (FEchoesPlacementDiagnostics::Enabled())
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] attempt=%s stage=queued sequence=%llu %s"),
+            *BuildPlacementAttempt, static_cast<unsigned long long>(Bridge->GetLastAcceptedLocalCommandSequence().Get(0)), *LastBuildPlacementDiagnostic);
     ShowAcceptedCommandMarker(
         BuildPlacementWorldPosition,
         EEchoesCommandMarkerType::Build,
@@ -366,6 +400,8 @@ bool AEchoesPlayerController::ConfirmBuildPlacement()
 void AEchoesPlayerController::CancelBuildPlacement(bool bShowFeedback)
 {
     const bool bWasActive = bBuildPlacementActive;
+    if (bWasActive && FEchoesPlacementDiagnostics::Enabled())
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] attempt=%s stage=preview_closed explicit_cancel=%d"), *BuildPlacementAttempt, bShowFeedback);
     if (BuildPlacementPreview != nullptr)
     {
         BuildPlacementPreview->Destroy();
@@ -527,7 +563,7 @@ void AEchoesPlayerController::ToggleTacticalPause()
         return;
     }
     if (!Bridge || !Bridge->IsScenarioReady() || Bridge->GetMatchOutcome() != echoes::sim::MatchOutcome::Ongoing) return;
-    if (Bridge->IsScenarioPaused() && !RequireOperationMastery(Bridge->GetOperationMode())) return;
+    if (Bridge->IsScenarioPaused() && !RequireOperationProfile()) return;
     bTacticalPaused = !Bridge->IsScenarioPaused();
     Bridge->SetScenarioPaused(bTacticalPaused);
     SetStatusMessage(bTacticalPaused ? LOCTEXT("TacticalPaused", "Tactical pause — issue orders, then press Pause to resume.").ToString() : LOCTEXT("BattleResumed", "Battle resumed.").ToString(), bTacticalPaused ? 3600.f : 3.f);

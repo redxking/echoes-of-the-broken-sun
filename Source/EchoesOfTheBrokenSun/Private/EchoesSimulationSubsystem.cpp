@@ -1,4 +1,5 @@
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesPlacementDiagnostics.h"
 
 #include "EchoesBattlefieldPresentation.h"
 #include "EchoesAiDifficultyController.h"
@@ -16011,6 +16012,83 @@ bool UEchoesSimulationSubsystem::ValidateSustainedStressContract(
     return true;
 }
 
+
+void UEchoesSimulationSubsystem::ObservePlacementDiagnostics()
+{
+    if (!FEchoesPlacementDiagnostics::Enabled() || !Simulation.IsValid()) return;
+    const auto View = Simulation->CreatePlayerView(LocalPlayerId);
+    if (!View.has_value()) return;
+    if (DiagnosticScenarioGeneration != ScenarioAuthorityGeneration || Simulation->CurrentTick() < DiagnosticLastTick)
+    {
+        DiagnosticBuildingStates.Reset();
+        DiagnosticBuildingSequences.Reset();
+        DiagnosticBuildCommands.Reset();
+        DiagnosticScenarioGeneration = ScenarioAuthorityGeneration;
+    }
+    DiagnosticLastTick = Simulation->CurrentTick();
+    for (auto It = DiagnosticBuildCommands.CreateIterator(); It; ++It)
+    {
+        const auto Receipt = Simulation->FindCommandResolutionReceipt(LocalPlayerId, *It);
+        if (!Receipt.has_value())
+        {
+            const auto Pending = Simulation->PendingCommands();
+            const bool bPending = std::any_of(Pending.begin(), Pending.end(),
+                [Sequence = *It](const echoes::sim::Command& C)
+                { return C.player == LocalPlayerId && C.sequence == Sequence; });
+            if (!bPending)
+            {
+                UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] stage=resolution_missing generation=%llu sequence=%llu tick=%llu"),
+                    static_cast<unsigned long long>(ScenarioAuthorityGeneration), static_cast<unsigned long long>(*It),
+                    static_cast<unsigned long long>(Simulation->CurrentTick()));
+                It.RemoveCurrent();
+            }
+            continue;
+        }
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] stage=resolved generation=%llu sequence=%llu tick=%llu outcome=%u"),
+            static_cast<unsigned long long>(ScenarioAuthorityGeneration), static_cast<unsigned long long>(*It),
+            static_cast<unsigned long long>(Receipt->assignedExecutionTick), static_cast<uint32>(Receipt->outcome));
+        It.RemoveCurrent();
+    }
+    for (const auto& Receipt : View->ConstructionReceipts())
+    {
+        if (Receipt.transition == echoes::sim::ConstructionTransition::Progressed) continue;
+        if (Receipt.transition == echoes::sim::ConstructionTransition::Created)
+            DiagnosticBuildingSequences.Add(Receipt.structure, Receipt.commandSequence);
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] stage=construction generation=%llu tick=%llu sequence=%llu worker=%u building=%u transition=%u charged=%d/%d refund=%d/%d matter=%d dawn=%d logistics=%d/%d"),
+            static_cast<unsigned long long>(ScenarioAuthorityGeneration), static_cast<unsigned long long>(Receipt.tick),
+            static_cast<unsigned long long>(DiagnosticBuildingSequences.FindRef(Receipt.structure)), Receipt.worker, Receipt.structure,
+            static_cast<uint32>(Receipt.transition), Receipt.charged.material, Receipt.charged.dawnshards,
+            Receipt.refund.material, Receipt.refund.dawnshards, View->Player().resources.material, View->Player().resources.dawnshards,
+            View->PopulationUsed(), View->PopulationCapacity());
+    }
+    TSet<uint32> Present;
+    for (const auto& Entity : View->Entities())
+    {
+        if (Entity.owner != LocalPlayerId || Entity.faction != echoes::sim::Faction::MeridianCompact ||
+            (Entity.type != echoes::sim::EntityType::CommandCore && Entity.type != echoes::sim::EntityType::Dropoff &&
+             Entity.type != echoes::sim::EntityType::Barracks && Entity.type != echoes::sim::EntityType::UtilityStructure)) continue;
+        Present.Add(Entity.id);
+        const FString State = FString::Printf(TEXT("type=%u raw=(%d,%d) completed=%d alive=%d network=%d aegis=%d"),
+            static_cast<uint32>(Entity.type), Entity.position.x.Raw(), Entity.position.y.Raw(), Entity.completed,
+            Entity.hitPoints > 0, Entity.networkOperational, Entity.aegisPowered);
+        const FString* Previous = DiagnosticBuildingStates.Find(Entity.id);
+        if (Previous && *Previous == State) continue;
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] stage=building_state generation=%llu tick=%llu building=%u sequence=%llu %s matter=%d dawn=%d logistics=%d/%d"),
+            static_cast<unsigned long long>(ScenarioAuthorityGeneration), static_cast<unsigned long long>(View->CurrentTick()), Entity.id,
+            static_cast<unsigned long long>(DiagnosticBuildingSequences.FindRef(Entity.id)), *State,
+            View->Player().resources.material, View->Player().resources.dawnshards, View->PopulationUsed(), View->PopulationCapacity());
+        DiagnosticBuildingStates.Add(Entity.id, State);
+    }
+    for (auto It = DiagnosticBuildingStates.CreateIterator(); It; ++It)
+    {
+        if (Present.Contains(It.Key())) continue;
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] stage=building_removed generation=%llu building=%u"),
+            static_cast<unsigned long long>(ScenarioAuthorityGeneration), It.Key());
+        DiagnosticBuildingSequences.Remove(It.Key());
+        It.RemoveCurrent();
+    }
+}
+
 void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 {
     PollCheckpointSaves();
@@ -16146,6 +16224,8 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
                 : 0;
         QueueOpponentCommands();
         Simulation->Step();
+        ObserveGameplayFeedbackFixedStep();
+        ObservePlacementDiagnostics();
         OnFixedStepObserved.Broadcast();
         if (bSustainedStressScenario &&
             !MaintainSustainedStressContractAfterFixedStep(
@@ -17537,6 +17617,7 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
     }
     for (const echoes::sim::Command& Command : Commands)
     {
+        if (!echoes::sim::Simulation::IsExecutableCommandTick(Command.executeTick)) continue;
         std::string Rejection;
         if (Simulation->QueueCommand(Command, &Rejection))
         {
@@ -18199,6 +18280,18 @@ bool UEchoesSimulationSubsystem::IssueRepairCommand(
         OutFeedback);
 }
 
+bool UEchoesSimulationSubsystem::IssueConstructionAssistCommand(
+    uint32 WorkerId, uint32 StructureId, FString& OutFeedback)
+{
+    const echoes::sim::Entity* Site = FindEntity(StructureId);
+    return QueuePlayerCommand(
+        echoes::sim::CommandType::Build, WorkerId, StructureId,
+        Site != nullptr ? Site->position : echoes::sim::Vec2{},
+        echoes::sim::FutureWellChoice::Dormant,
+        Site != nullptr ? Site->type : echoes::sim::EntityType::Barracks,
+        OutFeedback);
+}
+
 bool UEchoesSimulationSubsystem::IssueConstructionCancellation(
     uint32 StructureId,
     FString& OutFeedback)
@@ -18339,6 +18432,11 @@ bool UEchoesSimulationSubsystem::IssueResearchCommand(
     // Match movement/build/ability scheduling so increasing local sequences
     // cannot target an earlier tick than an already queued order.
     Command.executeTick = ResolvePlayerExecuteTick(1);
+    if (!echoes::sim::Simulation::IsExecutableCommandTick(Command.executeTick))
+    {
+        OutFeedback = TEXT("[SIM_TIME_LIMIT] This game has reached its simulation time limit. Start a new game to issue orders.");
+        return false;
+    }
     Command.player = LocalPlayerId;
     Command.sequence = NextPlayerCommandSequence;
     Command.type = echoes::sim::CommandType::Research;
@@ -18354,6 +18452,7 @@ bool UEchoesSimulationSubsystem::IssueResearchCommand(
 
     ++NextPlayerCommandSequence;
     LastAcceptedLocalCommandSequence = Command.sequence;
+    TrackGameplayFeedbackCommand(Command);
     OutFeedback = TEXT("RESEARCH QUEUED: production is suspended until completion.");
     UE_LOG(
         LogEchoes,
@@ -18430,6 +18529,11 @@ bool UEchoesSimulationSubsystem::IssueWarformAdaptation(
 
     echoes::sim::Command Command;
     Command.executeTick = ResolvePlayerExecuteTick(1);
+    if (!echoes::sim::Simulation::IsExecutableCommandTick(Command.executeTick))
+    {
+        OutFeedback = TEXT("[SIM_TIME_LIMIT] This game has reached its simulation time limit. Start a new game to issue orders.");
+        return false;
+    }
     Command.player = LocalPlayerId;
     Command.sequence = NextPlayerCommandSequence;
     Command.type = echoes::sim::CommandType::AdaptWarform;
@@ -18446,6 +18550,7 @@ bool UEchoesSimulationSubsystem::IssueWarformAdaptation(
     }
     ++NextPlayerCommandSequence;
     LastAcceptedLocalCommandSequence = Command.sequence;
+    TrackGameplayFeedbackCommand(Command);
     OutFeedback = TEXT("[QUEUED] Warform molt accepted for the next simulation tick.");
     return true;
 }
@@ -18639,6 +18744,11 @@ bool UEchoesSimulationSubsystem::QueuePlayerCommand(
 
     echoes::sim::Command Command;
     Command.executeTick = ResolvePlayerExecuteTick(1);
+    if (!echoes::sim::Simulation::IsExecutableCommandTick(Command.executeTick))
+    {
+        OutFeedback = TEXT("[SIM_TIME_LIMIT] This game has reached its simulation time limit. Start a new game to issue orders.");
+        return false;
+    }
     Command.player = LocalPlayerId;
     Command.sequence = NextPlayerCommandSequence;
     Command.type = CommandType;
@@ -18667,7 +18777,23 @@ bool UEchoesSimulationSubsystem::QueuePlayerCommand(
 
     ++NextPlayerCommandSequence;
     LastAcceptedLocalCommandSequence = Command.sequence;
+    TrackGameplayFeedbackCommand(Command);
 
+    if (CommandType == echoes::sim::CommandType::Build && FEchoesPlacementDiagnostics::Enabled())
+    {
+        if (DiagnosticScenarioGeneration != ScenarioAuthorityGeneration || Simulation->CurrentTick() < DiagnosticLastTick)
+        {
+            DiagnosticBuildCommands.Reset();
+            DiagnosticBuildingStates.Reset();
+            DiagnosticBuildingSequences.Reset();
+            DiagnosticScenarioGeneration = ScenarioAuthorityGeneration;
+            DiagnosticLastTick = Simulation->CurrentTick();
+        }
+        DiagnosticBuildCommands.Add(Command.sequence);
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] stage=queue_authority generation=%llu sequence=%llu execute_tick=%llu worker=%u type=%u raw=(%d,%d)"),
+            static_cast<unsigned long long>(ScenarioAuthorityGeneration), static_cast<unsigned long long>(Command.sequence),
+            static_cast<unsigned long long>(Command.executeTick), Command.actor, static_cast<uint32>(Command.buildType), Command.position.x.Raw(), Command.position.y.Raw());
+    }
     OutFeedback = TEXT("[QUEUED] Order accepted for the next simulation tick.");
     UE_LOG(
         LogEchoes,
@@ -18770,6 +18896,11 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                 Actor.type != EntityType::HeavyUnit)
             {
                 OutFeedback = TEXT("[BULWARK_REQUIRED] Deployment requires a Meridian Bulwark Team.");
+                return false;
+            }
+            if (Actor.deploymentPhase != echoes::sim::BulwarkDeploymentPhase::None)
+            {
+                OutFeedback = TEXT("[BULWARK_TRANSITION_ACTIVE] Wait for this Bulwark to finish deploying or packing.");
                 return false;
             }
             if (!Actor.deployed && Position == Actor.position)
@@ -19170,38 +19301,21 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             }
             break;
         case CommandType::Repair:
-            if (Actor.type != EntityType::Worker)
+            switch (Simulation->ValidateRepair(LocalPlayerId, Actor.id, TargetId))
             {
-                OutFeedback = TEXT("[REPAIR_REQUIRES_WORKER] Select a worker before choosing a repair target.");
-                return false;
+                case echoes::sim::RepairResult::Valid: return true;
+                case echoes::sim::RepairResult::InvalidWorker:
+                    OutFeedback = TEXT("[REPAIR_REQUIRES_WORKER] Select a completed, living worker."); break;
+                case echoes::sim::RepairResult::InvalidTarget:
+                    OutFeedback = TEXT("[REPAIR_TARGET_INVALID] Choose a damaged allied target this worker can repair."); break;
+                case echoes::sim::RepairResult::TargetNotVisible:
+                    OutFeedback = TEXT("[REPAIR_TARGET_HIDDEN] Restore vision of the repair target."); break;
+                case echoes::sim::RepairResult::Undamaged:
+                    OutFeedback = TEXT("[REPAIR_TARGET_UNDAMAGED] This target already has full health."); break;
+                case echoes::sim::RepairResult::Disconnected:
+                    OutFeedback = TEXT("[REPAIR_DISCONNECTED] Move the Surveyor into the connected power network."); break;
             }
-            if (Target == nullptr || Target->hitPoints <= 0 ||
-                Target->owner == echoes::sim::kNeutralPlayer ||
-                Simulation->Config().IsHostile(LocalPlayerId, Target->owner) ||
-                Target->hitPoints >= Target->maxHitPoints)
-            {
-                OutFeedback = TEXT("[REPAIR_TARGET_INVALID] Choose a damaged live allied unit or structure.");
-                return false;
-            }
-            if (!Target->completed &&
-                Target->type != EntityType::CommandCore &&
-                Target->type != EntityType::Dropoff &&
-                Target->type != EntityType::Barracks &&
-                Target->type != EntityType::UtilityStructure)
-            {
-                OutFeedback = TEXT("[REPAIR_TARGET_INVALID] Incomplete repair targets must be structures.");
-                return false;
-            }
-            if (Actor.faction != echoes::sim::Faction::MeridianCompact &&
-                (Target->type != EntityType::CommandCore &&
-                 Target->type != EntityType::Dropoff &&
-                 Target->type != EntityType::Barracks &&
-                 Target->type != EntityType::UtilityStructure))
-            {
-                OutFeedback = TEXT("[REPAIR_TARGET_INVALID] This worker repairs completed allied structures.");
-                return false;
-            }
-            return true;
+            return false;
         case CommandType::CancelConstruction:
             if (Actor.completed ||
                 (Actor.type != EntityType::CommandCore &&
@@ -19215,6 +19329,24 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             return true;
         case CommandType::Build:
         {
+            // An existing construction site is already paid for and occupies
+            // its footprint. Assist must never run new-placement/cost checks.
+            if (TargetId != 0)
+            {
+                switch (Simulation->ValidateConstructionAssist(LocalPlayerId, Actor.id, TargetId))
+                {
+                    case echoes::sim::ConstructionAssistResult::Valid: return true;
+                    case echoes::sim::ConstructionAssistResult::InvalidWorker:
+                        OutFeedback = TEXT("[ASSIST_REQUIRES_WORKER] Select a completed, living worker."); break;
+                    case echoes::sim::ConstructionAssistResult::WorkerBusy:
+                        OutFeedback = TEXT("[WORKER_BUSY] Stop the worker's current construction order first."); break;
+                    case echoes::sim::ConstructionAssistResult::InvalidSite:
+                        OutFeedback = TEXT("[ASSIST_SITE_INVALID] Choose an owned construction site."); break;
+                    case echoes::sim::ConstructionAssistResult::SiteComplete:
+                        OutFeedback = TEXT("[ASSIST_SITE_COMPLETE] Construction has finished; damaged structures can be repaired."); break;
+                }
+                return false;
+            }
             if (Actor.type != EntityType::Worker)
             {
                 OutFeedback = TEXT("[BUILD_REQUIRES_WORKER] Select a worker before placing a structure.");
@@ -21265,8 +21397,32 @@ UEchoesSimulationSubsystem::AdmitNetworkCommand(
     {
         return echoes::sim::net::CommandAdmissionStatus::InvalidSeat;
     }
-    return echoes::sim::net::AdmitCommandRequest(
+    if (!echoes::sim::Simulation::IsExecutableCommandTick(Request.executeTick))
+    {
+        if (SimulationRejection) *SimulationRejection = "command tick cannot be executed";
+        return echoes::sim::net::CommandAdmissionStatus::TickRangeInvalid;
+    }
+    const auto Admission = echoes::sim::net::AdmitCommandRequest(
         Request, Context, *Simulation, SimulationRejection);
+    if (Admission == echoes::sim::net::CommandAdmissionStatus::Accepted)
+    {
+        // Record only the request just admitted by authority. This observer
+        // never changes the request, sequence, command queue, or simulation.
+        echoes::sim::Command Command{};
+        Command.executeTick = Request.executeTick;
+        Command.player = Context.player;
+        Command.sequence = Request.sequence;
+        Command.type = Request.type;
+        Command.actor = Request.actor;
+        Command.target = Request.target;
+        Command.position = Request.position;
+        Command.buildType = Request.buildType;
+        Command.wellChoice = Request.wellChoice;
+        Command.warformAdaptation = Request.warformAdaptation;
+        Command.researchType = Request.researchType;
+        TrackGameplayFeedbackCommand(Command);
+    }
+    return Admission;
 }
 
 const echoes::sim::Entity* UEchoesSimulationSubsystem::FindEntity(uint32 EntityId) const

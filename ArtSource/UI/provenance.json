@@ -1,0 +1,11 @@
+{
+  "author": "Angelis Pseftis",
+  "asset": "command-bridge-background.png",
+  "classification": "DERIVED_MENU_BACKDROP",
+  "source_concept": "site/assets/concepts/echoes-main-menu-bridge.jpg",
+  "source_sha256": "2ad57d0abdc483f8cfe288caeb2fcb5332869729d32f2e043a2a64e5c58aefbc",
+  "sha256": "16265284916d6db7854c71e886f359a129f659c33c5a9b76d85efd6a3bc18579",
+  "changes": "Removed painted title, menu controls, version and account overlays. Original retained unchanged.",
+  "generation": "Built-in image generation, 2026-09-09; derived visual reference, not a 3D scene or owner acceptance.",
+  "unreal_destination": "/Game/Art/UI/T_EBS_CommandBridge"
+}

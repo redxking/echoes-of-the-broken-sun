@@ -9,6 +9,7 @@
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesSimCore/Simulation.h"
 #include "Engine/World.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "HAL/PlatformTime.h"
@@ -128,6 +129,27 @@ bool FEchoesProductionFogTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("M01 remembered terrain uses a translucent tint"),
             FogView->ExploredMaterial != nullptr &&
             FogView->ExploredMaterial->GetBlendMode() == BLEND_Translucent);
+        // Cover both layers through discovery, loss of sight, re-visibility and
+        // scope reset. Optimizing redundant writes must not leave stale shrouds.
+        if (TestTrue(TEXT("Single-tile transition fixture initializes"), FogView->InitializeScopedFog(1, 1, 200.0f)))
+        {
+            using echoes::sim::Visibility;
+            std::vector<echoes::sim::net::ScopedTileState> Tiles(1);
+            for (const Visibility State : {Visibility::Unexplored, Visibility::Visible,
+                Visibility::Explored, Visibility::Visible, Visibility::Unexplored,
+                Visibility::Explored, Visibility::Unexplored})
+            {
+                Tiles[0].visibility = State;
+                if (!TestTrue(TEXT("Scoped fog transition admitted"), FogView->SyncScopedVisibility(Tiles))) break;
+                FTransform Unknown, Remembered;
+                if (!TestTrue(TEXT("Unknown instance exists"), FogView->UnexploredTiles->GetInstanceTransform(0, Unknown)) ||
+                    !TestTrue(TEXT("Remembered instance exists"), FogView->ExploredTiles->GetInstanceTransform(0, Remembered))) break;
+                TestTrue(TEXT("Unknown geometry exactly follows knowledge"), Unknown.Equals(State == Visibility::Unexplored ?
+                    FogView->TileTransform(0, 0, true) : FogView->HiddenTransform()));
+                TestTrue(TEXT("Remembered geometry exactly follows knowledge"), Remembered.Equals(State == Visibility::Explored ?
+                    FogView->TileTransform(0, 0, false) : FogView->HiddenTransform()));
+            }
+        }
         FogView->Destroy();
     }
 
@@ -156,6 +178,7 @@ bool FEchoesProductionFogTest::RunTest(const FString& Parameters)
 
             // Performance timing check: last sync duration must be <= 1.5 ms budget
             const double LastDuration = SubsystemFog->GetLastSyncDurationMs();
+            AddInfo(FString::Printf(TEXT("[ECHOES_FOG_TIMING] initial_ms=%.6f budget_ms=1.5"), LastDuration));
             TestTrue(TEXT("Fog synchronization is within the 1.5 ms budget"),
                      LastDuration <= 1.5);
 
@@ -171,6 +194,7 @@ bool FEchoesProductionFogTest::RunTest(const FString& Parameters)
                 }
             }
 
+            AddInfo(FString::Printf(TEXT("[ECHOES_FOG_TIMING] peak_incremental_ms=%.6f ticks=20 budget_ms=1.5"), MaxSyncDuration));
             TestTrue(TEXT("Peak incremental fog sync across 20 ticks stays within 1.5 ms budget"),
                      MaxSyncDuration <= 1.5);
             TestTrue(TEXT("Incremental sync takes less than 0.2 ms on average"),

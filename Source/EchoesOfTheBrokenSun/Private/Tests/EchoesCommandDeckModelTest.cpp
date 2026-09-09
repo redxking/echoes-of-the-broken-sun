@@ -38,6 +38,35 @@ bool FEchoesCommandDeckModelTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Worker exposes Barracks construction"), Worker.Contains(TEXT("[B] BARRACKS")));
     TestTrue(TEXT("Worker exposes Utility construction"), Worker.Contains(TEXT("[M] UTILITY")));
 
+    TestTrue(TEXT("Worker exposes its existing repair gesture"),
+        Worker.Contains(TEXT("[R] REPAIR")));
+    const auto WorkerEntries = FEchoesCommandDeckModel::BuildActionEntries(Profile);
+    TestEqual(TEXT("Worker deck retains room within the six-slot command contract"),
+        WorkerEntries.Num(), 5);
+    const FEchoesCommandDeckActionEntry* RepairEntry = WorkerEntries.FindByPredicate(
+        [](const FEchoesCommandDeckActionEntry& Entry)
+        {
+            return Entry.Action == EEchoesCommandDeckAction::RepairAtCursor;
+        });
+    TestTrue(TEXT("Repair remains a pointer-targeted worker action"),
+        RepairEntry != nullptr && RepairEntry->bRequiresCursorTarget &&
+            FString(RepairEntry->Label) == TEXT("REPAIR"));
+
+    Profile = {};
+    Profile.StructureCount = 1;
+    Profile.bCanCancelSelectedConstruction = true;
+    const auto CancellationEntries = FEchoesCommandDeckModel::BuildActionEntries(Profile);
+    TestTrue(TEXT("Only a selected unfinished structure exposes cancellation"),
+        CancellationEntries.ContainsByPredicate(
+            [](const FEchoesCommandDeckActionEntry& Entry)
+            {
+                return Entry.Action == EEchoesCommandDeckAction::CancelConstruction &&
+                    !Entry.bRequiresCursorTarget;
+            }));
+    TestTrue(TEXT("Cancellation preserves its existing shifted input prompt"),
+        FEchoesCommandDeckModel::BuildPrimaryActions(Profile).Contains(
+            TEXT("[SHIFT+X] CANCEL CONSTRUCTION")));
+
     Profile = {};
     Profile.bHasCommandCore = true;
     TestEqual(
@@ -79,6 +108,51 @@ bool FEchoesCommandDeckModelTest::RunTest(const FString& Parameters)
     TestTrue(
         TEXT("Combat context takes precedence in a mixed mobile selection"),
         FEchoesCommandDeckModel::BuildPrimaryActions(Profile).Contains(TEXT("[F] ATTACK-MOVE")));
+    // Exercise the actual dispatch resolver against real queued commands and
+    // phase transitions. No manually seeded deployment/cooldown state.
+    using namespace echoes::sim;
+    Simulation Sim(SimulationConfig{64, 64, 20, 0x42554C5741524BULL});
+    if (!TestTrue(TEXT("Caster owner exists"), Sim.AddPlayer(0, Faction::MeridianCompact, {1000, 500})) ||
+        !TestTrue(TEXT("Other owner exists"), Sim.AddPlayer(1, Faction::MeridianCompact, {1000, 500}))) return false;
+    const auto Near = Sim.SpawnEntity(0, Faction::MeridianCompact, EntityType::HeavyUnit, Vec2::FromTiles(10, 10));
+    const auto Far = Sim.SpawnEntity(0, Faction::MeridianCompact, EntityType::HeavyUnit, Vec2::FromTiles(20, 10));
+    const auto Peer = Sim.SpawnEntity(0, Faction::MeridianCompact, EntityType::HeavyUnit, Vec2::FromTiles(10, 20));
+    const auto Scout = Sim.SpawnEntity(0, Faction::MeridianCompact, EntityType::ScoutUnit, Vec2::FromTiles(14, 14));
+    const auto Enemy = Sim.SpawnEntity(1, Faction::MeridianCompact, EntityType::HeavyUnit, Vec2::FromTiles(15, 15));
+    if (!TestTrue(TEXT("Caster prerequisites spawn"), Near && Far && Peer && Scout && Enemy)) return false;
+    const TArray<uint32> Mixed{Enemy, Scout, Peer, Far, Near, Near, 999999};
+    const auto Resolve = [&](bool All) { return FEchoesCommandDeckModel::ResolveLocalBulwarkCasters(
+        Sim, 0, Vec2::FromTiles(15, 15), Mixed, All); };
+    TestTrue(TEXT("Equal-distance normal gesture chooses lowest eligible ID only"), Resolve(false) == TArray<uint32>{Near});
+    TestTrue(TEXT("Ctrl gesture includes each eligible owner once"), Resolve(true) == TArray<uint32>({Near, Far, Peer}));
+    TestTrue(TEXT("Empty selection cannot command the whole army"),
+        FEchoesCommandDeckModel::ResolveLocalBulwarkCasters(Sim, 0, {}, {}, false).IsEmpty());
+    TestTrue(TEXT("Geometric closest caster wins over a smaller entity ID"),
+        FEchoesCommandDeckModel::ResolveLocalBulwarkCasters(Sim, 0, Vec2::FromTiles(19, 10), Mixed, false) == TArray<uint32>{Far});
+    TestTrue(TEXT("Packed caster under the target yields to the next valid facing"),
+        FEchoesCommandDeckModel::ResolveLocalBulwarkCasters(Sim, 0, Vec2::FromTiles(10, 10), Mixed, false) == TArray<uint32>{Far});
+    TestTrue(TEXT("Ctrl also excludes a caster without a deployment direction"),
+        FEchoesCommandDeckModel::ResolveLocalBulwarkCasters(Sim, 0, Vec2::FromTiles(10, 10), Mixed, true) == TArray<uint32>({Far, Peer}));
+    Command Deploy{}; Deploy.player = 0; Deploy.actor = Near; Deploy.sequence = 1;
+    Deploy.type = CommandType::ToggleDeploy; Deploy.position = Vec2::FromTiles(30, 10);
+    if (!TestTrue(TEXT("First real deployment queues"), Sim.QueueCommand(Deploy))) return false;
+    TestTrue(TEXT("Second gesture before a fixed step skips pending caster"), Resolve(false) == TArray<uint32>{Far});
+    Deploy.actor = Far; Deploy.sequence = 2;
+    if (!TestTrue(TEXT("Second deployment queues"), Sim.QueueCommand(Deploy))) return false;
+    TestTrue(TEXT("Third rapid gesture selects the remaining eligible caster"), Resolve(false) == TArray<uint32>{Peer});
+    Sim.Step(10);
+    TestTrue(TEXT("Executing transitions remain ineligible"), Resolve(true) == TArray<uint32>{Peer});
+    Sim.Step(10);
+    TestTrue(TEXT("Deployed Bulwark becomes eligible for packing"), Resolve(false) == TArray<uint32>{Near});
+    TestTrue(TEXT("Packing does not require a new facing direction"),
+        FEchoesCommandDeckModel::ResolveLocalBulwarkCasters(Sim, 0, Vec2::FromTiles(10, 10), Mixed, false) == TArray<uint32>{Near});
+    Deploy.actor = Near; Deploy.sequence = 3; Deploy.executeTick = Sim.CurrentTick();
+    if (!TestTrue(TEXT("Real packing queues"), Sim.QueueCommand(Deploy))) return false;
+    Sim.Step(5);
+    TestTrue(TEXT("Packing caster does not steal the next gesture"), Resolve(false) == TArray<uint32>{Far});
+    Sim.Step(10);
+    TestTrue(TEXT("Packed Bulwark can deploy again"), Resolve(false) == TArray<uint32>{Near});
+
     return true;
 }
 

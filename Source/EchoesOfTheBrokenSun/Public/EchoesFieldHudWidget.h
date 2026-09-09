@@ -14,6 +14,7 @@ class UScrollBox;
 class UTextBlock;
 class UUniformGridPanel;
 class UVerticalBox;
+class UProgressBar;
 struct FAnchors;
 
 enum class EEchoesFieldHudSection : uint8
@@ -45,6 +46,8 @@ public:
         const FEchoesFieldHudControl& InControl,
         bool bInHighContrast,
         float InScale);
+    void SetPresentationLabel(UTextBlock* Label) { PresentationLabel = Label; }
+    UTextBlock* GetPresentationLabel() const { return PresentationLabel; }
     bool Activate();
     [[nodiscard]] EEchoesFieldHudAction GetAction() const { return Action; }
     [[nodiscard]] int32 GetArgument() const { return Argument; }
@@ -58,6 +61,8 @@ private:
     UFUNCTION() void HandleHovered();
     UFUNCTION() void HandleUnhovered();
     void HandleReceivedFocus();
+    void HandleLostFocus();
+    void RefreshKeyboardPresentation();
 
     TWeakObjectPtr<class UEchoesFieldHudWidget> Owner;
     EEchoesFieldHudAction Action = EEchoesFieldHudAction::None;
@@ -65,6 +70,8 @@ private:
     bool bFocusedPresentation = false;
     bool bHighContrast = false;
     bool bPointerHovered = false;
+    bool bKeyboardFocused = false;
+    UPROPERTY(Transient) TObjectPtr<UTextBlock> PresentationLabel;
 };
 
 UCLASS(NotBlueprintable)
@@ -106,6 +113,19 @@ public:
         float InScale,
         bool bShowEndpoint = false,
         const FText& Endpoint = FText::GetEmpty());
+    void SetResourceTelemetry(const FEchoesFieldHudResourceView& Resources);
+    int32 GetResourceReadoutCount() const { return ResourceValues.Num(); }
+    UTextBlock* GetResourceReadout(int32 Index) const { return ResourceValues.IsValidIndex(Index) ? ResourceValues[Index].Get() : nullptr; }
+    UTextBlock* GetResourceLabel(int32 Index) const { return ResourceLabels.IsValidIndex(Index) ? ResourceLabels[Index].Get() : nullptr; }
+    /** Visible identity line; values come only from the scoped resource view. */
+    UTextBlock* GetResourceIdentityReadout() const { return ResourceIdentityText; }
+    /** Visible match/research line; empty source fields remain absent. */
+    UTextBlock* GetResourceContextReadout() const { return ResourceSummaryText; }
+    /** Full resource telemetry hit target when the semantic monitor action is available. */
+    UEchoesFieldHudActionButton* GetResourceActionButton() const { return ResourceActionButton; }
+    void SetSelectionTelemetry(const FEchoesFieldHudSelectionView& Selection);
+    int32 GetHealthReadoutCount() const { return HealthBars.Num(); }
+    UProgressBar* GetHealthReadout(int32 Index) const { return HealthBars.IsValidIndex(Index) ? HealthBars[Index].Get() : nullptr; }
     [[nodiscard]] EEchoesFieldHudSection GetSection() const { return Section; }
     [[nodiscard]] int32 GetActionButtonCount() const { return ActionButtons.Num(); }
     [[nodiscard]] UEchoesFieldHudActionButton* GetActionButton(int32 Index) const
@@ -129,6 +149,8 @@ public:
 
 protected:
     virtual TSharedRef<SWidget> RebuildWidget() override;
+    virtual int32 NativePaint(const FPaintArgs&, const FGeometry&, const FSlateRect&,
+        FSlateWindowElementList&, int32, const FWidgetStyle&, bool) const override;
     virtual FReply NativeOnMouseButtonDown(
         const FGeometry& InGeometry,
         const FPointerEvent& InMouseEvent) override;
@@ -149,10 +171,21 @@ private:
     float Scale = 1.0f;
     bool bHasEndpoint = false;
     FText EndpointText;
+    FEchoesFieldHudResourceView ResourceTelemetry;
+    UPROPERTY(Transient) TArray<TObjectPtr<UTextBlock>> ResourceLabels;
+    UPROPERTY(Transient) TArray<TObjectPtr<UTextBlock>> ResourceValues;
+    UPROPERTY(Transient) TObjectPtr<UTextBlock> ResourceIdentityText;
+    UPROPERTY(Transient) TObjectPtr<UTextBlock> ResourceSummaryText;
+    TArray<FEchoesFieldHudSelectionEntry> SelectionEntries;
+    UPROPERTY(Transient) TArray<TObjectPtr<UTextBlock>> TelemetryLabels;
+    UPROPERTY(Transient) TArray<TObjectPtr<UTextBlock>> TelemetryDetails;
+    UPROPERTY(Transient) TArray<TObjectPtr<UProgressBar>> HealthBars;
 
     UPROPERTY(Transient) TObjectPtr<UBorder> RootBorder;
     UPROPERTY(Transient) TObjectPtr<UScrollBox> ContentScroll;
     UPROPERTY(Transient) TObjectPtr<UVerticalBox> ContentBox;
+    /** ResourceLedger only: whole compact telemetry region is a real action button. */
+    UPROPERTY(Transient) TObjectPtr<UEchoesFieldHudActionButton> ResourceActionButton;
     UPROPERTY(Transient) TObjectPtr<UTextBlock> TitleText;
     UPROPERTY(Transient) TArray<TObjectPtr<UTextBlock>> LineTexts;
     UPROPERTY(Transient) TArray<TObjectPtr<UEchoesFieldHudActionButton>> ActionButtons;
@@ -311,6 +344,8 @@ class ECHOESOFTHEBROKENSUN_API UEchoesFieldHudWidget final
     GENERATED_BODY()
 
 public:
+    /** Shared pixel-space layout; also usable before first paint in isolated Slate hosts. */
+    void ApplyConsoleLayout(const FVector2D& ViewportPixels);
     UEchoesFieldHudWidget(const FObjectInitializer& ObjectInitializer);
     void Configure(AEchoesPlayerController* InController);
     void SetView(const FEchoesFieldHudView& InView);
@@ -345,6 +380,10 @@ public:
     [[nodiscard]] UEchoesFieldHudMinimapWidget* GetMinimapWidget() const
     {
         return MinimapWidget;
+    }
+    [[nodiscard]] UEchoesFieldHudActionButton* GetMenuButton() const
+    {
+        return MenuButton;
     }
     [[nodiscard]] UEchoesFieldHudCampaignMapWidget* GetCampaignMapWidget() const
     {
@@ -422,6 +461,10 @@ private:
     mutable bool bHoldToSkipPointerPressed = false;
     mutable bool bHoldToSkipSpacePressed = false;
 
+    // Keep painted skip chrome reachable without intercepting the battlefield.
+    UPROPERTY(Transient) TObjectPtr<UEchoesFieldHudActionButton> MenuButton;
+    UPROPERTY(Transient) TObjectPtr<UBorder> TutorialSkipHitTarget;
+    UPROPERTY(Transient) TObjectPtr<UBorder> ConsoleBacking;
     UPROPERTY(Transient) TObjectPtr<UCanvasPanel> RootCanvas;
     UPROPERTY(Transient) TArray<TObjectPtr<UEchoesFieldHudSectionWidget>> Sections;
     UPROPERTY(Transient) TObjectPtr<UEchoesFieldHudMinimapWidget> MinimapWidget;

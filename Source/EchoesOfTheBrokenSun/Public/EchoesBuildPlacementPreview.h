@@ -26,6 +26,10 @@ struct FEchoesBuildPlacementEvaluation final
     EEchoesBuildPreviewValidity Validity =
         EEchoesBuildPreviewValidity::InvalidWorker;
     int32 FootprintHalfExtentRaw = 0;
+    bool bNetworkRelevant = false;
+    bool bWillConnect = false;
+    int32 ConnectionRadiusRaw = 0;
+    uint32 ConnectionNodeId = 0;
 
     [[nodiscard]] bool IsValid() const
     {
@@ -42,6 +46,8 @@ struct FEchoesBuildPlacementModel final
         echoes::sim::EntityType BuildingType,
         echoes::sim::Vec2 Position);
 
+    [[nodiscard]] static FString Guidance(const FEchoesBuildPlacementEvaluation& Evaluation);
+
     [[nodiscard]] static const TCHAR* Feedback(
         EEchoesBuildPreviewValidity Validity);
 };
@@ -55,6 +61,8 @@ class ECHOESOFTHEBROKENSUN_API AEchoesBuildPlacementPreview final
 
 public:
     AEchoesBuildPlacementPreview();
+    /** Shared with the authored material contract regression; not a guessed shader pin. */
+    static FName TintParameterName() { return FName(TEXT("Color")); }
 
     void SetPreview(
         const FVector& WorldPosition,

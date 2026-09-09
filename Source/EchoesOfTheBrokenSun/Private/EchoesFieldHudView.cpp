@@ -2,9 +2,13 @@
 // Author: Angelis Pseftis
 
 #include "EchoesFieldHudView.h"
+#include "EchoesHudLayout.h"
+#include "EchoesInputPrompt.h"
 
 #include "EchoesCampaignRewards.h"
 #include "EchoesCinematicSubsystem.h"
+#include "EchoesContentSubsystem.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "EchoesContactIndicatorLayout.h"
 #include "EchoesFactionPolicy.h"
@@ -54,16 +58,62 @@ FText EntityName(EntityType Type)
     return LOCTEXT("EntityUnknown", "Entity");
 }
 
-FText EntityPurpose(Faction FactionValue, EntityType Type)
+FText NamedEntity(
+    Faction FactionValue,
+    EntityType Type,
+    const FEchoesContentCatalog* Catalog)
 {
-    if (FactionValue == Faction::MeridianCompact &&
-        Type == EntityType::Worker)
+    if (Catalog != nullptr)
     {
-        return LOCTEXT("SurveyorPurpose",
-            "Core economic builder and logistics conduit. Gathers Matter, constructs Compact structures, operates Future Wells, and provides baseline maintenance. Keep its routes short and scouted: it is unarmed, and route pressure is the opponent's counterplay.");
+        if (const FEchoesUnitContent* Unit = Catalog->FindUnit(FactionValue, Type))
+        {
+            return Text(Unit->DisplayName);
+        }
+        if (const FEchoesBuildingContent* Building = Catalog->FindBuilding(FactionValue, Type))
+        {
+            return Text(Building->DisplayName);
+        }
     }
-    return FText::GetEmpty();
+    // The catalog is the authority. When a caller has none, the roster table
+    // still resolves the canonical name rather than a generic type word.
+    const FEchoesRosterGuidance Guidance =
+        FEchoesFieldHudModel::RosterGuidance(FactionValue, Type);
+    if (!Guidance.Name.IsEmpty())
+    {
+        return Guidance.Name;
+    }
+    return EntityName(Type);
 }
+
+FText EntityRole(
+    Faction FactionValue,
+    EntityType Type,
+    const FEchoesContentCatalog* Catalog)
+{
+    if (Catalog == nullptr)
+    {
+        return FText::GetEmpty();
+    }
+    const FString* Role = nullptr;
+    if (const FEchoesUnitContent* Unit = Catalog->FindUnit(FactionValue, Type))
+    {
+        Role = &Unit->Role;
+    }
+    else if (const FEchoesBuildingContent* Building = Catalog->FindBuilding(FactionValue, Type))
+    {
+        Role = &Building->Role;
+    }
+    // The catalog role is a schema classification token the content validator
+    // depends on; showing it would print "HEADQUARTERS DROPOFF" to the player.
+    // Only an authored role reaches the panel.
+    (void)Role;
+    const FEchoesRosterGuidance Guidance =
+        FEchoesFieldHudModel::RosterGuidance(FactionValue, Type);
+    return Guidance.DisplayRole.IsEmpty()
+        ? FText::GetEmpty()
+        : FText::FromString(Guidance.DisplayRole.ToString().ToUpper());
+}
+
 
 FText OrderName(OrderType Type)
 {
@@ -282,19 +332,129 @@ void BuildNetworkMinimap(
     AddContacts(Out, Keyframe.vibrationSignatures);
 }
 
+// The live scoped view supplies operational flags. Do not infer a modern network
+// in legacy playback or a network keyframe that does not carry those flags.
+void AddNetworkFeedback(const PlayerView& Scoped, const TArray<uint32>& Selected,
+                        FEchoesFieldHudView& Out)
+{
+    const auto IsNode = [](const Entity& E)
+    {
+        return E.type == EntityType::CommandCore || E.type == EntityType::Dropoff ||
+               E.type == EntityType::Barracks;
+    };
+    TArray<const Entity*> Nodes;
+    bool bHasRoot = false;
+    for (const Entity& E : Scoped.Entities())
+    {
+        if (E.owner != Scoped.Player().id || E.faction != Faction::MeridianCompact ||
+            E.hitPoints <= 0 || !IsNode(E)) continue;
+        Nodes.Add(&E);
+        bHasRoot |= E.type == EntityType::CommandCore && E.completed && E.networkOperational;
+    }
+    const int64 RadiusRaw = Scoped.Config().rules.poweredAegis.connectionRadiusRaw;
+    const double RadiusTiles = double(RadiusRaw) / kFixedScale;
+    const auto World = [&Scoped](const Entity& E)
+    {
+        return FVector((double(E.position.x.Raw()) / kFixedScale - Scoped.Config().mapWidthTiles * 0.5) * UEchoesSimulationSubsystem::TileWorldSize,
+                       (double(E.position.y.Raw()) / kFixedScale - Scoped.Config().mapHeightTiles * 0.5) * UEchoesSimulationSubsystem::TileWorldSize, 20.0);
+    };
+    for (const Entity* E : Nodes)
+    {
+        if (!Selected.Contains(E->id)) continue;
+        for (FEchoesFieldHudSelectionEntry& Entry : Out.Selection.Entries)
+        {
+            if (Entry.EntityId != E->id) continue;
+            if (!bHasRoot)
+            {
+                Entry.Purpose = LOCTEXT("NetworkUnavailable", "Network status unavailable. An operational Anchor is required to show connected coverage.");
+                continue;
+            }
+            const FString State = !E->completed ? TEXT("Under construction") :
+                E->networkOperational ? TEXT("Connected to Anchor") : TEXT("Disconnected — extend a chain from your Anchor");
+            FString Benefits = TEXT("Extends the network; enables Aegis weapons and Surveyor repairs in range.");
+            if (E->type == EntityType::Dropoff)
+            {
+                const int32 Capacity = Scoped.Config().rules.archetypes[static_cast<int32>(E->faction)][static_cast<int32>(E->type)].populationCapacity;
+                Benefits = FString::Printf(TEXT("When connected: Matter drop-off, +%d Logistics, network extension. Supports Aegis weapons and Surveyor repairs."), Capacity);
+            }
+            Entry.Purpose = Text(FString::Printf(TEXT("%s. Range: %g tiles, center to center. %s"), *State, RadiusTiles, *Benefits));
+        }
+        if (bHasRoot && E->completed)
+            Out.NetworkCoverage.Add({World(*E), float(RadiusTiles * UEchoesSimulationSubsystem::TileWorldSize), E->networkOperational});
+    }
+    if (!bHasRoot) return;
+    // A rooted display tree avoids implying that isolated overlapping rings have power.
+    // Only nodes already marked operational by the simulation may enter the tree.
+    TSet<uint32> Reached;
+    for (const Entity* E : Nodes)
+        if (E->type == EntityType::CommandCore && E->completed && E->networkOperational) Reached.Add(E->id);
+    bool bAdded = true;
+    while (bAdded)
+    {
+        bAdded = false;
+        for (const Entity* E : Nodes)
+        {
+            if (Reached.Contains(E->id) || !E->completed || !E->networkOperational) continue;
+            for (const Entity* Parent : Nodes)
+            {
+                if (!Reached.Contains(Parent->id)) continue;
+                const int64 DX = int64(E->position.x.Raw()) - Parent->position.x.Raw();
+                const int64 DY = int64(E->position.y.Raw()) - Parent->position.y.Raw();
+                if (DX * DX + DY * DY > RadiusRaw * RadiusRaw) continue;
+                Out.NetworkConnections.Add({World(*Parent), World(*E)});
+                Reached.Add(E->id);
+                bAdded = true;
+                break;
+            }
+        }
+    }
+    // Aegis consumes power but cannot extend it. Attach terminals only after the
+    // relay tree is complete; never insert a terminal into Reached or Nodes.
+    for (const Entity& Terminal : Scoped.Entities())
+    {
+        if (Terminal.owner != Scoped.Player().id || Terminal.faction != Faction::MeridianCompact ||
+            Terminal.type != EntityType::UtilityStructure || Terminal.hitPoints <= 0) continue;
+        for (FEchoesFieldHudSelectionEntry& Entry : Out.Selection.Entries)
+        {
+            if (Entry.EntityId != Terminal.id) continue;
+            Entry.Purpose = !Terminal.completed ?
+                LOCTEXT("AegisFoundation", "Under construction. Weapons become available when completed and connected to your Anchor network.") :
+                Terminal.aegisPowered ?
+                LOCTEXT("AegisConnected", "Aegis connected — weapons powered. Defends nearby ground; does not extend the network.") :
+                LOCTEXT("AegisDisconnected", "Aegis disconnected — weapons offline. Extend your Anchor network into range; this post does not relay power.");
+        }
+        if (!Terminal.completed || !Terminal.aegisPowered) continue;
+        for (const Entity* Parent : Nodes)
+        {
+            if (!Reached.Contains(Parent->id)) continue;
+            const int64 DX = int64(Terminal.position.x.Raw()) - Parent->position.x.Raw();
+            const int64 DY = int64(Terminal.position.y.Raw()) - Parent->position.y.Raw();
+            if (DX * DX + DY * DY > RadiusRaw * RadiusRaw) continue;
+            Out.NetworkConnections.Add({World(*Parent), World(Terminal)});
+            break;
+        }
+    }
+}
+
 void AddSelectionEntry(
     const Entity& Entity,
     PlayerId Viewer,
-    FEchoesFieldHudSelectionView& Out)
+    FEchoesFieldHudSelectionView& Out,
+    const FEchoesContentCatalog* Catalog)
 {
     FEchoesFieldHudSelectionEntry Entry;
     Entry.EntityId = Entity.id;
-    Entry.Name = Entity.faction == Faction::MeridianCompact &&
-        Entity.type == EntityType::Worker
-        ? LOCTEXT("EntitySurveyor", "Surveyor")
-        : EntityName(Entity.type);
+    Entry.Name = NamedEntity(Entity.faction, Entity.type, Catalog);
     Entry.Faction = Text(echoes::presentation::FactionDisplayName(Entity.faction));
-    Entry.Purpose = EntityPurpose(Entity.faction, Entity.type);
+    Entry.Role = EntityRole(Entity.faction, Entity.type, Catalog);
+    {
+        const FEchoesRosterGuidance Guidance =
+            FEchoesFieldHudModel::RosterGuidance(Entity.faction, Entity.type);
+        Entry.Purpose = Guidance.Purpose;
+        Entry.StrongUse = Guidance.StrongUse;
+        Entry.Limitation = Guidance.Limitation;
+        Entry.Counterplay = Guidance.Counterplay;
+    }
     Entry.Order = OrderName(Entity.order.type);
     Entry.HitPoints = Entity.hitPoints;
     Entry.MaxHitPoints = Entity.maxHitPoints;
@@ -326,6 +486,132 @@ const Entity* FindVisibleEntity(const PlayerView& View, uint32 Id)
         }
     }
     return nullptr;
+}
+
+void AddRelayFeedback(const PlayerView& Player, const TArray<uint32>& Selected,
+    FEchoesFieldHudView& Out)
+{
+    int32 Count = 0;
+    int32 Ready = 0;
+    FText SingleState;
+    const auto& Rules = Player.Config().rules.relaySupply;
+    const auto Seconds = [&Player](Tick Remaining)
+    {
+        const uint64 Rate = FMath::Max<uint64>(1, Player.Config().ticksPerSecond);
+        return FText::AsNumber((Remaining + Rate - 1) / Rate);
+    };
+    for (uint32 Id : Selected)
+    {
+        const Entity* Relay = FindVisibleEntity(Player, Id);
+        if (!Relay || Relay->owner != Player.Player().id || Relay->hitPoints <= 0 ||
+            !Relay->completed || Relay->faction != Faction::MeridianCompact ||
+            Relay->type != EntityType::ScoutUnit) continue;
+        ++Count;
+        // The simulation supplies owner-scoped connectivity so historical
+        // replay-bound saves and current live games cannot disagree with UI.
+        const auto& Connected = Player.ConnectedRelayUnits();
+        const bool bConnected = std::find(Connected.begin(), Connected.end(), Id) != Connected.end();
+        FText State;
+        if (Relay->relaySupplyActive)
+        {
+            State = FText::Format(bConnected
+                ? LOCTEXT("RelayActive", "Active: +{0} Logistics, {1}s left")
+                : LOCTEXT("RelayActiveOffline", "Disconnected: +0 Logistics, {1}s left"),
+                FText::AsNumber(Rules.capacityBonus),
+                Seconds(Relay->relaySupplyUntilTick > Player.CurrentTick()
+                    ? Relay->relaySupplyUntilTick - Player.CurrentTick() : 0));
+        }
+        else if (Relay->relaySupplyCooldownUntilTick > Player.CurrentTick())
+            State = FText::Format(bConnected
+                ? LOCTEXT("RelayCooldown", "Cooldown: {0}s")
+                : LOCTEXT("RelayDisconnectedCooldown", "Disconnected: +0 Logistics. Cooldown: {0}s"),
+                Seconds(Relay->relaySupplyCooldownUntilTick - Player.CurrentTick()));
+        else if (!bConnected) State = LOCTEXT("RelayDisconnected", "Disconnected: move near Anchor or Power Link");
+        else { ++Ready; State = LOCTEXT("RelayReady", "Ready"); }
+        SingleState = State;
+        if (auto* Entry = Out.Selection.Entries.FindByPredicate(
+            [Id](const auto& Value) { return Value.EntityId == Id; }))
+        {
+            Entry->Purpose = FText::Format(LOCTEXT("RelayRoleAndState",
+                "{0}\nEXTEND RELAY  +{1} Logistics for {2}s; {3}s cooldown. {4}"),
+                Entry->Purpose, FText::AsNumber(Rules.capacityBonus),
+                Seconds(Rules.durationTicks), Seconds(Rules.cooldownTicks), State);
+        }
+    }
+    if (Count == 0) return;
+    FEchoesFieldHudControl Control;
+    Control.Action = EEchoesFieldHudAction::ActivateRelaySupply;
+    Control.Label = LOCTEXT("ExtendRelay", "EXTEND RELAY");
+    Control.Detail = Count == 1 ? SingleState : FText::Format(
+        LOCTEXT("RelayGroupReady", "{0}/{1} Skiffs ready"), Ready, Count);
+    Out.Commands.AbilityStatus = FText::Format(
+        LOCTEXT("RelayCommandStatus", "EXTEND RELAY — {0}"), Control.Detail);
+    Control.bEnabled = Ready > 0;
+    Out.Commands.bVisible = true;
+    Out.Commands.Controls.Add(MoveTemp(Control));
+}
+
+// Consume scoped simulation state; the HUD never starts or completes deployment.
+template <typename Lookup>
+void AddBulwarkFeedback(PlayerId Owner, Tick CurrentTick, double TickRate, bool bCommitmentRules,
+    const TArray<uint32>& Selected, Lookup FindUnit, FEchoesFieldHudView& Out)
+{
+    int32 Count = 0, Ready = 0, Deployed = 0;
+    FText SingleState;
+    for (uint32 Id : Selected)
+    {
+        const auto* Unit = FindUnit(Id);
+        if (!Unit || Unit->owner != Owner || Unit->hitPoints <= 0 ||
+            !Unit->completed || Unit->faction != Faction::MeridianCompact ||
+            Unit->type != EntityType::HeavyUnit) continue;
+        ++Count;
+        if (Unit->deployed) ++Deployed;
+        const bool bTransition = Unit->deploymentPhase != BulwarkDeploymentPhase::None;
+        if (!bTransition) ++Ready;
+        if (bTransition)
+        {
+            const bool bPacking = Unit->deploymentPhase == BulwarkDeploymentPhase::Packing;
+            const uint64 Duration = bPacking ? kBulwarkPackTicks : kBulwarkDeployTicks;
+            const uint64 Remaining = Unit->deploymentTransitionUntilTick > CurrentTick
+                ? Unit->deploymentTransitionUntilTick - CurrentTick : 0;
+            const uint64 Percent = 100 * (Duration - FMath::Min(Duration, Remaining)) / Duration;
+            SingleState = FText::Format(bPacking
+                ? LOCTEXT("BulwarkPacking", "Packing {0}% — barrier remains active")
+                : LOCTEXT("BulwarkDeploying", "Deploying {0}% — barrier not active yet"), Percent);
+        }
+        else SingleState = Unit->deployed
+            ? (bCommitmentRules
+                ? LOCTEXT("BulwarkDeployed", "Deployed — 120-degree front arc, 40% protection; 35% movement speed")
+                : LOCTEXT("BulwarkLegacyDeployed", "Deployed — front-facing protection: 40%; 35% movement speed"))
+            : LOCTEXT("BulwarkMobile", "Mobile — barrier inactive; full movement speed");
+        if (auto* Entry = Out.Selection.Entries.FindByPredicate(
+            [Id](const auto& Value) { return Value.EntityId == Id; }))
+        {
+            Entry->Purpose = Selected.Num() > 1 ? SingleState : FText::Format(LOCTEXT("BulwarkRoleState",
+                "{0}\n{1}. Choose the barrier command, then a battlefield direction."), Entry->Purpose, SingleState);
+            // A network keyframe carries ticks, not a negotiated tick rate.
+            // Do not invent seconds there; percent/state remain exact.
+            if (Selected.Num() == 1 && TickRate > 0 && bCommitmentRules)
+                Entry->Purpose = FText::Format(LOCTEXT("BulwarkTiming", "{0} Deploy: {1}s; pack: {2}s."),
+                    Entry->Purpose, FText::AsNumber(kBulwarkDeployTicks / TickRate),
+                    FText::AsNumber(kBulwarkPackTicks / TickRate));
+        }
+    }
+    if (Count == 0) return;
+    FEchoesFieldHudControl Control;
+    Control.Action = EEchoesFieldHudAction::CommandDeck;
+    Control.Argument = static_cast<int32>(EEchoesCommandDeckAction::ToggleBulwarkDeployment);
+    Control.Label = Deployed == Count ? LOCTEXT("PackBarrier", "PACK BARRIER")
+        : Deployed == 0 ? LOCTEXT("DeployBarrier", "DEPLOY BARRIER")
+        : LOCTEXT("ToggleBarrier", "DEPLOY / PACK");
+    Control.Detail = Count == 1 ? SingleState : FText::Format(
+        LOCTEXT("BulwarkGroupState", "{0}/{1} deployed; {2} ready for orders"), Deployed, Count, Ready);
+    Control.bEnabled = Ready > 0;
+    const FText Status = FText::Format(LOCTEXT("BulwarkCommandState", "BARRIER — {0}"), Control.Detail);
+    Out.Commands.AbilityStatus = Out.Commands.AbilityStatus.IsEmpty() ? Status
+        : FText::Format(LOCTEXT("CombinedAbilityStates", "{0}\n{1}"), Out.Commands.AbilityStatus, Status);
+    Out.Commands.bVisible = true;
+    Out.Commands.Controls.Add(MoveTemp(Control));
 }
 
 void AddProductionControl(
@@ -819,7 +1105,7 @@ void BuildCommandControls(
     {
         FEchoesFieldHudControl Control;
         Control.Label = Text(Entry.Label);
-        Control.Detail = Text(Entry.Hotkey);
+        Control.Detail = FEchoesInputPrompt::Command(Entry.Action);
         Control.Action = EEchoesFieldHudAction::CommandDeck;
         Control.Argument = static_cast<int32>(Entry.Action);
         Control.bPrimary = Entry.bRequiresCursorTarget;
@@ -858,6 +1144,9 @@ FEchoesCommandDeckProfile BuildNetworkCommandProfile(
                 Profile.bHasCommandCore |=
                     Entity->type == EntityType::CommandCore;
                 Profile.bHasBarracks |= Entity->type == EntityType::Barracks;
+                Profile.bCanCancelSelectedConstruction |=
+                    SelectedEntityIds.Num() == 1 && !Entity->completed &&
+                    Entity->hitPoints > 0;
                 break;
             default:
                 ++Profile.OtherCount;
@@ -1168,7 +1457,8 @@ void BuildMissionMarkers(
 FEchoesFieldHudView FEchoesFieldHudModel::BuildPlayerScoped(
     const echoes::sim::PlayerView& PlayerView,
     const TArray<uint32>& SelectedEntityIds,
-    bool bReplay)
+    bool bReplay,
+    const FEchoesContentCatalog* Catalog)
 {
     FEchoesFieldHudView View;
     View.Authority = bReplay ? EEchoesFieldHudAuthority::ReplayPlayerView
@@ -1193,17 +1483,24 @@ FEchoesFieldHudView FEchoesFieldHudModel::BuildPlayerScoped(
     {
         if (const echoes::sim::Entity* Entity = FindVisibleEntity(PlayerView, Id))
         {
-            AddSelectionEntry(*Entity, PlayerView.Player().id, View.Selection);
+            AddSelectionEntry(
+                *Entity, PlayerView.Player().id, View.Selection, Catalog);
         }
     }
     View.Selection.bVisible = !View.Selection.Entries.IsEmpty();
+    AddNetworkFeedback(PlayerView, SelectedEntityIds, View);
+    AddRelayFeedback(PlayerView, SelectedEntityIds, View);
+    AddBulwarkFeedback(PlayerView.Player().id, PlayerView.CurrentTick(), PlayerView.Config().ticksPerSecond,
+        PlayerView.UsesBulwarkCommitmentRules(), SelectedEntityIds,
+        [&PlayerView](uint32 Id) { return FindVisibleEntity(PlayerView, Id); }, View);
     BuildProductionQueue(PlayerView, SelectedEntityIds, View.Production);
     return View;
 }
 
 FEchoesFieldHudView FEchoesFieldHudModel::BuildNetworkScoped(
     const echoes::sim::net::ScopedViewKeyframe& Keyframe,
-    const TArray<uint32>& SelectedEntityIds)
+    const TArray<uint32>& SelectedEntityIds,
+    const FEchoesContentCatalog* Catalog)
 {
     FEchoesFieldHudView View;
     View.Authority = EEchoesFieldHudAuthority::NetworkKeyframe;
@@ -1230,7 +1527,16 @@ FEchoesFieldHudView FEchoesFieldHudModel::BuildNetworkScoped(
         }
         FEchoesFieldHudSelectionEntry Entry;
         Entry.EntityId = Entity->id;
-        Entry.Name = EntityName(Entity->type);
+        Entry.Name = NamedEntity(Entity->faction, Entity->type, Catalog);
+        {
+            const FEchoesRosterGuidance Guidance =
+                FEchoesFieldHudModel::RosterGuidance(Entity->faction, Entity->type);
+            Entry.Purpose = Guidance.Purpose;
+            Entry.StrongUse = Guidance.StrongUse;
+            Entry.Limitation = Guidance.Limitation;
+            Entry.Counterplay = Guidance.Counterplay;
+        }
+        Entry.Role = EntityRole(Entity->faction, Entity->type, Catalog);
         Entry.Faction = Text(echoes::presentation::FactionDisplayName(Entity->faction));
         Entry.HitPoints = Entity->hitPoints;
         Entry.MaxHitPoints = Entity->maxHitPoints;
@@ -1241,12 +1547,17 @@ FEchoesFieldHudView FEchoesFieldHudModel::BuildNetworkScoped(
     BuildCommandControls(
         BuildNetworkCommandProfile(Keyframe, SelectedEntityIds),
         View.Commands);
+    // Online protocol compatibility requires the current commitment mechanics.
+    AddBulwarkFeedback(Keyframe.player, Keyframe.simulationTick, 0.0, true,
+        SelectedEntityIds, [&Keyframe](uint32 Id) { return FindScopedEntity(Keyframe, Id); }, View);
     return View;
 }
 
 FEchoesFieldHudView FEchoesFieldHudModel::BuildReplayObserver(
-    const echoes::sim::Simulation& ReplaySimulation)
+    const echoes::sim::Simulation& ReplaySimulation,
+    const FEchoesContentCatalog* Catalog)
 {
+    (void)Catalog;
     FEchoesFieldHudView View;
     View.Authority = EEchoesFieldHudAuthority::ReplayObserver;
     View.Surface = EEchoesFieldHudSurface::Replay;
@@ -1294,6 +1605,12 @@ bool FEchoesFieldHudModel::Build(
     }
     const AEchoesPlayerController& Controller = *Context.Controller;
     const UEchoesSimulationSubsystem& Bridge = *Context.Simulation;
+    const UEchoesContentSubsystem* Content = Controller.GetGameInstance() != nullptr
+        ? Controller.GetGameInstance()->GetSubsystem<UEchoesContentSubsystem>()
+        : nullptr;
+    const FEchoesContentCatalog* Catalog = Content != nullptr && Content->IsReady()
+        ? &Content->GetCatalog()
+        : nullptr;
     ApplySettings(Context.Settings, OutView);
 
     // Flow state is authoritative even when unattended tests or widget
@@ -1362,7 +1679,7 @@ bool FEchoesFieldHudModel::Build(
                 ? Context.Narrative->GetBriefing(Node.Operation) : FString();
             if (Briefing.IsEmpty())
             {
-                Briefing = LOCTEXT("CampaignBriefingFallback", "Authoritative briefing data is linked in the narrative pack.").ToString();
+                Briefing = LOCTEXT("CampaignBriefingFallback", "No briefing is available for this operation.").ToString();
             }
             OutView.Campaign.Briefing = Text(Briefing);
             if (const FEchoesMissionReward* Reward = FEchoesCampaignRewards::GetReward(Node.MissionId))
@@ -1498,12 +1815,29 @@ bool FEchoesFieldHudModel::Build(
         OutView.Surface = EEchoesFieldHudSurface::OnlineLocalMenu;
         OutView.Online.bVisible = true;
         OutView.Online.Title = LOCTEXT("OnlineFieldMenu", "ONLINE FIELD MENU");
-        OutView.Online.State = LOCTEXT("OnlineAuthorityContinues", "THE AUTHORITY CONTINUES WHILE THIS MENU IS OPEN");
+        OutView.Online.State = LOCTEXT("OnlineAuthorityContinues", "THE MATCH CONTINUES WHILE THIS MENU IS OPEN");
         FEchoesFieldHudControl Resume;
         Resume.Label = LOCTEXT("OnlineResume", "RESUME MATCH");
         Resume.Action = EEchoesFieldHudAction::OnlineResume;
         Resume.bPrimary = true;
         OutView.Online.Controls.Add(MoveTemp(Resume));
+        FEchoesFieldHudControl Options;
+        Options.Label = LOCTEXT("OnlineOptions", "OPTIONS");
+        Options.Action = EEchoesFieldHudAction::OnlineOptions;
+        OutView.Online.Controls.Add(MoveTemp(Options));
+        FEchoesFieldHudControl Controls;
+        Controls.Label = LOCTEXT("OnlineControls", "CONTROLS AND KEY BINDINGS");
+        Controls.Action = EEchoesFieldHudAction::OnlineControls;
+        OutView.Online.Controls.Add(MoveTemp(Controls));
+        FEchoesFieldHudControl History;
+        History.Label = LOCTEXT("OnlineCommandHistory", "COMMAND HISTORY");
+        History.Action = EEchoesFieldHudAction::OnlineCommandHistory;
+        OutView.Online.Controls.Add(MoveTemp(History));
+        FEchoesFieldHudControl ResourceMonitor;
+        ResourceMonitor.Label = LOCTEXT("OnlineResourceMonitor", "RESOURCE MONITOR");
+        ResourceMonitor.Detail = LOCTEXT("OnlineResourceMonitorDetail", "MATCH CONTINUES");
+        ResourceMonitor.Action = EEchoesFieldHudAction::OpenResourceMonitor;
+        OutView.Online.Controls.Add(MoveTemp(ResourceMonitor));
         FEchoesFieldHudControl Leave;
         Leave.Label = LOCTEXT("OnlineLeave", "LEAVE ONLINE MATCH");
         Leave.Action = EEchoesFieldHudAction::OnlineLeave;
@@ -1521,7 +1855,7 @@ bool FEchoesFieldHudModel::Build(
         {
             if (const Simulation* Replay = Bridge.GetReplayPresentationSimulation())
             {
-                OutView = BuildReplayObserver(*Replay);
+                OutView = BuildReplayObserver(*Replay, Catalog);
             }
             else
             {
@@ -1538,7 +1872,7 @@ bool FEchoesFieldHudModel::Build(
                 OutError = TEXT("[FIELD_HUD_REPLAY_SCOPE_MISSING] Player replay perspective has no scoped detached view.");
                 return false;
             }
-            OutView = BuildPlayerScoped(*ReplayPlayer, {}, true);
+            OutView = BuildPlayerScoped(*ReplayPlayer, {}, true, Catalog);
         }
         ApplySettings(Context.Settings, OutView);
         AddSpatialPresentation(Context, OutView);
@@ -1553,7 +1887,7 @@ bool FEchoesFieldHudModel::Build(
             OutError = TEXT("[FIELD_HUD_NETWORK_SOURCE_MISSING] No validated scoped keyframe is available.");
             return false;
         }
-        OutView = BuildNetworkScoped(*Keyframe, Selected);
+        OutView = BuildNetworkScoped(*Keyframe, Selected, Catalog);
     }
     else
     {
@@ -1566,12 +1900,24 @@ bool FEchoesFieldHudModel::Build(
             OutError = TEXT("[FIELD_HUD_PLAYER_VIEW_MISSING] No live scoped player view is available.");
             return false;
         }
-        OutView = BuildPlayerScoped(*Player, Selected, false);
+        OutView = BuildPlayerScoped(*Player, Selected, false, Catalog);
+        if (Controller.IsBuildPlacementActive())
+        {
+            // Existing live coverage stays visible while choosing a site. Invalid
+            // placement is explained separately and never changes simulation admission.
+            TArray<uint32> NetworkIds;
+            for (const Entity& E : Player->Entities())
+                if (E.owner == Player->Player().id && E.networkOperational) NetworkIds.Add(E.id);
+            OutView.NetworkCoverage.Reset();
+            OutView.NetworkConnections.Reset();
+            AddNetworkFeedback(*Player, NetworkIds, OutView);
+        }
         OutView.Resources.OpponentFaction = Text(Controller.GetOpponentFactionLabel());
         OutView.Resources.MatchState = OutcomeText(SimulationValue->Outcome());
     }
     ApplySettings(Context.Settings, OutView);
-    OutView.Status = Text(Controller.GetStatusMessage());
+    OutView.Status = Text(Controller.IsBuildPlacementActive()
+        ? Controller.GetBuildPlacementGuidance() : Controller.GetStatusMessage());
     OutView.Commands.Formation = Text(Controller.GetFormationLabel());
     OutView.Commands.ArmedAction = Controller.GetArmedDeckAction();
     if (OutView.Authority == EEchoesFieldHudAuthority::LivePlayerView)
@@ -1580,13 +1926,17 @@ bool FEchoesFieldHudModel::Build(
             Controller.BuildCommandDeckProfile(), OutView.Commands);
     }
     if (const auto Subgroup = Controller.GetActiveSelectionSubgroupType(); Subgroup.IsSet())
-        OutView.Commands.Formation = FText::Format(LOCTEXT("ActiveSubgroup", "Active subgroup: {0}"), EntityName(Subgroup.GetValue()));
+    {
+        FText Name = EntityName(Subgroup.GetValue());
+        if (OutView.Selection.Entries.Num() == 1) Name = OutView.Selection.Entries[0].Name;
+        OutView.Commands.Formation = FText::Format(LOCTEXT("ActiveSubgroup", "Active subgroup: {0}"), Name);
+    }
     OutView.Targeting.bKeyboardTargetVisible = Controller.IsKeyboardTargetingEnabled();
+    const FVector2D KeyboardPoint = FEchoesHudLayout::KeyboardTargetPoint(
+        Context.ViewportSize, OutView.HudScale, Controller.GetKeyboardTargetOffset());
     OutView.Targeting.KeyboardTargetNormalizedOffset = FVector2D(
-        Controller.GetKeyboardTargetOffset().X /
-            FMath::Max(1.0f, Context.ViewportSize.X),
-        Controller.GetKeyboardTargetOffset().Y /
-            FMath::Max(1.0f, Context.ViewportSize.Y));
+        KeyboardPoint.X / FMath::Max(1.0f, Context.ViewportSize.X) - 0.5f,
+        KeyboardPoint.Y / FMath::Max(1.0f, Context.ViewportSize.Y) - 0.5f);
     OutView.Targeting.bSelectionDragVisible = Controller.IsDraggingSelection();
     OutView.Targeting.SelectionStartNormalized = FVector2D(
         Controller.GetSelectionStartScreenPosition().X /
@@ -1885,7 +2235,7 @@ bool FEchoesFieldHudModel::Build(
     {
         OutView.Surface = EEchoesFieldHudSurface::Reconnect;
         OutView.Online.bVisible = true;
-        OutView.Online.Title = LOCTEXT("ReconnectPaused", "OPPONENT DISCONNECTED // AUTHORITY PAUSED");
+        OutView.Online.Title = LOCTEXT("ReconnectPaused", "OPPONENT DISCONNECTED // MATCH PAUSED");
         const int32 Remaining = Controller.GetOpponentReconnectSecondsRemaining();
         OutView.Online.Reconnect = FText::Format(
             LOCTEXT("ReconnectTime", "RECONNECT {0}:{1}"),
@@ -1914,7 +2264,394 @@ bool FEchoesFieldHudModel::Build(
         if (!Instruction.IsEmpty())
             OutView.ObjectiveLines.Add({FText::GetEmpty(), Instruction, EEchoesFieldHudTone::Muted});
     }
+    // The resource strip is itself the monitor entry. It is present only where
+    // the controller can open the corresponding local or online-local route.
+    if (OutView.Surface == EEchoesFieldHudSurface::Battlefield &&
+        OutView.Resources.bVisible && !Controller.IsModalOverlayVisible())
+    {
+        OutView.Resources.MonitorControl.Label =
+            LOCTEXT("OpenResourceMonitor", "Open resource monitor");
+        OutView.Resources.MonitorControl.Detail =
+            LOCTEXT("OpenResourceMonitorDetail", "Review economy and commitments");
+        OutView.Resources.MonitorControl.Action =
+            EEchoesFieldHudAction::OpenResourceMonitor;
+    }
+    // The upper-left Menu control is presentation-only. It is available only
+    // over a running local battlefield; all modal, reconnect and replay routes
+    // retain their own controls and input boundaries.
+    if (OutView.Surface == EEchoesFieldHudSurface::Battlefield &&
+        !Controller.IsModalOverlayVisible())
+    {
+        OutView.Menu.bVisible = true;
+        OutView.Menu.Control.Label = LOCTEXT("BattlefieldMenu", "MENU");
+        OutView.Menu.Control.Action = EEchoesFieldHudAction::OpenPauseMenu;
+    }
     return true;
+}
+
+FEchoesRosterGuidance FEchoesFieldHudModel::RosterGuidance(
+    const Faction FactionValue,
+    const EntityType Type)
+{
+    switch (FactionValue)
+    {
+    case Faction::MeridianCompact:
+        switch (Type)
+        {
+        // SPEC-UNIT-001
+        case EntityType::Worker:
+            return {
+                LOCTEXT("SurveyorName", "Surveyor"),
+                LOCTEXT("SurveyorRole", "Worker"),
+                LOCTEXT("SurveyorPurpose",
+                    "Core economic builder and logistics conduit. Gathers Matter, builds structures, operates Wells, and repairs allies."),
+                LOCTEXT("SurveyorStrongUse",
+                    "Repair damaged allies and buildings between fights at ten health a second within 200 cm."),
+                LOCTEXT("SurveyorLimitation",
+                    "Unarmed with no escape from close combat; repairs spend Matter and stop under fire."),
+                LOCTEXT("SurveyorCounterplay",
+                    "Raid its gathering routes; it cannot fight back, and any damage stops the repair.")
+            };
+        // SPEC-UNIT-002
+        case EntityType::Soldier:
+            return {
+                LOCTEXT("LancerName", "Lancer"),
+                LOCTEXT("LancerRole", "Ranged Line"),
+                LOCTEXT("LancerPurpose",
+                    "Disciplined ranged damage, striking for 18 every 1.5 seconds from behind thick defensive screens."),
+                LOCTEXT("LancerStrongUse",
+                    "Mass them behind deployed Bulwark teams, focus-firing at 650 cm with long-range scout support."),
+                LOCTEXT("LancerLimitation",
+                    "No activated ability; they must halt to fire and stall if turning during weapon wind-up."),
+                LOCTEXT("LancerCounterplay",
+                    "Mobile skirmishers that close the distance gap punish them, since they must halt to fire.")
+            };
+        // SPEC-UNIT-003
+        case EntityType::HeavyUnit:
+            return {
+                LOCTEXT("BulwarkTeamName", "Bulwark Team"),
+                LOCTEXT("BulwarkTeamRole", "Frontline Screen"),
+                LOCTEXT("BulwarkTeamPurpose",
+                    "Holds the front line, creating movable cover that shields fragile ranged units from frontal projectile fire."),
+                LOCTEXT("BulwarkTeamStrongUse",
+                    "Anchor it across a narrow chokepoint or resource entry so Lancers behind it force head-on trades."),
+                LOCTEXT("BulwarkTeamLimitation",
+                    "Setup takes a second, deployed movement drops to 35%, and its 10-damage attack threatens little."),
+                LOCTEXT("BulwarkTeamCounterplay",
+                    "Fast skirmishers flank to the rear, where the 40% projectile reduction does not apply at all.")
+            };
+        // SPEC-UNIT-004
+        case EntityType::ScoutUnit:
+            return {
+                LOCTEXT("RelaySkiffName", "Relay Skiff"),
+                LOCTEXT("RelaySkiffRole", "Scout and Supply"),
+                LOCTEXT("RelaySkiffPurpose",
+                    "Fast scout that opens vision across fog corridors and briefly raises supply capacity during production bottlenecks."),
+                LOCTEXT("RelaySkiffStrongUse",
+                    "Hold it near a connected grid node to gain 4 supply for 20 seconds, fielding a squad early."),
+                LOCTEXT("RelaySkiffLimitation",
+                    "It hovers but still follows ground paths, and the 20-second supply boost returns only every 40 seconds."),
+                LOCTEXT("RelaySkiffCounterplay",
+                    "Hide static batteries along its scouting routes; it has 75 health and only a 6-damage gun.")
+            };
+        // SPEC-BLD-015.MC.ANCHOR
+        case EntityType::CommandCore:
+            return {
+                LOCTEXT("AnchorName", "Anchor"),
+                LOCTEXT("AnchorRole", "Headquarters Drop-off"),
+                LOCTEXT("AnchorPurpose",
+                    "Your command core: it produces Surveyors, roots the power network, and takes in delivered Matter."),
+                LOCTEXT("AnchorStrongUse",
+                    "Keep it heavily guarded; queue Surveyors, set rally points, and run their maintenance repairs from here."),
+                LOCTEXT("AnchorLimitation",
+                    "It cannot be rebuilt or replaced, and losing it ends the match in defeat."),
+                LOCTEXT("AnchorCounterplay",
+                    "Enemies harass from several routes, sever your narrow outward power links, and cut off reinforcements.")
+            };
+        // SPEC-BLD-015.MC.LINK
+        case EntityType::Dropoff:
+            return {
+                LOCTEXT("PowerLinkName", "Power Link"),
+                LOCTEXT("PowerLinkRole", "Supply Node"),
+                LOCTEXT("PowerLinkPurpose",
+                    "Extends your power grid outward, adds six logistics capacity, and gives nearby workers a closer Matter drop-off."),
+                LOCTEXT("PowerLinkStrongUse",
+                    "Chain them with deliberate overlap so no single node carries your whole forward grid."),
+                LOCTEXT("PowerLinkLimitation",
+                    "Cannot be dismantled once built, so an over-extended node stays a permanent weak point in the chain."),
+                LOCTEXT("PowerLinkCounterplay",
+                    "Enemies pinpoint the weakest link and destroy it, instantly disabling the forward automated defenses beyond.")
+            };
+        // SPEC-BLD-015.MC.FOUNDRY
+        case EntityType::Barracks:
+            return {
+                LOCTEXT("ArrayFoundryName", "Array Foundry"),
+                LOCTEXT("ArrayFoundryRole", "Production Center"),
+                LOCTEXT("ArrayFoundryPurpose",
+                    "Builds every Compact mobile combat unit and hosts the faction's specialized tech research projects."),
+                LOCTEXT("ArrayFoundryStrongUse",
+                    "Queue up to five units, and build another only when your workers can sustain the drain."),
+                LOCTEXT("ArrayFoundryLimitation",
+                    "Research occupies the active slot, so unit production stops completely until that project finishes."),
+                LOCTEXT("ArrayFoundryCounterplay",
+                    "Enemies raid while research runs, block where new units emerge, or force you into wrong units.")
+            };
+        // SPEC-BLD-015.MC.AEGIS
+        case EntityType::UtilityStructure:
+            return {
+                LOCTEXT("AegisPostName", "Aegis Post"),
+                LOCTEXT("AegisPostRole", "Automated Defense"),
+                LOCTEXT("AegisPostPurpose",
+                    "Holds a defended zone automatically, hitting ground attackers hard with powered fire while the network keeps it online."),
+                LOCTEXT("AegisPostStrongUse",
+                    "Strongest covering mining routes or key network joints, backed by line units rather than left alone."),
+                LOCTEXT("AegisPostLimitation",
+                    "Covers only its fixed arc, stops ground threats only, and needs a live power link."),
+                LOCTEXT("AegisPostCounterplay",
+                    "Enemies cut the link node feeding it to shut it down, or skirmish around its arc.")
+            };
+        default: break;
+        }
+        break;
+    case Faction::KharuunAssemblies:
+        switch (Type)
+        {
+        // SPEC-UNIT-005
+        case EntityType::Worker:
+            return {
+                LOCTEXT("TenderName", "Tender"),
+                LOCTEXT("TenderRole", "Worker"),
+                LOCTEXT("TenderPurpose",
+                    "Gathers Matter, grows Assemblies structures, operates Wells, relocates base assets, and permanently converts Scarred tiles to Open."),
+                LOCTEXT("TenderStrongUse",
+                    "Send it with Waystone relocations to clear passability chokes and stabilize key build tiles around resource expansions."),
+                LOCTEXT("TenderLimitation",
+                    "Deals no damage at all, and stabilizing a Scar costs 15 Dawn and six uninterrupted seconds."),
+                LOCTEXT("TenderCounterplay",
+                    "Kill it before those six seconds finish and the 15 Dawn is forfeited; it cannot fight back.")
+            };
+        // SPEC-UNIT-006
+        case EntityType::Soldier:
+            return {
+                LOCTEXT("RiftstalkerName", "Riftstalker"),
+                LOCTEXT("RiftstalkerRole", "Mobile Skirmisher"),
+                LOCTEXT("RiftstalkerPurpose",
+                    "High-speed harasser and flank skirmisher that probes perimeter defenses, raids exposed worker routes, and isolates separated targets."),
+                LOCTEXT("RiftstalkerStrongUse",
+                    "Kite slow lines with hit-and-run passes, firing while moving and flanking out of subsurface passages."),
+                LOCTEXT("RiftstalkerLimitation",
+                    "Firing while moving deals 75% damage on a longer cooldown; staying power in prolonged fights is low."),
+                LOCTEXT("RiftstalkerCounterplay",
+                    "Trap it inside a static defensive arc and force the prolonged fight it handles poorly.")
+            };
+        // SPEC-UNIT-007
+        case EntityType::HeavyUnit:
+            return {
+                LOCTEXT("CairnbackName", "Cairnback"),
+                LOCTEXT("CairnbackRole", "Assault Screen"),
+                LOCTEXT("CairnbackPurpose",
+                    "Absorbs incoming fire at the front and controls lanes by raising temporary, destructible cover across enemy firing lines."),
+                LOCTEXT("CairnbackStrongUse",
+                    "Drop cover between enemy guns and your retreating skirmishers, or split a chokepoint to divide a bigger army."),
+                LOCTEXT("CairnbackLimitation",
+                    "Must close to 200 cm to fight, and each cover costs 15 Dawn with a 30-second wait."),
+                LOCTEXT("CairnbackCounterplay",
+                    "Break the 180-HP cover or wait out its 15 seconds, then engage from beyond its 200 cm range.")
+            };
+        // SPEC-UNIT-008
+        case EntityType::ScoutUnit:
+            return {
+                LOCTEXT("ResonantName", "Resonant"),
+                LOCTEXT("ResonantRole", "Sensor Scout"),
+                LOCTEXT("ResonantPurpose",
+                    "Spots moving enemies at long range and hunts enemy scouts, without giving away its own position."),
+                LOCTEXT("ResonantStrongUse",
+                    "Park at a route intersection to catch armies, skiffs, and projections moving within 2,200 cm."),
+                LOCTEXT("ResonantLimitation",
+                    "Stationary enemies leave no trace, and its pings give rough positions only, never identities."),
+                LOCTEXT("ResonantCounterplay",
+                    "Stand still and it sees nothing, then strike the frail scout from beyond its 380 cm reach.")
+            };
+        // SPEC-BLD-016.KA.HEARTH
+        case EntityType::CommandCore:
+            return {
+                LOCTEXT("MemoryHearthName", "Memory Hearth"),
+                LOCTEXT("MemoryHearthRole", "Headquarters Drop-off"),
+                LOCTEXT("MemoryHearthPurpose",
+                    "Your command core: produces Tender workers, authorizes roster adaptation, and receives the Matter your workers deliver."),
+                LOCTEXT("MemoryHearthStrongUse",
+                    "Hold the center with frontline screens so it keeps producing Tenders and taking in Matter."),
+                LOCTEXT("MemoryHearthLimitation",
+                    "Losing it loses the match outright, and standard play gives you no way to rebuild it."),
+                LOCTEXT("MemoryHearthCounterplay",
+                    "Mobile enemy forces draw defenders away, destroy your rooted outpost nodes, then commit to one heavy push.")
+            };
+        // SPEC-BLD-016.KA.WAYSTONE
+        case EntityType::Dropoff:
+            return {
+                LOCTEXT("WaystoneName", "Waystone"),
+                LOCTEXT("WaystoneRole", "Mobile Supply Node"),
+                LOCTEXT("WaystonePurpose",
+                    "A Matter drop-off point that can pull up its roots and walk to a new deposit."),
+                LOCTEXT("WaystoneStrongUse",
+                    "Scout the destination first, then relocate when a fresh deposit outweighs the exposure of moving."),
+                LOCTEXT("WaystoneLimitation",
+                    "While walking it crawls, takes 25% extra damage, and adds no supply capacity until rooted."),
+                LOCTEXT("WaystoneCounterplay",
+                    "Enemies strike during the 2-second uproot or 3-second root, or occupy the destination first.")
+            };
+        // SPEC-BLD-016.KA.BASIN
+        case EntityType::Barracks:
+            return {
+                LOCTEXT("GrowthBasinName", "Growth Basin"),
+                LOCTEXT("GrowthBasinRole", "Production Center"),
+                LOCTEXT("GrowthBasinPurpose",
+                    "Trains every Assemblies combat unit, researches technology upgrades, and lets nearby troops molt into new warforms."),
+                LOCTEXT("GrowthBasinStrongUse",
+                    "Strongest tucked into secure interior ground, where wounded troops return to adapt warforms without exposing your economy."),
+                LOCTEXT("GrowthBasinLimitation",
+                    "Adaptation reaches only 600 cm, so units must come back here, and it adds no supply capacity."),
+                LOCTEXT("GrowthBasinCounterplay",
+                    "Enemies strike while several units are mid-molt, when those bodies take 150% damage for four seconds.")
+            };
+        // SPEC-BLD-016.KA.SPINE
+        case EntityType::UtilityStructure:
+            return {
+                LOCTEXT("ListeningSpineName", "Listening Spine"),
+                LOCTEXT("ListeningSpineRole", "Seismic Detection"),
+                LOCTEXT("ListeningSpinePurpose",
+                    "Marks anonymous moving contacts within 2,600 cm through fog, well past its own 900 cm sight."),
+                LOCTEXT("ListeningSpineStrongUse",
+                    "Cover approach lanes visual scouts cannot safely hold; pair with Resonants to confirm the anonymous pings."),
+                LOCTEXT("ListeningSpineLimitation",
+                    "Only movement registers, contacts stay anonymous at 200 cm resolution, and each fades after about two seconds."),
+                LOCTEXT("ListeningSpineCounterplay",
+                    "Stop your forces along the way, or split them onto alternate routes to mask true numbers.")
+            };
+        default: break;
+        }
+        break;
+    case Faction::HollowChoir:
+        switch (Type)
+        {
+        // SPEC-UNIT-009
+        case EntityType::Worker:
+            return {
+                LOCTEXT("ThreadkeeperName", "Threadkeeper"),
+                LOCTEXT("ThreadkeeperRole", "Worker"),
+                LOCTEXT("ThreadkeeperPurpose",
+                    "Gathers Matter, builds Choir structures, and forecasts whether your Dawn will cover the network's upcoming upkeep."),
+                LOCTEXT("ThreadkeeperStrongUse",
+                    "Before adding more structures, repair one to read its next upkeep and your projected Dawn."),
+                LOCTEXT("ThreadkeeperLimitation",
+                    "Unarmed with only 80 health, so they cannot answer an attacker or hold any ground."),
+                LOCTEXT("ThreadkeeperCounterplay",
+                    "Hunt them on the Matter line; they cannot fight back, and Choir repairs stop with them.")
+            };
+        // SPEC-UNIT-010
+        case EntityType::Soldier:
+            return {
+                LOCTEXT("IntervalistName", "Intervalist"),
+                LOCTEXT("IntervalistRole", "Phase Skirmisher"),
+                LOCTEXT("IntervalistPurpose",
+                    "Flexible ranged skirmisher and line fighter that changes state to favor damage, or speed and vision."),
+                LOCTEXT("IntervalistStrongUse",
+                    "Go Possible to scout, flank, or escape traps; go Manifest from a screened firing position."),
+                LOCTEXT("IntervalistLimitation",
+                    "Each change costs Dawn, takes eight seconds, and locks out the other state for twenty seconds."),
+                LOCTEXT("IntervalistCounterplay",
+                    "Strike during the visible transition, or force a fight the locked-in state is wrong for.")
+            };
+        // SPEC-UNIT-011
+        case EntityType::HeavyUnit:
+            return {
+                LOCTEXT("LacunaWardenName", "Lacuna Warden"),
+                LOCTEXT("LacunaWardenRole", "Heavy Controller"),
+                LOCTEXT("LacunaWardenPurpose",
+                    "Durable heavy controller that pins dangerous enemies, shuts off their active abilities, and holds your army's center."),
+                LOCTEXT("LacunaWardenStrongUse",
+                    "Bind an enemy caster or heavy: its active abilities lock out and it slows 35% for four seconds."),
+                LOCTEXT("LacunaWardenLimitation",
+                    "Each bind costs 25 Dawn, needs a visible target within 500 cm, and holds only four seconds."),
+                LOCTEXT("LacunaWardenCounterplay",
+                    "Break line of sight for a full second, or move the bound unit past 700 cm away.")
+            };
+        // SPEC-UNIT-012
+        case EntityType::ScoutUnit:
+            return {
+                LOCTEXT("AfterimageName", "Afterimage"),
+                LOCTEXT("AfterimageRole", "Misdirection Scout"),
+                LOCTEXT("AfterimagePurpose",
+                    "High-speed scout that maps routes along explored fog lines and feeds enemy sensors false movement."),
+                LOCTEXT("AfterimageStrongUse",
+                    "Send two projections down other corridors just before a push, baiting defenses and screening your real approach."),
+                LOCTEXT("AfterimageLimitation",
+                    "Barely armed and fragile; the projections last six seconds, die to one hit, and block nothing."),
+                LOCTEXT("AfterimageCounterplay",
+                    "Hold your defenses until vision confirms a contact; the fakes die to one hit and never fight.")
+            };
+        // SPEC-BLD-017.HC.CONCORDANCE
+        case EntityType::CommandCore:
+            return {
+                LOCTEXT("ConcordanceName", "Concordance"),
+                LOCTEXT("ConcordanceRole", "Headquarters Drop-off"),
+                LOCTEXT("ConcordancePurpose",
+                    "Your Choir command core: trains Threadkeepers, receives Matter drop-offs, and tracks every upcoming structural charge."),
+                LOCTEXT("ConcordanceStrongUse",
+                    "Strongest when you keep at least 20 Dawn unspent and check its ledger of coming payments."),
+                LOCTEXT("ConcordanceLimitation",
+                    "It only reports the charges ahead; covering them from your Dawn reserve is still your job."),
+                LOCTEXT("ConcordanceCounterplay",
+                    "Enemies pressure several outposts at once to strain your Dawn, forcing shutdowns before assaulting the core.")
+            };
+        // SPEC-BLD-017.HC.INTERVAL
+        case EntityType::Dropoff:
+            return {
+                LOCTEXT("IntervalLoomName", "Interval Loom"),
+                LOCTEXT("IntervalLoomRole", "Supply Node"),
+                LOCTEXT("IntervalLoomPurpose",
+                    "Adds logistics capacity and gives workers a nearby Matter drop-off, in exchange for a recurring Dawn charge."),
+                LOCTEXT("IntervalLoomStrongUse",
+                    "Strongest when the worker route it serves earns more than its 5 Dawn per 30 seconds."),
+                LOCTEXT("IntervalLoomLimitation",
+                    "Charges 5 Dawn every 30 seconds even when idle, dropping to 4 inside a Phase Anchor field."),
+                LOCTEXT("IntervalLoomCounterplay",
+                    "Cut the harvesting routes feeding it; the Dawn charge keeps draining while it earns nothing.")
+            };
+        // SPEC-BLD-017.HC.CHORUS
+        case EntityType::Barracks:
+            return {
+                LOCTEXT("ChorusLoomName", "Chorus Loom"),
+                LOCTEXT("ChorusLoomRole", "Production Center"),
+                LOCTEXT("ChorusLoomPurpose",
+                    "Trains every Choir mobile combat unit and hosts research upgrades, carrying a repeating Dawn upkeep debt."),
+                LOCTEXT("ChorusLoomStrongUse",
+                    "Time unit queues to your Dawn income, and delay deep research that would threaten paying upkeep."),
+                LOCTEXT("ChorusLoomLimitation",
+                    "Coherence takes 5 Dawn every 30 seconds, only 4 inside a Phase Anchor field, whatever you produce."),
+                LOCTEXT("ChorusLoomCounterplay",
+                    "Strike just before an upkeep charge comes due, forcing a choice between defending and staying solvent.")
+            };
+        // SPEC-BLD-017.HC.ANCHOR
+        case EntityType::UtilityStructure:
+            return {
+                LOCTEXT("PhaseAnchorName", "Phase Anchor"),
+                LOCTEXT("PhaseAnchorRole", "Coherence Optimizer"),
+                LOCTEXT("PhaseAnchorPurpose",
+                    "Cuts the recurring Dawn upkeep of every Choir structure except the Core inside its 700 cm field."),
+                LOCTEXT("PhaseAnchorStrongUse",
+                    "Place it centrally so both Looms sit inside the field, cutting each upkeep charge to 4 Dawn."),
+                LOCTEXT("PhaseAnchorLimitation",
+                    "It still owes 5 Dawn every 30 seconds, saves only 1 per structure, and fields never stack."),
+                LOCTEXT("PhaseAnchorCounterplay",
+                    "Focus it down or bypass it entirely; covered structures immediately pay the full 5 Dawn again.")
+            };
+        default: break;
+        }
+        break;
+    default: break;
+    }
+    return {};
 }
 
 #undef LOCTEXT_NAMESPACE

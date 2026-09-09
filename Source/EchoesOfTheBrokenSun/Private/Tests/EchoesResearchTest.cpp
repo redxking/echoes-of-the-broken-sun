@@ -27,11 +27,16 @@ bool FEchoesResearchTest::RunTest(const FString& Parameters)
     {
         return false;
     }
-    // Repair and production identity advance snapshots to 30 and replay execution to 27.
-    TestEqual(TEXT("Research interruption uses snapshot schema 30"),
-              echoes::sim::kSnapshotVersion, 30U);
-    TestEqual(TEXT("Research interruption uses replay schema 27"),
-              echoes::sim::kReplayVersion, 27U);
+    // Bulwark commitments advance current persistence; the Link cutoff remains
+    // fixed so old research/production histories retain their original rules.
+    TestEqual(TEXT("Research interruption uses snapshot schema 31"),
+              echoes::sim::kSnapshotVersion, 31U);
+    TestEqual(TEXT("Research interruption uses replay semantics 29"),
+              echoes::sim::kReplayVersion, 29U);
+    TestEqual(TEXT("Historical Bulwark commitment cutoff remains replay 28"),
+              echoes::sim::kBulwarkCommitmentReplayVersion, 28U);
+    TestEqual(TEXT("Legacy Link mechanics retain replay schema 27"),
+              echoes::sim::kLinkMechanicsReplayVersion, 27U);
     FTestWorldWrapper WorldWrapper;
     if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
     {

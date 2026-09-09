@@ -1,3 +1,4 @@
+#include "EchoesOfTheBrokenSun.h"
 #include "EchoesPlayerController.h"
 
 #include "EchoesMatchReplay.h"
@@ -552,6 +553,12 @@ bool AEchoesPlayerController::HandleReplayShellAction(
         ShellMessage = Feedback.IsEmpty()
             ? TEXT("[REPLAY_ACTION_FAILED] The replay action could not be completed.")
             : Feedback;
+        // Keep diagnostic identifiers in the log, not in the player's dialog.
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_REPLAY_ACTION_FAILURE] %s"), *ShellMessage);
+        int32 DiagnosticEnd = INDEX_NONE;
+        if (ShellMessage.StartsWith(TEXT("[REPLAY_")) &&
+            ShellMessage.FindChar(TEXT(']'), DiagnosticEnd))
+            ShellMessage = ShellMessage.Mid(DiagnosticEnd + 1).TrimStart();
         PendingShellAction = Action;
         PendingShellArgument = Argument;
         PlayerFlow.Push(EEchoesShellScreen::Error);
@@ -787,7 +794,7 @@ bool AEchoesPlayerController::HandleReplayShellAction(
 
         case EEchoesShellAction::Rematch:
         {
-            if (!RequireOperationMastery(EEchoesOperationMode::Skirmish)) return true;
+            if (!RequireOperationProfile()) return true;
             if (Bridge == nullptr ||
                 Bridge->GetOperationMode() != EEchoesOperationMode::Skirmish)
             {

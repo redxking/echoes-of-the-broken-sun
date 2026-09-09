@@ -7,16 +7,17 @@ namespace echoes::network {
 namespace {
 
 [[maybe_unused]] constexpr std::string_view BuildIdentityMaterial =
-    "EchoesOfTheBrokenSun:0.93.0:protocol-4:snapshot-30:view-2";
+    "EchoesOfTheBrokenSun:0.93.0:protocol-5:snapshot-31:view-3";
 // SHA-256(BuildIdentityMaterial). A content test binds the product version,
 // native snapshot schema, identity material, and exact digest.
 // Keep the compatibility identity aligned with the current native snapshot schema
 // so builds with different serialization formats cannot negotiate compatibility.
 constexpr sim::net::Digest256 BuildId{
-    0x29, 0x86, 0xbe, 0xaa, 0xb3, 0xba, 0x57, 0x20,
-    0x72, 0x75, 0x10, 0x18, 0xff, 0x2d, 0x3c, 0x2f,
-    0x62, 0x41, 0x48, 0x9a, 0x74, 0x97, 0x5e, 0xef,
-    0xd5, 0x9c, 0xf1, 0xec, 0xc9, 0x21, 0x69, 0x34};
+    0xa6, 0xef, 0x95, 0x63, 0xe1, 0xa8, 0x7d, 0x8a,
+    0x5d, 0xe7, 0xd3, 0xfe, 0x37, 0x31, 0x97, 0xe2,
+    0x8c, 0x4d, 0x23, 0xf9, 0x71, 0x29, 0x25, 0x8d,
+    0x32, 0xee, 0xdc, 0x7d, 0xf2, 0xf6, 0xfe, 0xf5
+};
 constexpr sim::net::Digest256 CanonicalRulesPack{
     0x04, 0x60, 0xf5, 0xe2, 0xfc, 0x18, 0x02, 0x38,
     0xfc, 0x71, 0x36, 0x4a, 0xf1, 0x38, 0xcc, 0xe3,
@@ -48,6 +49,10 @@ sim::net::CompatibilityManifest BuildCompatibilityManifest(
         simulation != nullptr
             ? simulation->Config().rules.version
             : sim::DefaultSimulationRules().version;
+    // Build identity is also persisted in replay archives. Negotiate this
+    // command-behavior repair separately so supported old archives still open.
+    manifest.serializationFeatureFlags |= sim::net::kMaintenanceCommandSemanticsFeature |
+        sim::net::kGameplayFeedbackStreamFeature;
     manifest.buildIdSha256 = BuildId;
     manifest.rulesPackSha256 =
         simulation != nullptr
@@ -102,6 +107,7 @@ ScopedViewAcceptance ScopedViewState::Accept(
     }
     if (!current_.has_value())
     {
+        bulwarkActions_.ReconcileAcceptedView(keyframe);
         current_ = keyframe;
         ++acceptedCount_;
         return ScopedViewAcceptance::AcceptedFirst;
@@ -118,6 +124,7 @@ ScopedViewAcceptance ScopedViewState::Accept(
         keyframe.snapshotId == current_->snapshotId + 1
             ? ScopedViewAcceptance::AcceptedNext
             : ScopedViewAcceptance::AcceptedRecovery;
+    bulwarkActions_.ReconcileAcceptedView(keyframe);
     current_ = keyframe;
     ++acceptedCount_;
     return result;
@@ -161,6 +168,7 @@ ScopedViewAcceptance ScopedViewState::AcceptDelta(
     {
         return ScopedViewAcceptance::DeltaRejected;
     }
+    bulwarkActions_.ReconcileAcceptedView(applied);
     current_ = std::move(applied);
     ++acceptedCount_;
     return ScopedViewAcceptance::AcceptedDelta;

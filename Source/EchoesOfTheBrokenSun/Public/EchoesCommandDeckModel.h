@@ -12,6 +12,8 @@ struct FEchoesCommandDeckProfile final
     int32 OtherCount = 0;
     bool bHasCommandCore = false;
     bool bHasBarracks = false;
+    /** True only for one selected owned, unfinished cancellable structure. */
+    bool bCanCancelSelectedConstruction = false;
     bool bUseM01RoleNames = false;
 };
 
@@ -32,7 +34,10 @@ enum class EEchoesCommandDeckAction : uint8
     ProduceHeavy,
     ProduceScout,
     ToggleTechnology,
-    CycleFormation
+    CycleFormation,
+    ToggleBulwarkDeployment,
+    RepairAtCursor,
+    CancelConstruction
 };
 
 /**
@@ -52,6 +57,12 @@ struct FEchoesCommandDeckActionEntry final
 /** Pure command-label model shared by the HUD and automation. */
 struct FEchoesCommandDeckModel final
 {
+    /** Resolve one gesture without issuing commands. Pending casts remain busy
+     * until the simulation consumes them, so rapid clicks choose the next unit. */
+    [[nodiscard]] static TArray<uint32> ResolveLocalBulwarkCasters(
+        const echoes::sim::Simulation& Simulation, echoes::sim::PlayerId Player,
+        echoes::sim::Vec2 Target, const TArray<uint32>& Selection, bool bAllEligible);
+
     /** Authored M01 Meridian roles; does not change command types or availability. */
     [[nodiscard]] static const TCHAR* GetM01RoleName(echoes::sim::EntityType Type);
 
@@ -100,6 +111,15 @@ struct FEchoesCommandDeckModel final
                 Profile.bUseM01RoleNames ? TEXT("POWER LINK") : TEXT("DROPOFF"), TEXT("N"), true);
             Add(EEchoesCommandDeckAction::BuildUtility,
                 Profile.bUseM01RoleNames ? TEXT("AEGIS POST") : TEXT("UTILITY"), TEXT("M"), true);
+            Add(EEchoesCommandDeckAction::RepairAtCursor,
+                TEXT("REPAIR"), TEXT("R"), true);
+            Add(EEchoesCommandDeckAction::Stop, TEXT("STOP"), TEXT("X"), false);
+            return Entries;
+        }
+        if (Profile.bCanCancelSelectedConstruction)
+        {
+            Add(EEchoesCommandDeckAction::CancelConstruction,
+                TEXT("CANCEL CONSTRUCTION"), TEXT("SHIFT+X"), false);
             Add(EEchoesCommandDeckAction::Stop, TEXT("STOP"), TEXT("X"), false);
             return Entries;
         }

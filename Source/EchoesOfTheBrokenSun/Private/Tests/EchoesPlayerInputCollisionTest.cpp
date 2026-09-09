@@ -10,6 +10,7 @@
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
 #include "GameFramework/InputSettings.h"
+#include "GameFramework/PlayerInput.h"
 #include "InputCoreTypes.h"
 #include "Tests/AutomationCommon.h"
 
@@ -239,6 +240,33 @@ struct FDispatchRun final
         Bridge->StopPrototypeScenario();
         WorldWrapper.ForwardErrorMessages(&Test);
         return false;
+    }
+
+    // Inspect the actual initialized player's inherited config, not only the
+    // action delegates: a debug Exec binding can run alongside gameplay input.
+    // UE GetBind treats an unspecified modifier as optional, not forbidden.
+    const UInputSettings* Settings = GetDefault<UInputSettings>();
+    for (const FInputActionKeyMapping& Mapping : Settings->GetActionMappings())
+    {
+        for (const FKeyBind& Debug : Controller->PlayerInput->DebugExecBindings)
+        {
+            const bool bMatches = Debug.Key == Mapping.Key && !Debug.bDisabled &&
+                (!Debug.Control || Mapping.bCtrl) &&
+                (!Debug.Shift || Mapping.bShift) &&
+                (!Debug.Alt || Mapping.bAlt) &&
+                (!Debug.Cmd || Mapping.bCmd) &&
+                (!Debug.bIgnoreCtrl || !Mapping.bCtrl) &&
+                (!Debug.bIgnoreShift || !Mapping.bShift) &&
+                (!Debug.bIgnoreAlt || !Mapping.bAlt) &&
+                (!Debug.bIgnoreCmd || !Mapping.bCmd);
+            if (bMatches)
+            {
+                Test.AddError(FString::Printf(
+                    TEXT("%s gameplay action %s on %s also executes debug command %s"),
+                    Scope, *Mapping.ActionName.ToString(),
+                    *Mapping.Key.ToString(), *Debug.Command));
+            }
+        }
     }
 
     if (Controller->InputComponent == nullptr)

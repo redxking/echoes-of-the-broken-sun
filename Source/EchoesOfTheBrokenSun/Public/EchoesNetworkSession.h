@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "EchoesNetworkActionDispatch.h"
 #include "EchoesSimCore/NetworkProtocol.h"
 
 #include <optional>
@@ -70,10 +71,23 @@ public:
     {
         return acceptedCount_;
     }
+    [[nodiscard]] BulwarkActionDispatchState& BulwarkActions()
+    {
+        return bulwarkActions_;
+    }
+    [[nodiscard]] const BulwarkActionDispatchState& BulwarkActions() const
+    {
+        return bulwarkActions_;
+    }
+    void ResetBulwarkActions()
+    {
+        bulwarkActions_.Reset();
+    }
 
 private:
     std::optional<sim::net::ScopedViewKeyframe> current_{};
     std::uint64_t acceptedCount_ = 0;
+    BulwarkActionDispatchState bulwarkActions_{};
 };
 
 [[nodiscard]] ECHOESOFTHEBROKENSUN_API const char* StableId(

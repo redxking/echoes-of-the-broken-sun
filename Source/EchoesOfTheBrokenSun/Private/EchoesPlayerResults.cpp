@@ -43,7 +43,7 @@ void AEchoesPlayerController::AppendMatchResultDossier(FEchoesShellView& View) c
         return;
     }
     Sections.Add(Report->baselineTick == 0 ? LOCTEXT("FullCoverage", "Statistics cover the full match.") :
-        FText::Format(LOCTEXT("PartialCoverage", "Statistics cover play from {0}. Earlier activity is unavailable in this legacy checkpoint."),
+        FText::Format(LOCTEXT("PartialCoverage", "Statistics cover play from {0}. Earlier match activity is unavailable."),
             ElapsedTime(Report->baselineTick)));
     for (int32 Seat = 0; Seat < static_cast<int32>(echoes::sim::kMaximumPlayers); ++Seat)
     {

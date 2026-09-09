@@ -10,6 +10,7 @@
 #include "EchoesSimCore/NetworkProtocol.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
+#include "HAL/PlatformTime.h"
 #include "Tests/AutomationCommon.h"
 
 #include <algorithm>
@@ -91,15 +92,30 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
 
     const CompatibilityManifest ClientManifest =
         echoes::network::BuildCompatibilityManifest();
-    // SHA-256("EchoesOfTheBrokenSun:0.93.0:protocol-4:snapshot-30:view-2").
+    // SHA-256("EchoesOfTheBrokenSun:0.93.0:protocol-5:snapshot-31:view-3").
     // Keep the compatibility identity aligned with the current native snapshot schema.
     constexpr Digest256 ExpectedBuildId{
-    0x29, 0x86, 0xbe, 0xaa, 0xb3, 0xba, 0x57, 0x20,
-    0x72, 0x75, 0x10, 0x18, 0xff, 0x2d, 0x3c, 0x2f,
-    0x62, 0x41, 0x48, 0x9a, 0x74, 0x97, 0x5e, 0xef,
-    0xd5, 0x9c, 0xf1, 0xec, 0xc9, 0x21, 0x69, 0x34};
-    TestTrue(TEXT("Compatibility identity is bound to version 0.93.0 and schema 30"),
+    0xa6, 0xef, 0x95, 0x63, 0xe1, 0xa8, 0x7d, 0x8a,
+    0x5d, 0xe7, 0xd3, 0xfe, 0x37, 0x31, 0x97, 0xe2,
+    0x8c, 0x4d, 0x23, 0xf9, 0x71, 0x29, 0x25, 0x8d,
+    0x32, 0xee, 0xdc, 0x7d, 0xf2, 0xf6, 0xfe, 0xf5
+};
+    TestTrue(TEXT("Compatibility identity is bound to version 0.93.0 and schema 31"),
              ClientManifest.buildIdSha256 == ExpectedBuildId);
+    TestTrue(TEXT("Current engine advertises targeted construction assist semantics"),
+        (ClientManifest.serializationFeatureFlags & kMaintenanceCommandSemanticsFeature) != 0);
+    TestTrue(TEXT("Current engine advertises recipient-scoped gameplay feedback"),
+        (ClientManifest.serializationFeatureFlags & kGameplayFeedbackStreamFeature) != 0);
+    CompatibilityManifest WithoutFeedback = ClientManifest;
+    WithoutFeedback.serializationFeatureFlags &= ~kGameplayFeedbackStreamFeature;
+    TestTrue(TEXT("A peer without the feedback RPC contract is refused"),
+        CheckCompatibility(WithoutFeedback, ClientManifest) == CompatibilityStatus::SerializationFeaturesMismatch);
+    CompatibilityManifest BeforeMaintenance = ClientManifest;
+    BeforeMaintenance.serializationFeatureFlags &= ~kMaintenanceCommandSemanticsFeature;
+    TestTrue(TEXT("The old engine is refused without invalidating its replay build identity"),
+        CheckCompatibility(BeforeMaintenance, ClientManifest) ==
+            CompatibilityStatus::SerializationFeaturesMismatch &&
+        BeforeMaintenance.buildIdSha256 == ClientManifest.buildIdSha256);
     SimulationConfig RuntimeConfig{16, 16, 20, 77};
     RuntimeConfig.rules.contentSha256 = ClientManifest.rulesPackSha256;
     Simulation RuntimeSimulation(RuntimeConfig);
@@ -367,6 +383,49 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
     if (TestNotNull(TEXT("Network-presentation controller spawns"),
                     PresentationController))
     {
+        // Reproduce the actual controller boundary: eight outstanding snapshots
+        // during initial client presentation must wait, then resume on a valid ACK.
+        const double AckTestNow = FPlatformTime::Seconds();
+        PresentationController->NetworkSnapshotFlow.RecordSend(0, AckTestNow - 44.0);
+        for (uint64 SnapshotId = 1; SnapshotId <= 8; ++SnapshotId)
+        {
+            PresentationController->PendingNetworkSnapshotDigests.Add(
+                SnapshotId, SnapshotId + 100);
+        }
+        TestFalse(TEXT("Full initial snapshot window applies backpressure without disconnecting"),
+            PresentationController->CanSendNetworkSnapshot());
+        TestEqual(TEXT("Backpressure retains the bounded pending snapshot window"),
+            PresentationController->PendingNetworkSnapshotDigests.Num(), 8);
+        // Invalid-ACK logging is rate-limited across connections; match only
+        // this exact diagnostic and allow its deliberate suppression.
+        AddExpectedError(TEXT("[ECHOES_NETWORK_KEYFRAME_ACK_REJECTED]"),
+            EAutomationExpectedErrorFlags::Contains, 0, false);
+        PresentationController->ServerAcknowledgeScopedKeyframe_Implementation(1, 999);
+        TestTrue(TEXT("A wrong digest cannot retire state or renew the ACK deadline"),
+            PresentationController->PendingNetworkSnapshotDigests.Num() == 8 &&
+            PresentationController->LastAcknowledgedNetworkSnapshotId == 0 &&
+            PresentationController->NetworkSnapshotFlow.Evaluate(8, AckTestNow + 2.0) ==
+                echoes::network::SnapshotSendDecision::TimedOut);
+        PresentationController->ServerAcknowledgeScopedKeyframe_Implementation(1, 101);
+        TestTrue(TEXT("A valid delayed ACK resumes the actual snapshot sender"),
+            PresentationController->CanSendNetworkSnapshot());
+        TestTrue(TEXT("The exact acknowledged prefix retires and records progress"),
+            PresentationController->PendingNetworkSnapshotDigests.Num() == 7 &&
+            PresentationController->LastAcknowledgedNetworkSnapshotId == 1 &&
+            PresentationController->NetworkSnapshotFlow.Evaluate(7, AckTestNow + 44.0) ==
+                echoes::network::SnapshotSendDecision::Send);
+        PresentationController->NetworkSnapshotFlow.RecordSend(0, AckTestNow - 44.0);
+        PresentationController->ServerAcknowledgeScopedKeyframe_Implementation(1, 101);
+        TestTrue(TEXT("A duplicate ACK cannot renew the deadline or retire another snapshot"),
+            PresentationController->PendingNetworkSnapshotDigests.Num() == 7 &&
+            PresentationController->NetworkSnapshotAcknowledgementCount == 1 &&
+            PresentationController->NetworkSnapshotFlow.Evaluate(7, AckTestNow + 2.0) ==
+                echoes::network::SnapshotSendDecision::TimedOut);
+        PresentationController->PendingNetworkSnapshotDigests.Reset();
+        PresentationController->NetworkSnapshotFlow.Reset();
+        PresentationController->LastAcknowledgedNetworkSnapshotId = 0;
+        PresentationController->NetworkSnapshotAcknowledgementCount = 0;
+
         UEchoesSimulationSubsystem* CommandBridge =
             PresentationWorld->GetSubsystem<UEchoesSimulationSubsystem>();
         FString FactionFeedback;
@@ -533,6 +592,32 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
                 PresentationController->NetworkCommandContext
                     .lastAcceptedSequence = *InitialNextSequence - 1;
                 PresentationController->LastAcceptedNetworkBatchId = 0;
+
+                // A timed-out connection cannot keep commanding while the net
+                // driver is delivering Close and scheduling Logout/seat recovery.
+                CommandRequest ClosingCommand{};
+                ClosingCommand.sequence = *InitialNextSequence;
+                ClosingCommand.type = CommandType::Move;
+                ClosingCommand.actor = CairnbackId;
+                ClosingCommand.position = CairnbackPosition;
+                CommandBatchRequest ClosingBatch{};
+                ClosingBatch.clientBatchId = 1;
+                CommandIntent ClosingIntent{};
+                ClosingIntent.type = CommandType::Move;
+                ClosingIntent.actor = CairnbackId;
+                ClosingIntent.position = CairnbackPosition;
+                ClosingBatch.intents.push_back(ClosingIntent);
+                PresentationController->bNetworkSnapshotClosing = true;
+                PresentationController->ServerSubmitNetworkCommand_Implementation(
+                    echoes::network::ToByteArray(EncodeCommandRequest(ClosingCommand)));
+                PresentationController->ServerSubmitNetworkCommandBatch_Implementation(
+                    echoes::network::ToByteArray(EncodeCommandBatchRequest(ClosingBatch)));
+                TestTrue(TEXT("Closing transport rejects single and batch orders without consuming authority sequence"),
+                    CommandSimulation->CommandLog().size() == InitialCommandLogSize &&
+                    CommandSimulation->NextCommandSequence(
+                        UEchoesSimulationSubsystem::LocalPlayerId) == InitialNextSequence &&
+                    PresentationController->LastAcceptedNetworkBatchId == 0);
+                PresentationController->bNetworkSnapshotClosing = false;
 
                 for (std::size_t Index = 0; Index < 2; ++Index)
                 {

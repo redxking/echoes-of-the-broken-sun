@@ -90,6 +90,8 @@ struct FEmbeddedSnapshotLayout final
     int32 Schema29AppendSize = 0;
     int32 Schema30AppendOffset = INDEX_NONE;
     int32 Schema30AppendSize = 0;
+    int32 Schema31AppendOffset = INDEX_NONE;
+    int32 Schema31AppendSize = 0;
 };
 
 inline constexpr echoes::sim::PlayerHostilityMasks
@@ -210,7 +212,7 @@ inline int32 EmbeddedSnapshotTerrainGridOffset()
             // four measured hostility-mask bytes, and schema-29's empty
             // producer-state count and schema-30 next-ID/entity-count header.
             static_cast<int32>(echoes::sim::kMaximumPlayers) * 4 +
-            4 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 8 + 4;
+            4 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 8 + 4 + 4;
         constexpr int32 SnapshotSignatureSize = 8;
         const echoes::sim::Simulation Probe(
             echoes::sim::SimulationConfig{2, 2, 20, 0});
@@ -372,7 +374,7 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
     int64 Cursor = static_cast<int64>(Layout.MemoryLedgerOffset) +
         Layout.MemoryLedgerSize;
     const uint32 Version = ReadUint32(Envelope, Layout.SnapshotOffset + 4);
-    if (Version < 26U || Version > 30U)
+    if (Version < 26U || Version > 31U)
     {
         return false;
     }
@@ -582,6 +584,17 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
         OutLayout.Schema30AppendOffset = static_cast<int32>(LinkOffset);
         OutLayout.Schema30AppendSize = static_cast<int32>(Cursor - LinkOffset);
     }
+    if (Version >= 31U)
+    {
+        const int64 TransitionOffset = Cursor;
+        uint32 TransitionCount = 0;
+        if (!ReadCount(TransitionCount) || TransitionCount != EntityCount ||
+            Cursor + static_cast<int64>(TransitionCount) * 13 > PayloadEnd) return false;
+        Cursor += static_cast<int64>(TransitionCount) * 13;
+        if (TransitionOffset > MAX_int32 || Cursor - TransitionOffset > MAX_int32) return false;
+        OutLayout.Schema31AppendOffset = static_cast<int32>(TransitionOffset);
+        OutLayout.Schema31AppendSize = static_cast<int32>(Cursor - TransitionOffset);
+    }
     if (Cursor != PayloadEnd) return false;
     if (CommandOffset > MAX_int32 || ReceiptOffset > MAX_int32 ||
         AppendOffset > MAX_int32 ||
@@ -790,6 +803,45 @@ inline bool InspectEmbeddedSnapshot(
 // A synthetic legacy fixture is permitted only when it has no new repair or
 // live construction investment and no pending identity-bound cancellation. Item
 // IDs are synthesized by the old-save migration; they are not historical IDs.
+// Commitments cannot be represented by schema30. Refuse the entire conversion
+// rather than silently deleting a pending deployment or packing operation.
+inline bool ConvertEmbeddedSnapshotV31ToV30(
+    TArray<uint8>& Envelope, int32 FixedHeaderSize, int32 LedgerLengthOffset,
+    int32 SnapshotLengthOffset,
+    const echoes::sim::PlayerHostilityMasks& LegacyHostilityMasks =
+        echoes::sim::kDefaultHostilityMasks)
+{
+    FEmbeddedSnapshotLayout Layout;
+    if (!InspectEmbeddedSnapshot(Envelope, FixedHeaderSize, LedgerLengthOffset,
+        SnapshotLengthOffset, Layout, 31U, LegacyHostilityMasks) ||
+        Layout.Schema31AppendOffset == INDEX_NONE || Layout.Schema31AppendSize < 4) return false;
+    std::string Error;
+    const auto Original = echoes::sim::Simulation::LoadSnapshot(
+        std::span<const uint8>(Envelope.GetData() + Layout.SnapshotOffset,
+            Layout.SnapshotLength), &Error, LegacyHostilityMasks);
+    if (!Original.has_value() || !Error.empty()) return false;
+    for (const auto& Entity : Original->Entities())
+        if (Entity.deploymentPhase != echoes::sim::BulwarkDeploymentPhase::None ||
+            Entity.deploymentTransitionUntilTick != 0) return false;
+    TArray<uint8> Working = Envelope;
+    Working.RemoveAt(Layout.Schema31AppendOffset, Layout.Schema31AppendSize, EAllowShrinking::No);
+    const uint32 Length = Layout.SnapshotLength - Layout.Schema31AppendSize;
+    WriteUint32(Working, SnapshotLengthOffset, Length);
+    WriteUint32(Working, Layout.SnapshotOffset + 4, 30U);
+    if (!ResignEmbeddedSnapshot(Working, Layout.SnapshotOffset, Length)) return false;
+    UpdateEnvelopeChecksum(Working);
+    const auto Migrated = echoes::sim::Simulation::LoadSnapshot(
+        std::span<const uint8>(Working.GetData() + Layout.SnapshotOffset, Length),
+        &Error, LegacyHostilityMasks);
+    if (!Migrated.has_value() || !Error.empty()) return false;
+    const auto Resaved = Migrated->SaveSnapshot();
+    if (Resaved.size() != Layout.SnapshotLength ||
+        FMemory::Memcmp(Resaved.data(), Envelope.GetData() + Layout.SnapshotOffset,
+            Layout.SnapshotLength) != 0) return false;
+    Envelope = MoveTemp(Working);
+    return true;
+}
+
 inline bool ConvertEmbeddedSnapshotV30ToV29(
     TArray<uint8>& Envelope,
     int32 FixedHeaderSize,
@@ -836,8 +888,12 @@ inline bool ConvertEmbeddedSnapshotV30ToV29(
     // Every pre-Link field must survive; new default state and synthesized IDs
     // must also survive a current-schema reload byte for byte.
     const auto Reloaded = echoes::sim::Simulation::LoadSnapshot(Resaved, &Error, LegacyHostilityMasks);
-    if (Resaved.size() != Layout.SnapshotLength ||
-        FMemory::Memcmp(Resaved.data(), Envelope.GetData() + Layout.SnapshotOffset, PrefixLength) != 0 ||
+    TArray<uint8> ExpectedPrefix;
+    ExpectedPrefix.Append(Envelope.GetData() + Layout.SnapshotOffset, PrefixLength);
+    WriteUint32(ExpectedPrefix, 4, echoes::sim::kSnapshotVersion);
+    const size_t ExpectedLength = Layout.SnapshotLength + 4U + Original->Entities().size() * 13U;
+    if (Resaved.size() != ExpectedLength ||
+        FMemory::Memcmp(Resaved.data(), ExpectedPrefix.GetData(), PrefixLength) != 0 ||
         !Reloaded.has_value() || !Error.empty() || Reloaded->SaveSnapshot() != Resaved) return false;
     Envelope = MoveTemp(Working);
     return true;
@@ -1250,7 +1306,10 @@ inline bool ConvertEmbeddedSnapshotToV22(
     constexpr uint32 ReceiptSnapshotVersion = 24U;
     constexpr uint32 ReceiptFreeSnapshotVersion = 23U;
     TArray<uint8> Source = Envelope;
-    if (!ConvertEmbeddedSnapshotV30ToV29(
+    if (!ConvertEmbeddedSnapshotV31ToV30(
+            Source, FixedHeaderSize, LedgerLengthOffset, SnapshotLengthOffset,
+            LegacyHostilityMasks) ||
+        !ConvertEmbeddedSnapshotV30ToV29(
             Source,
             FixedHeaderSize,
             LedgerLengthOffset,

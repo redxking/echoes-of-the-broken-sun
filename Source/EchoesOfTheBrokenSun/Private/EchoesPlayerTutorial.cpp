@@ -650,6 +650,22 @@ void AEchoesPlayerController::SkipTutorialCurrentStep()
 
 void AEchoesPlayerController::EndAllTutorials()
 {
+    // The existing profile bit is a durable preference, never mastery. Commit
+    // before unfreezing so failed storage does not promise a choice we lost.
+    if (!InitializePlayerProfile())
+    {
+        SetStatusMessage(ShellMessage, 8.0f);
+        return;
+    }
+    const FEchoesPlayerProfile PriorProfile = PlayerProfile;
+    PlayerProfile.bOnboardingOffered = true;
+    PlayerProfile.bTutorialOptOut = true;
+    if (!CommitPlayerProfile())
+    {
+        PlayerProfile = PriorProfile;
+        SetStatusMessage(ShellMessage, 8.0f);
+        return;
+    }
     CloseTutorialSkipModal(false);
     bTutorialOperationAuthorized = false;
     TutorialActiveLessonBit = 0;

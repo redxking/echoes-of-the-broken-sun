@@ -290,9 +290,9 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
               FEchoesCampaignProgress::SchemaVersion,
               static_cast<uint16>(2));
     // Schema 29 persists production queues, invested costs and rally routes.
-    TestEqual(TEXT("Mission 14 writes native snapshot schema 30"),
+    TestEqual(TEXT("Mission 14 writes native snapshot schema 31"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(30));
+              static_cast<uint32>(31));
 
     FString Feedback;
     FEchoesCampaignProgress ThirteenRecords =
@@ -691,7 +691,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         NativeLayout;
     TestTrue(
-        TEXT("The Mission 14 schema-30 checkpoint exposes bounded receipt, lifecycle, hostility, and production blocks"),
+        TEXT("The Mission 14 schema-31 checkpoint exposes bounded receipt, lifecycle, hostility, and production blocks"),
         FFileHelper::LoadFileToArray(NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, NativeCheckpoint, MapFailure) &&
             ExtractReplayCheckpointPayloadForTest(NativeCheckpoint, Feedback) &&
@@ -719,11 +719,16 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             NativeLayout.Schema29AppendSize >= 4 &&
             NativeLayout.Schema30AppendOffset == NativeLayout.Schema29AppendOffset + NativeLayout.Schema29AppendSize &&
             NativeLayout.Schema30AppendSize >= 12 &&
+            NativeLayout.Schema31AppendOffset == NativeLayout.Schema30AppendOffset + NativeLayout.Schema30AppendSize &&
+            NativeLayout.Schema31AppendSize >= 4 &&
+            (NativeLayout.Schema31AppendSize - 4) % 13 == 0 &&
             NativeLayout.PendingCommandOffset != INDEX_NONE &&
             NativeLayout.PendingCommandCount > 0U);
     TArray<uint8> LosslessV28Projection = NativeCheckpoint;
     TestTrue(
         TEXT("Mission 14 production state is losslessly representable by schema 28"),
+        EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV31ToV30(
+            LosslessV28Projection, 19, 11, 15) &&
         EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV30ToV29(
             LosslessV28Projection, 19, 11, 15) &&
         EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV29ToV28(
@@ -736,6 +741,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             NativeCheckpoint.Num() - LosslessV28Projection.Num() ==
                 NativeLayout.Schema29AppendSize +
                     NativeLayout.Schema30AppendSize +
+                    NativeLayout.Schema31AppendSize +
                     static_cast<int32>(NativeLayout.PendingCommandCount));
     // The schema-25 memory ledgers are measured against this mission's own map,
     // not taken on the inspector's word: four remembered-terrain grids of
@@ -914,7 +920,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
                 ProtectedCoreSnapshot);
             // The source here is the checkpoint just written by this run, so
-            // it carries native schema 30. Replay versioning is independent.
+            // it carries native schema 31. Replay versioning is independent.
             bProtectedCoreSourceLoadable =
                 EchoesSnapshotMigrationTestHelpers::
                     IsLoadableEmbeddedSnapshot(
@@ -1054,6 +1060,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
                     NativeLayout.Schema28AppendSize +
                     NativeLayout.Schema29AppendSize +
                     NativeLayout.Schema30AppendSize +
+                    NativeLayout.Schema31AppendSize +
                     static_cast<int32>(NativeLayout.PendingCommandCount) &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
                 ZeroReceiptV22) == 22U);
@@ -1067,9 +1074,10 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         static_cast<uint64>(NativeLayout.Schema28AppendSize) +
         static_cast<uint64>(NativeLayout.Schema29AppendSize) +
         static_cast<uint64>(NativeLayout.Schema30AppendSize) +
+        static_cast<uint64>(NativeLayout.Schema31AppendSize) +
         static_cast<uint64>(NativeLayout.PendingCommandCount);
     TestTrue(
-        TEXT("The Mission 14 checkpoint converts through every schema from 30 to its synthetic schema-22 shape"),
+        TEXT("The Mission 14 checkpoint converts through every schema from 31 to its synthetic schema-22 shape"),
         EchoesSnapshotMigrationTestHelpers::
                 ConvertMission14EnvelopeSnapshotToV22(V22Checkpoint) &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
@@ -1144,10 +1152,10 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TArray<uint8> ResavedNativePrimary;
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         ResavedNativeLayout;
-    // Resaving writes native schema 30. The retained backup is a genuine
+    // Resaving writes native schema 31. The retained backup is a genuine
     // migration fixture and stays at schema 22.
     TestTrue(
-        TEXT("The legacy-loaded Mission 14 state resaves natively as schema 30"),
+        TEXT("The legacy-loaded Mission 14 state resaves natively as schema 31"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, ResavedNativePrimary, MapFailure) &&
@@ -1160,7 +1168,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
                 ResavedNativePrimary) == echoes::sim::kSnapshotVersion);
     TArray<uint8> RetainedV22Backup;
     TestTrue(
-        TEXT("The first schema-30 resave retains the valid schema-22 Mission 14 generation"),
+        TEXT("The first schema-31 resave retains the valid schema-22 Mission 14 generation"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope,
             *(QuickSavePath + TEXT(".bak"))) &&

@@ -5,6 +5,8 @@
 #include "EchoesTestSaveEnvironment.h"
 
 #include "EchoesPlayerController.h"
+#include "EchoesHudLayout.h"
+#include "EchoesGameUserSettings.h"
 #include "EchoesRTSCameraPawn.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -171,6 +173,22 @@ bool FEchoesTutorialAnchorSelectionTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Recenter key is player-driven navigation"),
         Camera->WasLastNavigationPlayerDriven());
     Step();
+    TArray<FVector> FocusCorners;
+    if (!TestTrue(TEXT("Selection focus has a measurable battlefield footprint"),
+        Camera->GetBattlefieldFootprint(FVector2D(1280, 720), FocusCorners)) ||
+        !TestEqual(TEXT("Selection focus footprint has four corners"), FocusCorners.Num(), 4))
+        return false;
+    const auto* FocusSettings = UEchoesGameUserSettings::Get();
+    const auto FocusLayout = FEchoesHudLayout::Build(FVector2D(1280, 720),
+        FocusSettings ? FocusSettings->GetHudScale() : 1.0f, true);
+    const FVector ClearBattlefieldCenter = FMath::Lerp(
+        (FocusCorners[0] + FocusCorners[1]) * 0.5f,
+        (FocusCorners[2] + FocusCorners[3]) * 0.5f,
+        FocusLayout.StatusPanel.Min.Y * 0.5f / 720.0f);
+    const auto* FocusCore = Bridge->FindEntity(CoreId);
+    if (!TestNotNull(TEXT("Focused Anchor remains available"), FocusCore)) return false;
+    TestTrue(TEXT("Selection focus centers the Anchor above the instruction and bottom console"),
+        ClearBattlefieldCenter.Equals(Bridge->SimToWorld(FocusCore->position), 0.1f));
     TestTrue(TEXT("Anchor selection survives the recenter key"),
         Controller->IsTutorialCoreSelected());
     TestTrue(TEXT("Survey observation survives the recenter key"),

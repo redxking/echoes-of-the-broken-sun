@@ -324,7 +324,7 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
     TestEqual(
         TEXT("Mission 12 accepts the current simulation snapshot schema"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(30));
+        static_cast<uint32>(31));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();

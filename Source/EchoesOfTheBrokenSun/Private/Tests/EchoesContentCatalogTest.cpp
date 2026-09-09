@@ -46,6 +46,101 @@ bool FEchoesContentCatalogTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Twelve authored units are present"), Catalog.Units.Num(), 12);
     TestEqual(TEXT("Twelve authored buildings are present"), Catalog.Buildings.Num(), 12);
     TestEqual(TEXT("Six authored technologies are present"), Catalog.Technologies.Num(), 6);
+    struct FExpectedUnit final
+    {
+        echoes::sim::Faction Faction;
+        echoes::sim::EntityType Type;
+        const TCHAR* Name;
+        const TCHAR* Role;
+    };
+    const FExpectedUnit ExpectedUnits[] = {
+        {echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Worker,
+         TEXT("Surveyor"), TEXT("worker")},
+        {echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Soldier,
+         TEXT("Lancer"), TEXT("ranged_line")},
+        {echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::HeavyUnit,
+         TEXT("Bulwark Team"), TEXT("heavy_screen")},
+        {echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::ScoutUnit,
+         TEXT("Relay Skiff"), TEXT("scout_support")},
+        {echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Worker,
+         TEXT("Tender"), TEXT("worker")},
+        {echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Soldier,
+         TEXT("Riftstalker"), TEXT("mobile_skirmisher")},
+        {echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::HeavyUnit,
+         TEXT("Cairnback"), TEXT("assault_screen")},
+        {echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::ScoutUnit,
+         TEXT("Resonant"), TEXT("scout_counter_scout")},
+        {echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Worker,
+         TEXT("Threadkeeper"), TEXT("worker")},
+        {echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Soldier,
+         TEXT("Intervalist"), TEXT("phase_skirmisher")},
+        {echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::HeavyUnit,
+         TEXT("Lacuna Warden"), TEXT("recovery_controller")},
+        {echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::ScoutUnit,
+         TEXT("Afterimage"), TEXT("misdirection_support")},
+    };
+    for (const FExpectedUnit& Expected : ExpectedUnits)
+    {
+        const FEchoesUnitContent* Unit = Catalog.FindUnit(
+            Expected.Faction, Expected.Type);
+        TestNotNull(TEXT("Every simulation unit slot resolves to canonical content"), Unit);
+        if (Unit != nullptr)
+        {
+            TestEqual(TEXT("Resolved unit preserves the authored display name"),
+                Unit->DisplayName, FString(Expected.Name));
+            TestEqual(TEXT("Resolved unit preserves the authored role"),
+                Unit->Role, FString(Expected.Role));
+        }
+    }
+    struct FExpectedBuilding final
+    {
+        echoes::sim::Faction Faction;
+        echoes::sim::EntityType Type;
+        const TCHAR* Name;
+        const TCHAR* Role;
+    };
+    const FExpectedBuilding ExpectedBuildings[] = {
+        {echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::CommandCore,
+         TEXT("Anchor"), TEXT("headquarters_dropoff")},
+        {echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Dropoff,
+         TEXT("Power Link"), TEXT("supply_node")},
+        {echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Barracks,
+         TEXT("Array Foundry"), TEXT("production")},
+        {echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::UtilityStructure,
+         TEXT("Aegis Post"), TEXT("defense")},
+        {echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::CommandCore,
+         TEXT("Memory Hearth"), TEXT("headquarters_dropoff")},
+        {echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Dropoff,
+         TEXT("Waystone"), TEXT("mobile_supply_node")},
+        {echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Barracks,
+         TEXT("Growth Basin"), TEXT("production")},
+        {echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::UtilityStructure,
+         TEXT("Listening Spine"), TEXT("detection")},
+        {echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::CommandCore,
+         TEXT("Concordance"), TEXT("headquarters_dropoff")},
+        {echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Dropoff,
+         TEXT("Interval Loom"), TEXT("supply_node")},
+        {echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Barracks,
+         TEXT("Chorus Loom"), TEXT("production")},
+        {echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::UtilityStructure,
+         TEXT("Phase Anchor"), TEXT("coherence")},
+    };
+    for (const FExpectedBuilding& Expected : ExpectedBuildings)
+    {
+        const FEchoesBuildingContent* Building = Catalog.FindBuilding(
+            Expected.Faction, Expected.Type);
+        TestNotNull(TEXT("Every simulation structure slot resolves to canonical content"), Building);
+        if (Building != nullptr)
+        {
+            TestEqual(TEXT("Resolved structure preserves the authored display name"),
+                Building->DisplayName, FString(Expected.Name));
+            TestEqual(TEXT("Resolved structure preserves the authored role"),
+                Building->Role, FString(Expected.Role));
+        }
+    }
+    TestNull(TEXT("Neutral matter nodes have no faction roster label"),
+        Catalog.FindUnit(echoes::sim::Faction::MeridianCompact,
+                         echoes::sim::EntityType::ResourceNode));
     TestEqual(
         TEXT("Canonical SHA-256 matches the compiler output"),
         Catalog.Sha256,

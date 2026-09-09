@@ -142,7 +142,15 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesContentCatalog final
 
     [[nodiscard]] int32 PlayableFactionCount() const;
     [[nodiscard]] const FEchoesUnitContent* FindUnit(const FString& Id) const;
+    /** Resolves the simulation's stable roster slot to its canonical authored unit. */
+    [[nodiscard]] const FEchoesUnitContent* FindUnit(
+        echoes::sim::Faction Faction,
+        echoes::sim::EntityType Type) const;
     [[nodiscard]] const FEchoesBuildingContent* FindBuilding(const FString& Id) const;
+    /** Resolves the simulation's stable roster slot to its canonical authored structure. */
+    [[nodiscard]] const FEchoesBuildingContent* FindBuilding(
+        echoes::sim::Faction Faction,
+        echoes::sim::EntityType Type) const;
     [[nodiscard]] const FEchoesTechnologyContent* FindTechnology(
         const FString& Id) const;
     [[nodiscard]] bool BuildSimulationRules(

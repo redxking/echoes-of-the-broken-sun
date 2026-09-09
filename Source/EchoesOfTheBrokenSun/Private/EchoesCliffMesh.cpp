@@ -383,17 +383,19 @@ EchoesCliffMesh::FGeometry EchoesCliffMesh::BuildExteriorBank(
             FMath::Max(MinX - static_cast<float>(X), static_cast<float>(X) - MaxX),
             FMath::Max(MinY - static_cast<float>(Y), static_cast<float>(Y) - MaxY)));
         // World-space masses and saddles, not a repeated height for each ring.
-        // Two scales break the shoulder into broad cleaved crests. The low foot
-        // varies in width; both contact rims return smoothly to the substrate.
+        // Two scales break the shoulder into broad cleaved crests. Saddles keep
+        // a low regional shoulder instead of resolving into a flat terrace.
+        // Both contact rims return smoothly to the substrate.
         const float Mass = Noise(X,Y,2400.0f,FVector2D(17.3,31.7)) +
                            .28f * Noise(X,Y,1100.0f,FVector2D(43.1,9.6));
         const float Crest = FMath::SmoothStep(-.28f,.38f,Mass);
         const float RegionalHeight = 960.0f + 420.0f * Noise(X,Y,5700.0f,FVector2D(8.2,53.4));
-        const float FootWidth = 800.0f + 450.0f * Noise(X,Y,2300.0f,FVector2D(21.8,4.6));
+        const float FootWidth = 600.0f + 250.0f * Noise(X,Y,2300.0f,FVector2D(21.8,4.6));
         const float Contact = FMath::SmoothStep(0.0f,FootWidth,Distance) *
                               (1.0f - FMath::SmoothStep(8000.0f,10000.0f,Distance));
-        return -2.0f + Contact * (120.0f + RegionalHeight * Crest +
-            65.0f * Noise(X,Y,1200.0f,FVector2D(61.4,12.7)));
+        const float Shoulder = .14f + .86f * Crest;
+        const float Detail = 35.0f * (1.0f + Noise(X,Y,1200.0f,FVector2D(61.4,12.7)));
+        return -2.0f + Contact * (30.0f + RegionalHeight * Shoulder + Detail);
     };
     const auto Point = [&](const int32 BankSide, const int32 Sample, const int32 Ring)
     {

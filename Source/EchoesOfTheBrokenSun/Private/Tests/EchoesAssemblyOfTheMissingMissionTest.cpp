@@ -254,7 +254,7 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
     // construction identity. This assertion pins the native schema only.
     TestEqual(TEXT("Mission 13 accepts the current native snapshot schema"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(30));
+              static_cast<uint32>(31));
 
     FString Feedback;
     FEchoesCampaignProgress TwelveRecords = MakeAssemblyPrerequisites(

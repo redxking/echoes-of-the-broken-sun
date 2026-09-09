@@ -5,6 +5,8 @@
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
 #include "EchoesRTSCameraPawn.h"
+#include "EchoesGameUserSettings.h"
+#include "EchoesHudLayout.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
@@ -115,14 +117,55 @@ bool FEchoesOrthographicCameraTest::RunTest(const FString& Parameters)
     {
         Pawn->Destroy(); Bridge->StopPrototypeScenario(); return false;
     }
-    const FVector BaseScreenCenter = (BaseFrame[0] + BaseFrame[1] + BaseFrame[2] + BaseFrame[3]) * 0.25f;
+    const auto* HudSettings = UEchoesGameUserSettings::Get();
+    const auto HudLayout = FEchoesHudLayout::Build(FVector2D(1280, 720),
+        HudSettings ? HudSettings->GetHudScale() : 1.0f, true);
+    const FVector2D Reticle = FEchoesHudLayout::KeyboardTargetPoint(FVector2D(1280, 720),
+        HudSettings ? HudSettings->GetHudScale() : 1.0f, FVector2D::ZeroVector);
+    TestEqual(TEXT("Keyboard reticle uses the same clear battlefield center as framing"),
+        Reticle, FVector2D(640, HudLayout.StatusPanel.Min.Y * 0.5f));
+    for (const FVector2D Offset : {FVector2D(-100000, -100000), FVector2D(100000, 100000)})
+    {
+        const auto Target = FEchoesHudLayout::KeyboardTargetPoint(FVector2D(1280, 720),
+            HudSettings ? HudSettings->GetHudScale() : 1.0f, Offset);
+        TestTrue(TEXT("Keyboard aiming remains above the instruction and console"),
+            Target.X > 0 && Target.X < 1280 && Target.Y > 0 && Target.Y < HudLayout.StatusPanel.Min.Y);
+        TestFalse(TEXT("Keyboard aiming cannot target through the bottom chrome"),
+            HudLayout.IsPointerOnChrome(Target));
+    }
+    const FVector BaseScreenCenter = FMath::Lerp(
+        (BaseFrame[0] + BaseFrame[1]) * 0.5f,
+        (BaseFrame[2] + BaseFrame[3]) * 0.5f,
+        HudLayout.StatusPanel.Min.Y * 0.5f / 720.0f);
     bool bFoundCenteredBase = false;
     for (const auto& Entity : Bridge->GetSimulation()->Entities())
         if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId && Entity.type == echoes::sim::EntityType::CommandCore)
             bFoundCenteredBase |= BaseScreenCenter.Equals(Bridge->SimToWorld(Entity.position), 0.1f);
-    TestTrue(TEXT("Actual ground projection centers an owned base, not a fixed map coordinate"), bFoundCenteredBase);
+    TestTrue(TEXT("Actual ground projection centers an owned base above the instruction and console"), bFoundCenteredBase);
+    TestTrue(TEXT("Framed headquarters has room for its silhouette without crossing the instruction"),
+        HudLayout.IsBattlefieldBoxClear(FBox2D(
+            FVector2D(570, HudLayout.StatusPanel.Min.Y * 0.5f - 70),
+            FVector2D(710, HudLayout.StatusPanel.Min.Y * 0.5f + 70)), FVector2D(1280, 720)));
     TestFalse(TEXT("Deployment framing cannot grant player navigation credit"), Pawn->WasLastNavigationPlayerDriven());
     TestFalse(TEXT("Direct RTS camera does not trail the navigation target"), SpringArm->bEnableCameraLag);
+    // Failed framing must not consume movement input or change the camera.
+    const FRotator ValidCameraRotation = Camera->GetComponentRotation();
+    Camera->SetWorldRotation(FRotator(0.0f, ValidCameraRotation.Yaw, 0.0f));
+    const FVector BeforeFailedFrame = Pawn->GetActorLocation();
+    const uint64 BeforeFailedRevision = Pawn->NavigationRevision;
+    Pawn->ForwardInput = 0.75f;
+    Pawn->RightInput = -0.5f;
+    Pawn->bEdgePanArmed = true;
+    TestFalse(TEXT("Horizontal camera refuses an unresolvable ground frame"),
+        Pawn->FrameGroundPoint(FVector(1000, 1000, 0), true));
+    TestEqual(TEXT("Failed framing preserves camera position"), Pawn->GetActorLocation(), BeforeFailedFrame);
+    TestEqual(TEXT("Failed framing preserves navigation revision"), Pawn->NavigationRevision, BeforeFailedRevision);
+    TestEqual(TEXT("Failed framing preserves forward input"), Pawn->ForwardInput, 0.75f);
+    TestEqual(TEXT("Failed framing preserves sideways input"), Pawn->RightInput, -0.5f);
+    TestTrue(TEXT("Failed framing preserves edge-pan state"), Pawn->bEdgePanArmed);
+    Camera->SetWorldRotation(ValidCameraRotation);
+    Pawn->ForwardInput = Pawn->RightInput = 0.0f;
+    Pawn->bEdgePanArmed = false;
     FMinimalViewInfo CameraView;
     Camera->GetCameraView(0.0f, CameraView);
     FSceneViewProjectionData Projection;

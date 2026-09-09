@@ -1,5 +1,7 @@
 #include "EchoesCommandDeckModel.h"
 
+#include <algorithm>
+
 const TCHAR* FEchoesCommandDeckModel::GetM01RoleName(echoes::sim::EntityType Type)
 {
     switch (Type)
@@ -35,7 +37,11 @@ FString FEchoesCommandDeckModel::BuildPrimaryActions(
     }
     if (Profile.WorkerCount > 0)
     {
-        return TEXT("[RMB] GATHER / DELIVER / MOVE    [B] BARRACKS    [N] DROPOFF    [M] UTILITY    [X] STOP");
+        return TEXT("[RMB] GATHER / DELIVER / MOVE    [B] BARRACKS    [N] DROPOFF    [M] UTILITY    [R] REPAIR    [X] STOP");
+    }
+    if (Profile.bCanCancelSelectedConstruction)
+    {
+        return TEXT("[SHIFT+X] CANCEL CONSTRUCTION    [X] STOP");
     }
     if (Profile.bHasCommandCore && Profile.bHasBarracks)
     {
@@ -50,4 +56,37 @@ FString FEchoesCommandDeckModel::BuildPrimaryActions(
         return TEXT("[E] LINE UNIT    [;] HEAVY    ['] SCOUT    [F2] TECHNOLOGY");
     }
     return TEXT("[RMB] CONTEXT / MOVE    [X] STOP");
+}
+
+TArray<uint32> FEchoesCommandDeckModel::ResolveLocalBulwarkCasters(
+    const echoes::sim::Simulation& Simulation, echoes::sim::PlayerId Player,
+    echoes::sim::Vec2 Target, const TArray<uint32>& Selection, bool bAllEligible)
+{
+    using namespace echoes::sim;
+    std::vector<EntityId> Candidates;
+    for (uint32 Id : Selection)
+    {
+        // The Unreal order adapter requires a direction when deploying. A
+        // packed unit under the target cannot cast, while packing needs none.
+        const Entity* Actor = Simulation.FindEntity(Id);
+        if (Actor && !Actor->deployed && Actor->position == Target) continue;
+        bool bPending = false;
+        for (const Command& Pending : Simulation.PendingCommands())
+            if (Pending.player == Player && Pending.actor == Id && Pending.type == CommandType::ToggleDeploy)
+            { bPending = true; break; }
+        if (!bPending) Candidates.push_back(Id);
+    }
+    TArray<uint32> Result;
+    // An empty candidate list means "search all units" to SimCore. A user
+    // gesture with no selected candidate must instead issue no command.
+    while (!Candidates.empty())
+    {
+        const EntityId Caster = Simulation.FindSmartCastCaster(Player,
+            CommandType::ToggleDeploy, Target, 0, Candidates);
+        if (Caster == 0) break;
+        Result.Add(Caster);
+        if (!bAllEligible) break;
+        Candidates.erase(std::remove(Candidates.begin(), Candidates.end(), Caster), Candidates.end());
+    }
+    return Result;
 }

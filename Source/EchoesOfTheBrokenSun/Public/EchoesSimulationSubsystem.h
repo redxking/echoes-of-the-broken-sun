@@ -23,6 +23,7 @@
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimCore/NetworkProtocol.h"
 #include "EchoesMatchReplay.h"
+#include "EchoesGameplayFeedback.h"
 #include "Async/Future.h"
 #include "EchoesSimulationSubsystem.generated.h"
 
@@ -562,6 +563,11 @@ public:
         uint32 TargetId,
         FString& OutFeedback);
 
+    bool IssueConstructionAssistCommand(
+        uint32 WorkerId,
+        uint32 StructureId,
+        FString& OutFeedback);
+
     bool IssueConstructionCancellation(
         uint32 StructureId,
         FString& OutFeedback);
@@ -604,6 +610,9 @@ public:
     {
         return LastAcceptedLocalCommandSequence;
     }
+    /** Transient, recipient-owned action evidence; never serialized or replayed. */
+    [[nodiscard]] const echoes::feedback::GameplayFeedbackState&
+        GetGameplayFeedbackForPlayer(uint8 Player = LocalPlayerId) const;
     [[nodiscard]] FEchoesObjectiveSnapshot GetLocalObjectiveSnapshot() const;
 
     [[nodiscard]] const echoes::sim::Simulation* GetSimulation() const;
@@ -1113,7 +1122,17 @@ private:
     TWeakObjectPtr<AEchoesFogView> FogView;
     TWeakObjectPtr<AEchoesTerrainView> TerrainView;
     double FixedTimeAccumulator = 0.0;
+    void ObservePlacementDiagnostics();
+    TSet<uint64> DiagnosticBuildCommands;
+    TMap<uint32, uint64> DiagnosticBuildingSequences;
+    TMap<uint32, FString> DiagnosticBuildingStates;
+    uint64 DiagnosticScenarioGeneration = MAX_uint64;
+    uint64 DiagnosticLastTick = 0;
     uint64 NextPlayerCommandSequence = 1;
+    void TrackGameplayFeedbackCommand(const echoes::sim::Command& Command);
+    void ObserveGameplayFeedbackFixedStep();
+    mutable std::array<echoes::feedback::GameplayFeedbackState,
+        echoes::sim::kMaximumPlayers> GameplayFeedbackByPlayer;
     TOptional<uint64> LastAcceptedLocalCommandSequence;
     uint64 ScenarioAuthorityGeneration = 0;
     bool bScenarioReady = false;

@@ -12,6 +12,78 @@ namespace
 constexpr int32 ExpectedPackVersion = 1;
 constexpr int32 ExpectedSchemaVersion = 2;
 
+struct FUnitBinding final
+{
+    const TCHAR* Id;
+    const TCHAR* FactionId;
+    const TCHAR* Role;
+    echoes::sim::Faction Faction;
+    echoes::sim::EntityType Type;
+};
+
+constexpr FUnitBinding UnitBindings[] = {
+    {TEXT("mc_surveyor"), TEXT("meridian_compact"), TEXT("worker"),
+     echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Worker},
+    {TEXT("mc_lancer"), TEXT("meridian_compact"), TEXT("ranged_line"),
+     echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Soldier},
+    {TEXT("mc_bulwark_team"), TEXT("meridian_compact"), TEXT("heavy_screen"),
+     echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::HeavyUnit},
+    {TEXT("mc_relay_skiff"), TEXT("meridian_compact"), TEXT("scout_support"),
+     echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::ScoutUnit},
+    {TEXT("ka_tender"), TEXT("kharuun_assemblies"), TEXT("worker"),
+     echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Worker},
+    {TEXT("ka_riftstalker"), TEXT("kharuun_assemblies"), TEXT("mobile_skirmisher"),
+     echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Soldier},
+    {TEXT("ka_cairnback"), TEXT("kharuun_assemblies"), TEXT("assault_screen"),
+     echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::HeavyUnit},
+    {TEXT("ka_resonant"), TEXT("kharuun_assemblies"), TEXT("scout_counter_scout"),
+     echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::ScoutUnit},
+    {TEXT("hc_threadkeeper"), TEXT("hollow_choir"), TEXT("worker"),
+     echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Worker},
+    {TEXT("hc_intervalist"), TEXT("hollow_choir"), TEXT("phase_skirmisher"),
+     echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Soldier},
+    {TEXT("hc_lacuna_warden"), TEXT("hollow_choir"), TEXT("recovery_controller"),
+     echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::HeavyUnit},
+    {TEXT("hc_afterimage"), TEXT("hollow_choir"), TEXT("misdirection_support"),
+     echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::ScoutUnit},
+};
+
+struct FBuildingBinding final
+{
+    const TCHAR* Id;
+    const TCHAR* FactionId;
+    const TCHAR* Role;
+    echoes::sim::Faction Faction;
+    echoes::sim::EntityType Type;
+};
+
+constexpr FBuildingBinding BuildingBindings[] = {
+    {TEXT("mc_anchor"), TEXT("meridian_compact"), TEXT("headquarters_dropoff"),
+     echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::CommandCore},
+    {TEXT("mc_power_link"), TEXT("meridian_compact"), TEXT("supply_node"),
+     echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Dropoff},
+    {TEXT("mc_array_foundry"), TEXT("meridian_compact"), TEXT("production"),
+     echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Barracks},
+    {TEXT("mc_aegis_post"), TEXT("meridian_compact"), TEXT("defense"),
+     echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::UtilityStructure},
+    {TEXT("ka_memory_hearth"), TEXT("kharuun_assemblies"), TEXT("headquarters_dropoff"),
+     echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::CommandCore},
+    {TEXT("ka_waystone"), TEXT("kharuun_assemblies"), TEXT("mobile_supply_node"),
+     echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Dropoff},
+    {TEXT("ka_growth_basin"), TEXT("kharuun_assemblies"), TEXT("production"),
+     echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Barracks},
+    {TEXT("ka_listening_spine"), TEXT("kharuun_assemblies"), TEXT("detection"),
+     echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::UtilityStructure},
+    {TEXT("hc_concordance"), TEXT("hollow_choir"), TEXT("headquarters_dropoff"),
+     echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::CommandCore},
+    {TEXT("hc_interval_loom"), TEXT("hollow_choir"), TEXT("supply_node"),
+     echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Dropoff},
+    {TEXT("hc_chorus_loom"), TEXT("hollow_choir"), TEXT("production"),
+     echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Barracks},
+    {TEXT("hc_phase_anchor"), TEXT("hollow_choir"), TEXT("coherence"),
+     echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::UtilityStructure},
+};
+
 constexpr uint32 Sha256RoundConstants[64] = {
     0x428a2f98U, 0x71374491U, 0xb5c0fbcfU, 0xe9b5dba5U,
     0x3956c25bU, 0x59f111f1U, 0x923f82a4U, 0xab1c5ed5U,
@@ -234,6 +306,20 @@ const FEchoesUnitContent* FEchoesContentCatalog::FindUnit(const FString& Id) con
         });
 }
 
+const FEchoesUnitContent* FEchoesContentCatalog::FindUnit(
+    const echoes::sim::Faction Faction,
+    const echoes::sim::EntityType Type) const
+{
+    for (const FUnitBinding& Binding : UnitBindings)
+    {
+        if (Binding.Faction == Faction && Binding.Type == Type)
+        {
+            return FindUnit(Binding.Id);
+        }
+    }
+    return nullptr;
+}
+
 const FEchoesBuildingContent* FEchoesContentCatalog::FindBuilding(const FString& Id) const
 {
     return Buildings.FindByPredicate(
@@ -241,6 +327,20 @@ const FEchoesBuildingContent* FEchoesContentCatalog::FindBuilding(const FString&
         {
             return Building.Id == Id;
         });
+}
+
+const FEchoesBuildingContent* FEchoesContentCatalog::FindBuilding(
+    const echoes::sim::Faction Faction,
+    const echoes::sim::EntityType Type) const
+{
+    for (const FBuildingBinding& Binding : BuildingBindings)
+    {
+        if (Binding.Faction == Faction && Binding.Type == Type)
+        {
+            return FindBuilding(Binding.Id);
+        }
+    }
+    return nullptr;
 }
 
 const FEchoesTechnologyContent* FEchoesContentCatalog::FindTechnology(
@@ -295,40 +395,6 @@ bool FEchoesContentCatalog::BuildSimulationRules(
             static_cast<uint8>((High << 4) | Low);
     }
 
-    struct FUnitBinding final
-    {
-        const TCHAR* Id;
-        const TCHAR* FactionId;
-        const TCHAR* Role;
-        echoes::sim::Faction Faction;
-        echoes::sim::EntityType Type;
-    };
-    constexpr FUnitBinding UnitBindings[] = {
-        {TEXT("mc_surveyor"), TEXT("meridian_compact"), TEXT("worker"),
-         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Worker},
-        {TEXT("mc_lancer"), TEXT("meridian_compact"), TEXT("ranged_line"),
-         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Soldier},
-        {TEXT("mc_bulwark_team"), TEXT("meridian_compact"), TEXT("heavy_screen"),
-         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::HeavyUnit},
-        {TEXT("mc_relay_skiff"), TEXT("meridian_compact"), TEXT("scout_support"),
-         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::ScoutUnit},
-        {TEXT("ka_tender"), TEXT("kharuun_assemblies"), TEXT("worker"),
-         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Worker},
-        {TEXT("ka_riftstalker"), TEXT("kharuun_assemblies"), TEXT("mobile_skirmisher"),
-         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Soldier},
-        {TEXT("ka_cairnback"), TEXT("kharuun_assemblies"), TEXT("assault_screen"),
-         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::HeavyUnit},
-        {TEXT("ka_resonant"), TEXT("kharuun_assemblies"), TEXT("scout_counter_scout"),
-         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::ScoutUnit},
-        {TEXT("hc_threadkeeper"), TEXT("hollow_choir"), TEXT("worker"),
-         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Worker},
-        {TEXT("hc_intervalist"), TEXT("hollow_choir"), TEXT("phase_skirmisher"),
-         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Soldier},
-        {TEXT("hc_lacuna_warden"), TEXT("hollow_choir"), TEXT("recovery_controller"),
-         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::HeavyUnit},
-        {TEXT("hc_afterimage"), TEXT("hollow_choir"), TEXT("misdirection_support"),
-         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::ScoutUnit},
-    };
     for (const FUnitBinding& Binding : UnitBindings)
     {
         const FEchoesUnitContent* Unit = FindUnit(Binding.Id);
@@ -460,40 +526,6 @@ bool FEchoesContentCatalog::BuildSimulationRules(
         }
     }
 
-    struct FBuildingBinding final
-    {
-        const TCHAR* Id;
-        const TCHAR* FactionId;
-        const TCHAR* Role;
-        echoes::sim::Faction Faction;
-        echoes::sim::EntityType Type;
-    };
-    constexpr FBuildingBinding BuildingBindings[] = {
-        {TEXT("mc_anchor"), TEXT("meridian_compact"), TEXT("headquarters_dropoff"),
-         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::CommandCore},
-        {TEXT("mc_power_link"), TEXT("meridian_compact"), TEXT("supply_node"),
-         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Dropoff},
-        {TEXT("mc_array_foundry"), TEXT("meridian_compact"), TEXT("production"),
-         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::Barracks},
-        {TEXT("mc_aegis_post"), TEXT("meridian_compact"), TEXT("defense"),
-         echoes::sim::Faction::MeridianCompact, echoes::sim::EntityType::UtilityStructure},
-        {TEXT("ka_memory_hearth"), TEXT("kharuun_assemblies"), TEXT("headquarters_dropoff"),
-         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::CommandCore},
-        {TEXT("ka_waystone"), TEXT("kharuun_assemblies"), TEXT("mobile_supply_node"),
-         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Dropoff},
-        {TEXT("ka_growth_basin"), TEXT("kharuun_assemblies"), TEXT("production"),
-         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::Barracks},
-        {TEXT("ka_listening_spine"), TEXT("kharuun_assemblies"), TEXT("detection"),
-         echoes::sim::Faction::KharuunAssemblies, echoes::sim::EntityType::UtilityStructure},
-        {TEXT("hc_concordance"), TEXT("hollow_choir"), TEXT("headquarters_dropoff"),
-         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::CommandCore},
-        {TEXT("hc_interval_loom"), TEXT("hollow_choir"), TEXT("supply_node"),
-         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Dropoff},
-        {TEXT("hc_chorus_loom"), TEXT("hollow_choir"), TEXT("production"),
-         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::Barracks},
-        {TEXT("hc_phase_anchor"), TEXT("hollow_choir"), TEXT("coherence"),
-         echoes::sim::Faction::HollowChoir, echoes::sim::EntityType::UtilityStructure},
-    };
     for (const FBuildingBinding& Binding : BuildingBindings)
     {
         const FEchoesBuildingContent* Building = FindBuilding(Binding.Id);

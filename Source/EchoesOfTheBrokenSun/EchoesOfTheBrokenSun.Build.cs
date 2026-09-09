@@ -14,6 +14,8 @@ public class EchoesOfTheBrokenSun : ModuleRules
             "LevelSequence", "MovieScene", "MovieSceneTracks", "CinematicCamera",
             "ProceduralMeshComponent"
         });
+        // Explicitly link the typed connection-close result used by the ACK timeout.
+        PrivateDependencyModuleNames.Add("NetCore");
         if (Target.bBuildEditor)
         {
             // VideoCaptureProtocol's public header includes AVIWriter.h.

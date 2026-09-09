@@ -11,6 +11,7 @@
 #include "EchoesSimCore/Simulation.h"
 
 class AEchoesPlayerController;
+struct FEchoesContentCatalog;
 class UEchoesGameUserSettings;
 class UEchoesNarrativeSubsystem;
 class UEchoesSimulationSubsystem;
@@ -68,6 +69,11 @@ enum class EEchoesFieldHudAction : uint8
     OnlineRetry,
     NetworkReady,
     OnlineResume,
+    OnlineOptions,
+    OnlineControls,
+    OnlineCommandHistory,
+    OpenPauseMenu,
+    OpenResourceMonitor,
     OnlineLeave,
     ProductionCancel,          // Opens review for active slot 0 or a 1-based waiting slot.
     ProductionCancelConfirm,   // Confirms only the controller-captured stable item.
@@ -79,7 +85,8 @@ enum class EEchoesFieldHudAction : uint8
     OpenTutorialSkipModal,
     TutorialSkipCurrentStep,
     TutorialEndAll,
-    TutorialCancelSkipModal
+    TutorialCancelSkipModal,
+    ActivateRelaySupply
 };
 
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudControl final
@@ -112,6 +119,30 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudResourceView final
     FText OpponentFaction;
     FText MatchState;
     FText ResearchStatus;
+    /** Semantic entry carried by the live resource strip; no decorative click target. */
+    FEchoesFieldHudControl MonitorControl;
+};
+
+/**
+ * SPEC-HUD-003 selection guidance for one roster slot, plus the canonical name
+ * used when no content catalog is available to resolve it. Docs/Requirements.md
+ * owns this wording through SPEC-UNIT-001..012 and the section 13 structure
+ * records; this is a presentation restatement and never a second authority.
+ */
+struct ECHOESOFTHEBROKENSUN_API FEchoesRosterGuidance final
+{
+    FText Name;
+    /**
+     * The authored role a player reads. The catalog's own role string is a schema
+     * classification token that the content validator depends on, so it is never
+     * shown; structures take this wording from their requirement Data Metrics and
+     * units from the role named in their Player Purpose clause.
+     */
+    FText DisplayRole;
+    FText Purpose;
+    FText StrongUse;
+    FText Limitation;
+    FText Counterplay;
 };
 
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudSelectionEntry final
@@ -119,8 +150,14 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudSelectionEntry final
     uint32 EntityId = 0;
     FText Name;
     FText Faction;
+    /** Canonical authored roster role, when this entity has a catalog binding. */
+    FText Role;
     /** Canonical mechanical role text for the selected roster element. */
     FText Purpose;
+    /** SPEC-HUD-003: when to reach for this, what it cannot do, how it is answered. */
+    FText StrongUse;
+    FText Limitation;
+    FText Counterplay;
     FText Order;
     int32 Count = 1;
     int32 HitPoints = 0;
@@ -139,6 +176,13 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudSelectionView final
 {
     bool bVisible = false;
     TArray<FEchoesFieldHudSelectionEntry> Entries;
+};
+
+/** Persistent, local presentation action available over a live battlefield. */
+struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudMenuView final
+{
+    bool bVisible = false;
+    FEchoesFieldHudControl Control;
 };
 
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudProductionItem final
@@ -191,6 +235,7 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudCommandView final
 {
     bool bVisible = false;
     FText Formation;
+    FText AbilityStatus;
     EEchoesCommandDeckAction ArmedAction = EEchoesCommandDeckAction::None;
     TArray<FEchoesFieldHudControl> Controls;
 };
@@ -333,6 +378,20 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesTutorialSkipModalView final
  * Immutable-by-convention snapshot consumed by UMG. It owns all strings and
  * arrays and contains no simulation, controller, actor, or UObject pointer.
  */
+/** Presentation-only, owned network geometry; never grants gameplay connectivity. */
+struct FEchoesNetworkCoverageView final
+{
+    FVector Center = FVector::ZeroVector;
+    float Radius = 0.0f;
+    bool bOperational = false;
+};
+
+struct FEchoesNetworkConnectionView final
+{
+    FVector From = FVector::ZeroVector;
+    FVector To = FVector::ZeroVector;
+};
+
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudView final
 {
     EEchoesFieldHudAuthority Authority = EEchoesFieldHudAuthority::None;
@@ -346,8 +405,11 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudView final
     FText TutorialInstruction;
     FEchoesTutorialSpotlightView TutorialSpotlight;
     FEchoesTutorialSkipModalView TutorialSkipModal;
+    FEchoesFieldHudMenuView Menu;
     FEchoesFieldHudResourceView Resources;
     FEchoesFieldHudSelectionView Selection;
+    TArray<FEchoesNetworkCoverageView> NetworkCoverage;
+    TArray<FEchoesNetworkConnectionView> NetworkConnections;
     FEchoesFieldHudProductionView Production;
     FEchoesFieldHudCommandView Commands;
     /** Existing reconstructable mission model, copied only from live authority. */
@@ -388,12 +450,25 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudModel final
     [[nodiscard]] static FEchoesFieldHudView BuildPlayerScoped(
         const echoes::sim::PlayerView& PlayerView,
         const TArray<uint32>& SelectedEntityIds,
-        bool bReplay);
+        bool bReplay,
+        const FEchoesContentCatalog* Catalog = nullptr);
     [[nodiscard]] static FEchoesFieldHudView BuildNetworkScoped(
         const echoes::sim::net::ScopedViewKeyframe& Keyframe,
-        const TArray<uint32>& SelectedEntityIds);
+        const TArray<uint32>& SelectedEntityIds,
+        const FEchoesContentCatalog* Catalog = nullptr);
     [[nodiscard]] static FEchoesFieldHudView BuildReplayObserver(
-        const echoes::sim::Simulation& ReplaySimulation);
+        const echoes::sim::Simulation& ReplaySimulation,
+        const FEchoesContentCatalog* Catalog = nullptr);
+
+    /**
+     * SPEC-HUD-003 guidance for a faction roster slot. Returns empty fields for
+     * ResourceNode and FutureWell, which belong to the world rather than to any
+     * faction roster. The content catalog remains the authority for the display
+     * name; the name here answers a caller that has no catalog to consult.
+     */
+    [[nodiscard]] static FEchoesRosterGuidance RosterGuidance(
+        echoes::sim::Faction FactionValue,
+        echoes::sim::EntityType Type);
 };
 
 /**

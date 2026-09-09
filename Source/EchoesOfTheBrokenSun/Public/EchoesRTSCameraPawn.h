@@ -54,6 +54,8 @@ private:
     friend class FEchoesTutorialAnchorSelectionTest;
     void ApplyZoomAtViewportPoint(float Direction, const FVector2D& Point, const FVector2D& ViewportSize);
     void PanFromPlayerInput(const FVector& WorldPosition);
+    // Shared focus/deployment framing; authority remains camera presentation.
+    bool FrameGroundPoint(const FVector& WorldPosition, bool bPlayerDriven);
     uint64 NavigationRevision = 0;
     bool bLastNavigationPlayerDriven = false;
     /** Applies the authored exposure, tonemapper, and bloom baseline

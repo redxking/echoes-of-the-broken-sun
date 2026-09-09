@@ -107,6 +107,21 @@ bool FEchoesBulwarkDeploymentTest::RunTest(const FString& Parameters)
     Bridge->Tick(0.05f);
     Bridge->Tick(0.05f);
     Bulwark = Bridge->FindEntity(LocalBulwark);
+    if (!TestNotNull(TEXT("Deploying Bulwark remains alive"), Bulwark)) return false;
+    TestFalse(TEXT("Deployment does not grant an instant shield"), Bulwark->deployed);
+    TestTrue(TEXT("Deployment reports the pending commitment"),
+        Bulwark->deploymentPhase == echoes::sim::BulwarkDeploymentPhase::Deploying);
+    Feedback.Reset();
+    TestFalse(TEXT("Repeated deployment is refused while the commitment runs"),
+        Bridge->IssueCommand(echoes::sim::CommandType::ToggleDeploy, LocalBulwark,
+            0, FacingPoint, echoes::sim::FutureWellChoice::Harvest, Feedback));
+    TestTrue(TEXT("Repeated deployment explains the prerequisite"),
+        Feedback.StartsWith(TEXT("[BULWARK_TRANSITION_ACTIVE]")));
+    for (int32 Tick = 0; Tick < 18; ++Tick) Bridge->Tick(0.05f);
+    TestFalse(TEXT("Shield stays inactive until all 20 ticks elapse"),
+        Bridge->FindEntity(LocalBulwark)->deployed);
+    Bridge->Tick(0.05f);
+    Bulwark = Bridge->FindEntity(LocalBulwark);
     TestNotNull(TEXT("Deployed Bulwark remains alive"), Bulwark);
     if (Bulwark != nullptr)
     {
@@ -137,6 +152,13 @@ bool FEchoesBulwarkDeploymentTest::RunTest(const FString& Parameters)
             echoes::sim::FutureWellChoice::Harvest,
             Feedback));
     Bridge->Tick(0.05f);
+    Bridge->Tick(0.05f);
+    if (!TestNotNull(TEXT("Packing Bulwark remains alive"), Bridge->FindEntity(LocalBulwark))) return false;
+    TestTrue(TEXT("Packing retains the deployed endpoint until its commitment completes"),
+        Bridge->FindEntity(LocalBulwark)->deployed);
+    for (int32 Tick = 0; Tick < 13; ++Tick) Bridge->Tick(0.05f);
+    TestTrue(TEXT("Packing has not completed after only 14 simulation ticks"),
+        Bridge->FindEntity(LocalBulwark)->deployed);
     Bridge->Tick(0.05f);
     TestFalse(TEXT("Pack-up clears public deployment state"),
               Bridge->FindEntity(LocalBulwark)->deployed);

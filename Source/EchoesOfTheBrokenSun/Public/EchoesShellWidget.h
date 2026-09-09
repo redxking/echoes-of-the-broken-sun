@@ -8,9 +8,12 @@
 #include "EchoesShellWidget.generated.h"
 
 class AEchoesPlayerController;
+class UImage;
 class UOverlay;
 class UScrollBox;
+class USizeBox;
 class UTextBlock;
+class UTexture2D;
 class UEchoesShellWidget;
 
 /** Pointer slider; adjacent step controls provide the same setting to keyboard users. */
@@ -42,6 +45,8 @@ public:
         EEchoesShellAction InAction,
         int32 InArgument);
     bool Activate();
+    EEchoesShellAction GetAction() const { return Action; }
+    int32 GetArgument() const { return Argument; }
     void ApplyPresentation(bool bFocused, bool bHighContrast);
 
 private:
@@ -74,16 +79,22 @@ public:
     int32 GetFocusedButtonIndex() const { return FocusedButtonIndex; }
     UEchoesShellActionButton* GetActionButton(int32 Index) const { return ActionButtons.IsValidIndex(Index) ? ActionButtons[Index] : nullptr; }
     bool ActivateFocused();
+    /** Absolute Slate screen coordinates only; never viewport-local pixels. */
     bool ActivateButtonUnderLocation(const FVector2D& ScreenPosition);
     bool FocusNext(bool bReverse = false);
     bool HandleNavigationKey(const FKey& Key, bool bShift, bool bRepeat = false);
     void NotifyButtonFocused(UEchoesShellActionButton* Button);
     void BeginValueEdit() { bEditingValue = true; }
     void UpdateValue(EEchoesShellAction Action, float Value, bool bCommit);
+    bool IsHighContrastPresentation() const { return bHasView && View.bHighContrast; }
+    float GetPresentationScale() const { return FMath::Clamp(View.Scale, 0.8f, 1.5f); }
 
 protected:
     virtual TSharedRef<SWidget> RebuildWidget() override;
     virtual void NativeConstruct() override;
+    virtual void NativeTick(
+        const FGeometry& MyGeometry,
+        float InDeltaTime) override;
     virtual FReply NativeOnPreviewKeyDown(
         const FGeometry& InGeometry,
         const FKeyEvent& InKeyEvent) override;
@@ -116,6 +127,7 @@ private:
     bool FocusAction(EEchoesShellAction Action, int32 Argument);
     bool FocusDefaultButton();
     void RefreshButtonPresentation();
+    void UpdatePanelLimits(float LogicalViewportWidth, float LogicalViewportHeight);
     AEchoesPlayerController* ResolveController() const;
 
     FEchoesShellView View;
@@ -123,9 +135,26 @@ private:
     bool bEditingValue = false;
     bool bSuppressFocusScroll = false;
     int32 FocusedButtonIndex = INDEX_NONE;
+    float RequestedPanelWidth = 0.0f;
+    float PanelSafeInset = 0.0f;
+    float ResolvedPanelWidth = -1.0f;
+    bool bTitleNavigationLayout = false;
+    float PanelVerticalInset = 0.0f;
+    float ResolvedPanelHeight = -1.0f;
+    float RequestedMastheadWidth = 0.0f;
+    float ResolvedMastheadWidth = -1.0f;
 
     UPROPERTY(Transient)
     TObjectPtr<UOverlay> RootOverlay;
+    /** Optional derived Command Bridge plate. A null texture deliberately falls back to the authored charcoal shell. */
+    UPROPERTY()
+    TObjectPtr<UTexture2D> CommandBridgeTexture;
+    UPROPERTY(Transient)
+    TObjectPtr<UImage> CommandBridgeBackground;
+    UPROPERTY(Transient)
+    TObjectPtr<USizeBox> MastheadWidth;
+    UPROPERTY(Transient)
+    TObjectPtr<USizeBox> WidthLimit;
     UPROPERTY(Transient)
     TObjectPtr<UScrollBox> ContentScroll;
     UPROPERTY(Transient)

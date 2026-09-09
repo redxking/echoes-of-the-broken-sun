@@ -1,8 +1,11 @@
 #include "EchoesPlayerController.h"
+#include "EchoesInputPrompt.h"
+#include "EchoesCheckpointFeedback.h"
 #include "EchoesRTSCameraPawn.h"
 #include "EchoesCinematicSubsystem.h"
 #include "EchoesShellWidget.h"
 #include "EchoesFieldHudWidget.h"
+#include "EchoesPowerNetworkView.h"
 
 #include "EchoesAmbienceSubsystem.h"
 #include "EchoesCollisionChannels.h"
@@ -37,11 +40,13 @@
 #include "Engine/DirectionalLight.h"
 #include "Engine/EngineTypes.h"
 #include "Engine/GameViewportClient.h"
+#include "Engine/NetConnection.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/SkyLight.h"
 #include "Engine/World.h"
 #include "Framework/Application/SlateApplication.h"
+#include "GameFramework/InputSettings.h"
 #include "HAL/PlatformApplicationMisc.h"
 #include "HAL/PlatformMisc.h"
 #include "HAL/PlatformTime.h"
@@ -73,6 +78,78 @@ constexpr float FormationSpacingWorldUnits = 150.0f;
 constexpr int32 ControlGroupCount = 10;
 constexpr double ControlGroupDoubleTapSeconds = 0.300;
 constexpr float NetworkTileWorldSize = 200.0f;
+
+/**
+ * Replay playback permits only view navigation through the same live mappings
+ * exposed by Controls. Keep action modifiers exact for presses; releases only
+ * need the key match so an already-started camera gesture can always end.
+ */
+[[nodiscard]] bool IsReplayCameraActionMapped(
+    const FKey& Key,
+    bool bShift,
+    bool bControl,
+    bool bAlt,
+    bool bCommand,
+    bool bRequireModifierMatch)
+{
+    const UInputSettings* const InputSettings = UInputSettings::GetInputSettings();
+    if (InputSettings == nullptr)
+    {
+        return false;
+    }
+
+    static const FName ReplayCameraActions[] = {
+        TEXT("CameraZoomIn"), TEXT("CameraZoomOut"), TEXT("Select")};
+    TArray<FInputActionKeyMapping> Mappings;
+    for (const FName ActionName : ReplayCameraActions)
+    {
+        Mappings.Reset();
+        InputSettings->GetActionMappingByName(ActionName, Mappings);
+        for (const FInputActionKeyMapping& Mapping : Mappings)
+        {
+            // A mapping constrains a modifier only when it demands one, which
+            // is UPlayerInput::GetChordsForKeyMapping's own rule. Requiring
+            // equality would let any unrelated held modifier disable replay
+            // zoom and clicks, since every replay action is mapped bare.
+            if (Mapping.Key == Key &&
+                (!bRequireModifierMatch ||
+                    ((!Mapping.bShift || bShift) &&
+                        (!Mapping.bCtrl || bControl) &&
+                        (!Mapping.bAlt || bAlt) &&
+                        (!Mapping.bCmd || bCommand))))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+[[nodiscard]] bool IsReplayCameraAxisMapped(const FKey& Key)
+{
+    const UInputSettings* const InputSettings = UInputSettings::GetInputSettings();
+    if (InputSettings == nullptr)
+    {
+        return false;
+    }
+
+    static const FName ReplayCameraAxes[] = {TEXT("CameraForward"), TEXT("CameraRight")};
+    TArray<FInputAxisKeyMapping> Mappings;
+    for (const FName AxisName : ReplayCameraAxes)
+    {
+        Mappings.Reset();
+        InputSettings->GetAxisMappingByName(AxisName, Mappings);
+        if (Mappings.ContainsByPredicate(
+                [&Key](const FInputAxisKeyMapping& Mapping)
+                {
+                    return Mapping.Key == Key;
+                }))
+        {
+            return true;
+        }
+    }
+    return false;
+}
 
 [[nodiscard]] FString FactionDisplayName(echoes::sim::Faction Faction)
 {
@@ -520,7 +597,10 @@ AEchoesPlayerController::AEchoesPlayerController()
 void AEchoesPlayerController::BeginPlay()
 {
     if (auto* Bridge = GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>())
+    {
         Bridge->OnFixedStepObserved.AddUObject(this, &AEchoesPlayerController::TickTutorialObservation);
+        Bridge->OnFixedStepObserved.AddUObject(this, &AEchoesPlayerController::PublishGameplayFeedback);
+    }
 
     Super::BeginPlay();
     InitializeTacticalInputPresentation();
@@ -738,12 +818,17 @@ void AEchoesPlayerController::EndPlay(
     if (auto* Bridge = GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>())
         Bridge->OnFixedStepObserved.RemoveAll(this);
     ClearNetworkConnectionTimeouts();
+    NetworkViewState.ResetBulwarkActions();
+    ResetNetworkGameplayFeedback();
     GetWorldTimerManager().ClearTimer(NetworkResultAcknowledgementTimer);
+    GetWorldTimerManager().ClearTimer(NetworkAcknowledgementDelayTimer);
+    ResetNetworkSnapshotTransmission();
     DestroyNetworkPresentation();
     RevertPendingDisplay();
     ShutdownTacticalInputPresentation();
     CancelReplayBrowserScan();
     if (ShellWidget) { ShellWidget->RemoveFromParent(); ShellWidget = nullptr; }
+    if (PowerNetworkView) { PowerNetworkView->Destroy(); PowerNetworkView = nullptr; }
     if (FieldHudWidget) { FieldHudWidget->RemoveFromParent(); FieldHudWidget = nullptr; }
     Super::EndPlay(EndPlayReason);
 }
@@ -803,15 +888,9 @@ bool AEchoesPlayerController::InputKey(const FInputKeyEventArgs& Params)
         }
         if (Params.Key == EKeys::LeftMouseButton && Params.Event == IE_Pressed)
         {
-            FVector2D PointerPosition = FVector2D::ZeroVector;
-            FVector2D ViewportSize = FVector2D::ZeroVector;
-            if (ResolvePointerScreenPosition(PointerPosition, &ViewportSize))
-            {
-                if (ShellWidget->ActivateButtonUnderLocation(PointerPosition))
-                {
-                    return true;
-                }
-            }
+            // The shell hit-test contract is absolute Slate screen space.
+            // ResolvePointerScreenPosition returns viewport-local pixels and
+            // cannot be passed to this API, especially under DPI scaling.
             if (FSlateApplication::IsInitialized())
             {
                 if (ShellWidget->ActivateButtonUnderLocation(FSlateApplication::Get().GetCursorPos()))
@@ -838,34 +917,34 @@ bool AEchoesPlayerController::InputKey(const FInputKeyEventArgs& Params)
                 IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift), Params.Event == IE_Repeat))
                 return true;
         }
-        const bool bCameraKey = Params.Key == EKeys::W || Params.Key == EKeys::A ||
-            Params.Key == EKeys::S || Params.Key == EKeys::D || Params.Key == EKeys::MiddleMouseButton ||
-            Params.Key == EKeys::MouseScrollUp || Params.Key == EKeys::MouseScrollDown ||
-            Params.Key == EKeys::MouseX || Params.Key == EKeys::MouseY;
-        if (bCameraKey || Params.Key == EKeys::LeftMouseButton) return Super::InputKey(Params);
+        const bool bShift =
+            IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
+        const bool bControl =
+            IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
+        const bool bAlt =
+            IsInputKeyDown(EKeys::LeftAlt) || IsInputKeyDown(EKeys::RightAlt);
+        const bool bCommand =
+            IsInputKeyDown(EKeys::LeftCommand) || IsInputKeyDown(EKeys::RightCommand);
+        const bool bMappedCameraInput =
+            IsReplayCameraAxisMapped(Params.Key) ||
+            IsReplayCameraActionMapped(
+                Params.Key, bShift, bControl, bAlt, bCommand,
+                Params.Event != IE_Released);
+        // Middle drag and raw pointer delta are fixed camera gestures until a
+        // CameraPanDrag mapping is introduced; all configurable keys resolve
+        // through UInputSettings above.
+        const bool bFixedPointerCameraInput =
+            Params.Key == EKeys::MiddleMouseButton || Params.Key == EKeys::MouseX ||
+            Params.Key == EKeys::MouseY;
+        if (bMappedCameraInput || bFixedPointerCameraInput)
+        {
+            return Super::InputKey(Params);
+        }
         return true;
     }
     if (HandleOnlineEndpointKey(Params))
     {
         return true;
-    }
-    if (Params.Key == EKeys::Pause && Params.Event == IE_Pressed)
-    {
-        ToggleTacticalPause();
-        return true;
-    }
-    if (Params.Key == EKeys::M && Params.Event == IE_Pressed)
-    {
-        if (bCampaignOperationsMapVisible)
-        {
-            CloseCampaignOperationsMap();
-            return true;
-        }
-        else if (PlayerFlow.Is(EEchoesShellScreen::Title) || (!IsModalOverlayVisible() && !PlayerFlow.Is(EEchoesShellScreen::Results)))
-        {
-            OpenCampaignOperationsMap();
-            return true;
-        }
     }
     if (bCampaignOperationsMapVisible &&
         (Params.Event == IE_Pressed || Params.Event == IE_Repeat))
@@ -901,23 +980,6 @@ bool AEchoesPlayerController::InputKey(const FInputKeyEventArgs& Params)
                 return true;
             }
         }
-    }
-    if (Params.Key == EKeys::Tab && Params.Event == IE_Pressed &&
-        !IsModalOverlayVisible())
-    {
-        const bool bPrevious =
-            IsInputKeyDown(EKeys::LeftShift) ||
-            IsInputKeyDown(EKeys::RightShift);
-        PruneSelection();
-        if (GetSelectionSubgroupTypes().Num() >= 2)
-        {
-            CycleSelectionSubgroup(bPrevious);
-        }
-        else
-        {
-            CycleOwnedEntity(bPrevious ? -1 : 1);
-        }
-        return true;
     }
     return Super::InputKey(Params);
 }
@@ -1300,6 +1362,7 @@ void AEchoesPlayerController::ConfigureNetworkSeat(uint8 Seat)
     {
         return;
     }
+    ResetNetworkGameplayFeedback();
     NetworkSeat = Seat;
     NetworkCommandContext = {};
     NetworkCommandContext.player = Seat;
@@ -1793,6 +1856,7 @@ void AEchoesPlayerController::RejectNetworkCompatibility(
 void AEchoesPlayerController::ServerSubmitCompatibilityHello_Implementation(
     const TArray<uint8>& Packet)
 {
+    if (bNetworkSnapshotClosing) return;
     AEchoesGameMode* GameMode =
         GetWorld() != nullptr
             ? GetWorld()->GetAuthGameMode<AEchoesGameMode>()
@@ -1993,6 +2057,7 @@ void AEchoesPlayerController::ClientReceiveCompatibilityResult_Implementation(
 
 void AEchoesPlayerController::ServerSetNetworkReady_Implementation()
 {
+    if (bNetworkSnapshotClosing) return;
     AEchoesGameMode* GameMode =
         GetWorld() != nullptr
             ? GetWorld()->GetAuthGameMode<AEchoesGameMode>()
@@ -2021,6 +2086,7 @@ void AEchoesPlayerController::ServerSetNetworkReady_Implementation()
 
 void AEchoesPlayerController::ServerLeaveNetworkMatch_Implementation()
 {
+    if (bNetworkSnapshotClosing) return;
     AEchoesGameMode* GameMode =
         GetWorld() != nullptr
             ? GetWorld()->GetAuthGameMode<AEchoesGameMode>()
@@ -2111,6 +2177,8 @@ void AEchoesPlayerController::HandlePlayerOnlineFailure(
     bool bPreserveReconnect)
 {
     ClearNetworkConnectionTimeouts();
+    NetworkViewState.ResetBulwarkActions();
+    ResetNetworkGameplayFeedback();
     UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance();
     if (EchoesGameInstance == nullptr)
     {
@@ -2134,14 +2202,17 @@ void AEchoesPlayerController::BeginNetworkMatch()
     {
         return;
     }
+    ResetNetworkSnapshotTransmission();
     bNetworkMatchStarted = true;
     Bridge->SetNetworkHumanOpponent(true);
+    // Ready releases the authority before admitting either player's orders.
+    // The smoke command uses the same paused-authority guard as normal input.
+    Bridge->SetScenarioPaused(false);
     if (FParse::Param(
             FCommandLine::Get(), TEXT("EchoesNetworkListenSmoke")))
     {
         QueueNetworkSmokeHostCommand();
     }
-    Bridge->SetScenarioPaused(false);
     if (UEchoesGameInstance* EchoesGameInstance = GetEchoesGameInstance())
     {
         EchoesGameInstance->MarkNetworkMatchStarted();
@@ -2199,6 +2270,7 @@ bool AEchoesPlayerController::ResumeNetworkMatch()
     {
         return false;
     }
+    ResetNetworkSnapshotTransmission();
     bNetworkMatchStarted = true;
     Bridge->SetNetworkHumanOpponent(true);
     Bridge->SetScenarioPaused(false);
@@ -2238,6 +2310,8 @@ void AEchoesPlayerController::ClientReceiveNetworkLobbyState_Implementation(
 {
     if (AssignedSeat >= echoes::sim::kMaximumPlayers)
     {
+        NetworkViewState.ResetBulwarkActions();
+        ResetNetworkGameplayFeedback();
         UE_LOG(
             LogEchoes,
             Error,
@@ -2247,6 +2321,11 @@ void AEchoesPlayerController::ClientReceiveNetworkLobbyState_Implementation(
     }
     NetworkSeat = AssignedSeat;
     bNetworkMatchStarted = bStarted;
+    NetworkInputDelayTicks = InputDelayTicks;
+    // Lobby delivery starts or rebinds client command lifecycle, including a
+    // reconnect seat. No reservation may cross that boundary.
+    NetworkViewState.ResetBulwarkActions();
+    ResetNetworkGameplayFeedback();
     if (bStarted)
     {
         GetWorldTimerManager().ClearTimer(NetworkReadyTimer);
@@ -2357,6 +2436,8 @@ void AEchoesPlayerController::ClientReceiveNetworkResumeState_Implementation(
         return;
     }
     bNetworkResumeAccepted = true;
+    NetworkViewState.ResetBulwarkActions();
+    ResetNetworkGameplayFeedback();
     NetworkResumeDisconnectTick = DisconnectTick;
     NextNetworkBatchId = RestoredNextBatchId;
     UE_LOG(
@@ -2413,19 +2494,67 @@ bool AEchoesPlayerController::BuildNextScopedKeyframe(
     return true;
 }
 
+void AEchoesPlayerController::ResetNetworkSnapshotTransmission()
+{
+    GetWorldTimerManager().ClearTimer(NetworkKeyframeTimer);
+    PendingNetworkSnapshotDigests.Reset();
+    LastSentNetworkKeyframe.reset();
+    LastNetworkSnapshotId = 0;
+    LastAcknowledgedNetworkSnapshotId = 0;
+    NetworkSnapshotAcknowledgementCount = 0;
+    NetworkSnapshotFlow.Reset();
+    bNetworkSnapshotBackpressure = false;
+    bNetworkSnapshotClosing = false;
+}
+
+bool AEchoesPlayerController::CanSendNetworkSnapshot()
+{
+    if (bNetworkSnapshotClosing) return false;
+    const auto Decision = NetworkSnapshotFlow.Evaluate(
+        PendingNetworkSnapshotDigests.Num(), FPlatformTime::Seconds());
+    if (Decision == echoes::network::SnapshotSendDecision::TimedOut)
+    {
+        bNetworkSnapshotClosing = true;
+        GetWorldTimerManager().ClearTimer(NetworkKeyframeTimer);
+        UE_LOG(LogEchoes, Error,
+            TEXT("[ECHOES_NETWORK_STATE_STALLED] player=%u pendingSnapshots=%d reason=NET_SNAPSHOT_ACK_TIMEOUT noProgressSeconds=45"),
+            NetworkSeat, PendingNetworkSnapshotDigests.Num());
+        ClientReturnToMainMenuWithTextReason(
+            FText::FromString(TEXT("NET_SNAPSHOT_ACK_TIMEOUT")));
+        // Allow the reliable reason RPC to drain within the engine's bounded
+        // graceful-close deadline. An unresponsive peer still reaches normal
+        // Logout and seat reservation; commands remain rejected while closing.
+        if (UNetConnection* Connection = GetNetConnection())
+        {
+            Connection->GracefulClose(ENetCloseResult::ConnectionTimeout);
+        }
+        return false;
+    }
+    if (Decision == echoes::network::SnapshotSendDecision::WaitForAcknowledgement)
+    {
+        if (!bNetworkSnapshotBackpressure)
+        {
+            bNetworkSnapshotBackpressure = true;
+            UE_LOG(LogEchoes, Display,
+                TEXT("[ECHOES_NETWORK_SNAPSHOT_BACKPRESSURE] player=%u pendingSnapshots=%d waitingForAck=true"),
+                NetworkSeat, PendingNetworkSnapshotDigests.Num());
+        }
+        return false;
+    }
+    if (bNetworkSnapshotBackpressure)
+    {
+        bNetworkSnapshotBackpressure = false;
+        UE_LOG(LogEchoes, Display,
+            TEXT("[ECHOES_NETWORK_SNAPSHOT_RESUMED] player=%u pendingSnapshots=%d"),
+            NetworkSeat, PendingNetworkSnapshotDigests.Num());
+    }
+    return true;
+}
+
 void AEchoesPlayerController::SendScopedKeyframe()
 {
-    if (PendingNetworkSnapshotDigests.Num() >= 8)
+    if (!CanSendNetworkSnapshot())
     {
-        GetWorldTimerManager().ClearTimer(NetworkKeyframeTimer);
-        UE_LOG(
-            LogEchoes,
-            Error,
-            TEXT("[ECHOES_NETWORK_STATE_STALLED] player=%u pendingSnapshots=%d reason=NET_SNAPSHOT_ACK_WINDOW_EXHAUSTED"),
-            NetworkSeat,
-            PendingNetworkSnapshotDigests.Num());
-        ClientReturnToMainMenuWithTextReason(
-            FText::FromString(TEXT("NET_SNAPSHOT_ACK_WINDOW_EXHAUSTED")));
         return;
     }
     echoes::sim::net::ScopedViewKeyframe Keyframe{};
@@ -2451,10 +2580,13 @@ void AEchoesPlayerController::SendScopedKeyframe()
             NetworkSeat);
         return;
     }
+    NetworkSnapshotFlow.RecordSend(
+        PendingNetworkSnapshotDigests.Num(), FPlatformTime::Seconds());
     PendingNetworkSnapshotDigests.Add(
         Keyframe.snapshotId, Keyframe.scopedDigest);
     LastSentNetworkKeyframe = Keyframe;
     ClientReceiveScopedKeyframe(echoes::network::ToByteArray(Encoded));
+    PublishGameplayFeedback();
     UE_LOG(
         LogEchoes,
         Display,
@@ -2476,9 +2608,8 @@ void AEchoesPlayerController::SendScopedUpdate()
         SendScopedKeyframe();
         return;
     }
-    if (PendingNetworkSnapshotDigests.Num() >= 8)
+    if (!CanSendNetworkSnapshot())
     {
-        SendScopedKeyframe();
         return;
     }
     echoes::sim::net::ScopedViewKeyframe Current{};
@@ -2512,6 +2643,8 @@ void AEchoesPlayerController::SendScopedUpdate()
             NetworkSeat);
         return;
     }
+    NetworkSnapshotFlow.RecordSend(
+        PendingNetworkSnapshotDigests.Num(), FPlatformTime::Seconds());
     PendingNetworkSnapshotDigests.Add(
         Current.snapshotId, Current.scopedDigest);
     LastSentNetworkKeyframe = Current;
@@ -2914,7 +3047,7 @@ void AEchoesPlayerController::ClientReceiveScopedKeyframe_Implementation(
             static_cast<unsigned long long>(PreviousSnapshotId),
             static_cast<unsigned long long>(Keyframe.snapshotId));
     }
-    ServerAcknowledgeScopedKeyframe(
+    AcknowledgeNetworkSnapshot(
         Keyframe.snapshotId, Keyframe.scopedDigest);
     if (!SyncNetworkPresentation(Keyframe))
     {
@@ -3172,7 +3305,7 @@ void AEchoesPlayerController::ProcessScopedDeltaPacket(
     }
     const uint64 PreviousSnapshotId = LastNetworkSnapshotId;
     LastNetworkSnapshotId = Current->snapshotId;
-    ServerAcknowledgeScopedKeyframe(
+    AcknowledgeNetworkSnapshot(
         Current->snapshotId, Current->scopedDigest);
     if (!SyncNetworkPresentation(*Current))
     {
@@ -3238,6 +3371,9 @@ echoes::sim::Entity AEchoesPlayerController::BuildNetworkPresentationEntity(
     State.completed = Scoped.completed;
     State.wellChoice = Scoped.wellChoice;
     State.deployed = Scoped.deployed;
+    State.deploymentFacing = Scoped.deploymentFacing;
+    State.deploymentPhase = Scoped.deploymentPhase;
+    State.deploymentTransitionUntilTick = Scoped.deploymentTransitionUntilTick;
     State.waystoneMode = Scoped.waystoneMode;
     State.warformAdaptation = Scoped.warformAdaptation;
     State.aegisPowered = Scoped.aegisPowered;
@@ -3590,10 +3726,58 @@ void AEchoesPlayerController::DestroyNetworkPresentation()
     bNetworkRemoteBattlefieldReady = false;
 }
 
+void AEchoesPlayerController::AcknowledgeNetworkSnapshot(
+    uint64 SnapshotId, uint64 ScopedDigest)
+{
+#if UE_BUILD_DEVELOPMENT && WITH_DEV_AUTOMATION_TESTS
+    if (GetNetMode() == NM_Client && bNetworkClientSmoke &&
+        !bNetworkAcknowledgementDelayPerformed &&
+        FParse::Param(FCommandLine::Get(), TEXT("EchoesNetworkDelayInitialAck")))
+    {
+        // Hold all initial ACK progress for more than eight snapshot intervals,
+        // without blocking the game thread or altering accepted view lineage.
+        if (SnapshotId > DelayedNetworkAcknowledgementId)
+        {
+            DelayedNetworkAcknowledgementId = SnapshotId;
+            DelayedNetworkAcknowledgementDigest = ScopedDigest;
+        }
+        if (!GetWorldTimerManager().IsTimerActive(NetworkAcknowledgementDelayTimer))
+        {
+            UE_LOG(LogEchoes, Display,
+                TEXT("[ECHOES_NETWORK_ACK_DELAY_STARTED] delaySeconds=6 snapshot=%llu"),
+                static_cast<unsigned long long>(SnapshotId));
+            GetWorldTimerManager().SetTimer(NetworkAcknowledgementDelayTimer,
+                this, &AEchoesPlayerController::DeliverDelayedNetworkAcknowledgement,
+                6.0f, false);
+        }
+        return;
+    }
+#endif
+    ServerAcknowledgeScopedKeyframe(SnapshotId, ScopedDigest);
+}
+
+void AEchoesPlayerController::DeliverDelayedNetworkAcknowledgement()
+{
+#if UE_BUILD_DEVELOPMENT && WITH_DEV_AUTOMATION_TESTS
+    bNetworkAcknowledgementDelayPerformed = true;
+    if (DelayedNetworkAcknowledgementId != 0)
+    {
+        UE_LOG(LogEchoes, Display,
+            TEXT("[ECHOES_NETWORK_ACK_DELAY_RELEASED] snapshot=%llu"),
+            static_cast<unsigned long long>(DelayedNetworkAcknowledgementId));
+        ServerAcknowledgeScopedKeyframe(
+            DelayedNetworkAcknowledgementId, DelayedNetworkAcknowledgementDigest);
+        DelayedNetworkAcknowledgementId = 0;
+        DelayedNetworkAcknowledgementDigest = 0;
+    }
+#endif
+}
+
 void AEchoesPlayerController::ServerAcknowledgeScopedKeyframe_Implementation(
     uint64 SnapshotId,
     uint64 ScopedDigest)
 {
+    if (bNetworkSnapshotClosing) return;
     const uint64* ExpectedDigest =
         PendingNetworkSnapshotDigests.Find(SnapshotId);
     if (ExpectedDigest == nullptr || *ExpectedDigest != ScopedDigest ||
@@ -3634,6 +3818,8 @@ void AEchoesPlayerController::ServerAcknowledgeScopedKeyframe_Implementation(
         }
     }
     LastAcknowledgedNetworkSnapshotId = SnapshotId;
+    NetworkSnapshotFlow.RecordValidAcknowledgement(
+        PendingNetworkSnapshotDigests.Num(), FPlatformTime::Seconds());
     ++NetworkSnapshotAcknowledgementCount;
     UE_LOG(
         LogEchoes,
@@ -3650,6 +3836,7 @@ void AEchoesPlayerController::ServerAcknowledgeScopedKeyframe_Implementation(
 void AEchoesPlayerController::ServerRequestScopedKeyframe_Implementation(
     uint64 LastAcceptedSnapshotId)
 {
+    if (bNetworkSnapshotClosing) return;
     const double Now = FPlatformTime::Seconds();
     if (Now - LastScopedRecoveryRequestServerSeconds < 1.0)
     {
@@ -3669,12 +3856,30 @@ void AEchoesPlayerController::ServerRequestScopedKeyframe_Implementation(
         NetworkSeat,
         static_cast<unsigned long long>(LastAcceptedSnapshotId),
         static_cast<unsigned long long>(LastNetworkSnapshotId));
+    if (LastSentNetworkKeyframe.has_value() &&
+        NetworkSnapshotFlow.Evaluate(PendingNetworkSnapshotDigests.Num(), Now) ==
+            echoes::network::SnapshotSendDecision::WaitForAcknowledgement)
+    {
+        const auto Encoded = echoes::sim::net::EncodeScopedViewKeyframe(
+            *LastSentNetworkKeyframe);
+        if (!Encoded.empty())
+        {
+            ClientReceiveScopedKeyframe(echoes::network::ToByteArray(Encoded));
+            UE_LOG(LogEchoes, Display,
+                TEXT("[ECHOES_NETWORK_KEYFRAME_RETRANSMITTED] player=%u snapshot=%llu pendingSnapshots=%d recoveryAtCapacity=true"),
+                NetworkSeat,
+                static_cast<unsigned long long>(LastSentNetworkKeyframe->snapshotId),
+                PendingNetworkSnapshotDigests.Num());
+        }
+        return;
+    }
     SendScopedKeyframe();
 }
 
 void AEchoesPlayerController::ServerSubmitNetworkCommand_Implementation(
     const TArray<uint8>& Packet)
 {
+    if (bNetworkSnapshotClosing) return;
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -3800,6 +4005,7 @@ void AEchoesPlayerController::ServerSubmitNetworkCommand_Implementation(
 void AEchoesPlayerController::ServerSubmitNetworkCommandBatch_Implementation(
     const TArray<uint8>& Packet)
 {
+    if (bNetworkSnapshotClosing) return;
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -3987,6 +4193,62 @@ void AEchoesPlayerController::ClientReceiveCommandBatchAdmission_Implementation(
     const FString Detail = FirstRejection.IsEmpty()
         ? TEXT("none")
         : FirstRejection;
+    if (BatchId == 0 &&
+        NetworkViewState.BulwarkActions().PendingActorCount() > 0)
+    {
+        NetworkViewState.ResetBulwarkActions();
+        SetStatusMessage(
+            TEXT("Bulwark order could not be confirmed. Try again after battlefield state updates."),
+            5.0f);
+        UE_LOG(
+            LogEchoes,
+            Warning,
+            TEXT("[ECHOES_NETWORK_BULWARK_ADMISSION_RECOVERY] batch=0 result=NET_BULWARK_ADMISSION_INVALID_BATCH pendingCleared=true"));
+        return;
+    }
+    if (NetworkViewState.BulwarkActions().HasBatch(BatchId))
+    {
+        const echoes::network::BulwarkAdmissionResult BulwarkResult =
+            NetworkViewState.BulwarkActions().ApplyAdmission(
+                BatchId,
+                AcceptedCount,
+                RejectedCount,
+                ServerTick,
+                NetworkInputDelayTicks,
+                NetworkViewState.Current());
+        if (BulwarkResult ==
+                echoes::network::BulwarkAdmissionResult::InvalidCounts ||
+            BulwarkResult ==
+                echoes::network::BulwarkAdmissionResult::TickOverflow ||
+            BulwarkResult ==
+                echoes::network::BulwarkAdmissionResult::InvalidBatchId)
+        {
+            SetStatusMessage(
+                TEXT("Bulwark order could not be confirmed. Try again after battlefield state updates."),
+                5.0f);
+            UE_LOG(
+                LogEchoes,
+                Warning,
+                TEXT("[ECHOES_NETWORK_BULWARK_ADMISSION_RECOVERY] batch=%llu result=%s pendingActors=%llu"),
+                static_cast<unsigned long long>(BatchId),
+                UTF8_TO_TCHAR(echoes::network::StableId(BulwarkResult)),
+                static_cast<unsigned long long>(
+                    NetworkViewState.BulwarkActions().PendingActorCount()));
+            return;
+        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_BULWARK_ADMISSION] batch=%llu result=%s accepted=%d rejected=%d serverTick=%llu executeTickDelay=%u pendingActors=%llu"),
+            static_cast<unsigned long long>(BatchId),
+            UTF8_TO_TCHAR(echoes::network::StableId(BulwarkResult)),
+            AcceptedCount,
+            RejectedCount,
+            static_cast<unsigned long long>(ServerTick),
+            NetworkInputDelayTicks,
+            static_cast<unsigned long long>(
+                NetworkViewState.BulwarkActions().PendingActorCount()));
+    }
     if (AcceptedCount > 0)
     {
         SetStatusMessage(
@@ -4258,6 +4520,16 @@ void AEchoesPlayerController::ClientReceiveCommandExecution_Implementation(
 
 void AEchoesPlayerController::TryFinishNetworkClientSmoke()
 {
+#if UE_BUILD_DEVELOPMENT && WITH_DEV_AUTOMATION_TESTS
+    // The injected ACK hold also withholds completion. After releasing its
+    // cumulative ACK, the next accepted update supplies the second authority
+    // acknowledgement required by the normal smoke completion contract.
+    if (!bNetworkAcknowledgementDelayPerformed && FParse::Param(
+            FCommandLine::Get(), TEXT("EchoesNetworkDelayInitialAck")))
+    {
+        return;
+    }
+#endif
     const bool bRecoveryRequired =
         FParse::Param(
             FCommandLine::Get(), TEXT("EchoesNetworkDropFirstDelta")) ||
@@ -5601,7 +5873,7 @@ void AEchoesPlayerController::ConfirmTitleScreen()
         return;
     }
     if (const auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
-        Bridge && !RequireOperationMastery(Bridge->GetOperationMode())) return;
+        Bridge && !RequireOperationProfile()) return;
     bNewCampaignConfirmationArmed = false;
     NewCampaignConfirmationExpiresAt = 0.0;
     bCampaignRestoreConfirmationArmed = false;
@@ -5779,7 +6051,7 @@ void AEchoesPlayerController::ConfirmMissionBriefing()
         SetStatusMessage(TEXT("[BRIEFING_SIM_NOT_READY] Deployment could not begin."));
         return;
     }
-    if (!RequireOperationMastery(Bridge->GetOperationMode())) return;
+    if (!RequireOperationProfile()) return;
     if (IsSkirmishDeploymentSummaryVisible())
     {
         FString DeploymentFeedback;
@@ -6147,9 +6419,10 @@ void AEchoesPlayerController::FinishMissionDeployment()
 
 void AEchoesPlayerController::CyclePlayableFaction()
 {
+    // Tab is intentionally shared with CycleOwnedEntityNext. The latter owns
+    // battlefield selection, while this action remains title/briefing-only.
     if (!PlayerFlow.Is(EEchoesShellScreen::Title) && !PlayerFlow.Is(EEchoesShellScreen::Briefing))
     {
-        CycleOwnedEntity(1);
         return;
     }
     UEchoesSimulationSubsystem* Bridge =
@@ -6436,7 +6709,7 @@ void AEchoesPlayerController::CycleOperation()
 
 void AEchoesPlayerController::ContinueCampaign()
 {
-    if (!RequireOperationMastery(EEchoesOperationMode::Skirmish)) return;
+    if (!RequireOperationProfile()) return;
     const bool bContinuingFromTitle = PlayerFlow.Is(EEchoesShellScreen::Title);
     const bool bContinuingFromResult =
         PlayerFlow.Is(EEchoesShellScreen::Results) && CanAdvanceCampaignResult();
@@ -6529,7 +6802,7 @@ void AEchoesPlayerController::ContinueCampaign()
 void AEchoesPlayerController::OpenCampaignOperationsMap()
 {
     if (IsReplayInputActive()) return;
-    if (!RequireOperationMastery(EEchoesOperationMode::Skirmish)) return;
+    if (!RequireOperationProfile()) return;
     bNewCampaignConfirmationArmed = false;
     NewCampaignConfirmationExpiresAt = 0.0;
     bCampaignRestoreConfirmationArmed = false;
@@ -6570,11 +6843,17 @@ void AEchoesPlayerController::ToggleCampaignOperationsMap()
     if (bCampaignOperationsMapVisible)
     {
         CloseCampaignOperationsMap();
+        return;
     }
-    else
+    // The map used to open from a hardcoded key that refused while another modal
+    // owned input, or once the match had already resolved. That guard belongs to
+    // the command, not to the key, now that the binding is remappable.
+    if (!PlayerFlow.Is(EEchoesShellScreen::Title) &&
+        (IsModalOverlayVisible() || PlayerFlow.Is(EEchoesShellScreen::Results)))
     {
-        OpenCampaignOperationsMap();
+        return;
     }
+    OpenCampaignOperationsMap();
 }
 
 void AEchoesPlayerController::SetSelectedCampaignMapNodeIndex(int32 Index)
@@ -6594,7 +6873,7 @@ void AEchoesPlayerController::SelectPreviousCampaignMapNode()
 
 void AEchoesPlayerController::DeploySelectedCampaignOperation()
 {
-    if (!RequireOperationMastery(EEchoesOperationMode::Skirmish)) return;
+    if (!RequireOperationProfile()) return;
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -6926,6 +7205,17 @@ void AEchoesPlayerController::RequestCampaignRestore()
     SetStatusMessage(Feedback, 12.0f);
 }
 
+void AEchoesPlayerController::CycleOwnedEntityNext()
+{
+    // Tab is intentionally shared with CyclePlayableFaction. This field-only
+    // action owns the selection behavior once the title/briefing is closed.
+    if (PlayerFlow.Is(EEchoesShellScreen::Title) || PlayerFlow.Is(EEchoesShellScreen::Briefing))
+    {
+        return;
+    }
+    CycleSelectionSubgroupOrOwned(false);
+}
+
 void AEchoesPlayerController::CycleOwnedEntityPrevious()
 {
     if (PlayerFlow.Is(EEchoesShellScreen::Title) || PlayerFlow.Is(EEchoesShellScreen::Briefing))
@@ -6933,7 +7223,21 @@ void AEchoesPlayerController::CycleOwnedEntityPrevious()
         CyclePlayableFaction();
         return;
     }
+    // Backspace steps through owned entities. It is deliberately not the
+    // subgroup walk: SPEC-CTL-011 gives that to Shift+Tab, and folding both
+    // into one command left a mixed selection unable to reach a single entity.
     CycleOwnedEntity(-1);
+}
+
+void AEchoesPlayerController::CycleSelectionSubgroupPrevious()
+{
+    // The Shift+Tab half of SPEC-CTL-011. It mirrors CycleOwnedEntityNext and
+    // stays out of the title and briefing, where Tab cycles the faction.
+    if (PlayerFlow.Is(EEchoesShellScreen::Title) || PlayerFlow.Is(EEchoesShellScreen::Briefing))
+    {
+        return;
+    }
+    CycleSelectionSubgroupOrOwned(true);
 }
 
 void AEchoesPlayerController::SelectCombatForce()
@@ -7145,7 +7449,11 @@ void AEchoesPlayerController::SnapKeyboardTargetToSelection()
         // An explicit recenter key is player navigation: it must carry the
         // same provenance and battlefield clamp as scrolling and minimap use,
         // so the guided survey can observe it instead of a silent teleport.
-        RTSCamera->PanFromPlayerInput(CameraLocation);
+        if (!RTSCamera->FrameGroundPoint(Centroid, true))
+        {
+            SetStatusMessage(TEXT("The selected force cannot be framed right now."));
+            return;
+        }
     }
     else
     {
@@ -8552,7 +8860,7 @@ void AEchoesPlayerController::PlayerTick(float DeltaTime)
         {
             PresentedCheckpointRequestId = Save.RequestId;
             bPresentedCheckpointPending = Save.State == EEchoesCheckpointSaveState::Pending;
-            if (Save.State != EEchoesCheckpointSaveState::Idle && !IsModalOverlayVisible()) SetStatusMessage(Save.Feedback, 8.f);
+            if (Save.State != EEchoesCheckpointSaveState::Idle && !IsModalOverlayVisible()) SetStatusMessage(EchoesCheckpointFeedback::Display(Save).ToString(), 8.f);
         }
     }
 #if WITH_DEV_AUTOMATION_TESTS
@@ -9344,7 +9652,7 @@ void AEchoesPlayerController::SetupInputComponent()
         TEXT("RestartScenario"),
         IE_Pressed,
         this,
-        &AEchoesPlayerController::RestartScenario);
+        &AEchoesPlayerController::RepairOrRestartPressed);
     InputComponent->BindAction(
         TEXT("QuickSaveScenario"),
         IE_Pressed,
@@ -9382,16 +9690,20 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("SkirmishValueNext"), &AEchoesPlayerController::IncreaseSkirmishSetting);
     BindPressed(TEXT("CyclePlayableFaction"), &AEchoesPlayerController::CyclePlayableFaction);
     BindPressed(TEXT("CycleOperation"), &AEchoesPlayerController::CycleOperation);
+    BindPressed(TEXT("ToggleCampaignOperationsMap"), &AEchoesPlayerController::ToggleCampaignOperationsMap);
     BindPressed(TEXT("ContinueCampaign"), &AEchoesPlayerController::ContinueCampaign);
     BindPressed(TEXT("RequestNewCampaign"), &AEchoesPlayerController::RequestNewCampaign);
     BindPressed(TEXT("LeaveOnlineMatch"), &AEchoesPlayerController::LeaveOnlineMatch);
     BindPressed(TEXT("RequestCampaignRestore"), &AEchoesPlayerController::RequestCampaignRestore);
+    BindPressed(TEXT("CycleOwnedEntityNext"), &AEchoesPlayerController::CycleOwnedEntityNext);
     BindPressed(TEXT("CycleOwnedEntityPrevious"), &AEchoesPlayerController::CycleOwnedEntityPrevious);
+    BindPressed(TEXT("CycleSelectionSubgroupPrevious"), &AEchoesPlayerController::CycleSelectionSubgroupPrevious);
     BindPressed(TEXT("SelectCombatForce"), &AEchoesPlayerController::SelectCombatForce);
     BindPressed(TEXT("OpenOnlineFrontDoor"), &AEchoesPlayerController::OpenOnlineFrontDoor);
     BindPressed(TEXT("CycleFormation"), &AEchoesPlayerController::CycleFormation);
     BindPressed(TEXT("ToggleKeyboardTargeting"), &AEchoesPlayerController::ToggleKeyboardTargeting);
     BindPressed(TEXT("KeyboardContextOrder"), &AEchoesPlayerController::KeyboardContextOrderPressed);
+    BindPressed(TEXT("CancelConstruction"), &AEchoesPlayerController::CancelSelectedConstruction);
     BindPressed(TEXT("KeyboardTargetLeft"), &AEchoesPlayerController::NudgeKeyboardTargetLeft);
     BindPressed(TEXT("KeyboardTargetRight"), &AEchoesPlayerController::NudgeKeyboardTargetRight);
     BindPressed(TEXT("SnapKeyboardTargetToSelection"), &AEchoesPlayerController::SnapKeyboardTargetToSelection);
@@ -9474,6 +9786,9 @@ void AEchoesPlayerController::SelectionPressed()
             case EEchoesCommandDeckAction::Guard:
                 GuardAtCursor();
                 break;
+            case EEchoesCommandDeckAction::ToggleBulwarkDeployment:
+                ToggleBulwarkDeploymentAtCursor();
+                break;
             case EEchoesCommandDeckAction::BuildBarracks:
                 BuildBarracks();
                 break;
@@ -9482,6 +9797,9 @@ void AEchoesPlayerController::SelectionPressed()
                 break;
             case EEchoesCommandDeckAction::BuildUtility:
                 BuildUtility();
+                break;
+            case EEchoesCommandDeckAction::RepairAtCursor:
+                RepairAtCursor();
                 break;
             default:
                 break;
@@ -9874,6 +10192,10 @@ void AEchoesPlayerController::IssueContextOrder(
     if (TargetView == nullptr)
     {
         TargetView = Cast<AEchoesEntityView>(HitResult.GetActor());
+    }
+    if (TargetView != nullptr && TryIssueWorkerMaintenanceContext(TargetView->GetEntityId()))
+    {
+        return;
     }
     if (GetNetMode() == NM_Client)
     {
@@ -10337,6 +10659,21 @@ void AEchoesPlayerController::NormalizeSelectionSubgroup()
     }
 }
 
+void AEchoesPlayerController::CycleSelectionSubgroupOrOwned(bool bPrevious)
+{
+    if (IsReplayInputActive() || IsModalOverlayVisible())
+    {
+        return;
+    }
+    PruneSelection();
+    if (GetSelectionSubgroupTypes().Num() >= 2)
+    {
+        CycleSelectionSubgroup(bPrevious);
+        return;
+    }
+    CycleOwnedEntity(bPrevious ? -1 : 1);
+}
+
 void AEchoesPlayerController::CycleSelectionSubgroup(bool bPrevious)
 {
     if (IsReplayInputActive() || IsModalOverlayVisible()) return;
@@ -10665,13 +11002,9 @@ bool AEchoesPlayerController::TraceKeyboardTarget(FHitResult& OutHitResult)
     {
         return false;
     }
-    return GetHitResultAtScreenPosition(
-        FVector2D(
-            static_cast<float>(ViewportWidth) * 0.5f,
-            static_cast<float>(ViewportHeight) * 0.5f) + KeyboardTargetOffset,
-        ECC_Visibility,
-        true,
-        OutHitResult);
+    FVector2D ScreenPosition;
+    return ResolveCommandScreenPosition(false, ScreenPosition) &&
+        GetHitResultAtScreenPosition(ScreenPosition, ECC_Visibility, true, OutHitResult);
 }
 
 bool AEchoesPlayerController::TraceCommandTarget(FHitResult& OutHitResult)
@@ -10699,11 +11032,10 @@ bool AEchoesPlayerController::ResolveCommandScreenPosition(
         {
             return false;
         }
-        OutScreenPosition =
-            FVector2D(
-                static_cast<float>(ViewportWidth) * 0.5f,
-                static_cast<float>(ViewportHeight) * 0.5f) +
-            KeyboardTargetOffset;
+        const auto* Settings = UEchoesGameUserSettings::Get();
+        OutScreenPosition = FEchoesHudLayout::KeyboardTargetPoint(
+            FVector2D(ViewportWidth, ViewportHeight),
+            Settings ? Settings->GetHudScale() : 1.0f, KeyboardTargetOffset);
         return true;
     }
     if (!ResolvePointerScreenPosition(OutScreenPosition))
@@ -11334,6 +11666,8 @@ void AEchoesPlayerController::PatrolAtCursor()
 
 void AEchoesPlayerController::StopSelectedUnits()
 {
+    // Shift+X belongs to explicit construction cancellation.
+    if (IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift)) return;
     if (IsModalOverlayVisible())
     {
         return;
@@ -11452,14 +11786,72 @@ void AEchoesPlayerController::ToggleBulwarkDeploymentAtCursor()
             SetStatusMessage(TEXT("[NETWORK_TARGET_UNAVAILABLE] Bulwark deployment requires a remote battlefield direction."));
             return;
         }
-        (void)SubmitNetworkSelectionCommand(
-            echoes::sim::CommandType::ToggleDeploy,
-            0,
-            HitResult.Location,
-            false,
-            false,
-            TEXT("ONLINE BULWARK DEPLOY / PACK"),
-            EEchoesCommandMarkerType::Interact);
+        const std::optional<echoes::sim::net::ScopedViewKeyframe>& View =
+            NetworkViewState.Current();
+        if (!View.has_value())
+        {
+            SetStatusMessage(TEXT("[NETWORK_VIEW_UNAVAILABLE] Bulwark deployment is waiting for authoritative battlefield state."));
+            return;
+        }
+        const bool bAllEligible =
+            IsInputKeyDown(EKeys::LeftControl) ||
+            IsInputKeyDown(EKeys::RightControl);
+        const echoes::sim::Vec2 Target =
+            NetworkWorldToSim(HitResult.Location);
+        const std::vector<echoes::network::BulwarkDispatchActor> Casters =
+            NetworkViewState.BulwarkActions().Resolve(
+                *View,
+                NetworkSeat,
+                Target,
+                std::span<const echoes::sim::EntityId>(
+                    SelectedEntityIds.GetData(),
+                    static_cast<std::size_t>(SelectedEntityIds.Num())),
+                bAllEligible);
+        if (Casters.empty())
+        {
+            SetStatusMessage(TEXT("[ONLINE_BULWARK_UNAVAILABLE] Select an eligible owned Bulwark; pending and transitioning teams must finish first."));
+            return;
+        }
+
+        TArray<echoes::sim::net::CommandIntent> Intents;
+        Intents.Reserve(static_cast<int32>(Casters.size()));
+        for (const echoes::network::BulwarkDispatchActor& Caster : Casters)
+        {
+            echoes::sim::net::CommandIntent Intent{};
+            Intent.type = echoes::sim::CommandType::ToggleDeploy;
+            Intent.actor = Caster.actor;
+            Intent.position = Target;
+            Intent.wellChoice = FutureWellChoice;
+            Intents.Add(Intent);
+        }
+        const uint64 ReservedBatchId = NextNetworkBatchId;
+        if (!NetworkViewState.BulwarkActions().ReserveBatch(
+                ReservedBatchId, Casters))
+        {
+            SetStatusMessage(TEXT("Bulwark order is waiting for updated battlefield state. Try again shortly."));
+            return;
+        }
+        if (!SubmitNetworkCommandBatch(
+                MoveTemp(Intents),
+                TEXT("ONLINE BULWARK DEPLOY / PACK"),
+                HitResult.Location,
+                EEchoesCommandMarkerType::Interact))
+        {
+            (void)NetworkViewState.BulwarkActions().RejectBatch(
+                ReservedBatchId);
+            return;
+        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_NETWORK_BULWARK_DISPATCH] batch=%llu actors=%d ctrlAll=%s pendingActors=%llu targetRaw=(%d,%d)"),
+            static_cast<unsigned long long>(ReservedBatchId),
+            static_cast<int32>(Casters.size()),
+            bAllEligible ? TEXT("true") : TEXT("false"),
+            static_cast<unsigned long long>(
+                NetworkViewState.BulwarkActions().PendingActorCount()),
+            Target.x.Raw(),
+            Target.y.Raw());
         return;
     }
     UEchoesSimulationSubsystem* Bridge =
@@ -11487,15 +11879,18 @@ void AEchoesPlayerController::ToggleBulwarkDeploymentAtCursor()
     int32 PackedCount = 0;
     int32 RejectedCount = 0;
     FString LastRejection;
-    for (const uint32 EntityId : SelectedEntityIds)
+    const bool bAllEligible = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
+    const TArray<uint32> Casters = FEchoesCommandDeckModel::ResolveLocalBulwarkCasters(
+        *Bridge->GetSimulation(), UEchoesSimulationSubsystem::LocalPlayerId,
+        Bridge->WorldToSim(HitResult.Location), SelectedEntityIds, bAllEligible);
+    for (const uint32 EntityId : Casters)
     {
         const echoes::sim::Entity* Entity = Bridge->FindEntity(EntityId);
         if (Entity == nullptr ||
             Entity->faction != echoes::sim::Faction::MeridianCompact ||
             Entity->type != echoes::sim::EntityType::HeavyUnit)
         {
-            ++RejectedCount;
-            continue;
+            continue; // Mixed-selection units with another role are not rejected casts.
         }
         const bool bWasDeployed = Entity->deployed;
         FString Feedback;
@@ -11525,7 +11920,7 @@ void AEchoesPlayerController::ToggleBulwarkDeploymentAtCursor()
     if (DeployedCount + PackedCount > 0)
     {
         SetStatusMessage(FString::Printf(
-            TEXT("BULWARK: %d deploying toward cursor, %d packing, %d rejected."),
+            TEXT("Bulwark orders: %d deploying toward target, %d packing. %d Bulwarks unavailable."),
             DeployedCount,
             PackedCount,
             RejectedCount));
@@ -11534,7 +11929,7 @@ void AEchoesPlayerController::ToggleBulwarkDeploymentAtCursor()
     {
         SetStatusMessage(
             LastRejection.IsEmpty()
-                ? TEXT("[BULWARK_REQUIRED] Select a Meridian Bulwark Team.")
+                ? TEXT("Select a ready Bulwark and point away from it to deploy. Wait for current deployment or packing to finish.")
                 : LastRejection);
     }
 }
@@ -11588,8 +11983,7 @@ void AEchoesPlayerController::ActivateRelaySupply()
             Entity->faction != echoes::sim::Faction::MeridianCompact ||
             Entity->type != echoes::sim::EntityType::ScoutUnit)
         {
-            ++RejectedCount;
-            continue;
+            continue; // Other unit roles in a mixed selection do not receive this ability.
         }
         FString Feedback;
         if (Bridge->IssueCommand(
@@ -11608,15 +12002,24 @@ void AEchoesPlayerController::ActivateRelaySupply()
             LastRejection = Feedback;
         }
     }
+    if (!LastRejection.IsEmpty())
+    {
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_RELAY_REFUSED] %s"), *LastRejection);
+        // Keep the adapter's stable diagnostic code in the log while the
+        // player receives its actionable explanation.
+        int32 ClosingBracket = INDEX_NONE;
+        if (LastRejection.StartsWith(TEXT("[")) && LastRejection.FindChar(TEXT(']'), ClosingBracket))
+            LastRejection = LastRejection.Mid(ClosingBracket + 1).TrimStart();
+    }
     SetStatusMessage(
         AcceptedCount > 0
             ? FString::Printf(
-                  TEXT("RELAY SUPPLY: %d extension%s activated, %d rejected."),
+                  TEXT("Extend Relay ordered for %d Skiff%s. %d unavailable."),
                   AcceptedCount,
                   AcceptedCount == 1 ? TEXT("") : TEXT("s"),
                   RejectedCount)
             : LastRejection.IsEmpty()
-                  ? TEXT("[RELAY_REQUIRED] Select a connected Meridian Relay Skiff.")
+                  ? TEXT("Select a Relay Skiff near your Anchor or an operational Power Link.")
                   : LastRejection);
 }
 
@@ -12354,7 +12757,8 @@ void AEchoesPlayerController::QuickSaveScenario()
     }
     else
     {
-        Bridge->RequestQuickSaveScenario(Feedback);
+        if (Bridge->RequestQuickSaveScenario(Feedback))
+            Feedback = EchoesCheckpointFeedback::Display(Bridge->GetCheckpointSaveStatus()).ToString();
     }
     SetStatusMessage(Feedback, 6.0f);
 }
@@ -12380,7 +12784,7 @@ void AEchoesPlayerController::QuickLoadScenario()
     {
         Feedback = TEXT("[LOAD_SIM_NOT_READY] Start a scenario before loading.");
     }
-    else if (!RequireOperationMastery(Bridge->GetOperationMode(), true))
+    else if (!RequireOperationProfile())
     {
         return;
     }
@@ -12389,12 +12793,14 @@ void AEchoesPlayerController::QuickLoadScenario()
         ClearSelection();
         bControlGroupAssignmentArmed = false;
         ResetTutorialObservation();
-        bTutorialOperationAuthorized = Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness;
-        if (!RequireOperationMastery(Bridge->GetOperationMode()))
+        bTutorialOperationAuthorized = Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness &&
+                !PlayerProfile.bTutorialOptOut;
+        if (!RequireOperationProfile())
         {
             PresentMissionBriefing();
             return;
         }
+        Feedback = EchoesCheckpointFeedback::Restored().ToString();
     }
     SetStatusMessage(Feedback, 7.0f);
 }
@@ -13150,6 +13556,9 @@ AEchoesPlayerController::BuildCommandDeckProfile() const
                 Profile.bHasBarracks =
                     Profile.bHasBarracks ||
                     Entity->type == echoes::sim::EntityType::Barracks;
+                Profile.bCanCancelSelectedConstruction |=
+                    SelectedEntityIds.Num() == 1 && !Entity->completed &&
+                    Entity->hitPoints > 0;
                 break;
             default:
                 ++Profile.OtherCount;
@@ -13171,9 +13580,11 @@ void AEchoesPlayerController::ActivateCommandDeckAction(
         case EEchoesCommandDeckAction::AttackMove:
         case EEchoesCommandDeckAction::Patrol:
         case EEchoesCommandDeckAction::Guard:
+        case EEchoesCommandDeckAction::ToggleBulwarkDeployment:
         case EEchoesCommandDeckAction::BuildBarracks:
         case EEchoesCommandDeckAction::BuildDropoff:
         case EEchoesCommandDeckAction::BuildUtility:
+        case EEchoesCommandDeckAction::RepairAtCursor:
             ArmedDeckAction = Action;
             if (Action == EEchoesCommandDeckAction::BuildBarracks)
             {
@@ -13188,8 +13599,13 @@ void AEchoesPlayerController::ActivateCommandDeckAction(
                 BeginBuildPlacement(echoes::sim::EntityType::UtilityStructure);
             }
             SetStatusMessage(
-                TEXT("Select a target on the battlefield. Right-click cancels."),
+                Action == EEchoesCommandDeckAction::RepairAtCursor
+                    ? TEXT("Select a damaged allied target or unfinished structure. Right-click cancels.")
+                    : TEXT("Select a target on the battlefield. Right-click cancels."),
                 8.0f);
+            return;
+        case EEchoesCommandDeckAction::CancelConstruction:
+            CancelSelectedConstruction();
             return;
         case EEchoesCommandDeckAction::Hold:
             HoldSelectedUnits();
@@ -13555,7 +13971,7 @@ void AEchoesPlayerController::TogglePauseMenu()
         SetIgnoreLookInput(bOnlineLocalMenuVisible);
         SetStatusMessage(
             bOnlineLocalMenuVisible
-                ? TEXT("ONLINE MATCH MENU — local controls are held; the authority state is unchanged. Enter or Escape resumes; choose Leave Online to exit.")
+                ? TEXT("ONLINE MATCH MENU — the match continues while this menu is open. Choose Resume to return, or Leave Online to exit.")
                 : TEXT("ONLINE MATCH CONTROLS RESUMED."),
             bOnlineLocalMenuVisible ? 3600.0f : 3.0f);
         UE_LOG(
@@ -13610,7 +14026,7 @@ void AEchoesPlayerController::TogglePauseMenu()
         return;
     }
     if (PlayerFlow.Is(EEchoesShellScreen::Pause) &&
-        !RequireOperationMastery(Bridge->GetOperationMode())) return;
+        !RequireOperationProfile()) return;
     if (!PlayerFlow.Is(EEchoesShellScreen::Pause)) bTacticalPaused = Bridge->IsScenarioPaused();
     PlayerFlow.SetVisible(EEchoesShellScreen::Pause, !PlayerFlow.Is(EEchoesShellScreen::Pause));
     if (UEchoesInterfaceAudioSubsystem* InterfaceAudio =
@@ -13688,7 +14104,7 @@ void AEchoesPlayerController::RestartScenario()
     ClearSelection();
     ClearControlGroups();
     bControlGroupAssignmentArmed = false;
-    if (Bridge != nullptr && !RequireOperationMastery(Bridge->GetOperationMode())) return;
+    if (Bridge != nullptr && !RequireOperationProfile()) return;
     if (Bridge != nullptr && Bridge->RestartPrototypeScenario())
     {
         ResetTutorialObservation();
@@ -13878,9 +14294,13 @@ void AEchoesPlayerController::SetFutureWellChoice(
         const FEchoesBrokenSunPlan Plan = Bridge->GetBrokenSunPlan();
         FutureWellChoice = Plan.RecordedProtocol;
         SetStatusMessage(
+            // Resolve the chord live. It moved off Shift, and a literal would
+            // also be wrong on Mac, where this modifier prints as Option.
             FString::Printf(
-                TEXT("The Broken Sun retains the recorded %s protocol as ledger context. Choose an eligible final resolution with Shift+1 through Shift+4 after assembling the accord."),
-                Plan.ProtocolDisplayName),
+                TEXT("The Broken Sun retains the recorded %s protocol as ledger context. Choose an eligible final resolution with %s through %s after assembling the accord."),
+                Plan.ProtocolDisplayName,
+                *FEchoesInputPrompt::Action(TEXT("ChooseFinalRestoration")).ToString(),
+                *FEchoesInputPrompt::Action(TEXT("ChooseFinalEvolution")).ToString()),
             9.0f);
         return;
     }
@@ -14020,6 +14440,10 @@ FString AEchoesPlayerController::CommandLabel(
             return TEXT("DELIVER MATTER");
         case echoes::sim::CommandType::Build:
             return TEXT("BUILD");
+        case echoes::sim::CommandType::Repair:
+            return TEXT("REPAIR");
+        case echoes::sim::CommandType::CancelConstruction:
+            return TEXT("CANCEL CONSTRUCTION");
         case echoes::sim::CommandType::Attack:
             return TEXT("ATTACK");
         case echoes::sim::CommandType::FutureWell:

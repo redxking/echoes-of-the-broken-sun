@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "EchoesCampaignProgress.h"
+#include "EchoesCheckpointFeedback.h"
 #include "EchoesMatchReplay.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesTestSaveEnvironment.h"
@@ -62,6 +63,8 @@ bool FEchoesAsyncCheckpointTest::RunTest(const FString& Parameters)
     TestTrue(
         TEXT("Pending feedback is explicit"),
         Feedback.Contains(TEXT("SAVE_PENDING")));
+    TestEqual(TEXT("Pending player receipt does not claim completion"),
+        EchoesCheckpointFeedback::Display(Bridge->GetCheckpointSaveStatus()).ToString(), FString(TEXT("Saving checkpoint…")));
 
     // Move authoritative time after capture. The worker owns a value copy and
     // must serialize the earlier tick without touching this live simulation.
@@ -88,6 +91,8 @@ bool FEchoesAsyncCheckpointTest::RunTest(const FString& Parameters)
         TEXT("Completed request reports success"),
         Bridge->GetCheckpointSaveStatus().State,
         EEchoesCheckpointSaveState::Succeeded);
+    TestEqual(TEXT("Player completion receipt follows real successful storage"),
+        EchoesCheckpointFeedback::Display(Bridge->GetCheckpointSaveStatus()).ToString(), FString(TEXT("Checkpoint saved.")));
 
     const FString SlotOneCheckpoint = Bridge->GetActiveQuickSavePath();
     TestTrue(
@@ -216,6 +221,32 @@ bool FEchoesAsyncCheckpointReplayBindingFailureTest::RunTest(
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
+
+    // Fail before filesystem replacement using isolated test storage. Both durable
+    // generations and the player-facing status must survive the same failed request.
+    AddExpectedError(TEXT("ECHOES_CHECKPOINT_COMPLETE"),
+        EAutomationExpectedErrorFlags::Contains, 1);
+    Bridge->FailNextCheckpointWriteForTesting();
+    if (!TestTrue(TEXT("Injected write request starts"), Bridge->RequestQuickSaveScenario(Feedback)))
+    {
+        Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this);
+        return false;
+    }
+    TestFalse(TEXT("Injected write fails"), Bridge->WaitForCheckpointSaves(Feedback));
+    TestEqual(TEXT("Write failure reaches terminal failed state"),
+        Bridge->GetCheckpointSaveStatus().State, EEchoesCheckpointSaveState::Failed);
+    TestEqual(TEXT("Failed write never advertises a saved checkpoint"),
+        EchoesCheckpointFeedback::Display(Bridge->GetCheckpointSaveStatus()).ToString(),
+        FString(TEXT("Could not save the checkpoint. Please try again.")));
+    TArray<uint8> PrimaryAfterWriteFailure;
+    TArray<uint8> BackupAfterWriteFailure;
+    TestTrue(TEXT("Failed write preserves prior primary bytes"),
+        FFileHelper::LoadFileToArray(PrimaryAfterWriteFailure, *PrimaryPath) &&
+        PrimaryAfterWriteFailure == PrimaryBefore);
+    TestTrue(TEXT("Failed write preserves prior backup bytes"),
+        FFileHelper::LoadFileToArray(BackupAfterWriteFailure, *BackupPath) &&
+        BackupAfterWriteFailure == BackupBefore);
 
     std::string ReplayProofError;
     const echoes::sim::ReplayRecord ReplayProof =

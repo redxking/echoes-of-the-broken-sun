@@ -83,30 +83,27 @@ bool FEchoesGameUserSettingsTest::RunTest(const FString& Parameters)
     const FVector2D ReviewViewport(1600.0f, 900.0f);
     const FEchoesHudLayout MaximumLayout =
         FEchoesHudLayout::Build(ReviewViewport, 1.35f, true);
-    TestTrue(
-        TEXT("Maximum-scale objective clears the command strip"),
-        MaximumLayout.ObjectivePanel.Min.Y >=
-            MaximumLayout.MainPanel.Max.Y + 16.0f);
-    TestTrue(
-        TEXT("Maximum-scale command card sits inside the bottom bar"),
+    TestTrue(TEXT("Maximum-scale objectives are inside the lower console"),
+        MaximumLayout.ObjectivePanel.Min.Y >= MaximumLayout.BottomBar.Min.Y &&
+        MaximumLayout.ObjectivePanel.Max.Y + 14 <= MaximumLayout.SelectionPanel.Min.Y);
+    TestTrue(TEXT("Maximum-scale command card is inside the console to the right"),
         MaximumLayout.bCommandDeckVisible &&
-            MaximumLayout.CommandDeckPanel.Min.Y >= MaximumLayout.BottomBar.Min.Y &&
-            MaximumLayout.CommandDeckPanel.Max.Y <= MaximumLayout.BottomBar.Max.Y &&
-            MaximumLayout.CommandDeckPanel.Min.Y >=
-                MaximumLayout.ObjectivePanel.Max.Y + 12.0f);
-    TestTrue(
-        TEXT("Maximum-scale minimap sits inside the bar left of the command card"),
+        MaximumLayout.CommandDeckPanel.Min.Y >= MaximumLayout.BottomBar.Min.Y &&
+        MaximumLayout.CommandDeckPanel.Max.Y <= MaximumLayout.BottomBar.Max.Y &&
+        MaximumLayout.CommandDeckPanel.Min.X >= MaximumLayout.SelectionPanel.Max.X + 14);
+    TestTrue(TEXT("Maximum-scale minimap is square and left of selection"),
         MaximumLayout.bMinimapVisible &&
-            MaximumLayout.MinimapPanel.Max.X + 14.0f <= MaximumLayout.CommandDeckPanel.Min.X);
-    TestTrue(
-        TEXT("Maximum-scale status line clears the bar and the objectives"),
-        MaximumLayout.bStatusVisible &&
-            MaximumLayout.StatusPanel.Max.Y <= MaximumLayout.BottomBar.Min.Y &&
-            MaximumLayout.StatusPanel.Min.Y >= MaximumLayout.ObjectivePanel.Max.Y + 8.0f);
-    TestTrue(
-        TEXT("Maximum-scale ledger sits top-right clear of the command strip"),
-        MaximumLayout.bResourceVisible &&
-            MaximumLayout.ResourcePanel.Min.X >= MaximumLayout.MainPanel.Max.X + 14.0f);
+        FMath::IsNearlyEqual(MaximumLayout.MinimapPanel.GetSize().X, MaximumLayout.MinimapPanel.GetSize().Y) &&
+        MaximumLayout.MinimapPanel.Max.X + 14 <= MaximumLayout.SelectionPanel.Min.X);
+    TestTrue(TEXT("Status remains above and clear of the console"),
+        MaximumLayout.bStatusVisible && MaximumLayout.StatusPanel.Max.Y < MaximumLayout.BottomBar.Min.Y);
+    TestTrue(TEXT("Compact global resources remain inside the viewport and clear of the console"),
+        MaximumLayout.bResourceVisible && MaximumLayout.ResourcePanel.Min.X >= 0 &&
+        MaximumLayout.ResourcePanel.Min.Y >= 0 &&
+        MaximumLayout.ResourcePanel.Max.X <= ReviewViewport.X - 220 &&
+        MaximumLayout.ResourcePanel.Max.Y < MaximumLayout.BottomBar.Min.Y);
+    TestFalse(TEXT("Compact global resources leave the battlefield centre clear"),
+        MaximumLayout.ResourcePanel.IsInside(ReviewViewport * .5f));
 
     const FEchoesHudLayout CompactMaximumLayout =
         FEchoesHudLayout::Build(FVector2D(1280.0f, 720.0f), 1.35f, true);

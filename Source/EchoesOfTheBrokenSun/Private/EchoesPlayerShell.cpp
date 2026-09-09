@@ -1,5 +1,7 @@
 #include "EchoesPlayerController.h"
+#include "EchoesCheckpointFeedback.h"
 #include "EchoesShellWidget.h"
+#include "EchoesInputPrompt.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesSimulationSubsystem.h"
 #include "EchoesInterfaceAudioSubsystem.h"
@@ -14,21 +16,16 @@
 
 #define LOCTEXT_NAMESPACE "EchoesPlayerShell"
 
-bool AEchoesPlayerController::RequireOperationMastery(EEchoesOperationMode Operation, bool bLearningCheckpoint)
+bool AEchoesPlayerController::RequireOperationProfile()
 {
     // A non-player controller used by runtime fixtures has no profile authority.
     // Every local player, and any controller exercising the profile flow, does.
     if (GetLocalPlayer() == nullptr && !bPlayerProfileInitialized) return true;
-    if (!bPlayerProfileInitialized) InitializePlayerProfile();
-    if (bPlayerProfileAvailable && (PlayerProfile.IsTutorialMasteryComplete() ||
-            (Operation == EEchoesOperationMode::TrainingReadiness &&
-                (bTutorialOperationAuthorized || bLearningCheckpoint))))
-    {
-        return true;
-    }
-    ShellMessage = bPlayerProfileAvailable
-        ? LOCTEXT("TrainingRequired", "Complete the tutorial before deploying into campaign or skirmish. Opting out leaves training available from the main menu.").ToString()
-        : LOCTEXT("ProfileRequiredForDeployment", "Recover your player profile before deploying.").ToString();
+    if (!bPlayerProfileInitialized && !InitializePlayerProfile()) return false;
+    // SPEC-TUT-008: learning progress is guidance, never permission to play.
+    // Keep the independent profile-recovery boundary for every local player.
+    if (bPlayerProfileAvailable) return true;
+    ShellMessage = LOCTEXT("ProfileRequiredForDeployment", "Recover your player profile before deploying.").ToString();
     if (auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr)
         Bridge->SetScenarioPaused(true);
     SetStatusMessage(ShellMessage, 3600.f);
@@ -111,11 +108,85 @@ bool AEchoesPlayerController::CommitPlayerProfile()
     return true;
 }
 
+bool AEchoesPlayerController::IsOnlineLocalMenuShellRouteActive() const
+{
+    if (!bOnlineLocalMenuVisible || !IsActiveOnlineNetworkMatch() ||
+        IsReplayInputActive())
+    {
+        return false;
+    }
+
+    switch (PlayerFlow.Current())
+    {
+        case EEchoesShellScreen::Options:
+        case EEchoesShellScreen::Controls:
+        case EEchoesShellScreen::ControlCapture:
+        case EEchoesShellScreen::FeedbackHistory:
+        case EEchoesShellScreen::ResourceMonitor:
+        case EEchoesShellScreen::Confirmation:
+        case EEchoesShellScreen::DisplayConfirmation:
+        case EEchoesShellScreen::Error:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool AEchoesPlayerController::OpenOnlineLocalMenuShellScreen(
+    EEchoesShellScreen Screen)
+{
+    if (!bOnlineLocalMenuVisible || !IsActiveOnlineNetworkMatch() ||
+        IsReplayInputActive() ||
+        PlayerFlow.Current() != EEchoesShellScreen::Gameplay)
+    {
+        return false;
+    }
+
+    switch (Screen)
+    {
+        case EEchoesShellScreen::Options:
+            if (const UEchoesGameUserSettings* Settings =
+                    UEchoesGameUserSettings::Get())
+            {
+                PendingDisplayResolution = Settings->GetScreenResolution();
+                PendingDisplayMode = Settings->GetFullscreenMode();
+            }
+            ShellMessage.Reset();
+            PlayerFlow.Push(Screen);
+            break;
+        case EEchoesShellScreen::Controls:
+            // Do not clear ControlBindingMessage here. The online route stores the
+            // match-continuity warning in it before pushing, and that warning is
+            // what BuildControlsShellView publishes as the screen's status line.
+            PlayerFlow.Push(Screen);
+            break;
+        case EEchoesShellScreen::ResourceMonitor:
+            if (!OpenResourceMonitor()) return false;
+            break;
+        case EEchoesShellScreen::FeedbackHistory:
+            if (!HandleFeedbackHistoryShellAction(
+                    EEchoesShellAction::OpenFeedbackHistory))
+            {
+                return false;
+            }
+            break;
+        default:
+            return false;
+    }
+
+    // This only transfers local input to a UMG route. The online menu itself
+    // deliberately leaves scenario authority running.
+    RefreshShell();
+    return true;
+}
+
 bool AEchoesPlayerController::UsesShellWidget() const
 {
+    const bool bOnlineFieldMenu = bOnlineLocalMenuVisible &&
+        PlayerFlow.Current() == EEchoesShellScreen::Gameplay;
     return ShellWidget != nullptr && ShellWidget->IsVisible() &&
         PlayerFlow.Current() != EEchoesShellScreen::Gameplay && PlayerFlow.Current() != EEchoesShellScreen::ReplayTransport &&
-        !IsOnlineFrontDoorVisible() && !bCampaignOperationsMapVisible && !bOnlineLocalMenuVisible;
+        !IsOnlineFrontDoorVisible() && !bCampaignOperationsMapVisible && !bOnlineFieldMenu;
 }
 
 void AEchoesPlayerController::RefreshShell()
@@ -131,8 +202,10 @@ void AEchoesPlayerController::RefreshShell()
         ShellWidget->SetView(BuildShellView());
         ShellWidget->AddToViewport(100);
     }
+    const bool bOnlineFieldMenu = bOnlineLocalMenuVisible &&
+        PlayerFlow.Current() == EEchoesShellScreen::Gameplay;
     const bool bShow = PlayerFlow.Current() != EEchoesShellScreen::Gameplay &&
-        !IsOnlineFrontDoorVisible() && !bCampaignOperationsMapVisible && !bOnlineLocalMenuVisible;
+        !IsOnlineFrontDoorVisible() && !bCampaignOperationsMapVisible && !bOnlineFieldMenu;
     ShellWidget->SetVisibility(!bShow ? ESlateVisibility::Collapsed :
         PlayerFlow.Current() == EEchoesShellScreen::ReplayTransport ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Visible);
     if (bShow) ShellWidget->SetView(BuildShellView());
@@ -184,6 +257,27 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
     const auto Back = [&]() { Button(LOCTEXT("Back", "Back"), EEchoesShellAction::Back); };
     switch (View.Screen)
     {
+    case EEchoesShellScreen::Controls:
+    case EEchoesShellScreen::ControlCapture:
+    {
+        FEchoesShellView ControlsView = BuildControlsShellView();
+        if (IsOnlineLocalMenuShellRouteActive())
+        {
+            const FText Continuity = LOCTEXT("OnlineControlsContinuity",
+                "ONLINE MATCH CONTINUES — local controls are held while this menu is open.");
+            ControlsView.Status = ControlsView.Status.IsEmpty()
+                ? Continuity
+                : FText::Format(LOCTEXT("OnlineControlsStatus", "{0}\n{1}"),
+                    Continuity, ControlsView.Status);
+        }
+        return ControlsView;
+    }
+    case EEchoesShellScreen::ResourceMonitor:
+        BuildResourceMonitorShellView(View);
+        break;
+    case EEchoesShellScreen::FeedbackHistory:
+        BuildFeedbackHistoryShellView(View);
+        break;
     case EEchoesShellScreen::Title:
         View.Title = LOCTEXT("Title", "Echoes of the Broken Sun");
         View.Body = LOCTEXT("TitleBody", "The sun is broken. The future is still yours to choose.");
@@ -232,20 +326,16 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
     {
         View.Title = Bridge ? FText::FromString(Bridge->GetOperationLabel()) : LOCTEXT("Brief", "Mission briefing");
         View.Body = FText::FromString(GetStatusMessage());
-        const bool bUnlocked = bPlayerProfileAvailable && Bridge &&
-            ((Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness && bTutorialOperationAuthorized) || PlayerProfile.IsTutorialMasteryComplete());
-        Button(LOCTEXT("Deploy", "Deploy"), EEchoesShellAction::Primary, Bridge && Bridge->IsScenarioReady() && bUnlocked);
-        if (!bUnlocked && bPlayerProfileAvailable)
-        {
-            View.Status = LOCTEXT("TrainingDeployLocked", "Deployment unlocks after tutorial mastery. Your setup choices are retained.");
-            Button(LOCTEXT("StartTutorial", "Start tutorial"), EEchoesShellAction::Tutorial);
-        }
+        Button(LOCTEXT("Deploy", "Deploy"), EEchoesShellAction::Primary,
+            bPlayerProfileAvailable && Bridge && Bridge->IsScenarioReady());
         Back(); break;
     }
     case EEchoesShellScreen::Pause:
         View.Title = LOCTEXT("Paused", "Paused");
         View.Body = LOCTEXT("PauseBody", "The battlefield is held. Resume when you are ready.");
         Button(LOCTEXT("Resume", "Resume"), EEchoesShellAction::Resume);
+        Button(LOCTEXT("ResourceMonitor", "Resource monitor"), EEchoesShellAction::OpenResourceMonitor);
+        Button(LOCTEXT("CommandHistory", "Command history"), EEchoesShellAction::OpenFeedbackHistory);
         Button(LOCTEXT("Options", "Options"), EEchoesShellAction::Options);
         Button(LOCTEXT("Help", "Help and lesson practice"), EEchoesShellAction::Help);
         Button(LOCTEXT("SaveLoad", "Save and load"), EEchoesShellAction::SaveLoad);
@@ -287,7 +377,7 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
             Button(LOCTEXT("RestoreJourney", "Restore previous journey"), EEchoesShellAction::RestoreJourney, Bridge && Bridge->HasRestorableCampaignBackup());
         }
         if (Bridge && Bridge->GetCheckpointSaveStatus().State != EEchoesCheckpointSaveState::Idle)
-            View.Status = FText::FromString(Bridge->GetCheckpointSaveStatus().Feedback);
+            View.Status = EchoesCheckpointFeedback::Display(Bridge->GetCheckpointSaveStatus());
         Back(); break;
     case EEchoesShellScreen::Confirmation:
         View.Title = LOCTEXT("ConfirmTitle", "Confirm your choice");
@@ -312,8 +402,17 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
     case EEchoesShellScreen::Help:
     {
         View.Title = LOCTEXT("HelpTitle", "Help and lesson practice");
-        View.Body = LOCTEXT("HelpBody",
-            "Choose a readiness lesson to practice. Your saved progress stays intact.");
+        View.Body = FText::Format(LOCTEXT("HelpActiveControls",
+            "Select: {0}   Context order: {1}\nCamera: {2} / {3}   Zoom: {4} / {5}\nAttack-move: {6}   Hold: {7}   Stop: {8}\n\nChoose a readiness lesson to practice. Your saved progress stays intact."),
+            FEchoesInputPrompt::Action(TEXT("Select")),
+            FEchoesInputPrompt::Action(TEXT("ContextOrder")),
+            FEchoesInputPrompt::Axis(TEXT("CameraForward")),
+            FEchoesInputPrompt::Axis(TEXT("CameraRight")),
+            FEchoesInputPrompt::Action(TEXT("CameraZoomIn")),
+            FEchoesInputPrompt::Action(TEXT("CameraZoomOut")),
+            FEchoesInputPrompt::Action(TEXT("AttackMoveAtCursor")),
+            FEchoesInputPrompt::Action(TEXT("HoldSelected")),
+            FEchoesInputPrompt::Action(TEXT("StopSelected")));
         static const TCHAR* LessonLabels[] = {
             TEXT("Survey"), TEXT("Roster"), TEXT("Muster"),
             TEXT("Route"), TEXT("Reserve"), TEXT("Link restoration"),
@@ -349,15 +448,15 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
         if (Settings)
         {
             View.Sliders.Add({FText::Format(LOCTEXT("ScaleSlider", "UI scale: {0}%"), FText::AsNumber(FMath::RoundToInt(Settings->GetHudScale()*100))), EEchoesShellAction::HudScaleValue, Settings->GetHudScale(), .8f, 1.5f});
-            Button(FText::Format(LOCTEXT("ScaleDown", "UI scale: {0}% — decrease"), FText::AsNumber(FMath::RoundToInt(Settings->GetHudScale()*100))), EEchoesShellAction::HudScaleDown, Settings->GetHudScale() > .8f);
-            Button(LOCTEXT("ScaleUp", "Increase UI scale"), EEchoesShellAction::HudScaleUp, Settings->GetHudScale() < 1.5f);
+            Button(FText::Format(LOCTEXT("ScaleDown", "UI scale: {0}% — decrease"), FText::AsNumber(FMath::RoundToInt(Settings->GetHudScale()*100))), EEchoesShellAction::HudScaleDown, Settings->GetHudScale() > .8f + KINDA_SMALL_NUMBER);
+            Button(LOCTEXT("ScaleUp", "Increase UI scale"), EEchoesShellAction::HudScaleUp, Settings->GetHudScale() < 1.5f - KINDA_SMALL_NUMBER);
             const auto Toggle = [&](FText Label, bool bOn, EEchoesShellAction Action)
             { Button(FText::Format(LOCTEXT("Toggle", "{0}: {1}"), Label, bOn ? LOCTEXT("On", "On") : LOCTEXT("Off", "Off")), Action); };
             Toggle(LOCTEXT("Contrast", "High contrast"), Settings->IsHighContrastHudEnabled(), EEchoesShellAction::HighContrast);
             Toggle(LOCTEXT("Motion", "Reduced motion"), Settings->IsReducedMotionEnabled(), EEchoesShellAction::ReducedMotion);
             Toggle(LOCTEXT("Flashing", "Reduced flashing"), Settings->IsReducedFlashingEnabled(), EEchoesShellAction::ReducedFlashing);
+            Button(LOCTEXT("Controls", "Controls and key bindings"), EEchoesShellAction::OpenControls);
             Toggle(LOCTEXT("EdgePan", "Edge pan"), Settings->IsEdgePanEnabled(), EEchoesShellAction::EdgePan);
-            Toggle(LOCTEXT("DynamicRange", "Reduced dynamic range"), Settings->IsReducedDynamicRangeEnabled(), EEchoesShellAction::DynamicRange);
             Button(FText::Format(LOCTEXT("PanDown", "Camera pan speed: {0}% — decrease"), FText::AsNumber(FMath::RoundToInt(Settings->GetCameraPanSpeedScale()*100))), EEchoesShellAction::CameraPanDown, Settings->GetCameraPanSpeedScale() > .5f);
             Button(LOCTEXT("PanUp", "Increase camera pan speed"), EEchoesShellAction::CameraPanUp, Settings->GetCameraPanSpeedScale() < 2.f);
             Button(FText::Format(LOCTEXT("ZoomDown", "Camera zoom step: {0}% — decrease"), FText::AsNumber(FMath::RoundToInt(Settings->GetCameraZoomScale()*100))), EEchoesShellAction::CameraZoomDown, Settings->GetCameraZoomScale() > .5f);
@@ -369,6 +468,8 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
             Button(LOCTEXT("ApplyDisplay", "Apply display settings"), EEchoesShellAction::ApplyDisplay,
                 PendingDisplayResolution != Settings->GetScreenResolution() || PendingDisplayMode != Settings->GetFullscreenMode());
 
+            Toggle(LOCTEXT("DynamicRange", "Reduced dynamic range"), Settings->IsReducedDynamicRangeEnabled(), EEchoesShellAction::DynamicRange);
+
             const auto Volume = [&](FText Label, float Value, EEchoesShellAction Down, EEchoesShellAction Up)
             { Button(FText::Format(LOCTEXT("VolumeDown", "{0}: {1}% — decrease"), Label, FText::AsNumber(FMath::RoundToInt(Value*100))), Down, Value > 0); Button(FText::Format(LOCTEXT("VolumeUp", "Increase {0}"), Label), Up, Value < 1); };
             Volume(LOCTEXT("Master", "Master volume"),Settings->GetMasterVolume(),EEchoesShellAction::MasterDown,EEchoesShellAction::MasterUp);
@@ -378,8 +479,24 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
             Volume(LOCTEXT("Interface", "Interface"),Settings->GetInterfaceVolume(),EEchoesShellAction::InterfaceDown,EEchoesShellAction::InterfaceUp);
             Volume(LOCTEXT("Ambience", "Ambience"),Settings->GetAmbienceVolume(),EEchoesShellAction::AmbienceDown,EEchoesShellAction::AmbienceUp);
         }
+        if (!Settings)
+        {
+            Button(LOCTEXT("Controls", "Controls and key bindings"), EEchoesShellAction::OpenControls);
+        }
+        if (IsOnlineLocalMenuShellRouteActive())
+        {
+            View.Status = LOCTEXT("OnlineOptionsContinuity",
+                "ONLINE MATCH CONTINUES — local controls are held while this menu is open.");
+        }
         Back(); break;
     case EEchoesShellScreen::Gameplay: break;
+    }
+    if (IsOnlineLocalMenuShellRouteActive() &&
+        (View.Screen == EEchoesShellScreen::Confirmation || View.Screen == EEchoesShellScreen::DisplayConfirmation || View.Screen == EEchoesShellScreen::Error))
+    {
+        const FText Continuity = LOCTEXT("OnlineDialogContinuity", "ONLINE MATCH CONTINUES while this dialog is open.");
+        View.Status = View.Status.IsEmpty() ? Continuity
+            : FText::Format(LOCTEXT("OnlineDialogStatus", "{0}\n{1}"), Continuity, View.Status);
     }
     return View;
 }
@@ -425,6 +542,10 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
         (PlayerFlow.Current() == EEchoesShellScreen::ReplayTransport || PlayerFlow.Current() == EEchoesShellScreen::ReplayBrowser))
         Action = EEchoesShellAction::ExitReplay;
     if (HandleReplayShellAction(Action, Argument, bConfirmed)) { RefreshShell(); return; }
+    if (Action == EEchoesShellAction::OpenResourceMonitor) { OpenResourceMonitor(); RefreshShell(); return; }
+    if (HandleFeedbackHistoryShellAction(Action)) { RefreshShell(); return; }
+    if (Action != EEchoesShellAction::ResetBindings && HandleControlsShellAction(Action, Argument))
+    { RefreshShell(); return; }
     const auto Fail = [&](const FString& Feedback)
     {
         ShellMessage = Feedback;
@@ -444,21 +565,23 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
     FString Feedback;
     const auto StartTutorial = [&](uint16 PracticeBit)
     {
+        const auto PriorPractice = TutorialPractice;
         if (PracticeBit != 0)
         {
             if (!TutorialPractice.Begin(PracticeBit)) return;
         }
-        else
+        else TutorialPractice.Reset();
+        // An explicit learning attempt opts back in durably, including practice.
+        // Otherwise recovery would suppress the session the player just chose.
+        const FEchoesPlayerProfile PriorProfile = PlayerProfile;
+        PlayerProfile.bOnboardingOffered = true;
+        PlayerProfile.bTutorialOptOut = false;
+        if (!CommitPlayerProfile())
         {
-            TutorialPractice.Reset();
-            const FEchoesPlayerProfile PriorProfile = PlayerProfile;
-            PlayerProfile.bOnboardingOffered = true;
-            if (!CommitPlayerProfile())
-            {
-                PlayerProfile = PriorProfile;
-                Fail(ShellMessage);
-                return;
-            }
+            PlayerProfile = PriorProfile;
+            TutorialPractice = PriorPractice;
+            Fail(ShellMessage);
+            return;
         }
         const bool bRestartTraining = Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness;
         if (!Bridge->SelectOperationMode(EEchoesOperationMode::TrainingReadiness, Feedback)) { Fail(Feedback); return; }
@@ -521,17 +644,17 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
         break;
     case EEchoesShellAction::Campaign:
     case EEchoesShellAction::Modes:
-        if (Action == EEchoesShellAction::Campaign && !RequireOperationMastery(EEchoesOperationMode::Skirmish))
+        if (Action == EEchoesShellAction::Campaign && !RequireOperationProfile())
         { Fail(ShellMessage); break; }
         if (!PlayerProfile.IsTutorialMasteryComplete() && !PlayerProfile.bTutorialOptOut)
         {
-            if (!Confirm(LOCTEXT("SkipTraining", "Skip the tutorial for now? Campaign and skirmish remain locked until training is complete."))) break;
+            if (!Confirm(LOCTEXT("SkipTraining", "Skip the tutorial for now? You can return to it from the main menu at any time."))) break;
             const FEchoesPlayerProfile PriorProfile = PlayerProfile;
             PlayerProfile.bOnboardingOffered = true;
             PlayerProfile.bTutorialOptOut = true;
             if (!CommitPlayerProfile()) { PlayerProfile = PriorProfile; Fail(ShellMessage); break; }
         }
-        if (!RequireOperationMastery(EEchoesOperationMode::Skirmish))
+        if (!RequireOperationProfile())
         {
             PlayerFlow.ClearOverlays();
             PresentTitleScreen();
@@ -549,6 +672,10 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
             PresentTitleScreen();
             PlayerFlow.Push(EEchoesShellScreen::Modes);
         }
+        break;
+    case EEchoesShellAction::ResetBindings:
+        if (Confirm(LOCTEXT("ResetControlsConfirm", "Restore all default control bindings? Your current bindings will be replaced.")))
+            ApplyConfirmedDefaultBindings();
         break;
     case EEchoesShellAction::Options:
         if (const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
@@ -623,17 +750,16 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
         FEchoesRecoveryCandidate Recovery;
         if (Action == EEchoesShellAction::Recover && !Bridge->CheckInterruptedSessionRecovery(Recovery, Feedback))
         { Fail(Feedback); break; }
-        const EEchoesOperationMode RestoredOperation = Action == EEchoesShellAction::Load
-            ? Bridge->GetOperationMode() : Recovery.OperationMode;
-        if (!RequireOperationMastery(RestoredOperation, true)) { Fail(ShellMessage); break; }
+        if (!RequireOperationProfile()) { Fail(ShellMessage); break; }
         if (!(Action == EEchoesShellAction::Load ? Bridge->QuickLoadScenario(Feedback) : Bridge->RecoverInterruptedSession(Recovery, Feedback)))
             Fail(Feedback);
         else
         {
             PlayerFlow.ClearOverlays();
             ResetTutorialObservation();
-            bTutorialOperationAuthorized = Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness;
-            if (!RequireOperationMastery(Bridge->GetOperationMode()))
+            bTutorialOperationAuthorized = Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness &&
+                !PlayerProfile.bTutorialOptOut;
+            if (!RequireOperationProfile())
             {
                 PresentMissionBriefing();
                 break;
@@ -641,7 +767,8 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
             PlayerFlow.SetVisible(PlayerFlow.BaseScreen(), false);
             Bridge->SetScenarioPaused(false);
             ResetIgnoreMoveInput(); ResetIgnoreLookInput();
-            ShellMessage = Feedback;
+            ShellMessage = EchoesCheckpointFeedback::Restored().ToString();
+            SetStatusMessage(ShellMessage, 8.0f);
         }
         break;
     }

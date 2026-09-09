@@ -14,8 +14,12 @@
 #include "EchoesCampaignMapLayout.h"
 #include "EchoesCommandDeckModel.h"
 #include "EchoesFormationLayout.h"
+#include "EchoesFeedbackHistoryModel.h"
 #include "EchoesFieldHudView.h"
+#include "EchoesInputBindingModel.h"
 #include "EchoesNetworkSession.h"
+#include "EchoesNetworkSnapshotFlow.h"
+#include "EchoesGameplayFeedbackPacket.h"
 #include "EchoesPrologueMissionModel.h"
 #include "EchoesSkirmishSetup.h"
 #include "EchoesTitleOverlayLayout.h"
@@ -38,6 +42,8 @@ class UEchoesShellWidget;
 class AEchoesBuildPlacementPreview;
 class UEchoesContextCursorWidget;
 class UEchoesFieldHudWidget;
+class AEchoesPowerNetworkView;
+struct FKey;
 
 /** Value-only result of a background replay directory scan. */
 struct FEchoesReplayBrowserScanResult
@@ -155,6 +161,8 @@ public:
     [[nodiscard]] echoes::sim::FutureWellChoice GetFutureWellChoice() const;
     [[nodiscard]] FString GetFutureWellChoiceLabel() const;
     [[nodiscard]] FString GetStatusMessage() const;
+    [[nodiscard]] bool IsBuildPlacementActive() const { return bBuildPlacementActive; }
+    [[nodiscard]] FString GetBuildPlacementGuidance() const { return BuildPlacementGuidance; }
     [[nodiscard]] FString GetFormationLabel() const
     {
         return FEchoesFormationLayout::DisplayName(CurrentFormation);
@@ -258,6 +266,19 @@ public:
     FEchoesShellView BuildShellView() const;
     void HandleShellAction(EEchoesShellAction Action, int32 Argument = 0);
     void HandleShellValue(EEchoesShellAction Action, float Value, bool bCommit);
+    void BuildResourceMonitorShellView(FEchoesShellView& View) const;
+    bool OpenResourceMonitor();
+    void BuildFeedbackHistoryShellView(FEchoesShellView& View) const;
+    bool HandleFeedbackHistoryShellAction(EEchoesShellAction Action);
+    FEchoesShellView BuildControlsShellView() const;
+    bool HandleControlsShellAction(EEchoesShellAction Action, int32 Argument);
+    bool IsCapturingControlBinding() const;
+    void CaptureControlBinding(
+        const FKey& Key,
+        bool bShift,
+        bool bCtrl,
+        bool bAlt,
+        bool bCmd);
     void BuildReplayShellView(FEchoesShellView& View) const;
     bool HandleReplayShellAction(EEchoesShellAction Action, int32 Argument, bool bConfirmed);
     void RefreshReplayBrowser();
@@ -273,7 +294,7 @@ public:
     void RefreshShell();
     bool InitializePlayerProfile();
     bool CommitPlayerProfile();
-    bool RequireOperationMastery(EEchoesOperationMode Operation, bool bLearningCheckpoint = false);
+    bool RequireOperationProfile();
     const FEchoesPlayerProfile& GetPlayerProfile() const { return PlayerProfile; }
     bool UsesShellWidget() const;
     const FEchoesPlayerFlow& GetPlayerFlow() const { return PlayerFlow; }
@@ -282,6 +303,9 @@ public:
     void ConfirmOnlineFrontDoorAction();
     void CancelOnlineFrontDoor();
     void LeaveOnlineMatch();
+    /** Opens a presentation-only route from the live online field menu. */
+    bool OpenOnlineLocalMenuShellScreen(EEchoesShellScreen Screen);
+    [[nodiscard]] bool IsOnlineLocalMenuShellRouteActive() const;
     void BeginHostedNetworkMatchPresentation();
     void ConfirmTitleScreen();
     void PresentMissionBriefing();
@@ -321,7 +345,9 @@ public:
     void CycleOperation();
     void RequestNewCampaign();
     void RequestCampaignRestore();
+    void CycleOwnedEntityNext();
     void CycleOwnedEntityPrevious();
+    void CycleSelectionSubgroupPrevious();
     void SelectCombatForce();
     void CycleFormation();
     void ToggleKeyboardTargeting();
@@ -330,6 +356,17 @@ public:
     void FocusNextTechnologyTier();
     void TogglePauseMenu();
     void RestartScenario();
+    void RepairOrRestartPressed();
+    void RepairAtCursor();
+    bool TryIssueWorkerMaintenanceContext(uint32 TargetId);
+    bool IssueSelectedWorkerMaintenance(uint32 TargetId, bool bConstructionAssist);
+    void CancelSelectedConstruction();
+    /** Owner-scoped transient evidence for presentation; never command authority. */
+    [[nodiscard]] const echoes::feedback::GameplayFeedbackState& GetGameplayFeedback() const;
+    [[nodiscard]] bool IsGameplayFeedbackRecoveryPending() const
+    {
+        return bGameplayFeedbackReseedRequested;
+    }
     void ToggleTacticalPause();
 #if WITH_DEV_AUTOMATION_TESTS
     // Historical explicit-position fixtures; shipping input is routed by UMG.
@@ -550,9 +587,17 @@ private:
     FVector BuildPlacementWorldPosition = FVector::ZeroVector;
     int32 BuildPlacementHalfExtentRaw = 0;
     bool bBuildPlacementActive = false;
+    FString BuildPlacementGuidance;
+    // Presentation diagnostics are intentionally absent from saves/replay commands.
+    FString BuildPlacementAttempt;
+    FString LastBuildPlacementDiagnostic;
+    FString LastBuildPlacementSemantic;
+    double LastBuildPlacementLogTime = -1.0;
     bool bBuildPlacementValid = false;
 #if WITH_DEV_AUTOMATION_TESTS
     friend class FEchoesNetworkProtocolTest;
+    friend class FEchoesOnlineLocalMenuRouteTest;
+    friend class FEchoesResourceMonitorShellTest;
     friend class FEchoesTrainingReadinessOperationTest;
     friend class FEchoesTutorialAnchorSelectionTest;
 #endif
@@ -642,6 +687,20 @@ private:
     void ServerSubmitNetworkCommandBatch(const TArray<uint8>& Packet);
 
     UFUNCTION(Client, Reliable)
+    void ClientReceiveGameplayFeedback(
+        uint64 Generation, uint8 Recipient, uint64 AfterEventId,
+        bool bResetStream, bool bHistoryTruncated,
+        const FEchoesGameplayFeedbackLossPacket& Loss,
+        const TArray<FEchoesGameplayFeedbackPacket>& Events);
+
+    UFUNCTION(Server, Reliable)
+    void ServerRequestGameplayFeedbackReseed();
+
+    void PublishGameplayFeedback();
+    void RequestGameplayFeedbackReseed();
+    void ResetNetworkGameplayFeedback();
+
+    UFUNCTION(Client, Reliable)
     void ClientReceiveCommandAdmission(
         uint8 Status,
         uint64 ServerTick,
@@ -701,6 +760,10 @@ private:
     void RejectNetworkCompatibility(const FString& StableReason);
     void BeginNetworkMatch();
     bool ResumeNetworkMatch();
+    void ResetNetworkSnapshotTransmission();
+    bool CanSendNetworkSnapshot();
+    void AcknowledgeNetworkSnapshot(uint64 SnapshotId, uint64 ScopedDigest);
+    void DeliverDelayedNetworkAcknowledgement();
     void SendScopedKeyframe();
     void SendScopedUpdate();
     bool BuildNextScopedKeyframe(
@@ -859,6 +922,7 @@ private:
     void RecallControlGroup(int32 GroupIndex);
     void ClearControlGroups();
     void CycleSelectionSubgroup(bool bPrevious);
+    void CycleSelectionSubgroupOrOwned(bool bPrevious);
     void NormalizeSelectionSubgroup();
     [[nodiscard]] TArray<echoes::sim::EntityType>
         GetSelectionSubgroupTypes() const;
@@ -944,12 +1008,20 @@ private:
     TObjectPtr<UEchoesShellWidget> ShellWidget;
     UPROPERTY(Transient)
     TObjectPtr<UEchoesFieldHudWidget> FieldHudWidget;
+    UPROPERTY(Transient)
+    TObjectPtr<AEchoesPowerNetworkView> PowerNetworkView;
     mutable FString LastFieldHudError;
     bool bFieldHudWasModal = false;
     EEchoesFieldHudSurface LastFieldHudSurface = EEchoesFieldHudSurface::Hidden;
     EEchoesShellAction PendingShellAction = EEchoesShellAction::Cancel;
     int32 PendingShellArgument = 0;
     FString ShellMessage;
+    EEchoesFeedbackHistoryFilter FeedbackHistoryFilter =
+        EEchoesFeedbackHistoryFilter::All;
+    void ApplyConfirmedDefaultBindings();
+    int32 PendingControlBindingIndex = INDEX_NONE;
+    TOptional<FEchoesInputBinding> PendingControlBinding;
+    FString ControlBindingMessage;
     TArray<FEchoesReplayMetadata> ReplayBrowserEntries;
     TFuture<FEchoesReplayBrowserScanResult> ReplayBrowserScan;
     std::shared_ptr<std::atomic_bool> ReplayBrowserCancellation;
@@ -1114,6 +1186,7 @@ private:
     uint64 NetworkResumeDisconnectTick = 0;
     uint64 NetworkReconnectExpectedSequence = 0;
     uint64 NetworkReconnectExpectedBatchId = 0;
+    uint8 NetworkInputDelayTicks = 0;
     uint32 NetworkReconnectActorId = 0;
     echoes::sim::Vec2 NetworkReconnectInitialPosition{};
     FString NetworkResumeCredential;
@@ -1137,6 +1210,9 @@ private:
     std::optional<echoes::sim::net::ScopedViewKeyframe>
         LastSentNetworkKeyframe{};
     TMap<uint64, uint64> PendingNetworkSnapshotDigests;
+    echoes::network::SnapshotFlowControl NetworkSnapshotFlow;
+    bool bNetworkSnapshotBackpressure = false;
+    bool bNetworkSnapshotClosing = false;
     TMap<uint32, TWeakObjectPtr<AEchoesEntityView>> NetworkEntityViews;
     UPROPERTY(Transient)
     TArray<TObjectPtr<AEchoesEntityView>> NetworkFreeEntityViews;
@@ -1157,6 +1233,10 @@ private:
     FTimerHandle NetworkClientExitTimer;
     FTimerHandle NetworkServerExitTimer;
     FTimerHandle NetworkFaultDeliveryTimer;
+    FTimerHandle NetworkAcknowledgementDelayTimer;
+    uint64 DelayedNetworkAcknowledgementId = 0;
+    uint64 DelayedNetworkAcknowledgementDigest = 0;
+    bool bNetworkAcknowledgementDelayPerformed = false;
     FTimerHandle NetworkHandshakeTimer;
     FTimerHandle NetworkReadyTimer;
     FTimerHandle NetworkResultAcknowledgementTimer;
@@ -1164,6 +1244,15 @@ private:
     double LastScopedRecoveryRequestClientSeconds = -1000.0;
     double LastScopedRecoveryRequestServerSeconds = -1000.0;
     echoes::network::CommandRateLimiter NetworkCommandRateLimiter{};
+    echoes::feedback::GameplayFeedbackState NetworkGameplayFeedback;
+    echoes::feedback::GameplayFeedbackLoss SentGameplayFeedbackLoss;
+    uint64 SentGameplayFeedbackGeneration = 0;
+    uint64 SentGameplayFeedbackEventId = 0;
+    bool bSentGameplayFeedbackInitialized = false;
+    bool bGameplayFeedbackReseedRequested = false;
+    double LastGameplayFeedbackReseedSeconds = -1.0;
+    double LastGameplayFeedbackRequestSeconds = -1.0;
+    FTimerHandle GameplayFeedbackReseedTimer;
     bool bCampaignSuccess = false;
     echoes::sim::FutureWellChoice CampaignConsequence =
         echoes::sim::FutureWellChoice::Dormant;

@@ -291,23 +291,25 @@ bool AEchoesFogView::SyncScopedVisibility(
             {
                 continue;
             }
+            const auto Previous = static_cast<echoes::sim::Visibility>(CachedVisibility[TileIndex]);
             CachedVisibility[TileIndex] = Encoded;
-            UnexploredTiles->UpdateInstanceTransform(
-                TileIndex,
-                Visibility == echoes::sim::Visibility::Unexplored
-                    ? TileTransform(TileX, TileY, true)
-                    : Hidden,
-                false,
-                false,
-                true);
-            ExploredTiles->UpdateInstanceTransform(
-                TileIndex,
-                Visibility == echoes::sim::Visibility::Explored
-                    ? TileTransform(TileX, TileY, false)
-                    : Hidden,
-                false,
-                false,
-                true);
+            // Each layer changes only when entering/leaving its visible state.
+            // In particular, discovering a tile must not resubmit its already
+            // hidden explored instance. Keep both authority paths identical.
+            if ((Previous == echoes::sim::Visibility::Unexplored) !=
+                (Visibility == echoes::sim::Visibility::Unexplored))
+                UnexploredTiles->UpdateInstanceTransform(
+                    TileIndex,
+                    Visibility == echoes::sim::Visibility::Unexplored
+                        ? TileTransform(TileX, TileY, true) : Hidden,
+                    false, false, true);
+            if ((Previous == echoes::sim::Visibility::Explored) !=
+                (Visibility == echoes::sim::Visibility::Explored))
+                ExploredTiles->UpdateInstanceTransform(
+                    TileIndex,
+                    Visibility == echoes::sim::Visibility::Explored
+                        ? TileTransform(TileX, TileY, false) : Hidden,
+                    false, false, true);
             bChanged = true;
         }
     }
@@ -358,23 +360,25 @@ bool AEchoesFogView::SyncVisibility(
             {
                 continue;
             }
+            const auto Previous = static_cast<echoes::sim::Visibility>(CachedVisibility[TileIndex]);
             CachedVisibility[TileIndex] = Encoded;
-            UnexploredTiles->UpdateInstanceTransform(
-                TileIndex,
-                Visibility == echoes::sim::Visibility::Unexplored
-                    ? TileTransform(TileX, TileY, true)
-                    : Hidden,
-                false,
-                false,
-                true);
-            ExploredTiles->UpdateInstanceTransform(
-                TileIndex,
-                Visibility == echoes::sim::Visibility::Explored
-                    ? TileTransform(TileX, TileY, false)
-                    : Hidden,
-                false,
-                false,
-                true);
+            // Each layer changes only when entering/leaving its visible state.
+            // In particular, discovering a tile must not resubmit its already
+            // hidden explored instance. Keep both authority paths identical.
+            if ((Previous == echoes::sim::Visibility::Unexplored) !=
+                (Visibility == echoes::sim::Visibility::Unexplored))
+                UnexploredTiles->UpdateInstanceTransform(
+                    TileIndex,
+                    Visibility == echoes::sim::Visibility::Unexplored
+                        ? TileTransform(TileX, TileY, true) : Hidden,
+                    false, false, true);
+            if ((Previous == echoes::sim::Visibility::Explored) !=
+                (Visibility == echoes::sim::Visibility::Explored))
+                ExploredTiles->UpdateInstanceTransform(
+                    TileIndex,
+                    Visibility == echoes::sim::Visibility::Explored
+                        ? TileTransform(TileX, TileY, false) : Hidden,
+                    false, false, true);
             bChanged = true;
         }
     }

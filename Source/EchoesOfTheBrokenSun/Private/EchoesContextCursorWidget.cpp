@@ -25,6 +25,10 @@ void DrawStroke(
         const FVector2D FirstPoint = Line[0];
         Line.Add(FirstPoint);
     }
+    // Charcoal keyline keeps the same contextual symbol visible over bright
+    // ceramic, emissive terrain and dark ground without changing its hit point.
+    FSlateDrawElement::MakeLines(Elements, Layer, Geometry.ToPaintGeometry(), Line,
+        ESlateDrawEffect::None, FLinearColor(.006f,.009f,.012f,.95f), true, Thickness + 2.f);
     FSlateDrawElement::MakeLines(
         Elements,
         Layer,

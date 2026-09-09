@@ -144,6 +144,18 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     TestTrue(TEXT("Options overlays title"), Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Options && Controller->IsTitleScreenVisible());
     if (auto* Settings = UEchoesGameUserSettings::Get())
     {
+        const FEchoesShellView OptionsView = Controller->BuildShellView();
+        const auto OptionIndex = [&OptionsView](EEchoesShellAction Action)
+        {
+            return OptionsView.Buttons.IndexOfByPredicate([Action](const FEchoesShellButton& Button)
+                { return Button.Action == Action; });
+        };
+        const int32 ControlsIndex = OptionIndex(EEchoesShellAction::OpenControls);
+        TestTrue(TEXT("Options keeps accessibility together before the Controls and Camera sections"),
+            OptionIndex(EEchoesShellAction::HudScaleDown) == 0 &&
+            OptionIndex(EEchoesShellAction::HudScaleUp) == 1 &&
+            OptionIndex(EEchoesShellAction::ReducedFlashing) == ControlsIndex - 1 &&
+            OptionIndex(EEchoesShellAction::EdgePan) == ControlsIndex + 1);
         const FScopedShellDisplayConfig DisplayConfig(*this);
         if (!DisplayConfig.IsReady()) { Bridge->StopPrototypeScenario(); return false; }
         const FEchoesPlayerProfile Original = Controller->GetPlayerProfile();
@@ -228,42 +240,43 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     TestTrue(TEXT("Failed opt-out write offers retry"), Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Error);
     TestFalse(TEXT("Failed write cannot retain opt-out in memory"), Controller->GetPlayerProfile().bTutorialOptOut);
     Controller->HandleShellAction(EEchoesShellAction::Retry);
-    TestTrue(TEXT("Confirmed opt out retains the locked title"), Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Title);
+    TestTrue(TEXT("Confirmed opt out opens skirmish setup without mastery"), Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Modes);
     TestTrue(TEXT("Opt out persists separately from mastery"), Controller->GetPlayerProfile().bTutorialOptOut && !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
     FEchoesPlayerProfile Reloaded;
     bool bExists = false; FString Feedback;
     TestTrue(TEXT("Profile survives fresh load"), FEchoesPlayerProfileStore::LoadWithBackup(FEchoesPlayerProfileStore::GetDefaultPath(), Reloaded, bExists, Feedback) && bExists && Reloaded.bTutorialOptOut);
-    Controller->HandleShellAction(EEchoesShellAction::Modes);
-    const uint64 BeforeDeniedDeployment = Bridge->GetSimulation()->StateChecksum();
-    Controller->ConfirmTitleScreen();
-    TestTrue(TEXT("Confirmed opt-out cannot open the lobby or title briefing"),
-        Controller->IsTitleScreenVisible() && Bridge->IsScenarioPaused());
-    Controller->PresentMissionBriefing(); // Deliberately reach the final guard.
-    TestTrue(TEXT("Direct deployment fixture reaches an actually locked briefing"),
-        Controller->IsMissionBriefingVisible() && Bridge->IsScenarioPaused());
-    Controller->ConfirmMissionBriefing();
-    TestTrue(TEXT("Final briefing guard denies full AI deployment"),
-        Controller->IsMissionBriefingVisible() && Bridge->IsScenarioPaused());
-    TestEqual(TEXT("Denied deployment preserves authority state"),
-        Bridge->GetSimulation()->StateChecksum(), BeforeDeniedDeployment);
+    // Approved optional onboarding must permit an actual unmastered deployment.
+    Controller->HandleShellAction(EEchoesShellAction::Primary);
+    if (!TestTrue(TEXT("Unmastered setup reaches a ready briefing"),
+        Controller->IsMissionBriefingVisible() && Bridge->IsScenarioPaused())) return false;
+    TestTrue(TEXT("Unmastered briefing offers enabled deployment"),
+        Controller->BuildShellView().Buttons.ContainsByPredicate([](const FEchoesShellButton& Button)
+            { return Button.Action == EEchoesShellAction::Primary && Button.bEnabled; }));
+    Controller->HandleShellAction(EEchoesShellAction::Primary);
+    TestTrue(TEXT("Opt-out deploys full skirmish without fabricating mastery"),
+        !Bridge->IsScenarioPaused() && !Controller->IsMissionBriefingVisible() &&
+        !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
+    Controller->TogglePauseMenu();
+    Controller->HandleShellAction(EEchoesShellAction::Resume);
+    TestFalse(TEXT("Unmastered player resumes normally"), Bridge->IsScenarioPaused());
     Controller->PresentTitleScreen();
-    TestTrue(TEXT("Locked title keeps tutorial as the primary action"),
+    TestTrue(TEXT("Title still recommends tutorial as the primary action"),
         Controller->BuildShellView().Buttons[0].Action == EEchoesShellAction::Tutorial);
-    TestTrue(TEXT("Locked title offers an actionable tutorial route"),
+    TestTrue(TEXT("Title retains an enabled tutorial route"),
         Controller->BuildShellView().Buttons.ContainsByPredicate([](const FEchoesShellButton& Button)
             { return Button.Action == EEchoesShellAction::Tutorial && Button.bEnabled; }));
     auto* OwnershipController = World->SpawnActor<AEchoesPlayerController>();
     if (TestNotNull(TEXT("Ownership boundary fixture controller exists"), OwnershipController))
     {
         TestTrue(TEXT("Non-player runtime authority has no profile gate"),
-            OwnershipController->RequireOperationMastery(EEchoesOperationMode::Skirmish));
+            OwnershipController->RequireOperationProfile());
         OwnershipController->Player = NewObject<ULocalPlayer>(GEngine);
-        TestFalse(TEXT("Attaching a local player lazily loads the profile and denies full AI"),
-            OwnershipController->RequireOperationMastery(EEchoesOperationMode::Skirmish));
+        TestTrue(TEXT("Attaching a local player loads the valid profile without requiring mastery"),
+            OwnershipController->RequireOperationProfile());
         TestTrue(TEXT("M01 checkpoint preflight is permitted"),
-            OwnershipController->RequireOperationMastery(EEchoesOperationMode::TrainingReadiness, true));
-        TestFalse(TEXT("Preflight alone cannot retain tutorial deployment authorization"),
-            OwnershipController->RequireOperationMastery(EEchoesOperationMode::CampaignPrologue));
+            OwnershipController->RequireOperationProfile());
+        TestTrue(TEXT("Campaign access also requires only the valid profile"),
+            OwnershipController->RequireOperationProfile());
         OwnershipController->Player = nullptr;
         OwnershipController->Destroy();
     }
@@ -272,17 +285,18 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     TestTrue(TEXT("Recovery scan admits the full-operation fixture before the player gate"),
         Bridge->CheckInterruptedSessionRecovery(FullRecovery, Feedback) &&
         FullRecovery.OperationMode == EEchoesOperationMode::Skirmish);
-    const uint64 BeforeDeniedRecovery = Bridge->GetSimulation()->StateChecksum();
+    const uint64 BeforeRecovery = Bridge->GetSimulation()->StateChecksum();
     TArray<uint8> BeforeRecoveryBytes, AfterRecoveryBytes;
     FFileHelper::LoadFileToArray(BeforeRecoveryBytes, *Bridge->GetActiveQuickSavePath());
     Controller->HandleShellAction(EEchoesShellAction::SaveLoad);
     Controller->HandleShellAction(EEchoesShellAction::Recover);
     Controller->HandleShellAction(EEchoesShellAction::Confirm);
-    TestTrue(TEXT("Unmastered full-operation recovery is denied before restoration"),
-        Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Error && Bridge->IsScenarioPaused());
-    TestEqual(TEXT("Denied recovery preserves simulation checksum"), Bridge->GetSimulation()->StateChecksum(), BeforeDeniedRecovery);
+    TestTrue(TEXT("Unmastered full-operation recovery restores playable skirmish"),
+        Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Gameplay && !Bridge->IsScenarioPaused() &&
+        Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish && !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
+    TestEqual(TEXT("Recovery restores the saved simulation checksum"), Bridge->GetSimulation()->StateChecksum(), BeforeRecovery);
     FFileHelper::LoadFileToArray(AfterRecoveryBytes, *Bridge->GetActiveQuickSavePath());
-    TestTrue(TEXT("Denied recovery preserves checkpoint bytes"), BeforeRecoveryBytes == AfterRecoveryBytes && !BeforeRecoveryBytes.IsEmpty());
+    TestTrue(TEXT("Recovery preserves checkpoint bytes"), BeforeRecoveryBytes == AfterRecoveryBytes && !BeforeRecoveryBytes.IsEmpty());
     // The file API can report only whole-second modification times. Establish
     // explicit ordering between independent fixtures instead of assuming the
     // subsequent learning checkpoint gets a distinct timestamp in a fast run.
@@ -290,8 +304,7 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     IFileManager::Get().SetTimeStamp(*FullRecovery.SourcePath, PriorFixtureTime);
     TestTrue(TEXT("Earlier full-operation fixture has an explicitly older timestamp"),
         IFileManager::Get().GetTimeStamp(*FullRecovery.SourcePath) < FDateTime::UtcNow() - FTimespan::FromSeconds(30));
-    Controller->HandleShellAction(EEchoesShellAction::Back);
-    Controller->HandleShellAction(EEchoesShellAction::Back);
+    Controller->PresentTitleScreen();
     Controller->HandleShellAction(EEchoesShellAction::Tutorial);
     Controller->HandleShellAction(EEchoesShellAction::Primary);
     auto* Opening = World->GetSubsystem<UEchoesCinematicSubsystem>();
@@ -308,6 +321,11 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     TestTrue(TEXT("Explicit tutorial route remains playable without granting mastery"),
         Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness &&
         !Bridge->IsScenarioPaused() && !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
+    Controller->OpenTutorialSkipModal();
+    Controller->EndAllTutorials();
+    TestTrue(TEXT("End all persists opt-out and stops guidance before checkpoint"),
+        Controller->GetPlayerProfile().bTutorialOptOut && !Controller->IsTutorialOperationAuthorized() &&
+        Controller->GetTutorialInstruction().IsEmpty() && !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
     TestTrue(TEXT("Learning operation checkpoint writes"), Bridge->QuickSaveScenario(Feedback));
     FEchoesRecoveryCandidate LearningRecovery;
     TestTrue(TEXT("Newest recovery candidate is the learning operation"),
@@ -334,6 +352,9 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
         Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Gameplay &&
         Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness &&
         !Bridge->IsScenarioPaused() && !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
+    TestTrue(TEXT("Fresh-controller recovery honors ended tutorials"),
+        !Controller->IsTutorialOperationAuthorized() && Controller->GetTutorialInstruction().IsEmpty() &&
+        !Controller->BuildFieldHudView().bTutorialActive);
     const uint64 BeforeHotkeyRestore = Bridge->GetScenarioAuthorityGeneration();
     bool bQuickLoadBound = false;
     if (Controller->InputComponent)
@@ -352,6 +373,45 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     TestTrue(TEXT("Quick-load input binding restores the training authority"), bQuickLoadBound &&
         Bridge->GetScenarioAuthorityGeneration() > BeforeHotkeyRestore &&
         Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness &&
+        !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
+    TestFalse(TEXT("Quick-load cannot reenable opted-out tutorial guidance"), Controller->IsTutorialOperationAuthorized());
+    TestEqual(TEXT("Quick-load reports restored gameplay instead of stale pause status"),
+        Controller->GetStatusMessage(), FString(TEXT("Checkpoint restored. Ready for your command.")));
+    Controller->PresentTitleScreen(); // Replay must use an action actually offered by the menu.
+    FEchoesPlayerProfileStore::FailNextCommitForTesting();
+    Controller->HandleShellAction(EEchoesShellAction::Tutorial);
+    TestTrue(TEXT("Failed explicit opt-in retains opt-out and offers retry"),
+        Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Error &&
+        Controller->GetPlayerProfile().bTutorialOptOut && !Controller->IsTutorialOperationAuthorized());
+    Controller->HandleShellAction(EEchoesShellAction::Retry);
+    TestTrue(TEXT("Explicit tutorial replay durably opts in without mastery"),
+        Controller->IsTutorialOperationAuthorized() && !Controller->GetPlayerProfile().bTutorialOptOut &&
+        FEchoesPlayerProfileStore::LoadWithBackup(FEchoesPlayerProfileStore::GetDefaultPath(), Reloaded, bExists, Feedback) &&
+        bExists && !Reloaded.bTutorialOptOut && !Reloaded.IsTutorialMasteryComplete());
+    if (!TestTrue(TEXT("Explicit replay writes a real training checkpoint"), Bridge->QuickSaveScenario(Feedback))) return false;
+    Controller->PresentTitleScreen();
+    Controller->HandleShellAction(EEchoesShellAction::SaveLoad);
+    if (!TestTrue(TEXT("Title recovery offers the restore action"),
+        Controller->BuildShellView().Buttons.ContainsByPredicate([](const FEchoesShellButton& Button)
+            { return Button.Action == EEchoesShellAction::Recover && Button.bEnabled; }))) return false;
+    Controller->HandleShellAction(EEchoesShellAction::Recover);
+    if (!TestTrue(TEXT("Explicit replay recovery reaches confirmation"),
+        Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Confirmation)) return false;
+    Controller->HandleShellAction(EEchoesShellAction::Confirm);
+    TestEqual(TEXT("Menu recovery replaces stale field-menu status"),
+        Controller->GetStatusMessage(), FString(TEXT("Checkpoint restored. Ready for your command.")));
+    TestTrue(TEXT("Explicit replay recovery retains guidance and no mastery"),
+        Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness &&
+        Controller->IsTutorialOperationAuthorized() && !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
+    // Campaign creates its own checkpoint; run it after the newest-training
+    // recovery checks so independent fixture saves cannot race in one second.
+    Controller->PresentTitleScreen();
+    Controller->HandleShellAction(EEchoesShellAction::Campaign);
+    if (!TestTrue(TEXT("Leaving a restarted tutorial offers optional-training confirmation"),
+        Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Confirmation)) return false;
+    Controller->HandleShellAction(EEchoesShellAction::Confirm);
+    TestTrue(TEXT("Optional tutorial permits campaign briefing without mastery"),
+        Controller->IsMissionBriefingVisible() && Bridge->GetOperationMode() == EEchoesOperationMode::CampaignPrologue &&
         !Controller->GetPlayerProfile().IsTutorialMasteryComplete());
     Controller->PresentTitleScreen();
     Controller->HandleShellAction(EEchoesShellAction::SaveLoad);
@@ -575,6 +635,7 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     }
     RecoveryController->PresentTitleScreen();
     TestFalse(TEXT("Two corrupt generations show profile error"), RecoveryController->InitializePlayerProfile());
+    TestFalse(TEXT("Optional onboarding never bypasses a corrupt profile"), RecoveryController->RequireOperationProfile());
     RecoveryController->HandleShellAction(EEchoesShellAction::ResetProfile);
     RecoveryController->HandleShellAction(EEchoesShellAction::Cancel);
     TArray<uint8> StillCorrupt; FFileHelper::LoadFileToArray(StillCorrupt, *ProfilePath);

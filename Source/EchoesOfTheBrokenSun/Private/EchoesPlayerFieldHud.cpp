@@ -4,6 +4,7 @@
 #include "EchoesPlayerController.h"
 
 #include "EchoesFieldHudWidget.h"
+#include "EchoesPowerNetworkView.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesGameInstance.h"
 #include "EchoesGameUserSettings.h"
@@ -356,6 +357,15 @@ void AEchoesPlayerController::RefreshFieldHud()
     }
     const auto View = BuildFieldHudView();
     FieldHudWidget->SetView(View);
+    if (!PowerNetworkView && View.Authority == EEchoesFieldHudAuthority::LivePlayerView &&
+        View.Surface == EEchoesFieldHudSurface::Battlefield)
+    {
+        FActorSpawnParameters Params;
+        Params.Owner = this;
+        Params.ObjectFlags |= RF_Transient;
+        PowerNetworkView = GetWorld()->SpawnActor<AEchoesPowerNetworkView>(Params);
+    }
+    if (PowerNetworkView) PowerNetworkView->SetView(View);
     FieldHudWidget->SetVisibility(View.Surface == EEchoesFieldHudSurface::Hidden
         ? ESlateVisibility::Collapsed : ESlateVisibility::SelfHitTestInvisible);
     const uint64 PresentationFrame = GFrameCounter;
@@ -460,6 +470,16 @@ void AEchoesPlayerController::HandleFieldHudAction(EEchoesFieldHudAction Action,
              Action == EEchoesFieldHudAction::ProductionCancelBack)) ||
         (View.Surface == EEchoesFieldHudSurface::Battlefield && !IsModalOverlayVisible() &&
             View.bObjectiveVisible && Contains(View.ObjectiveControls)) ||
+        (View.Surface == EEchoesFieldHudSurface::Battlefield &&
+            !IsModalOverlayVisible() && View.Menu.bVisible &&
+            View.Menu.Control.bEnabled &&
+            Action == View.Menu.Control.Action &&
+            Argument == View.Menu.Control.Argument) ||
+        (View.Surface == EEchoesFieldHudSurface::Battlefield &&
+            !IsModalOverlayVisible() && View.Resources.bVisible &&
+            View.Resources.MonitorControl.bEnabled &&
+            Action == View.Resources.MonitorControl.Action &&
+            Argument == View.Resources.MonitorControl.Argument) ||
         (View.TutorialSkipModal.bVisible && Contains(View.TutorialSkipModal.Controls)) ||
         (Action == EEchoesFieldHudAction::OpenTutorialSkipModal && bTutorialOperationAuthorized) ||
         (View.Campaign.bVisible && Contains(View.Campaign.Controls)) ||
@@ -482,6 +502,7 @@ void AEchoesPlayerController::HandleFieldHudAction(EEchoesFieldHudAction Action,
     {
         case EEchoesFieldHudAction::CommandDeck:
             ActivateCommandDeckAction(static_cast<EEchoesCommandDeckAction>(Argument)); break;
+        case EEchoesFieldHudAction::ActivateRelaySupply: ActivateRelaySupply(); break;
         case EEchoesFieldHudAction::ToggleTechnology: ToggleTechnologyPanel(); break;
         case EEchoesFieldHudAction::TechnologyPrevious: FocusPreviousTechnologyTier(); break;
         case EEchoesFieldHudAction::TechnologyNext: FocusNextTechnologyTier(); break;
@@ -501,6 +522,17 @@ void AEchoesPlayerController::HandleFieldHudAction(EEchoesFieldHudAction Action,
             if (Instance) Instance->RetryOnlineFrontDoor(this); break;
         case EEchoesFieldHudAction::NetworkReady: ConfirmPrimaryAction(); break;
         case EEchoesFieldHudAction::OnlineResume: TogglePauseMenu(); break;
+        case EEchoesFieldHudAction::OpenPauseMenu: TogglePauseMenu(); break;
+        case EEchoesFieldHudAction::OpenResourceMonitor: OpenResourceMonitor(); break;
+        case EEchoesFieldHudAction::OnlineOptions:
+            OpenOnlineLocalMenuShellScreen(EEchoesShellScreen::Options);
+            break;
+        case EEchoesFieldHudAction::OnlineControls:
+            OpenOnlineLocalMenuShellScreen(EEchoesShellScreen::Controls);
+            break;
+        case EEchoesFieldHudAction::OnlineCommandHistory:
+            OpenOnlineLocalMenuShellScreen(EEchoesShellScreen::FeedbackHistory);
+            break;
         case EEchoesFieldHudAction::OnlineLeave: LeaveOnlineMatch(); break;
         case EEchoesFieldHudAction::ProductionCancelConfirm:
             ConfirmProductionCancellation();

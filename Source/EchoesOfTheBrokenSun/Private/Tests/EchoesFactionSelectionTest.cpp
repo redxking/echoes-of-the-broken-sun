@@ -493,11 +493,12 @@ bool FEchoesFactionSelectionTest::RunTest(const FString& Parameters)
         TEXT("The reviewed setup returns active authority to Kharuun"),
         Bridge->GetLocalFaction() ==
             echoes::sim::Faction::KharuunAssemblies);
-    TestTrue(
-        TEXT("Live Tab is consumed by the gameplay input route"),
-        Controller->InputKey(FInputKeyEventArgs::CreateSimulated(
-            EKeys::Tab, IE_Pressed, 1.0f)));
-    TestEqual(TEXT("Live Tab selects one owned entity without a pointer"),
+    // Tab is a remappable action now rather than a hardcoded branch inside
+    // InputKey, so the selection contract is exercised through the command the
+    // binding runs. EchoesTabContextDispatchTest covers the binding itself, and
+    // the mapping's presence in the shipped config is asserted further below.
+    Controller->CycleOwnedEntityNext();
+    TestEqual(TEXT("Tab selects one owned entity without a pointer"),
               Controller->GetSelectedEntityIds().Num(), 1);
     const uint32 FirstKeyboardSelection =
         Controller->GetSelectedEntityIds().IsEmpty()

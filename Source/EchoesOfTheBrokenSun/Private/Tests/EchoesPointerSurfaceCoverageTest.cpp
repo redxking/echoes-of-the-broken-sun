@@ -183,7 +183,7 @@ bool FEchoesPointerSurfaceCoverageTest::RunTest(const FString& Parameters)
         TestFalse(TEXT("Status clears bottom bar"), BoxesOverlap(HudLayout.StatusPanel, HudLayout.BottomBar));
         TestFalse(TEXT("Selection clears minimap"), BoxesOverlap(HudLayout.MinimapPanel, HudLayout.SelectionPanel));
         TestFalse(TEXT("Selection clears command card"), BoxesOverlap(HudLayout.SelectionPanel, HudLayout.CommandDeckPanel));
-        TestTrue(TEXT("Command strip reserves actual text scale"),
+        TestTrue(TEXT("Selection reserves actual text scale"),
                  HudLayout.MainPanel.GetSize().Y + KINDA_SMALL_NUMBER >= 96.0f * Case.HudScale);
         TestTrue(TEXT("Ledger reserves actual text scale"),
                  HudLayout.ResourcePanel.GetSize().Y + KINDA_SMALL_NUMBER >= 62.0f * Case.HudScale);
@@ -326,7 +326,7 @@ bool FEchoesPointerSurfaceCoverageTest::RunTest(const FString& Parameters)
     }
     const FVector2D ClearPoint(
         ViewportSize.X * 0.5f,
-        HudLayout.MainPanel.Max.Y + 40.0f);
+        ViewportSize.Y * 0.25f);
     if (HudLayout.IsBattlefieldPointClear(ClearPoint, ViewportSize))
     {
         TestFalse(

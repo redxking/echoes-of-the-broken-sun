@@ -6,7 +6,8 @@
 enum class EEchoesShellScreen : uint8
 {
     Gameplay, Title, Briefing, Pause, Results, Modes, Options, SaveLoad, Confirmation, Error, Credits,
-    DisplayConfirmation, ReplayBrowser, ReplayTransport, Help
+    DisplayConfirmation, ReplayBrowser, ReplayTransport, Help,
+    FeedbackHistory, Controls, ControlCapture, ResourceMonitor
 };
 
 enum class EEchoesShellAction : uint8
@@ -23,7 +24,10 @@ enum class EEchoesShellAction : uint8
     HudScaleValue, OpenReplayBrowser, OpenReplay, ViewReplay, ReplayPlayPause,
     ReplaySpeedPrevious, ReplaySpeedNext, ReplayStep, ReplayPerspectivePrevious,
     ReplayPerspectiveNext, ReplayBookmark, ExitReplay, ReplayMapFilter, ReplayDateFilter,
-    Rematch, ReplaySeek, Help, PracticeTutorialLesson
+    Rematch, ReplaySeek, Help, PracticeTutorialLesson,
+    OpenFeedbackHistory, FeedbackHistoryAll, FeedbackHistoryOrders,
+    FeedbackHistoryConstruction, FeedbackHistoryProduction,
+    OpenControls, EditBinding, ResetBindings, CancelBinding, OpenResourceMonitor
 };
 
 /** Transient per-lesson practice state. It never owns durable profile facts. */
@@ -81,6 +85,7 @@ struct FEchoesShellButton
     EEchoesShellAction Action = EEchoesShellAction::Back;
     int32 Argument = 0;
     bool bEnabled = true;
+    FText Section = FText::GetEmpty();
 };
 
 struct FEchoesShellChartSeries

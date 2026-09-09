@@ -242,10 +242,72 @@ bool FEchoesFieldHudRoutesTest::RunTest(const FString& Parameters)
     TestFalse(TEXT("Cancel closes tutorial skip modal"), Controller->IsTutorialSkipModalVisible());
 
     Controller->OpenTutorialSkipModal();
+    // Profile initialization selects its journey slot and therefore requires a
+    // paused menu, just as the real startup flow does.
+    if (!TestTrue(TEXT("End-all fixture has a writable initialized profile"), Controller->InitializePlayerProfile())) return false;
+    const auto ProfileBeforeFailure = Controller->GetPlayerProfile();
+    FEchoesPlayerProfileStore::FailNextCommitForTesting();
+    Controller->HandleFieldHudAction(EEchoesFieldHudAction::TutorialEndAll);
+    TestTrue(TEXT("Failed end-all persistence preserves authorization and modal"),
+        Controller->IsTutorialOperationAuthorized() && Controller->IsTutorialSkipModalVisible());
+    TestTrue(TEXT("Failed end-all persistence rolls back profile"), Controller->GetPlayerProfile() == ProfileBeforeFailure);
     Controller->HandleFieldHudAction(EEchoesFieldHudAction::TutorialEndAll);
     TestFalse(TEXT("End all tutorials turns off tutorial authorization"), Controller->IsTutorialOperationAuthorized());
     TestFalse(TEXT("End all tutorials closes skip modal"), Controller->IsTutorialSkipModalVisible());
+    FEchoesPlayerProfile PersistedOptOut;
+    bool bProfileExists = false;
+    TestTrue(TEXT("End all tutorials persists opt-out without mastery"),
+        FEchoesPlayerProfileStore::LoadWithBackup(FEchoesPlayerProfileStore::GetDefaultPath(), PersistedOptOut, bProfileExists, Feedback) &&
+        bProfileExists && PersistedOptOut.bTutorialOptOut && PersistedOptOut.TutorialVerifiedMask == 0);
+
     TestEqual(TEXT("End all tutorials does not grant durable profile mastery"), Controller->GetPlayerProfile().TutorialVerifiedMask, static_cast<uint16>(0));
+
+    // Exercise the actual model-emitted ability route with a mixed force.
+    // Admission and completion remain separate; a UI acknowledgement is not
+    // evidence that the fixed-step ability has executed.
+    Controller->SelectCombatForce();
+    const auto RelayRouteView = Controller->BuildFieldHudView();
+    if (!TestTrue(TEXT("Live mixed force offers an eligible Relay action"),
+        RelayRouteView.Commands.Controls.ContainsByPredicate([](const FEchoesFieldHudControl& Control)
+        { return Control.Action == EEchoesFieldHudAction::ActivateRelaySupply && Control.bEnabled; })))
+    {
+        Controller->Destroy(); Camera->Destroy(); Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this); return false;
+    }
+    const auto RelayPendingBefore = Simulation->PendingCommands().size();
+    Controller->HandleFieldHudAction(EEchoesFieldHudAction::ActivateRelaySupply);
+    const auto RelayPending = Simulation->PendingCommands();
+    TArray<uint32> RoutedRelays;
+    for (size_t Index = RelayPendingBefore; Index < RelayPending.size(); ++Index)
+    {
+        const auto* Caster = Simulation->FindEntity(RelayPending[Index].actor);
+        TestTrue(TEXT("Ability card only dispatches owned Skiffs from a mixed group"),
+            Caster && Caster->owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+            Caster->type == echoes::sim::EntityType::ScoutUnit &&
+            Caster->faction == echoes::sim::Faction::MeridianCompact &&
+            RelayPending[Index].type == echoes::sim::CommandType::ActivateRelaySupply);
+        RoutedRelays.Add(RelayPending[Index].actor);
+    }
+    if (!TestTrue(TEXT("Ability card queued at least one real activation"), !RoutedRelays.IsEmpty()))
+    {
+        Controller->Destroy(); Camera->Destroy(); Bridge->StopPrototypeScenario();
+        WorldWrapper.ForwardErrorMessages(this); return false;
+    }
+    Bridge->Tick(0.05f);
+    Bridge->Tick(0.05f);
+    for (uint32 RelayId : RoutedRelays)
+    {
+        const auto* Active = Simulation->FindEntity(RelayId);
+        TestTrue(TEXT("Routed Skiff command executes in the simulation"), Active && Active->relaySupplyActive);
+    }
+    const auto ActiveRelayView = Controller->BuildFieldHudView();
+    TestTrue(TEXT("Executed Relay action disables repeat activation"),
+        ActiveRelayView.Commands.Controls.ContainsByPredicate([](const FEchoesFieldHudControl& Control)
+        { return Control.Action == EEchoesFieldHudAction::ActivateRelaySupply && !Control.bEnabled; }));
+    const auto BeforeRepeatedRelay = Simulation->PendingCommands().size();
+    Controller->HandleFieldHudAction(EEchoesFieldHudAction::ActivateRelaySupply);
+    TestEqual(TEXT("Stale repeated ability callback queues nothing"),
+        static_cast<int32>(Simulation->PendingCommands().size()), static_cast<int32>(BeforeRepeatedRelay));
 
     // A model-emitted command-card action reaches the existing controller
     // authority and nowhere else.
@@ -284,6 +346,21 @@ bool FEchoesFieldHudRoutesTest::RunTest(const FString& Parameters)
                 AfterHoldCommands[Index].type ==
                     echoes::sim::CommandType::Hold);
     }
+
+    const int32 BarrierArgument = static_cast<int32>(EEchoesCommandDeckAction::ToggleBulwarkDeployment);
+    const auto BarrierCard = Controller->BuildFieldHudView();
+    if (!TestTrue(TEXT("Combat selection offers the Bulwark direction control"),
+        BarrierCard.Commands.Controls.ContainsByPredicate([BarrierArgument](const auto& Control)
+        { return Control.Action == EEchoesFieldHudAction::CommandDeck && Control.Argument == BarrierArgument && Control.bEnabled; })))
+    {
+        Controller->Destroy(); Camera->Destroy(); Bridge->StopPrototypeScenario(); return false;
+    }
+    const auto BeforeBarrierArm = Simulation->PendingCommands().size();
+    Controller->HandleFieldHudAction(EEchoesFieldHudAction::CommandDeck, BarrierArgument);
+    TestEqual(TEXT("Barrier button arms the battlefield direction route"),
+        Controller->GetArmedDeckAction(), EEchoesCommandDeckAction::ToggleBulwarkDeployment);
+    TestEqual(TEXT("Barrier button does not cast into the command card"),
+        Simulation->PendingCommands().size(), BeforeBarrierArm);
 
     // Shell/modal ownership makes the semantic view hidden. Stale UMG
     // callbacks must therefore fail closed even if a retained widget invokes

@@ -6,6 +6,7 @@
 #include "EchoesTestSaveEnvironment.h"
 
 #include "EchoesEntityView.h"
+#include "EchoesFieldHudView.h"
 #include "EchoesMatchReplay.h"
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimulationSubsystem.h"
@@ -14,6 +15,7 @@
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Misc/ScopeExit.h"
 #include "Tests/AutomationCommon.h"
 
 namespace
@@ -543,6 +545,8 @@ bool FEchoesQuickSaveLoadTest::RunTest(const FString& Parameters)
             FFileHelper::SaveStringToFile(
                 TEXT("corrupt final staged recovery"),
                 *(SavePath + TEXT(".bak.tmp"))));
+    const auto CorruptLoadTick = Bridge->GetSimulation()->CurrentTick();
+    const auto CorruptLoadChecksum = Bridge->GetSimulation()->StateChecksum();
     TestFalse(
         TEXT("Loading fails closed when no validated generation remains"),
         Bridge->QuickLoadScenario(InvalidGenerationFeedback));
@@ -551,6 +555,10 @@ bool FEchoesQuickSaveLoadTest::RunTest(const FString& Parameters)
         InvalidGenerationFeedback.Contains(
             TEXT("[LOAD_NO_VALID_CHECKPOINT]")) &&
             InvalidGenerationFeedback.Contains(TEXT("staged=")));
+
+    TestTrue(TEXT("Exhausted corrupt generations do not mutate the active game"),
+        Bridge->GetSimulation()->CurrentTick() == CorruptLoadTick &&
+        Bridge->GetSimulation()->StateChecksum() == CorruptLoadChecksum);
 
     // Real schema29 writer output: do not relabel or project a current snapshot.
     // This must traverse the game adapter, including generated-save validation.
@@ -641,6 +649,135 @@ bool FEchoesQuickSaveLoadTest::RunTest(const FString& Parameters)
         ResumedPrefix.initialSnapshot == HistoricalPrefix.initialSnapshot &&
         ResumedPrefix.finalChecksum == HistoricalPrefix.finalChecksum);
 
+    // Keep the historical second-save regression above. Extend it with actual
+    // commands and HUD observations on both policies; a schema-only assertion
+    // would miss replay continuation restoring different execution rules.
+    // Tear down presentation before the world on every failed prerequisite.
+    ON_SCOPE_EXIT { Bridge->StopPrototypeScenario(); };
+    using namespace echoes::sim;
+    for (const bool bHistorical : {true, false})
+    {
+        ReplayRecord Prefix;
+        std::optional<Simulation> Baseline;
+        EntityId Bulwark = 1;
+        std::string Error;
+        if (bHistorical)
+        {
+            TArray<uint8> Bytes;
+            if (!TestTrue(TEXT("Authentic Bulwark checkpoint baseline loads"),
+                FFileHelper::LoadFileToArray(Bytes, *(FPaths::ProjectDir() /
+                    TEXT("Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-checkpoint-baseline.bin")))) ||
+                !TestTrue(TEXT("Authentic Bulwark baseline is nonempty"), Bytes.Num() > 0)) return false;
+            Prefix.version = kLinkMechanicsReplayVersion;
+            Prefix.initialSnapshot.assign(Bytes.GetData(), Bytes.GetData() + Bytes.Num());
+            Prefix.finalTick = 2;
+            Prefix.finalChecksum = 4590309749637731261ULL;
+            Command Deploy{}; Deploy.actor = 1; Deploy.sequence = 1;
+            Deploy.type = CommandType::ToggleDeploy; Deploy.position = Vec2::FromTiles(12, 10);
+            Command Attack{}; Attack.player = 1; Attack.actor = 3; Attack.target = 2;
+            Attack.sequence = 1; Attack.type = CommandType::Attack;
+            auto Pack = Deploy; Pack.executeTick = 1; Pack.sequence = 2;
+            Prefix.commands = {Deploy, Attack, Pack};
+            Baseline = Simulation::ReplayToEnd(Prefix, &Error);
+        }
+        else
+        {
+            Baseline.emplace(SimulationConfig{64, 64, 20, 0xE0C0B5A1ULL});
+            if (!TestTrue(TEXT("Current round-trip players exist"),
+                Baseline->AddPlayer(0, Faction::MeridianCompact, {1000, 500}) &&
+                Baseline->AddPlayer(1, Faction::KharuunAssemblies, {1000, 500}))) return false;
+            for (int Y = 30; Y <= 34; ++Y)
+            {
+                for (int X = 8; X <= 55; ++X)
+                {
+                    if ((X >= 12 && X <= 15) || (X >= 29 && X <= 35) ||
+                        (X >= 48 && X <= 51)) continue;
+                    if (!TestTrue(TEXT("Current fixture authors the admitted Glass Scar terrain"),
+                        Baseline->SetTerrainTile(X, Y, Terrain::Blocked))) return false;
+                }
+            }
+            Bulwark = Baseline->SpawnEntity(0, Faction::MeridianCompact,
+                EntityType::HeavyUnit, Vec2::FromTiles(10, 10));
+            if (!TestTrue(TEXT("Current round-trip Bulwark exists"), Bulwark != 0)) return false;
+            if (!TestTrue(TEXT("Both current fixture headquarters exist"),
+                Baseline->SpawnEntity(0, Faction::MeridianCompact, EntityType::CommandCore,
+                    Vec2::FromTiles(4, 4)) != 0 &&
+                Baseline->SpawnEntity(1, Faction::KharuunAssemblies, EntityType::CommandCore,
+                    Vec2::FromTiles(54, 54)) != 0)) return false;
+            Baseline->CaptureReplayBaseline();
+            Prefix = Baseline->ExportReplay(&Error);
+        }
+        if (!TestTrue(TEXT("Round-trip baseline verifies"), Baseline.has_value()))
+        { AddError(UTF8_TO_TCHAR(Error.c_str())); return false; }
+        const auto Snapshot = Baseline->SaveSnapshot();
+        TArray<uint8> Payload; Payload.Append(Snapshot.data(), static_cast<int32>(Snapshot.size()));
+        TArray<uint8> Bound;
+        if (!TestTrue(TEXT("Round-trip replay binding encodes"),
+            FEchoesMatchReplayStore::BindCheckpointPayload(Payload, Prefix, Bound, Feedback))) return false;
+        for (const FString& Suffix : {FString(), FString(TEXT(".bak")), FString(TEXT(".bak.tmp")), FString(TEXT(".tmp"))})
+            if (!ClearFixtureFile(SavePath + Suffix)) return false;
+        if (!TestTrue(TEXT("Round-trip checkpoint is staged"), FFileHelper::SaveArrayToFile(Bound, *SavePath)) ||
+            !TestTrue(TEXT("Round-trip checkpoint loads through adapter"), Bridge->QuickLoadScenario(Feedback)))
+        { AddError(Feedback); return false; }
+
+        for (int32 Generation = 0; Generation < 2; ++Generation)
+        {
+            if (!TestTrue(TEXT("Player changes barrier state through command adapter"),
+                Bridge->IssueCommand(CommandType::ToggleDeploy, Bulwark, 0,
+                    Bridge->SimToWorld(Vec2::FromTiles(20, 10)), FutureWellChoice::Dormant, Feedback)))
+            { AddError(Feedback); return false; }
+            for (int32 TickIndex = 0; TickIndex < 5; ++TickIndex) Bridge->Tick(0.05f);
+            const auto* Before = Bridge->GetSimulation();
+            const auto* Unit = Before->FindEntity(Bulwark);
+            if (!TestNotNull(TEXT("Changed Bulwark exists before save"), Unit)) return false;
+            const auto SavedTick = Before->CurrentTick();
+            const auto SavedChecksum = Before->StateChecksum();
+            const auto SavedReplayChecksum = Before->ReplayStateChecksum();
+            const auto Phase = Unit->deploymentPhase;
+            const auto Deadline = Unit->deploymentTransitionUntilTick;
+            const auto Facing = Unit->deploymentFacing;
+            const bool bDeployed = Unit->deployed;
+            TestTrue(TEXT("Actual transition follows historical or current commitment"), bHistorical
+                ? Phase == BulwarkDeploymentPhase::None
+                : Phase == (Generation == 0 ? BulwarkDeploymentPhase::Deploying : BulwarkDeploymentPhase::Packing));
+            if (!TestTrue(TEXT("Changed state saves successfully"), Bridge->QuickSaveScenario(Feedback)))
+            { AddError(Feedback); return false; }
+            for (const FString& Suffix : {FString(TEXT(".bak")), FString(TEXT(".bak.tmp")), FString(TEXT(".tmp"))})
+                if (!ClearFixtureFile(SavePath + Suffix)) return false;
+            Bridge->StopPrototypeScenario();
+            if (!TestTrue(TEXT("New scenario starts before reload"), Bridge->StartPrototypeScenario()) ||
+                !TestTrue(TEXT("New primary reloads without fallback generation"), Bridge->QuickLoadScenario(Feedback)))
+            { AddError(Feedback); return false; }
+            const auto* After = Bridge->GetSimulation();
+            const auto* ReloadedUnit = After->FindEntity(Bulwark);
+            if (!TestNotNull(TEXT("Reloaded Bulwark exists"), ReloadedUnit)) return false;
+            TestTrue(TEXT("Reload preserves authoritative state and replay checksum"),
+                After->CurrentTick() == SavedTick && After->StateChecksum() == SavedChecksum &&
+                After->ReplayStateChecksum() == SavedReplayChecksum);
+            TestTrue(TEXT("Reload preserves phase deadline facing and shield state"),
+                ReloadedUnit->deploymentPhase == Phase && ReloadedUnit->deploymentTransitionUntilTick == Deadline &&
+                ReloadedUnit->deploymentFacing == Facing && ReloadedUnit->deployed == bDeployed);
+            const auto View = After->CreatePlayerView(0);
+            if (!TestTrue(TEXT("Reloaded owner HUD view exists"), View.has_value())) return false;
+            auto Hud = FEchoesFieldHudModel::BuildPlayerScoped(*View, {Bulwark}, false);
+            if (!TestEqual(TEXT("Reloaded HUD contains single Bulwark"), Hud.Selection.Entries.Num(), 1)) return false;
+            TestEqual(TEXT("Reloaded timing description matches actual policy"),
+                Hud.Selection.Entries[0].Purpose.ToString().Contains(TEXT("Deploy: 1s; pack: 0.75s")), !bHistorical);
+            for (int32 TickIndex = 0; TickIndex < 20; ++TickIndex) Bridge->Tick(0.05f);
+            const auto SettledView = Bridge->GetSimulation()->CreatePlayerView(0);
+            if (!TestTrue(TEXT("Continued owner HUD view exists"), SettledView.has_value())) return false;
+            Hud = FEchoesFieldHudModel::BuildPlayerScoped(*SettledView, {Bulwark}, false);
+            const auto* SettledUnit = Bridge->GetSimulation()->FindEntity(Bulwark);
+            if (!TestNotNull(TEXT("Continued Bulwark still exists"), SettledUnit)) return false;
+            TestTrue(TEXT("Continued barrier reaches requested final state"),
+                SettledUnit->deployed == (Generation == 0));
+            if (Generation == 0)
+            {
+                TestTrue(TEXT("Reloaded deployed feedback describes actual shield coverage"),
+                    Hud.Commands.AbilityStatus.ToString().Contains(bHistorical ? TEXT("front-facing protection") : TEXT("120-degree front arc")));
+            }
+        }
+    }
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);
     return !HasAnyErrors() && !WorldWrapper.HasFailed();

@@ -5,15 +5,12 @@
 /** Shared responsive field-HUD geometry and battlefield-visibility checks. */
 struct FEchoesHudLayout final
 {
-    // Field-HUD arrangement (A8, 2026-09-04): the RTS convention players
-    // already know - a full-width bottom bar carrying the minimap at the left,
-    // the selection panel in the middle, and the command card at the right;
-    // resources top-right; the command strip and objectives top-left; the
-    // status line just above the bar. Every panel is drawn in the Compact
-    // command-deck language of the Bible, not borrowed art.
-    FBox2D MainPanel;        // top-left command strip: title, selection, research
-    FBox2D ObjectivePanel;   // top-left, under the command strip
-    FBox2D ResourcePanel;    // top-right ledger readout
+    // One pixel-space contract for rendered widgets and battlefield input.
+    // MainPanel remains a compatibility alias for the bottom selection panel.
+    FBox2D MainPanel;        // compatibility alias for SelectionPanel
+    FBox2D ObjectivePanel;   // bottom console, above selection
+    FBox2D ResourcePanel;    // compact global resource indicators
+    FBox2D MenuPanel;        // persistent battlefield menu affordance
     FBox2D BottomBar;        // full-width instrument bar
     FBox2D MinimapPanel;     // inside the bar, left
     FBox2D SelectionPanel;   // inside the bar, centre
@@ -21,6 +18,7 @@ struct FEchoesHudLayout final
     FBox2D StatusPanel;      // status message, above the bar, left
     bool bObjectiveVisible = false;
     bool bResourceVisible = false;
+    bool bMenuVisible = false;
     bool bBottomBarVisible = false;
     bool bMinimapVisible = false;
     bool bSelectionVisible = false;
@@ -39,84 +37,108 @@ struct FEchoesHudLayout final
         constexpr float Edge = 18.0f;
         constexpr float Gap = 14.0f;
 
-        // Bottom bar
-        float BarHeight = FMath::Clamp(212.0f * Scale, 176.0f, 262.0f);
-        if (Height < 540.0f)
-        {
-            BarHeight = FMath::Clamp(Height * 0.30f, 140.0f, 262.0f);
-        }
-        Layout.BottomBar = FBox2D(
-            FVector2D(0.0f, Height - BarHeight), FVector2D(Width, Height));
-        Layout.bBottomBarVisible = Height >= 360.0f;
-        const float InnerTop = Layout.BottomBar.Min.Y + Gap;
+        // Keep the console below the battlefield. Accessibility scaling grows
+        // its height, but never consumes more than the lower half of the view.
+        // The console must still fit what it carries. The selection card needs
+        // 96 units of text at scale, the objective header takes 90, and three
+        // gaps of 14 sit between and around them. Shrinking below that sum left
+        // the centre panel too short for a single selected unit at 150% on a
+        // 720-line display. The lower-half ceiling still wins over the floor.
+        const float SelectionTextHeight = 96.0f * Scale;
+        const float HeaderTextHeight = 90.0f * Scale;
+        const float MinBarHeight = SelectionTextHeight + HeaderTextHeight + 3.0f * Gap;
+        const float BarHeight = FMath::Clamp(
+            FMath::Min(252.0f * Scale, Height * 0.38f),
+            FMath::Min(MinBarHeight, Height * 0.5f),
+            Height * 0.5f);
+        const float Top = Height - BarHeight;
+        const float InnerTop = Top + Gap;
         const float InnerBottom = Height - Gap;
-
-        // Minimap: a square at the bar's left
-        // 18 px caption strip above the map keeps its label inside the bar.
-        const float MinimapSize = InnerBottom - InnerTop - 18.0f;
-        Layout.MinimapPanel = FBox2D(
-            FVector2D(Gap, InnerTop + 18.0f),
-            FVector2D(Gap + MinimapSize, InnerBottom));
-        Layout.bMinimapVisible = Layout.bBottomBarVisible && MinimapSize >= 120.0f;
-
-        // Command card: the bar's right
-        const float DeckWidth = FMath::Clamp(468.0f * Scale, 400.0f, 560.0f);
-        Layout.CommandDeckPanel = FBox2D(
-            FVector2D(Width - Gap - DeckWidth, InnerTop),
+        const float HeaderHeight = 90.0f * Scale;
+        const float MapSize = FMath::Max(1.0f, BarHeight - 2 * Gap);
+        const float LeftWidth = FMath::Max(220.0f, MapSize);
+        const float DeckWidth = FMath::Min(360.0f * Scale, Width * 0.32f);
+        const float CenterLeft = Gap + LeftWidth + Gap;
+        const float CenterRight = Width - 2 * Gap - DeckWidth;
+        Layout.BottomBar = FBox2D(FVector2D(0, Top), FVector2D(Width, Height));
+        // The concept's upper-left utility control is a real input target.
+        // Reserve it before sizing telemetry so narrow/high-scale layouts never
+        // stack visible controls on the same pointer bounds.
+        const float MenuWidth = 108.0f * Scale;
+        const float MenuHeight = 36.0f * Scale;
+        Layout.MenuPanel = FBox2D(FVector2D(Edge, Edge),
+            FVector2D(Edge + MenuWidth, Edge + MenuHeight));
+        const float ResourceLeftLimit = Layout.MenuPanel.Max.X + Gap;
+        // SPEC-UI-007 permits compact global indicators. Keep resource counts
+        // readable without stacking a large ledger over the minimap.
+        const float ResourceRight = FMath::Max(ResourceLeftLimit,
+            Width - Gap - FMath::Max(220.0f, Width * 0.17f));
+        const float ResourceWidth = FMath::Min(FMath::Min(540.0f * Scale, Width * 0.58f),
+            ResourceRight - ResourceLeftLimit);
+        // Leave the existing upper-right tutorial skip control unobstructed.
+        // Three readable source-backed lines require more than the original
+        // 64-dip proposal: one resource row plus faction and match/research
+        // context. This stays clear of the upper-right tutorial affordance.
+        Layout.ResourcePanel = FBox2D(FVector2D(ResourceRight - ResourceWidth, Gap),
+            FVector2D(ResourceRight, Gap + 84.0f * Scale));
+        Layout.MinimapPanel = FBox2D(FVector2D(Gap, InnerBottom - MapSize),
+            FVector2D(Gap + MapSize, InnerBottom));
+        Layout.ObjectivePanel = FBox2D(FVector2D(CenterLeft, InnerTop),
+            FVector2D(CenterRight, InnerTop + HeaderHeight));
+        Layout.SelectionPanel = FBox2D(FVector2D(CenterLeft, InnerTop + HeaderHeight + Gap),
+            FVector2D(CenterRight, InnerBottom));
+        Layout.MainPanel = Layout.SelectionPanel;
+        Layout.CommandDeckPanel = FBox2D(FVector2D(Width - Gap - DeckWidth, InnerTop),
             FVector2D(Width - Gap, InnerBottom));
-        const float LeftOfDeck = Layout.bMinimapVisible ? Layout.MinimapPanel.Max.X + Gap : Gap;
-        Layout.bCommandDeckVisible =
-            Layout.bBottomBarVisible &&
-            Layout.CommandDeckPanel.Min.X >= LeftOfDeck &&
-            InnerBottom - InnerTop >= 120.0f;
-
-        // Selection: whatever the bar has left between the two
-        const float SelectionRight =
-            Layout.bCommandDeckVisible ? Layout.CommandDeckPanel.Min.X - Gap : Width - Gap;
-        Layout.SelectionPanel = FBox2D(
-            FVector2D(LeftOfDeck, InnerTop), FVector2D(SelectionRight, InnerBottom));
-        Layout.bSelectionVisible =
-            Layout.bBottomBarVisible && Layout.SelectionPanel.GetSize().X >= 220.0f;
-
-        // Top-left command strip
-        const float MainWidth = FMath::Clamp(560.0f * Scale, 320.0f, FMath::Max(320.0f, Width * 0.36f));
-        Layout.MainPanel = FBox2D(
-            FVector2D(Edge, Edge),
-            FVector2D(Edge + MainWidth, Edge + 96.0f * Scale));
-
-        // Top-right resource ledger
-        const float ResourceWidth = FMath::Min(
-            FMath::Clamp(720.0f * Scale, 620.0f, 860.0f),
-            Width - Edge - Layout.MainPanel.Max.X - Gap);
-        Layout.ResourcePanel = FBox2D(
-            FVector2D(Width - Edge - ResourceWidth, Edge),
-            FVector2D(Width - Edge, Edge + 62.0f * FMath::Clamp(HudScale, 0.8f, 1.5f)));
-        Layout.bResourceVisible =
-            ResourceWidth >= 400.0f &&
-            Layout.ResourcePanel.Min.X >= Layout.MainPanel.Max.X + Gap;
-
-        // Objectives under the command strip
-        const float ObjectiveWidth = FMath::Clamp(440.0f * Scale, 380.0f, 520.0f);
-        const float ObjectiveHeight = FMath::Clamp(150.0f * Scale, 132.0f, 190.0f);
-        const float ObjectiveTop = Layout.MainPanel.Max.Y + 16.0f;
-        Layout.ObjectivePanel = FBox2D(
-            FVector2D(Edge, ObjectiveTop),
-            FVector2D(Edge + ObjectiveWidth, ObjectiveTop + ObjectiveHeight));
-
-        // Status line just above the bar
-        const float StatusHeight = 44.0f;
-        const float StatusTop = Layout.BottomBar.Min.Y - 12.0f - StatusHeight;
-        const float StatusWidth = FMath::Min(760.0f * Scale, Width - 2.0f * Edge);
-        Layout.StatusPanel = FBox2D(
-            FVector2D(Edge, StatusTop),
-            FVector2D(Edge + StatusWidth, StatusTop + StatusHeight));
-        Layout.bStatusVisible =
-            bHasStatusMessage && StatusWidth > 0.0f && StatusTop > Layout.MainPanel.Max.Y + 8.0f;
-        Layout.bObjectiveVisible =
-            Layout.ObjectivePanel.Max.X <= Width - Edge &&
-            Layout.ObjectivePanel.Max.Y + 8.0f <=
-                (Layout.bStatusVisible ? Layout.StatusPanel.Min.Y : Layout.BottomBar.Min.Y - 12.0f);
+        Layout.StatusPanel = FBox2D(FVector2D(Edge, Top - 62.0f * Scale),
+            FVector2D(Width - Edge, Top - 8.0f));
+        Layout.bBottomBarVisible = Height >= 360;
+        Layout.bMenuVisible = Layout.bBottomBarVisible &&
+            Layout.MenuPanel.Max.X <= Width - Edge;
+        // Do not render an unreadable or overlapping telemetry fragment.
+        Layout.bResourceVisible = Layout.bBottomBarVisible &&
+            Layout.ResourcePanel.GetSize().X >= 220.0f * Scale;
+        Layout.bMinimapVisible = Layout.bBottomBarVisible && MapSize >= 100;
+        Layout.bSelectionVisible = Layout.bBottomBarVisible && CenterRight - CenterLeft >= 180;
+        Layout.bObjectiveVisible = Layout.bSelectionVisible;
+        Layout.bCommandDeckVisible = Layout.bSelectionVisible;
+        Layout.bStatusVisible = bHasStatusMessage && Layout.StatusPanel.Min.Y >= Edge;
         return Layout;
+    }
+
+    /** A stable keyboard target in the unobstructed battlefield. Reserve the
+     * instruction region even when its message fades, so the aim never jumps.
+     * Drawing, ground/entity traces and camera focus must use this same point. */
+    [[nodiscard]] static FVector2D KeyboardTargetPoint(
+        const FVector2D& ViewportSize, float HudScale, const FVector2D& Offset)
+    {
+        if (ViewportSize.ContainsNaN() || ViewportSize.X <= 0 || ViewportSize.Y <= 0)
+            return FVector2D::ZeroVector;
+        const auto Layout = Build(ViewportSize, HudScale, true);
+        const double ClearHeight = Layout.bBottomBarVisible
+            ? (Layout.bStatusVisible ? Layout.StatusPanel.Min.Y : Layout.BottomBar.Min.Y)
+            : ViewportSize.Y;
+        const FVector2D Center(ViewportSize.X * 0.5, ClearHeight * 0.5);
+        const FVector2D Target = Center + (Offset.ContainsNaN() ? FVector2D::ZeroVector : Offset);
+        const double Margin = FMath::Min(24.0, FMath::Min(ViewportSize.X, ClearHeight) * 0.25);
+        // The reticle marks a battlefield point, so it must not come to rest on
+        // drawn chrome. The upper band now carries the Menu control and the
+        // resource strip, and a hard-left, hard-up aim used to clamp straight
+        // onto the Menu button. Keep the top limit below whatever is visible up
+        // there, while never pushing past the clear region's own lower bound.
+        double TopLimit = Margin;
+        if (Layout.bMenuVisible)
+        {
+            TopLimit = FMath::Max(TopLimit, Layout.MenuPanel.Max.Y + Margin);
+        }
+        if (Layout.bResourceVisible)
+        {
+            TopLimit = FMath::Max(TopLimit, Layout.ResourcePanel.Max.Y + Margin);
+        }
+        const double BottomLimit = ClearHeight - Margin;
+        TopLimit = FMath::Min(TopLimit, BottomLimit);
+        return FVector2D(FMath::Clamp(Target.X, Margin, ViewportSize.X - Margin),
+            FMath::Clamp(Target.Y, TopLimit, BottomLimit));
     }
 
     /** True when a pointer position lies on any drawn chrome panel. */
@@ -124,6 +146,7 @@ struct FEchoesHudLayout final
     {
         return MainPanel.IsInsideOrOn(ScreenPosition) ||
                (bResourceVisible && ResourcePanel.IsInsideOrOn(ScreenPosition)) ||
+               (bMenuVisible && MenuPanel.IsInsideOrOn(ScreenPosition)) ||
                (bBottomBarVisible && BottomBar.IsInsideOrOn(ScreenPosition)) ||
                (bCommandDeckVisible && CommandDeckPanel.IsInsideOrOn(ScreenPosition)) ||
                (bObjectiveVisible && ObjectivePanel.IsInsideOrOn(ScreenPosition)) ||
@@ -163,6 +186,7 @@ struct FEchoesHudLayout final
         };
         return !OverlapsExpanded(MainPanel) &&
                (!bResourceVisible || !OverlapsExpanded(ResourcePanel)) &&
+               (!bMenuVisible || !OverlapsExpanded(MenuPanel)) &&
                (!bBottomBarVisible || !OverlapsExpanded(BottomBar)) &&
                (!bObjectiveVisible || !OverlapsExpanded(ObjectivePanel)) &&
                (!bCommandDeckVisible || !OverlapsExpanded(CommandDeckPanel)) &&
