@@ -15,6 +15,8 @@
 #include "Misc/FileHelper.h"
 #include "Misc/App.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "Tests/AutomationCommon.h"
 #include "InputKeyEventArgs.h"
 #include "HAL/PlatformProcess.h"
@@ -139,9 +141,20 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     Controller->PresentTitleScreen();
     TestTrue(TEXT("Fresh isolated profile initializes"), Controller->InitializePlayerProfile());
     TestTrue(TEXT("Fresh primary action offers tutorial"), Controller->BuildShellView().Buttons[0].Action == EEchoesShellAction::Tutorial);
+    // AssetRegister.md requires placeholders to stay visibly labeled in development
+    // builds. -EchoesFinalArtPath is the documented opt-out, so honour it here rather
+    // than asserting a state the launch arguments may legitimately have suppressed.
+    const bool bArtNoticeExpected = !FParse::Param(FCommandLine::Get(), TEXT("EchoesFinalArtPath"));
+    TestTrue(TEXT("Title discloses that art is not final"),
+        Controller->BuildShellView().Body.ToString().Contains(TEXT("The art and graphics are not finished."))
+            == bArtNoticeExpected);
+    TestTrue(TEXT("Title keeps its own body alongside the art notice"),
+        Controller->BuildShellView().Body.ToString().Contains(TEXT("The sun is broken.")));
     const uint64 InitialChecksum = Bridge->GetSimulation()->StateChecksum();
     Controller->HandleShellAction(EEchoesShellAction::Options);
     TestTrue(TEXT("Options overlays title"), Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Options && Controller->IsTitleScreenVisible());
+    TestFalse(TEXT("Art notice stays on the two screens a player reads, not every shell screen"),
+        Controller->BuildShellView().Body.ToString().Contains(TEXT("The art and graphics are not finished.")));
     if (auto* Settings = UEchoesGameUserSettings::Get())
     {
         const FEchoesShellView OptionsView = Controller->BuildShellView();
@@ -509,6 +522,9 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     Bridge->Tick(.2f);
     Controller->TogglePauseMenu();
     TestTrue(TEXT("Pause owns single base surface"), Controller->IsPauseMenuVisible() && !Controller->IsTitleScreenVisible() && !Controller->IsMissionBriefingVisible());
+    TestTrue(TEXT("Pause discloses that art is not final"),
+        Controller->BuildShellView().Body.ToString().Contains(TEXT("The art and graphics are not finished."))
+            == bArtNoticeExpected);
     const auto* Narrative = World->GetGameInstance()
         ? World->GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>()
         : nullptr;

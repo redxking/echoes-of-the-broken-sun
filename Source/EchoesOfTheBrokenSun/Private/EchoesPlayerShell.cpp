@@ -9,12 +9,48 @@
 #include "Engine/LocalPlayer.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Misc/App.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "HAL/PlatformTime.h"
 #include "GenericPlatform/GenericApplication.h"
 #include "Engine/GameViewportClient.h"
 #include "UnrealClient.h"
 
 #define LOCTEXT_NAMESPACE "EchoesPlayerShell"
+
+namespace
+{
+// AssetRegister.md requires placeholders to remain visibly and textually labeled in
+// development builds and never to be described as final art. The vertical-slice
+// meshes, materials, lighting and effects currently on screen are first-pass work,
+// so every build that can still contain them says so where a player reads it.
+//
+// Two gates, because one is not sufficient. The compile-time gate keeps the string
+// out of a Shipping binary entirely, so a release build audited under REL-GOV-015
+// and DEMO-VIS-010 has never contained development language. The runtime opt-out
+// exists because Scripts/package_macos.sh hard-codes -clientconfig=Development and
+// Scripts/verify_packaged_app.py refuses any other configuration: today every
+// artifact the accepted pipeline can produce is a Development build, so a
+// compile-time gate alone would leave no way to take an owner acceptance capture
+// without this text on screen. Showing it is the default, because a forgotten flag
+// then leaves a true statement visible, where defaulting to hidden would let an
+// unfinished build present itself as finished.
+//
+// This discloses an unfinished visual state; it does not cure one. It must stop
+// being true - by the art being finished - before DEMO-VIS-010 or REL-GOV-015 can
+// be claimed.
+FText PreReleaseArtNotice()
+{
+#if UE_BUILD_SHIPPING
+    return FText::GetEmpty();
+#else
+    if (FParse::Param(FCommandLine::Get(), TEXT("EchoesFinalArtPath")))
+        return FText::GetEmpty();
+    return LOCTEXT("PreReleaseArtNotice",
+        "The art and graphics are not finished. Visual polish is scheduled for the final phase of production.");
+#endif
+}
+}
 
 bool AEchoesPlayerController::RequireOperationProfile()
 {
@@ -497,6 +533,15 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
         const FText Continuity = LOCTEXT("OnlineDialogContinuity", "ONLINE MATCH CONTINUES while this dialog is open.");
         View.Status = View.Status.IsEmpty() ? Continuity
             : FText::Format(LOCTEXT("OnlineDialogStatus", "{0}\n{1}"), Continuity, View.Status);
+    }
+    if (View.Screen == EEchoesShellScreen::Title || View.Screen == EEchoesShellScreen::Pause)
+    {
+        const FText ArtNotice = PreReleaseArtNotice();
+        if (!ArtNotice.IsEmpty())
+        {
+            View.Body = View.Body.IsEmpty() ? ArtNotice
+                : FText::Format(LOCTEXT("PreReleaseArtBody", "{0}\n\n{1}"), View.Body, ArtNotice);
+        }
     }
     return View;
 }

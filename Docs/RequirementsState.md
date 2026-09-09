@@ -3810,3 +3810,60 @@ Resume the first unfinished applicable [DeliveryPlan package](DeliveryPlan.md#sc
 The bounded review added explicit local/remote ability result/receipt parity (REL-MP-010.RESULT/RESULTSTATE), separated passage targetability/queue/sensor presentation from deterministic source checks, and added queued-attack state/replay assertions. Camera bookmarks are session-local; cross-session profile persistence is not inferred. Display confirmation now binds the existing 15.0-second wall-time behavior as an explicit requirement, still OPEN pending its own evidence. Session chat binds 256 UTF-8 bytes, one message/second with burst two, 128 messages/32 KiB history, inert/control-safe rendering and the existing combined bandwidth ceiling; these are requirements, not measured results. Observer capacity is explicitly unresolved under TBR-UX-008. Structural checks and in-memory guard failure cases certify document capture only.
 
 **Capture QA:** All 162 functional items and 32 feedback events have exact bindings/dispositions; six new parent identities and 55 new subordinate clauses were registered. Requirement registry, gameplay-audit traceability and ordinary agent-document checks pass. Seven in-memory missing/duplicate/unknown-ID/unrecorded-decision/future-row cases are rejected by the coverage guard. Bounded semantic review found no remaining consequential issue after the refinements above. [Capture receipt](../BuildArtifacts/Evidence/sc2-requirements-capture-20260909/capture-qa.json) and [negative cases](../BuildArtifacts/Evidence/sc2-requirements-capture-20260909/guard-negative-cases.json) retain the document-only results. No gameplay lifecycle promotion or owner acceptance follows from these checks.
+
+## In-development art disclosure in the running game — 2026-09-09
+
+The public site and `README.md` state that the art and graphics are unfinished and that visual polish is
+scheduled for the final phase of production. The running game said nothing. This change makes the game say
+the same thing on the two shell surfaces an ordinary player reads — the title screen and the single-player
+pause menu — implementing the standing rule already recorded at
+[AssetRegister.md](Archive/AssetRegister.md) ("Placeholders must remain visibly and textually labeled in
+development builds and must not be described as final art or audio") within the scope that rule already
+sets. No new requirement identifier is minted and no requirement changes state.
+
+**Engineering state: `IMPLEMENTED`** for the disclosure itself. `AEchoesPlayerController::BuildShellView`
+appends one sentence to `View.Body` on `Title` and `Pause` only. The text is compiled out of a Shipping
+binary (`#if UE_BUILD_SHIPPING` returns an empty `FText`), and below Shipping it is additionally
+suppressible per launch with `-EchoesFinalArtPath`. The runtime opt-out exists because
+`Scripts/package_macos.sh` hard-codes `-clientconfig=Development` and `Scripts/verify_packaged_app.py`
+rejects any other configuration, so a compile-time gate alone would place the notice in every artifact the
+approved pipeline can currently produce, leaving no way to take an owner acceptance capture without it.
+Showing it is the default: a forgotten flag then leaves a true statement on screen, where defaulting to
+hidden would let an unfinished build present itself as finished.
+
+This notice **discloses** a `DEMO-VIS-010` condition; it does not cure one. `DEMO-GOV-001` remains
+`HUMAN REJECTED`. No `DEMO-*` or `REL-*` requirement is promoted, and `REL-GOV-015.AUTH` is unaffected —
+its zero-placeholder item is satisfied by finishing the art, at which point this notice becomes false and
+must be removed from the surface.
+
+**Verification boundary.** Source reading and Unreal automation only. Automation runs a Development editor
+under `-nullrhi`, so the `UE_BUILD_SHIPPING` branch is never compiled into the test binary and no test in
+this suite can demonstrate that the notice disappears in a Shipping build; that claim rests on reading the
+preprocessor directive. No packaged, rendered (`PKG-REND`), physical-input (`PKG-PHYS`), human or owner
+evidence is claimed. Masthead layout growth at HUD scale 0.8/1.0/1.5, the `DEMO-UI-011` resolution sweep,
+and legibility where the Command Bridge plate drops the title scrim to 0.12 alpha are all unestablished
+and need a look at the composed frame rather than a source review.
+
+### Decisions and explicit non-adoption boundaries
+
+* **TBR-UX-009 — In-development art disclosure on an accepted demo path.** OPEN. Conflicts: `DEMO-GOV-008`
+  (no visible development language on the demo path), `DEMO-UI-012`, `DEMO-VIS-010`, `REL-GOV-015.AUTH`.
+  Supports: `DEMO-GOV-007`, `REL-PUB-001`, and the AssetRegister placeholder-labelling rule. The
+  implemented development-build notice is not the unresolved part; this record captures what is. Options:
+  (A) the notice stays a development-build-only disclosure and every owner acceptance capture is taken with
+  `-EchoesFinalArtPath`, leaving `DEMO-GOV-008` intact and unamended; (B) the notice is permitted on an
+  owner-accepted demo path as a truthful disclosure, which requires amending `DEMO-GOV-008` and
+  `DEMO-UI-012` under `SPEC-AUTH-004`; or (C) the notice is bound as a `REL-*` requirement whose `.FAIL`
+  prohibits its presence in a Shipping build or a frozen release candidate. Recommendation: option A until
+  the art is final, because a build that still needs this notice cannot be a release candidate under
+  `REL-GOV-015.FAIL` in any case. Cost: option B reopens two accepted governance clauses; option C obliges
+  a registry entry and an identifier-index rebuild. This record does not authorize placeholder art to
+  remain on the accepted demo path, does not move `DEMO-GOV-001`, and creates no general permission for
+  development language in shipped UI.
+* **Deliberate coverage gaps, recorded rather than closed.** The online field menu is a field-HUD surface,
+  not a shell surface, so a player in a live online match who opens MENU sees no notice. The Results screen
+  is also uncovered, though that is where a player most directly judges presentation. `REL-PUB-008` still
+  requires a title-screen copyright line and remains unimplemented; if a real bottom-anchored title footer
+  is built later it should carry both obligations rather than appending to the body. Nothing here records
+  whether an acceptance capture taken with `-EchoesFinalArtPath` must declare that suppression — today the
+  package manifest cannot distinguish such a capture from one taken from a finished build.
