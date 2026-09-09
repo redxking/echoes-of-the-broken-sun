@@ -46,10 +46,12 @@ V1_HASHES = {
     "Content/World/Source/GlassScar/glass_scar_map_pack_v1.sha256": (
         "41f5b6393730666316aaa774fa999fb695f4d99e2ed62faeecd9c3a1d4b7fc10"
     ),
-    "Tests/World/test_glass_scar_map_pack.py": (
-        "6210fac13aae02560cf9afe66fed029e60232955780886715aadec98d3fafd6b"
-    ),
 }
+
+# The accepted content remains immutable. Its original test source is retained
+# in Git, while the live test continues to verify later authored map changes.
+V1_TEST_SOURCE = "Tests/World/test_glass_scar_map_pack.py"
+V1_TEST_SOURCE_SHA256 = "6210fac13aae02560cf9afe66fed029e60232955780886715aadec98d3fafd6b"
 
 
 def reverse_object_keys(value):
@@ -116,6 +118,15 @@ class GlassScarCompiledMapTests(unittest.TestCase):
                 ).stdout
                 self.assertEqual(current, baseline)
                 self.assertEqual(hashlib.sha256(current).hexdigest(), expected_digest)
+
+    def test_original_v1_test_source_remains_recoverable(self):
+        baseline = subprocess.run(
+            ["git", "show", f"{BASE_COMMIT}:{V1_TEST_SOURCE}"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+        ).stdout
+        self.assertEqual(hashlib.sha256(baseline).hexdigest(), V1_TEST_SOURCE_SHA256)
 
     def test_fixture_is_reproducible_idempotent_and_digest_pinned(self):
         fixture_bytes = FIXTURE_PATH.read_bytes()

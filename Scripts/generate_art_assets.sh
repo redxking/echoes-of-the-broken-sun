@@ -15,6 +15,45 @@ fi
 
 mkdir -p "$project_root/Saved/Logs"
 
+# Retain the existing generator and asset checks while isolating the engine's
+# save, user and cache routes. Author: Angelis Pseftis.
+run_isolated_art_pass() {
+  local pass_name="$1"
+  local pass_script="$2"
+  local pass_log="$3"
+  local report_dir="$project_root/BuildArtifacts/Evidence/art-generation-$(date -u +%Y%m%dT%H%M%SZ)-$$/$pass_name"
+  local editor_status=0
+  /usr/bin/python3 "$project_root/Scripts/echoes_test_sandbox.py" \
+    --editor "$editor" --project "$project" --report-dir "$report_dir" \
+    --reuse-local-ddc -- \
+    -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+    -ExecutePythonScript="$pass_script" -abslog="$pass_log" || editor_status=$?
+
+  local isolation_report="$report_dir/SaveIsolation/launcher-result.json"
+  if [[ ! -f "$isolation_report" ]]; then
+    print -u2 "Art generation has no isolation result: $isolation_report"
+    return 9
+  fi
+  if ! /usr/bin/python3 - "$isolation_report" <<'PY'
+import json
+import sys
+with open(sys.argv[1], encoding="utf-8") as source:
+    report = json.load(source)
+for field in ("synthetic_denial_probe", "protected_policy_clauses_verified",
+              "scoped_save_directory_empty_after_run", "cleanup_succeeded"):
+    if report.get(field) is not True:
+        raise SystemExit("Art isolation check failed: " + field)
+if report.get("prelaunch_failure") is not False:
+    raise SystemExit("Art isolation launch did not complete")
+PY
+  then
+    print -u2 "Art generation isolation failed; inspect $isolation_report"
+    return 8
+  fi
+  print "Art generation isolation evidence: $report_dir"
+  return "$editor_status"
+}
+
 if [[ "${ECHOES_M01_BULWARK_PARTS_ONLY:-0}" == "1" ]]; then
   "$editor" "$project" -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
     -ExecutePythonScript="$generator" -abslog="$log"
@@ -66,8 +105,7 @@ if [[ "${ECHOES_MERIDIAN_FACING_ONLY:-0}" == "1" ]]; then
 fi
 
 if [[ "${ECHOES_EVACUATION_PROPS_ONLY:-0}" == "1" ]]; then
-  "$editor" "$project" -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
-    -ExecutePythonScript="$generator" -abslog="$log"
+  run_isolated_art_pass evacuation-props "$generator" "$log"
   rg -q '\[ECHOES_EVACUATION_PROPS_READY\].*assets=6 lods=2 collision=0' "$log"
   if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|Failed to compile Material' "$log"; then
     exit 13

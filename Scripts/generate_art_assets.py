@@ -1883,11 +1883,11 @@ def create_evacuation_materials():
         for suffix, parameter in (("BaseColor", "BaseColorMap"), ("MRE", "MREMap"), ("Normal", "NormalMap")):
             unreal.MaterialEditingLibrary.set_material_instance_texture_parameter_value(
                 instance, parameter, service_textures["T_EchoesServiceCeramic_" + suffix])
-        for key, value in (("Metallic", .0), ("Roughness", .93), ("EmissiveStrength", .0), ("MaskedEmissiveStrength", .0), ("UVScale", 1.0)):
+        for key, value in (("Metallic", .0), ("Roughness", evacuation_props.MATERIAL_ROUGHNESS), ("EmissiveStrength", .0), ("MaskedEmissiveStrength", .0), ("UVScale", 1.0)):
             unreal.MaterialEditingLibrary.set_material_instance_scalar_parameter_value(instance, key, value)
         unreal.EditorAssetLibrary.set_metadata_tag(instance, "Echoes.Creator", "Angelis Pseftis")
         unreal.MaterialEditingLibrary.update_material_instance(instance)
-        unreal.EditorAssetLibrary.set_metadata_tag(instance, "Echoes.AssetRevision", "m01-evacuation-material-v4")
+        unreal.EditorAssetLibrary.set_metadata_tag(instance, "Echoes.AssetRevision", evacuation_props.MATERIAL_REVISION)
         unreal.EditorAssetLibrary.set_metadata_tag(instance, "Echoes.Provenance", "Original M01 ceramic and service material; no external source")
         if not unreal.EditorAssetLibrary.save_loaded_asset(instance, False):
             raise RuntimeError("Could not save evacuation material: " + path)
@@ -3093,6 +3093,13 @@ def create_presentation_vfx_material() -> unreal.Material:
             existing, "Echoes.AssetRevision"
         )
         if revision == PRESENTATION_VFX_ASSET_REVISION:
+            # Runtime conduit ISMs need a compiled usage permutation. Repair the
+            # authored material in place, preserving all existing mesh references.
+            if not existing.get_editor_property("used_with_instanced_static_meshes"):
+                existing.set_editor_property("used_with_instanced_static_meshes", True)
+                unreal.MaterialEditingLibrary.recompile_material(existing)
+                if not unreal.EditorAssetLibrary.save_loaded_asset(existing, False):
+                    raise RuntimeError("Could not save instanced presentation VFX material")
             unreal.log(
                 f"[ECHOES_PRESENTATION_VFX_MATERIAL] path={VFX_MATERIAL_PATH} action=reused"
             )
@@ -3153,6 +3160,7 @@ def create_presentation_vfx_material() -> unreal.Material:
     unreal.MaterialEditingLibrary.connect_material_property(
         roughness, "", unreal.MaterialProperty.MP_ROUGHNESS
     )
+    material.set_editor_property("used_with_instanced_static_meshes", True)
     material.set_editor_property("two_sided", True)
     unreal.MaterialEditingLibrary.layout_material_expressions(material)
     unreal.MaterialEditingLibrary.recompile_material(material)
@@ -3719,7 +3727,7 @@ def main() -> None:
         return
     if os.environ.get("ECHOES_CLIFF_MATERIAL_ONLY") == "1":
         cliff_material.create_cliff_material()
-        unreal.log(f"[ECHOES_CLIFF_MATERIAL_READY] revision={cliff_material.REVISION} assets=1 emissive=false")
+        unreal.log(f"[ECHOES_CLIFF_MATERIAL_READY] revision={cliff_material.REVISION} assets=1 emissive=false validation=outputs-scalars-no-emissive revision_source=metadata graph_identity=unchecked")
         return
     if os.environ.get("ECHOES_MERIDIAN_FACING_ONLY") == "1":
         material = unreal.EditorAssetLibrary.load_asset(MATERIAL_PATH)

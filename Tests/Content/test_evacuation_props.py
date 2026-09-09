@@ -1,4 +1,4 @@
-"""Pure-Python geometry contract for the M01 evacuation prop source recipes."""
+"""Geometry and matte-surface source contracts. Author: Angelis Pseftis."""
 import importlib.util
 import math
 from pathlib import Path
@@ -79,6 +79,25 @@ class EvacuationPropsContract(unittest.TestCase):
         self.assertEqual({material for _, material in mesh.buffers}, {0, 1, 2, 3})
         mesh = Mesh(); props.build(mesh, True, "ArchiveLoadingFace")
         self.assertEqual({material for _, material in mesh.buffers}, {0, 1, 2, 3})
+
+    def test_service_roughness_retains_matte_texture_variation(self):
+        root = Path(__file__).parents[2]
+        reader_spec = importlib.util.spec_from_file_location(
+            "exposure_png_reader", root / "Scripts/measure_capture_exposure.py")
+        reader = importlib.util.module_from_spec(reader_spec)
+        reader_spec.loader.exec_module(reader)
+        width, height, pixels, channels = reader.read_png_rgb(str(
+            root / "Content/Art/Source/Textures/T_EchoesServiceCeramic_MRE.png"))
+        self.assertGreater(width * height, 0)
+        green = pixels[1::channels]
+        self.assertTrue(math.isfinite(props.MATERIAL_ROUGHNESS))
+        # Registered M_EchoesSurface shader contract: scalar * (MRE.G + .5).
+        # REL-ART-030 requires matte walkable surfaces; clipping destroys variation.
+        lower = props.MATERIAL_ROUGHNESS * (min(green) / 255. + .5)
+        upper = props.MATERIAL_ROUGHNESS * (max(green) / 255. + .5)
+        self.assertGreaterEqual(lower, .85)
+        self.assertLess(upper, 1.)
+        self.assertGreater(upper, lower)
 
 
 

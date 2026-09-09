@@ -8,6 +8,10 @@ from __future__ import annotations
 import math
 
 REVISION = "m01-evacuation-props-v13"
+MATERIAL_REVISION = "m01-evacuation-material-v5"
+# M_EchoesSurface multiplies this by (ServiceCeramic MRE.G + .5).
+# Keep the walkable service surfaces matte without saturating their roughness map.
+MATERIAL_ROUGHNESS = .72
 KINDS = ("ArchiveCradle", "ArchiveFrame", "RoutePaving", "ServiceConduit", "ArchiveApron", "ArchiveLoadingFace")
 
 

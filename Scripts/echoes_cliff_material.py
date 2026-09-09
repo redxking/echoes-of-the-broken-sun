@@ -9,6 +9,7 @@ normals and receive their illumination from the scene rig.
 
 from __future__ import annotations
 
+import math
 import unreal
 
 
@@ -83,10 +84,45 @@ def _existing_or_new() -> unreal.Material:
     return material
 
 
+def validate_cliff_material(material: unreal.Material, expected_outputs=None) -> None:
+    """Check the graph we actually reuse, not just its revision metadata.
+
+    This checks required outputs and the registered matte scalar parameters;
+    it does not claim byte identity or rendered material acceptance.
+    """
+    lib = unreal.MaterialEditingLibrary
+    required = (
+        unreal.MaterialProperty.MP_BASE_COLOR,
+        unreal.MaterialProperty.MP_METALLIC,
+        unreal.MaterialProperty.MP_ROUGHNESS,
+    )
+    for property_name in required:
+        node = lib.get_material_property_input_node(material, property_name)
+        if node is None or (expected_outputs is not None and node != expected_outputs[property_name]):
+            raise RuntimeError(f"{MATERIAL_NAME} lost required graph output {property_name}")
+    for property_name, parameter, value in (
+        (unreal.MaterialProperty.MP_METALLIC, "Metallic", .02),
+        (unreal.MaterialProperty.MP_ROUGHNESS, "Roughness", .90),
+    ):
+        node = lib.get_material_property_input_node(material, property_name)
+        if not isinstance(node, unreal.MaterialExpressionScalarParameter):
+            raise RuntimeError(f"{MATERIAL_NAME} has an invalid registered {parameter} parameter")
+        actual_value = float(node.get_editor_property("default_value"))
+        if str(node.get_editor_property("parameter_name")) != parameter or \
+                not math.isfinite(actual_value) or abs(actual_value - value) > 1.e-6:
+            raise RuntimeError(f"{MATERIAL_NAME} has an invalid registered {parameter} parameter")
+    if lib.get_material_property_input_node(material, unreal.MaterialProperty.MP_EMISSIVE_COLOR) is not None:
+        raise RuntimeError(f"{MATERIAL_NAME} must not contain an emissive path")
+
+
 def create_cliff_material() -> unreal.Material:
-    """Create or return the exact-revision, world-space exposed-cliff master."""
+    """Build the cliff master or validate outputs of the registered revision.
+
+    Reusing a matching tag checks the output/scalar contract, not graph identity.
+    """
     material = _existing_or_new()
     if unreal.EditorAssetLibrary.get_metadata_tag(material, "Echoes.AssetRevision") == REVISION:
+        validate_cliff_material(material)
         return material
 
     lib = unreal.MaterialEditingLibrary
@@ -166,18 +202,11 @@ def create_cliff_material() -> unreal.Material:
     errors = lib.recompile_material(material)
     if errors:
         raise RuntimeError(f"{MATERIAL_NAME} compilation failed: {errors}")
-    expected_outputs = (
-        (unreal.MaterialProperty.MP_BASE_COLOR, final_color),
-        (unreal.MaterialProperty.MP_METALLIC, metallic),
-        (unreal.MaterialProperty.MP_ROUGHNESS, roughness),
-    )
-    for property_name, expected_node in expected_outputs:
-        if lib.get_material_property_input_node(material, property_name) != expected_node:
-            raise RuntimeError(f"{MATERIAL_NAME} lost required graph output {property_name}")
-    if lib.get_material_property_input_node(
-        material, unreal.MaterialProperty.MP_EMISSIVE_COLOR
-    ) is not None:
-        raise RuntimeError(f"{MATERIAL_NAME} must not contain an emissive path")
+    validate_cliff_material(material, {
+        unreal.MaterialProperty.MP_BASE_COLOR: final_color,
+        unreal.MaterialProperty.MP_METALLIC: metallic,
+        unreal.MaterialProperty.MP_ROUGHNESS: roughness,
+    })
 
     unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.Creator", "Angelis Pseftis")
     unreal.EditorAssetLibrary.set_metadata_tag(
