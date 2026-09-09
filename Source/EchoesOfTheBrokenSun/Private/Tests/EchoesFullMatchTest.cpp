@@ -1199,6 +1199,18 @@ bool FEchoesFullMatchDefeatTest::RunTest(const FString& Parameters)
                      ResultController->IsMatchResultVisible() &&
                          ResultController->GetPresentedMatchOutcome() ==
                              echoes::sim::MatchOutcome::Player1Victory);
+            // Counter-case for the concession cause repair under SPEC-OUT-002 and
+            // SPEC-OUT-006. This defeat is a Command Core destroyed in combat, not
+            // a forfeit, so it must still read as a Corefall. Without this, the
+            // concession assertions in Echoes.Runtime.UI.PlayerShellRoutes could be
+            // satisfied by a banner that called every defeat a concession.
+            TestTrue(TEXT("A Corefall defeat is not recorded as a forfeit"),
+                     Bridge->GetForfeitingPlayer() == echoes::sim::kNeutralPlayer);
+            const FString DefeatBanner = ResultController->GetStatusMessage();
+            TestTrue(TEXT("A Corefall defeat still names the fallen Command Core"),
+                     DefeatBanner.Contains(TEXT("Command Core has fallen")));
+            TestFalse(TEXT("A Corefall defeat never claims a concession"),
+                      DefeatBanner.Contains(TEXT("conceded")));
             ResultController->Destroy();
         }
     }

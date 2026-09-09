@@ -11692,6 +11692,12 @@ echoes::sim::MatchOutcome UEchoesSimulationSubsystem::GetMatchOutcome() const
                                 : echoes::sim::MatchOutcome::Ongoing;
 }
 
+echoes::sim::PlayerId UEchoesSimulationSubsystem::GetForfeitingPlayer() const
+{
+    return Simulation.IsValid() ? Simulation->ForfeitingPlayer()
+                                : echoes::sim::kNeutralPlayer;
+}
+
 FEchoesPrologueMissionFacts UEchoesSimulationSubsystem::GatherPrologueFacts() const
 {
     FEchoesPrologueMissionFacts Facts;

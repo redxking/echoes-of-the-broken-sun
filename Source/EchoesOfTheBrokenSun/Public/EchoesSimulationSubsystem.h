@@ -602,6 +602,15 @@ public:
     [[nodiscard]] bool IsScenarioPaused() const { return bSimulationPaused; }
     [[nodiscard]] echoes::sim::MatchOutcome GetMatchOutcome() const;
     /**
+     * Seat that forfeited the finished match, or kNeutralPlayer when none did.
+     *
+     * Reads the live simulation, so it answers on the frame the match ends.
+     * GetCompletedMatchReport carries the same fact but only after the async
+     * replay archive publishes, which is exactly the window in which a player
+     * first reads the result screen.
+     */
+    [[nodiscard]] echoes::sim::PlayerId GetForfeitingPlayer() const;
+    /**
      * Last sequence accepted through a local Issue* command path. Observers
      * compare before/after values around one concrete controller action; AI,
      * replay, fixture, and rejected commands never advance this receipt.

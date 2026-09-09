@@ -83,6 +83,76 @@ durability, and owner acceptance are each separate gates. The
 [receipt](../BuildArtifacts/Evidence/display-revert-20260909T180500Z/session.json) records the
 candidate identity, commands, and the inconclusive field-HUD probe.
 
+## Outcome cause after a concession — 2026-09-09
+
+**Engineering state: AGENT VERIFIED at the source, native-simulation, engine-test, and
+agent-rendered boundary** for `SPEC-OUT-002`, `SPEC-OUT-006`, and the outcome-cause half of
+`SPEC-UI-008.F32`. No requirement changes lifecycle state: `SPEC-UI-008`'s event leaves carry
+verification class `PKG-PHYS`, and only Angelis assigns acceptance. This entry replaces the open
+defect recorded in the connected-input result.
+
+**Defect.** `Simulation::ForfeitPlayer` retires the conceding seat's Command Core so the match ends
+deterministically. `MatchOutcome` therefore cannot distinguish a concession from a Core destroyed in
+combat, and `AEchoesPlayerController::NotifyMatchFinished` branched on that enum alone — a conceding
+player was told `DEFEAT — your Command Core has fallen.` when it had not, and the winner of a
+concession was told the opposing Core had fallen. `SPEC-OUT-002` separates the two loss causes
+explicitly and `SPEC-OUT-006` requires the result screen to state the precise one.
+
+The result dossier was wrong for a second, independent reason. It read the cause from
+`FEchoesReplayMetadata`, which the **asynchronous** replay archive publishes. On the first composed
+result frame — and permanently whenever the archive fails — it fell through to
+`Your Command Core has fallen.` That is exactly the window in which a player first reads the screen.
+
+**Repair.** `Simulation::ForfeitingPlayer()` exposes the authoritative seat the simulation already
+holds in `replayForfeitingPlayer_`. That member is excluded from `StateChecksum` and the snapshot
+payload, so reading it cannot affect determinism, and it is reconstructed from a replay prefix in
+`ContinueReplayRecording`, so a replayed forfeit still reports its real cause.
+`UEchoesSimulationSubsystem::GetForfeitingPlayer` forwards it, and the banner and dossier both branch
+on it **on both sides** — the winner of a concession is told the opponent conceded rather than that
+their Core fell. No authoritative behaviour changed: `ForfeitPlayer` is untouched.
+
+**Observed.** Rendered route
+[`concession-cause-20260909T233000Z/rendered-01`](../BuildArtifacts/Evidence/concession-cause-20260909T233000Z/rendered-01/ConcessionResultReview.log)
+drove the ordinary player path — title, Skirmish, deployment review, Deploy, pause, Concede, Confirm.
+Before conceding it recorded `tick=60 outcome=0 forfeitingSeat=255`, so the match was live and the
+Core standing. It then read the result at `archive=1` (Pending), the previously broken window, and
+observed the banner `DEFEAT — you conceded the match.` and the dossier
+`You ended the match by concession.` The engine log contains **zero** occurrences of
+`Command Core has fallen`. `Scripts/run_concession_result_review.sh` re-runs this and fails if the
+false sentence reappears.
+
+**Regression cover.** Four assertions were added to `Echoes.Runtime.UI.PlayerShellRoutes` *before*
+the existing archive pump, so they run in the pre-archive window, and a Corefall counter-case was
+added to `Echoes.Runtime.Gameplay.CompleteSkirmishDefeat`. With the presentation fix reverted and
+rebuilt, `PlayerShellRoutes` fails on exactly those four while `CompleteSkirmishDefeat` still passes
+([negative report](../BuildArtifacts/Evidence/concession-cause-20260909T233000Z/focused-negative/index.json))
+— so the concession assertions cannot be satisfied by calling every defeat a concession. With the fix
+restored: **133/133 Unreal tests** with the inventory count unchanged
+([report](../BuildArtifacts/Evidence/concession-cause-20260909T233000Z/full-02/index.json)) and
+**126/126 native SimCore tests** in optimized, debug and address+undefined sanitizer builds. The
+source strings use an em-dash (U+2014); assertions match on the clause, not the punctuation.
+
+**Not repaired, recorded here rather than left for a reader to assume.**
+
+* **Network clients.** A client's simulation mirror never runs `ForfeitPlayer`, and the result RPC
+  carries only the outcome, so a client whose opponent surrendered still reads the Corefall wording.
+  Closing it requires the network result contract to carry the cause.
+* **A surrendering host's banner expires.** `NotifyNetworkHostSurrender` overwrites the result banner
+  with a 12.0-second message where every other result banner persists 3600 seconds, and drops the
+  navigation clause. Found during this work; adjacent, unrepaired.
+* **The replay timeline still marks a conceded match with a `CommandCoreLoss` bookmark.** Removing it
+  would leave a conceded match with no mark at the decisive tick and weaken `REL-QOL-014`'s four
+  required marks; relabelling it changes a serialized enum. Deliberately untouched.
+* **`SPEC-OUT-006`'s other dossier elements** — resources, units, Well decisions — are still absent in
+  the pre-archive window. This repair restores the cause only.
+* **Campaign operations have no concede path**, being gated to Skirmish, while `SPEC-OUT-007` states
+  the player may concede at any time.
+
+**Not established.** Packaged execution, physical input, human play, listening review, performance,
+and owner acceptance are each separate gates. The
+[receipt](../BuildArtifacts/Evidence/concession-cause-20260909T233000Z/session.json) records the
+candidate identity, commands, and the concurrent-lane state of this shared checkout.
+
 ## Connected player input, settings, recovery, result and replay — 2026-09-09
 
 **Engineering state: AGENT VERIFIED at the source, engine-test, and agent-rendered
@@ -142,8 +212,9 @@ same panels at a genuinely windowed 1280x720 render completely with high contras
 enabled, so contrast is not the cause. The auto-revert restores the resolution value but not
 the window presentation. Not repaired; no requirement state is changed for it.
 
-**Defect open — concession reports the wrong cause.** Conceding emits `DEFEAT - your Command
-Core has fallen.` when the Core did not fall. Not repaired.
+**Defect repaired 2026-09-09 — concession reported the wrong cause.** Conceding emitted
+`DEFEAT — your Command Core has fallen.` when the Core did not fall. Repaired and evidenced at
+[Outcome cause after a concession](#outcome-cause-after-a-concession--2026-09-09).
 
 **Not established by this route.** Agent-synthetic pointer input is its own evidence class
 and is never human play. Box-select and additive selection were not exercised

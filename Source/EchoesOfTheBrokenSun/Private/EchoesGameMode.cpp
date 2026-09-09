@@ -2223,6 +2223,12 @@ void AEchoesGameMode::BeginPlay()
         {
             Controller->StartDisplayRevertReview();
         }
+        if (FParse::Param(
+                FCommandLine::Get(),
+                TEXT("EchoesConcessionResultReview")))
+        {
+            Controller->StartConcessionResultReview();
+        }
         if ((FParse::Param(
                  FCommandLine::Get(),
                  TEXT("EchoesFutureWellArtReview")) ||

@@ -1321,6 +1321,20 @@ public:
     [[nodiscard]] MatchOutcome Outcome() const;
     /** Records a deterministic player forfeit by retiring that player's live Command Core. */
     bool ForfeitPlayer(PlayerId player);
+    /**
+     * Seat that forfeited this match, or kNeutralPlayer when none has.
+     *
+     * ForfeitPlayer retires the seat's Command Core, so the outcome enum alone
+     * cannot tell a concession apart from a Core destroyed in combat. This is
+     * the authoritative distinction, and presentation must read it here rather
+     * than remember that a player pressed Concede. It is reconstructed from a
+     * replay prefix (ContinueReplayRecording), so a replayed forfeit still
+     * reports its real cause, and it is excluded from StateChecksum and the
+     * snapshot payload, so reading it cannot affect determinism.
+     */
+    [[nodiscard]] PlayerId ForfeitingPlayer() const noexcept {
+        return replayForfeitingPlayer_;
+    }
 
     bool QueueCommand(const Command& command, std::string* rejectionReason = nullptr);
     void Step();

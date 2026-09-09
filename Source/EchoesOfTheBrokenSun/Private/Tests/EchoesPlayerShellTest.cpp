@@ -590,6 +590,27 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     TestTrue(TEXT("Concede requires confirmation"), Bridge->GetMatchOutcome() == echoes::sim::MatchOutcome::Ongoing);
     Controller->HandleShellAction(EEchoesShellAction::Confirm);
     TestTrue(TEXT("Confirmed concession reaches authoritative defeat/results"), Bridge->GetMatchOutcome() == echoes::sim::MatchOutcome::Player1Victory && Controller->IsMatchResultVisible());
+    // SPEC-OUT-002 separates a destroyed Command Core from a confirmed concession
+    // and SPEC-OUT-006 requires the precise cause. ForfeitPlayer retires the
+    // conceding seat's Core, so the outcome enum reports a concession as a
+    // Corefall; the banner told a conceding player their Core had fallen when it
+    // had not. These assertions run HERE, before the archive pump below, because
+    // the replay metadata that used to be the only cause source is not published
+    // yet - which is exactly the window in which a player first reads the screen.
+    // The source strings use an em-dash (U+2014); match on the clause, not the
+    // punctuation, or the assertion passes vacuously.
+    TestTrue(TEXT("A conceded match is authoritatively recorded as a forfeit by that seat"),
+        Bridge->GetForfeitingPlayer() == UEchoesSimulationSubsystem::LocalPlayerId);
+    const FString ConcedeBanner = Controller->GetStatusMessage();
+    TestFalse(TEXT("A conceded match never claims the player's Command Core fell"),
+        ConcedeBanner.Contains(TEXT("Command Core has fallen")));
+    TestTrue(TEXT("A conceded match names the concession in the banner"),
+        ConcedeBanner.Contains(TEXT("conceded")));
+    const FString PreArchiveDossier = Controller->BuildShellView().Body.ToString();
+    TestFalse(TEXT("The dossier never claims a Corefall before the replay archive publishes"),
+        PreArchiveDossier.Contains(TEXT("Command Core has fallen")));
+    TestTrue(TEXT("The dossier names the concession before the replay archive publishes"),
+        PreArchiveDossier.Contains(TEXT("concession")));
     // This is a controller route check. It does not stand in for physical input qualification.
     const double ArchiveDeadline = FPlatformTime::Seconds() + 15.0;
     while (Bridge->GetReplayArchiveState() == EEchoesReplayArchiveState::Pending && FPlatformTime::Seconds() < ArchiveDeadline)

@@ -40,8 +40,10 @@ change made from a window whose presentation disagreed with the saved preference
 window borderless at the full display. It now restores the presentation the player is
 actually looking at, proven in a rendered route and by the engine's own viewport log.
 Whether the field HUD reads correctly in a *deliberately* borderless session at a
-sub-native resolution is untouched by that repair and stays open; so does concession
-reporting a Command Core loss that did not happen. The
+sub-native resolution is untouched by that repair and stays open. Concession reporting a
+Command Core loss that did not happen is now repaired: see
+[Outcome cause after a concession](RequirementsState.md#outcome-cause-after-a-concession--2026-09-09).
+The
 [bounded evidence record](RequirementsState.md#connected-player-input-settings-recovery-result-and-replay--2026-09-09)
 keeps agent-synthetic input, packaged execution, audio, performance, and owner acceptance
 distinct — none of them is claimed. The predecessor route

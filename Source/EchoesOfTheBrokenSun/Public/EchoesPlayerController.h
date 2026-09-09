@@ -187,6 +187,14 @@ public:
      * physical input and not human acceptance.
      */
     void StartDisplayRevertReview();
+    /**
+     * Bounded non-shipping driver for SPEC-OUT-002 / SPEC-OUT-006 in a real
+     * rendered window: deploy an ordinary skirmish through the title, concede it
+     * from the pause menu, and report what the end-of-match banner and the result
+     * dossier actually say. It drives the same shell actions a player presses.
+     * Agent-driven; it is not physical input and not human acceptance.
+     */
+    void StartConcessionResultReview();
     void NotifyRuntimeFailure(const FString& FailureCode);
     void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
     void NotifyCampaignPrologueFinished(
@@ -852,6 +860,8 @@ private:
     void FinishNetworkClientSmoke();
     void RunPointerCombatGuardReviewStage(float DeltaTime);
     void RunDisplayRevertReviewStage(float DeltaTime);
+    void RunConcessionResultReviewStage(float DeltaTime);
+    void FinishConcessionResultReview(const TCHAR* Result, const FString& Detail);
     void FinishDisplayRevertReview(const TCHAR* Result, const FString& Detail);
     void LogDisplayRevertReviewPresentation(const TCHAR* Stage) const;
     bool MoveReviewPointerToEntity(uint32 EntityId, const TCHAR* StageLabel);
@@ -1010,6 +1020,10 @@ private:
     float PointerReviewPriorHudScale = -1.0f;
     bool bPointerCombatGuardReviewActive = false;
     bool bDisplayRevertReviewActive = false;
+    bool bConcessionResultReviewActive = false;
+    int32 ConcessionReviewStage = 0;
+    float ConcessionReviewStageElapsedSeconds = 0.0f;
+    float ConcessionReviewTotalElapsedSeconds = 0.0f;
     int32 DisplayRevertReviewStage = 0;
     float DisplayRevertReviewStageElapsedSeconds = 0.0f;
     float DisplayRevertReviewTotalElapsedSeconds = 0.0f;

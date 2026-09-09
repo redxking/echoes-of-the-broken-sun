@@ -24,9 +24,28 @@ void AEchoesPlayerController::AppendMatchResultDossier(FEchoesShellView& View) c
     const auto* Report = Bridge ? Bridge->GetCompletedMatchReport() : nullptr;
     const auto* Metadata = Bridge ? Bridge->GetCompletedReplayMetadata() : nullptr;
     TArray<FText> Sections;
+    // The cause is read from the live simulation first. Metadata->OutcomeCause
+    // carries the same fact but only once the async replay archive publishes, so
+    // sourcing it from there alone left the first composed frame - and every
+    // Failed archive - claiming a Command Core had fallen after a concession.
+    // The seat matters too: replay metadata records that *someone* forfeited but
+    // not who, so a winner was told only "the match ended by concession".
+    const echoes::sim::PlayerId ForfeitingSeat =
+        Bridge != nullptr ? Bridge->GetForfeitingPlayer() : echoes::sim::kNeutralPlayer;
+    const bool bForfeited = ForfeitingSeat != echoes::sim::kNeutralPlayer ||
+        (Metadata != nullptr &&
+         Metadata->OutcomeCause == EEchoesReplayOutcomeCause::PlayerForfeit);
+    const uint8 ViewerSeat =
+        GetNetMode() == NM_Client && NetworkSeat < echoes::sim::kMaximumPlayers
+            ? NetworkSeat
+            : UEchoesSimulationSubsystem::LocalPlayerId;
     if (bCampaignResult) Sections.Add(FText::FromString(GetStatusMessage()));
-    else if (Metadata && Metadata->OutcomeCause == EEchoesReplayOutcomeCause::PlayerForfeit)
-        Sections.Add(LOCTEXT("Concession", "The match ended by concession."));
+    else if (bForfeited)
+        Sections.Add(ForfeitingSeat == echoes::sim::kNeutralPlayer
+                ? LOCTEXT("Concession", "The match ended by concession.")
+            : ForfeitingSeat == ViewerSeat
+                ? LOCTEXT("ConcessionByYou", "You ended the match by concession.")
+                : LOCTEXT("ConcessionByOpponent", "Your opponent ended the match by concession."));
     else if (PresentedMatchOutcome == echoes::sim::MatchOutcome::Draw)
         Sections.Add(LOCTEXT("DrawCause", "The final opposing Command Cores fell in the same tick."));
     else

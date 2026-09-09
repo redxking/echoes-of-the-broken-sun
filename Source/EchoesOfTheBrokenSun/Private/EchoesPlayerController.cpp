@@ -5254,6 +5254,197 @@ void AEchoesPlayerController::RunDisplayRevertReviewStage(float DeltaTime)
 }
 #endif
 
+void AEchoesPlayerController::StartConcessionResultReview()
+{
+    if (bConcessionResultReviewActive) return;
+    bConcessionResultReviewActive = true;
+    ConcessionReviewStage = 0;
+    ConcessionReviewStageElapsedSeconds = 0.0f;
+    ConcessionReviewTotalElapsedSeconds = 0.0f;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CONCESSION_REVIEW_STARTED] contract=SPEC-OUT-002+SPEC-OUT-006 controlledNonshipping=true"));
+}
+
+void AEchoesPlayerController::FinishConcessionResultReview(
+    const TCHAR* Result, const FString& Detail)
+{
+    bConcessionResultReviewActive = false;
+    const UEchoesSimulationSubsystem* Bridge =
+        GetWorld() != nullptr
+            ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+            : nullptr;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_CONCESSION_REVIEW_COMPLETE] result=%s stage=%d forfeitingSeat=%u detail=%s agentDriven=true osInjection=false unaidedHuman=false controlledNonshipping=true"),
+        Result,
+        ConcessionReviewStage,
+        Bridge != nullptr ? Bridge->GetForfeitingPlayer() : echoes::sim::kNeutralPlayer,
+        *Detail);
+    FString OutputPath;
+    if (FParse::Value(
+            FCommandLine::Get(), TEXT("EchoesConcessionReviewOutput="), OutputPath) &&
+        !OutputPath.IsEmpty())
+    {
+        FScreenshotRequest::RequestScreenshot(OutputPath, true, false, false, FIntRect(), true);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_CONCESSION_REVIEW_CAPTURE] requested=true showUI=true output=%s"),
+            *OutputPath);
+    }
+}
+
+void AEchoesPlayerController::RunConcessionResultReviewStage(float DeltaTime)
+{
+    ConcessionReviewStageElapsedSeconds += DeltaTime;
+    ConcessionReviewTotalElapsedSeconds += DeltaTime;
+    if (ConcessionReviewTotalElapsedSeconds > 120.0f)
+    {
+        FinishConcessionResultReview(TEXT("FAILED"), TEXT("ROUTE_BUDGET_EXPIRED"));
+        return;
+    }
+    const auto Advance = [this](int32 NextStage)
+    {
+        ConcessionReviewStage = NextStage;
+        ConcessionReviewStageElapsedSeconds = 0.0f;
+    };
+    const auto Fail = [this](const TCHAR* Reason)
+    {
+        FinishConcessionResultReview(
+            TEXT("FAILED"),
+            FString::Printf(TEXT("%s_AT_SCREEN_%d"), Reason,
+                static_cast<int32>(PlayerFlow.Current())));
+    };
+    // The route is the ordinary player one: Title -> Skirmish -> deployment review
+    // -> Deploy -> pause -> Concede -> Confirm. HandleShellAction only accepts an
+    // action the current view offers as an enabled button, so reaching Results at
+    // all proves the route existed.
+    if (ConcessionReviewStage == 0)
+    {
+        if (ConcessionReviewStageElapsedSeconds < 2.0f) return;
+        HandleShellAction(EEchoesShellAction::Modes);
+        if (PlayerFlow.Current() == EEchoesShellScreen::Confirmation)
+        {
+            // First run offers to skip the tutorial before opening Skirmish.
+            HandleShellAction(EEchoesShellAction::Confirm);
+        }
+        if (PlayerFlow.Current() != EEchoesShellScreen::Modes)
+        {
+            Fail(TEXT("SKIRMISH_SETUP_UNREACHABLE"));
+            return;
+        }
+        Advance(1);
+        return;
+    }
+    if (ConcessionReviewStage == 1)
+    {
+        if (ConcessionReviewStageElapsedSeconds < 0.5f) return;
+        HandleShellAction(EEchoesShellAction::Primary);
+        if (PlayerFlow.Current() != EEchoesShellScreen::Briefing)
+        {
+            Fail(TEXT("BRIEFING_UNREACHABLE"));
+            return;
+        }
+        Advance(2);
+        return;
+    }
+    if (ConcessionReviewStage == 2)
+    {
+        if (ConcessionReviewStageElapsedSeconds < 0.5f) return;
+        HandleShellAction(EEchoesShellAction::Primary);
+        if (PlayerFlow.Current() != EEchoesShellScreen::Gameplay)
+        {
+            Fail(TEXT("DEPLOY_FAILED"));
+            return;
+        }
+        UE_LOG(LogEchoes, Display, TEXT("[ECHOES_CONCESSION_REVIEW_DEPLOYED] screen=gameplay"));
+        Advance(3);
+        return;
+    }
+    if (ConcessionReviewStage == 3)
+    {
+        // Let the match genuinely run before conceding it.
+        if (ConcessionReviewStageElapsedSeconds < 3.0f) return;
+        const UEchoesSimulationSubsystem* Bridge =
+            GetWorld() != nullptr
+                ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+                : nullptr;
+        if (Bridge == nullptr || Bridge->GetSimulation() == nullptr)
+        {
+            Fail(TEXT("SIM_NOT_READY"));
+            return;
+        }
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_CONCESSION_REVIEW_PRECONCEDE] tick=%llu outcome=%u forfeitingSeat=%u"),
+            static_cast<unsigned long long>(Bridge->GetSimulation()->CurrentTick()),
+            static_cast<uint8>(Bridge->GetMatchOutcome()),
+            Bridge->GetForfeitingPlayer());
+        TogglePauseMenu();
+        if (PlayerFlow.Current() != EEchoesShellScreen::Pause)
+        {
+            Fail(TEXT("PAUSE_UNREACHABLE"));
+            return;
+        }
+        HandleShellAction(EEchoesShellAction::Concede);
+        if (PlayerFlow.Current() != EEchoesShellScreen::Confirmation)
+        {
+            Fail(TEXT("CONCEDE_NOT_CONFIRMED"));
+            return;
+        }
+        HandleShellAction(EEchoesShellAction::Confirm);
+        if (!IsMatchResultVisible())
+        {
+            Fail(TEXT("RESULT_NOT_SHOWN"));
+            return;
+        }
+        Advance(4);
+        return;
+    }
+    if (ConcessionReviewStage == 4)
+    {
+        // Read the first composed result frame, before the async replay archive
+        // publishes. That is the window in which a player first reads the screen
+        // and the one in which the cause used to be unavailable.
+        const UEchoesSimulationSubsystem* Bridge =
+            GetWorld() != nullptr
+                ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+                : nullptr;
+        const FString Banner = GetStatusMessage();
+        const FString Dossier = BuildShellView().Body.ToString();
+        const bool bBannerTruthful =
+            !Banner.Contains(TEXT("Command Core has fallen")) &&
+            Banner.Contains(TEXT("conceded"));
+        const bool bDossierTruthful =
+            !Dossier.Contains(TEXT("Command Core has fallen")) &&
+            Dossier.Contains(TEXT("concession"));
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_CONCESSION_REVIEW_RESULT] archive=%d forfeitingSeat=%u bannerTruthful=%d dossierTruthful=%d banner=%s"),
+            Bridge != nullptr ? static_cast<int32>(Bridge->GetReplayArchiveState()) : -1,
+            Bridge != nullptr ? Bridge->GetForfeitingPlayer() : echoes::sim::kNeutralPlayer,
+            bBannerTruthful ? 1 : 0,
+            bDossierTruthful ? 1 : 0,
+            *Banner);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_CONCESSION_REVIEW_DOSSIER] body=%s"),
+            *Dossier.Replace(TEXT("\n"), TEXT(" / ")));
+        FinishConcessionResultReview(
+            bBannerTruthful && bDossierTruthful ? TEXT("PASSED") : TEXT("FAILED"),
+            bBannerTruthful && bDossierTruthful
+                ? TEXT("CONCESSION_NAMED_ON_BANNER_AND_DOSSIER")
+                : TEXT("RESULT_MISATTRIBUTED_THE_OUTCOME_CAUSE"));
+        return;
+    }
+}
+
 void AEchoesPlayerController::StartPointerCombatGuardReview()
 {
 #if !UE_BUILD_SHIPPING
@@ -7898,29 +8089,46 @@ void AEchoesPlayerController::NotifyMatchFinished(
     }
     SetIgnoreMoveInput(true);
     SetIgnoreLookInput(true);
+    const echoes::sim::PlayerId ViewerSeat =
+        GetNetMode() == NM_Client && NetworkSeat < echoes::sim::kMaximumPlayers
+            ? NetworkSeat
+            : UEchoesSimulationSubsystem::LocalPlayerId;
     if (Outcome != echoes::sim::MatchOutcome::Draw)
     {
-        PresentResultAudio(OutcomeBelongsToSeat(
-            Outcome,
-            GetNetMode() == NM_Client &&
-                    NetworkSeat < echoes::sim::kMaximumPlayers
-                ? NetworkSeat
-                : UEchoesSimulationSubsystem::LocalPlayerId));
+        PresentResultAudio(OutcomeBelongsToSeat(Outcome, ViewerSeat));
     }
+    // SPEC-OUT-002 separates the two ways a player loses: the final Command Core
+    // destroyed, or a confirmed concession. ForfeitPlayer retires the conceding
+    // seat's Core to end the match deterministically, so the outcome enum alone
+    // reports every concession as a Corefall - a defeat banner told a conceding
+    // player their Core had fallen when it had not, and the winner of a
+    // concession is told the same about their opponent. SPEC-OUT-006 requires the
+    // precise cause, so read the authoritative forfeiting seat instead.
+    // The authoritative seat lives in the simulation that ran the forfeit, so this
+    // answers on the host and in offline play. A network client's mirror never
+    // runs ForfeitPlayer and the result RPC carries only the outcome, so a client
+    // reports kNeutralPlayer and keeps the existing Corefall wording. That
+    // remaining client case needs the network result contract to carry the cause
+    // and is deliberately out of this repair's scope.
+    const echoes::sim::PlayerId ForfeitingSeat =
+        ResultBridge != nullptr ? ResultBridge->GetForfeitingPlayer()
+                                : echoes::sim::kNeutralPlayer;
+    const bool bForfeited = ForfeitingSeat != echoes::sim::kNeutralPlayer;
     FString Message =
         TEXT("DRAW — both Command Cores fell in the same deterministic tick.");
-    if (OutcomeBelongsToSeat(
-            Outcome,
-            GetNetMode() == NM_Client &&
-                    NetworkSeat < echoes::sim::kMaximumPlayers
-                ? NetworkSeat
-                : UEchoesSimulationSubsystem::LocalPlayerId))
+    if (OutcomeBelongsToSeat(Outcome, ViewerSeat))
     {
-        Message = TEXT("VICTORY — the opposing Command Core has fallen.");
+        Message = bForfeited
+            ? TEXT("VICTORY — your opponent conceded the match.")
+            : TEXT("VICTORY — the opposing Command Core has fallen.");
     }
     else if (Outcome != echoes::sim::MatchOutcome::Draw)
     {
-        Message = TEXT("DEFEAT — your Command Core has fallen.");
+        Message = bForfeited && ForfeitingSeat == ViewerSeat
+            ? TEXT("DEFEAT — you conceded the match.")
+            : bForfeited
+                ? TEXT("DEFEAT — your ally conceded the match.")
+                : TEXT("DEFEAT — your Command Core has fallen.");
     }
     if (bTrainingReadinessResult)
     {
@@ -9078,6 +9286,10 @@ void AEchoesPlayerController::PlayerTick(float DeltaTime)
     if (bDisplayRevertReviewActive)
     {
         RunDisplayRevertReviewStage(DeltaTime);
+    }
+    if (bConcessionResultReviewActive)
+    {
+        RunConcessionResultReviewStage(DeltaTime);
     }
 #endif
     if (bSelectionButtonDown)
