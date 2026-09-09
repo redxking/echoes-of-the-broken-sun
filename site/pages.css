@@ -719,6 +719,9 @@
 
 .readability-contract p { margin: 0; color: var(--night-body); font-size: 14px; }
 
+/* Plain figures that carry an engine-capture badge need a positioning context. */
+.engine-figure { position: relative; }
+
 .scar-page-hero {
   background:
     radial-gradient(circle at 82% 22%, rgba(179, 65, 122, .22), transparent 34%),
