@@ -37,6 +37,15 @@ simulation, campaign, three-faction, world, UI, and audio work at different stag
 verification. Automated tests and development captures cover bounded parts of that work; they do not
 establish a fully qualified ordinary-player experience.
 
+**The art and graphics are not finished, and are not meant to look finished yet.** Every in-engine image
+published anywhere for this project — on the website, in the development log, or in this repository — is a
+capture from the current development build. Meshes, materials, terrain, lighting, effects, animation, and
+destruction are at first-pass or vertical-slice quality, kept deliberately plain so that layout,
+readability, and the underlying systems can be judged now. Visual polish is scheduled for the final phase
+of production. Judge these captures on whether the battlefield reads clearly, not on whether it looks like
+a finished game — it will not, and it is not supposed to yet. Images labelled *concept target* are the
+opposite case: they show the intended look, and are not gameplay.
+
 The intended macOS release includes the fifteen-mission story campaign, a separate Conquest/roguelite
 mode, offline PvAI and bounded multiplayer with team battles and free-for-all. These are development
 commitments, not claims that those modes are ready. Linux/SteamOS and Windows remain later targets.
@@ -56,7 +65,7 @@ This is an ambitious, one-person effort to build something with real craft behin
 - `Source/EchoesSimCore` — the deterministic, engine-independent simulation at the heart of the game
 - `Source/EchoesOfTheBrokenSun` — the Unreal Engine presentation and interaction layer
 - `Content/Data/Source` — the source data defining factions, units, structures, technologies, and Future Wells
-- `Content/Art/Generated` — in-progress art for the vertical slice
+- `Content/Art/Generated` — in-progress vertical-slice art; first-pass quality, not final production art
 - `site` — website source; source presence does not verify the current live deployment
 - `Docs/Archive/DevelopmentBible.md` — the world, story, campaign, and design bible
 - `Docs/Archive/TechnicalArchitecture.md` — how the simulation, engine integration, AI, networking, and build pipeline work
