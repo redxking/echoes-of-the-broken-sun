@@ -2,7 +2,7 @@
 
 **Author and owner:** Angelis Pseftis
 **Created:** 2026-09-03
-**Maintained:** 2026-09-06
+**Maintained:** 2026-09-09
 
 Start with [AGENTS.md](../AGENTS.md) for shared agent rules. This index routes work to the controlling
 sources; it creates no game requirement and accepts no result. Current owner instructions and the host's
@@ -80,6 +80,10 @@ Keep historical owner decisions, IDs, negative evidence, and license/provenance 
 pointers and remove stale instructions in place. Do not rewrite past results as current successes. Inspect
 Git state live rather than copying counts, branch names, or tracking assertions into standing guidance.
 
+
+## SC2 audit intake and ongoing gameplay coverage
+
+The [SC2 gameplay audit](SC2GameplayGapAudit.md) is a dated source-level comparison, not a current defect ledger. Its complete 162-item/32-event intake now lives in [Requirements.md](Requirements.md#gameplay-completeness-intake--sc2-audit-2026-09-09). Read the [state and decision dispositions](RequirementsState.md#sc2-audit-intake-and-continuous-work--2026-09-09) and [existing P0–P7 integration](DeliveryPlan.md#sc2-audit-integration-into-continuous-work--2026-09-09) before continuing affected gameplay work. Keep passing recent repairs, unresolved design choices and required player evidence separate. The ordinary document checker includes `Scripts/check_gameplay_audit_traceability.py` so this coverage cannot silently lose a row.
 
 ## Maintenance verification
 

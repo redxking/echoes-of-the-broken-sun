@@ -12,7 +12,7 @@
 *Echoes of the Broken Sun* targets the graphical polish, responsive micro-feedback, and tactile clarity of tier-one competitive RTS benchmarks (such as *StarCraft II*), while strictly avoiding derivative visual clichés.
 
 ### The Originality Standard
-- **No Legacy 3-Box Console:** The game rejects the rigid 1998/2010 Blizzard layout (`[Minimap | Unit Wireframe | 3x5 Grid]` occupying the bottom 25% of the viewport). Instead, *Echoes* employs a **floating, modular tactical HUD** featuring an elegant contextual command arc, corner telemetry, and an uncluttered battlefield canvas.
+- **Bottom command console (owner-approved successor, 2026-09-08):** Apply SPEC-UI-007 and SPEC-TUT-008: minimap left, selected-object information center, commands right, with compact teaching and readable objectives/captions. This replaces the earlier floating-command-arc layout direction. Preserve original Echoes materials, typography and visual identity; the familiar RTS arrangement does not authorize copying another game’s art.
 - **No Generic Sci-Fi Power Armor:** The Meridian Compact is an industrial and civic engineering society. Combat units wear utilitarian pale ceramic heat-plating (`ceramic_civic`) over dark carbon-composite frames with visible hydraulic load paths, heavy surveyor optics, and deployable planar kinetic barriers.
 - **No Generic Mineral or Bio-Zerg Clones:** The Kharuun Assemblies are living geological custodians and memory-bearers. Their structures and warforms are grown layered basalt strata with faceted amber mineral nodes, not mindless alien beasts or generic crystals.
 - **No Generic Ghostly Psionics:** The Hollow Choir embodies unchosen futures that were denied existence. Their architecture and units exhibit "two valid shadows", offset probability duplicate contours, and magenta possibility bleed.
@@ -67,3 +67,8 @@ Every composed frame adheres to a strict five-tier luminance budget:
 ### 4. Campaign Operations Map (`WBP_EchoesCampaignMap`)
 - **Format:** Sector map of Soryn mapping all 15 campaign operations (`M01–M15`).
 - **Dossier:** Mission objectives, secondary recovery protocols, and Dawnshard yield estimates.
+
+
+### Owner-approved Meridian network feedback — 2026-09-08
+
+Ground-level conduits carry Dawn energy along simulation-confirmed owned connections. Keep them subtle normally and emphasize the relevant network during selection/placement. Preview uses a clearly distinct ghost connection, labelled as predicted until construction completes. Foundations show assembly, not active energy. A disconnected endpoint uses a broken-link symbol and useful text; restoration visibly returns energy. Do not rely on color alone; reduced-motion settings retain steady readable state. Aegis is a consuming endpoint, never a relay. A disconnected Foundry loses network extension, not its implemented production capability. No cosmetic geometry may intercept orders, affect navigation or disclose enemy information. First implementation/qualification batch covers operational conduits only; other approved states remain open.

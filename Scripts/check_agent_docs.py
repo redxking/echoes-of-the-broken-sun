@@ -8,6 +8,7 @@ import re
 import sys
 from urllib.parse import unquote
 from check_requirement_registry import validate as validate_registry
+from check_gameplay_audit_traceability import validate as validate_gameplay_audit
 
 ROOT = Path(__file__).resolve().parents[1]
 NEW_IDS = ('SPEC-MAP-004', 'SPEC-CAM-041', 'SPEC-CAM-042', 'SPEC-VISD-008', 'SPEC-ART-004')
@@ -55,6 +56,7 @@ def validate_game_workflow(root):
 
 def main():
     errors = validate_game_workflow(ROOT)
+    errors.extend(validate_gameplay_audit(ROOT))
     files = markdown_files()
     local_links = 0
     for path in files:

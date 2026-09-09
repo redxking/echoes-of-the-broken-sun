@@ -1,7 +1,7 @@
 # World and presentation work — continuation record
 
 **Author and owner:** Angelis Pseftis\
-**Updated:** 2026-09-04\
+**Updated:** 2026-09-09\
 **Status:** Partially complete; operational handoff, not requirements or acceptance authority.
 
 The owner directs autonomous implementation and quality decisions across maps, graphics,
@@ -9,7 +9,29 @@ images, effects and audio. Do not stop for intermediate owner review. Deliver th
 experience for review only after internal qualification; never label internal QA human acceptance.
 Preserve this objective across context windows and update this file in place.
 
-## Current resumption point — 2026-09-04
+## Current resumption point — 2026-09-09
+
+The September 9 environment source slice is integrated: service material v5, cliff reuse
+validation, protected evacuation generation, world provenance test repair, and exterior bank foot v4.
+The editor build, 20 main tooling tests, 99 world source tests, actual asset readback and all three
+native map checks pass. Nine protected authoring stills cover two before/after views, four current
+corners, arrival and archive; the review found a modest foot improvement without an exposed gap.
+V042 remains OPEN: broad repetitive relief, contour bands and the hard contact still need work.
+
+The normal campaign route and keyboard bank pan were observed, but pointer/modifier/zoom delivery
+was inconsistent and the interactive run reached its 480-second timeout. Protected cleanup passed
+and all 60 candidate files remained unchanged. This is partial agent GUI evidence, not a clean
+physical-player route, packaged qualification or owner acceptance. The opening cinematic's purple
+field remains an observed presentation issue; it is separate from intentional opaque unknown fog.
+
+Continue V042 authoring in `Worktrees/m01-environment-completion`, preserving the integrated v4
+geometry and its evidence. Do not restart the historical v8 instruction. Shared main/heavy ownership
+is being returned after the bounded environment slot; confirm the live owner before another edit,
+build or editor launch. Evidence is in the containing workspace's
+`BuildArtifacts/Evidence/m01-environment-completion-20260909/environment-integration-review.json`
+and `integrated-environment-candidate.json`. This record is not a resource lease.
+
+## Historical checkpoint — 2026-09-04
 
 **Active production checkpoint:** M01 has 306 blocked cells in all three doctrines and 30
 landmark records (including the shared archive apron and loading face); all three canyon crossings and required sites remain. World kits v9,
@@ -968,3 +990,166 @@ other actor/action states, pointer interaction V039, Well capability dependencie
 mission review. Gameplay layout acceptance, package qualification and Angelis-only acceptance remain
 open. The concurrent harvesting-guidance append was preserved; no economy rules or later maps changed.
 The editor is retained in the paused M01 review state, and the original build configuration is restored.
+
+### 2026-09-09 — M01 environment completion resumed in isolation
+
+**Author and owner:** Angelis Pseftis. The owner authorized this task to continue M01 environment
+production through integration and rendered verification. Existing P3/B1/B2 sequencing remains in force.
+The isolated checkout is `Worktrees/m01-environment-completion`, detached at
+`6b559889a4e7b0ed7fd86aee37b64728bd516017`. Main remains under the save/recovery integration owner;
+HUD/menu and unit/building-action work have separate owners. No main writes or heavy launches are
+authorized by a historical session pointer. Shared resources will transfer through live coordination.
+
+The source baseline and path hashes are retained at
+`/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/m01-environment-completion-20260909/baseline.json`.
+The inspected environment paths match main. The current source already contains the V042 v2 connected
+exterior-bank correction; its last retained 12:41 UTC movie on September 5 predates that correction.
+The next gate is a current-source matched camera sweep, not another unobserved geometry revision.
+
+Scope is the existing M01 environmental composition, surface materials, landmarks, atmosphere and
+readability. Preserve campaign geometry, anchors, resources, objectives and gameplay; scenery retains
+its existing inert collision/navigation/input/fog roles. Units, buildings, HUD and narrative/audio
+remain with their current owners. B1/B2 environmental observations will be recorded separately from
+integrated package, physical-input, performance and Angelis-only acceptance evidence.
+
+Source baseline: campaign, landmark and Glass Scar dressing compilers report current outputs;
+evacuation and world-kit recipe tests pass. The initial World suite passed 97/98. Its one failure
+compared the evolving `test_glass_scar_map_pack.py` with the sealed v1 test source, despite the
+later documented MAP-001 parser/fairness coverage. The separate test-contract repair keeps the
+three accepted v1 content files byte-identical, checks the original test-source hash through its
+immutable Git object, and preserves the current live test. The rerun passes 99/99 in 4.307 seconds.
+The failed result, scoped patch, unchanged-content checks and passing log are retained beside
+`baseline.json`; this repair is isolated and has not yet been integrated into main.
+
+The existing editor hook and M01 movie/camera commands are prepared for the reserved review window.
+The current camera is orthographic, so each settled view will also check its actual width against
+the current arm/FOV conversion and record the readback. Old perspective-camera captures provide
+historical defect evidence, not a pixel-matched current-camera reference. No new movie or visual
+pass is claimed by this preparation.
+
+The isolated cliff material generator now checks its required graph outputs, registered matte scalar
+parameters and absent emissive connection before reusing an asset with a matching revision tag. Five
+source-level refusal/reuse tests pass; a fake read-only Unreal surface establishes the Python branch
+behavior, not an editor result. Material recipe, revision and generated assets are unchanged. The scoped
+patch and source-only receipt are retained as `cliff-validator.patch` and `cliff-validator-source.json`
+in the evidence root above. Actual asset readback remains queued with the environment baseline.
+Independent source review confirmed the local UE 5.8 API contract and identified the missing standard
+test registration. `Scripts/test_content.sh` now includes this test; the full source content gate passes
+158 tests in 14 suites and validates the content compiler output. The ready log preserves its wrapper
+fields while explicitly limiting validation to outputs/scalars/no-emissive and leaving graph identity
+unchecked. `content-gate.json` binds the passing log. The 99-test World run is a separate overlapping
+suite, so these totals are not presented as 257 distinct tests.
+
+Source inspection also found that the existing ServiceCeramic MRE green values (190–213) combined with
+the evacuation material's `.93` roughness scalar calculate to 1.15794–1.24182 before renderer clamping.
+The `.72` candidate calculates to .89647–.96141, preserving the matte floor and texture variation.
+These calculations and the input hash are retained in `service-roughness-source.json`. No material
+appearance change is made on this calculation alone: current asset parameter/texture readback and
+scene inspection are still required, including the shared civic-service uses outside M01.
+
+The integration owner released a bounded read-only environment window on frozen recovery candidate39.
+Prelaunch and post-close checks matched all 530 candidate identity entries and five additional
+environment material assets. The protected full editor launch reached its 540-second limit before
+editor/Python/M01 readiness. A one-second process sample found the main thread waiting for global shader
+map compilation with active compiler workers. The timeout requested Mac graceful termination at
+13:59:14 UTC; the editor and workers were confirmed absent afterward. The OS synthetic-denial probe
+passed, scoped saves remained empty, and scoped cleanup succeeded. Persistent AutomationDDC was retained.
+
+`candidate39-baseline-result.json`, `baseline-launch.json`, the startup log and process sample preserve
+this failed attempt. No material readback, movie, physical-input result or visual pass was produced.
+The heavy slot transferred explicitly to Art at 14:00 UTC for its queued HUD integration/build. A
+read-only NullRHI command-editor material check is prepared separately to avoid coupling asset graph
+inspection to GPU startup; it remains unexecuted and cannot replace the rendered environment gate.
+
+Art subsequently ran the frozen read-only helper sequentially inside its protected HUD NullRHI import
+process, without another engine launch. The 14:05:36 UTC readback passed the cliff output/scalar/no-emissive
+checks and recorded four v4 service instances at roughness .93 with the expected non-sRGB mask texture.
+Its module hashes identify Art's newly built candidate, rather than the preceding candidate39 attempt.
+The helper is released after that successful run; the HUD owner retains main and heavy resources.
+
+The isolated service-material v5 source now uses the .72 matte multiplier, with a source-image bound
+check added to the existing evacuation prop tests. Four focused tests pass. Generated assets and main
+are unchanged; ordinary rendered appearance still needs comparison. The next bounded terrain view can
+use the already established protected Development-game launch and visible camera controls; static frames
+will be reported separately from continuous motion, package, performance and owner evidence.
+
+After adding the material source guard, the complete content gate passes 159 tests in 14 suites and
+validates the authoritative content output (`content-final-source.json`). The negative control with
+the old .93 scalar fails the new roughness-bound check as expected. The separate v5 patch passes a
+read-only application check against main; it remains unintegrated.
+
+The earlier recovery Development-game route used the home/Zen cache rather than the protected
+wrapper's project-only AutomationDDC. Its quick startup therefore cannot establish that changing to
+`-game` alone resolves the cold-cache delay. Art now owns a protected Development-game launch that is
+actively compiling into AutomationDDC. A regular-file-only, non-overwriting cache seed was prepared
+and checked with synthetic files, but no real cache copy has run. Any seed requires an exclusive
+storage window with no engine cache writers; player-save and whole-home launch protection stays intact.
+
+The canonical evacuation-only generation shell branch now calls the existing protected launcher and
+checks its full isolation receipt, including cleanup, before accepting the unchanged asset-ready marker.
+The three behavioral routing tests pass without an Unreal launch. The broader Tools suite passes 18/20;
+two existing checks refuse this isolated checkout's overlong ephemeral DDC path (126 versus the engine's
+119-character limit). The guard is unchanged; the actual integration path is the shorter main checkout,
+whose Tools qualification remains pending. `art-generation-isolation-source.json` preserves this limit.
+Canonical synthesis also reproduces all three existing ServiceCeramic PNGs byte-for-byte. The prepared
+post-generation readback covers four v5 instances and their six M01/four M03 shared mesh bindings;
+it records invalid instances/slots as failures before writing its result, and is not yet executed.
+
+Art's first protected rendered HUD window closed at 14:40 UTC after title/options/tutorial inspection.
+It reported normal editor exit, successful protection/cleanup, and scoped profile/tutorial writes;
+the wrapper's exit 8 is therefore retained rather than described as an empty-save automation pass.
+No M01 environment frames came from that route. Main/heavy ownership transferred explicitly to the
+unit/building-action task for its queued native and common-engine checks; environment integration is next.
+
+### September 9 protected M01 baseline continuation
+
+The gameplay owner granted a ten-minute read-only engine window, returned at 15:28:41 UTC.
+The protected main candidate launched through the normal campaign/tutorial-skip/briefing path,
+then used keyboard camera movement to inspect a portion of the M01 boundary. No source, assets
+or binaries were changed: all 43 tracked candidate files matched before and after. The editor
+closed normally with exit 0; the wrapper returned 8 because the normal route created scoped
+profile/save data. Its synthetic denial probe and cleanup passed. See the workspace evidence
+root's `baseline-game-identity.json`, `baseline-game-result.json` and `baseline-game.log`.
+
+Fresh screenshots retained in the task show a broad smooth foot below the connected exterior
+bank, a straight material contact, and a purple polygon/scene element whose component is not yet
+attributed. No material compilation failure or M01 bank degradation marker was found in the log.
+The source walk-surface recipe emits material slot 0, so a magenta palette entry at slot 3 alone
+does not establish the purple element's cause. Two UI refresh refusals occurred and the view was
+re-read before continuing; this is agent GUI observation, not owner acceptance or sole-input
+attribution. Only partial boundary views were obtained. The archive/Well, all corners, generated
+v5 material, motion, package and performance gates remain unqualified. Main/heavy ownership
+returned to the gameplay task for its networking repair; environment changes remain isolated.
+
+The first isolated bank-foot candidate (v3) was rejected before integration. Although its
+contact rims and source tests passed, a 6,240-vertex Python approximation using the installed
+engine's Perlin permutation showed 107–205 cm mean lowering within 600 cm of the rim on every
+side. Delaying relief could therefore widen the perceived bare strip. Its patch and analytical
+results remain retained as rejected preparation, not a rendered failure or completed repair.
+
+The current v4 candidate retains XY samples, triangulation, annulus extent and materials. It
+uses a 350–850 cm foot, a bounded regional shoulder in low-Crest saddles and nonnegative
+small relief. The same approximation raises mean near-foot height 78–99 cm, retains both
+exact contact rims and does not go below Z=-2; the largest sampled local rise is 323 cm.
+That increase requires explicit rendered occlusion inspection. `bank-perimeter-analysis-v4.json`
+is analytical evidence only. The fifth current patch is `bank-foot-v4.patch`; the ready manifest
+excludes v3. Native build, geometry invariants and normal-camera edge/corner views remain
+required after the explicit shared-resource handoff. No V042 closure is claimed.
+
+### September 9 integrated environment verification
+
+Five scoped patches were applied after the gameplay task explicitly released candidate5. All of its
+33 source files remained unchanged. The build succeeded (41.69 seconds for Unreal compilation after
+the required source checks); main tooling tests passed 20/20. Canonical protected evacuation generation
+completed and actual readback verified the four v5 roughness values, shared master formula, cliff
+output/scalar contract and ten shared M01/M03 mesh bindings. Native M01ExteriorBanks, WorldKitVisibility
+and MissionLandmarkVisibility passed 3/3. The first convenience JSON parser rejected the Unreal report's
+UTF-8 BOM; the retained report was decoded correctly without a test rerun.
+
+Matching SW/south stills and current SE/NE/NW/arrival/archive captures are retained. Independent visual
+review found no clear regression or exposed boundary gap, but only modest foot improvement; V042 is
+not closed. The separate normal-input run entered M01 and panned along the bank. It retained a purple
+opening-cinematic field and unreliable pointer/modifier/zoom attempts, then timed out at 480 seconds.
+Do not convert its partial observations into successful full-route evidence. Cleanup and the 60-file
+candidate identity check passed, and the remaining editor window was closed. No editor process remains
+at this checkpoint. No gameplay, HUD, requirement-state or human-acceptance change was made by this task.

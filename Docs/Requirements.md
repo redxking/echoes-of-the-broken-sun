@@ -149,7 +149,7 @@ exact structural coverage; per-ID evidence remains in RequirementsState.md.
 | `REL-FTU-*` | 12 | SPEC-PIL-*, SPEC-TUT-* |
 | `REL-GOV-*` | 15 | SPEC-AUTH-*, SPEC-VAL-* |
 | `REL-LOC-*` | 6 | SPEC-LOC-* |
-| `REL-MP-*` | 19 | SPEC-PRD-003, SPEC-SKM-014..018, SPEC-ARC-*, SPEC-PLAT-*; active bounded-session scope |
+| `REL-MP-*` | 21 | SPEC-PRD-003, SPEC-SKM-014..018, SPEC-ARC-*, SPEC-PLAT-*; active bounded-session scope |
 | `REL-PERF-*` | 25 | SPEC-BUD-*, SPEC-PLAT-* |
 | `REL-PORT-*` | 10 | SPEC-PLAT-* |
 | `REL-PUB-*` | 20 | — none (spec gap) |
@@ -395,11 +395,15 @@ Probability leakage appears as duplicated shadows, memories of streets never bui
 
 ### §6.2 Advanced Command Pipelining, Waypoint Visualization, and Smart-Casting
 
-* **SPEC-CMD-011 — Shift-Queued Order Chaining:** Players shall chain sequential orders by holding `Shift` while issuing commands (Move, Gather, Build, Patrol, Ability). The unit shall execute orders sequentially without dropping waypoints, supporting a queue depth of up to 16 commands.
+* **SPEC-CMD-011 — Shift-Queued Order Chaining:** Players shall chain sequential orders by holding `Shift` while issuing commands (Move, Direct Attack, Gather, Build, Patrol, Ability). The unit shall execute orders sequentially without dropping waypoints, supporting a queue depth of up to 16 commands.
   * **SPEC-CMD-011.AUTH:** Completing a leg immediately advances to the next queued order on the subsequent simulation tick.
   * **SPEC-CMD-011.FAIL:** Dropping intermediate waypoints or freezing upon completing a leg fails queue processing.
   * **SPEC-CMD-011.VERIF:** `SRC` (multi-order shift-queueing test).
   * **SPEC-CMD-011.LANE:** Core Gameplay (`EchoesSimCore`).
+
+* **SPEC-CMD-011.ATTACK — Direct-attack queue reachability.** DERIVED FROM SPEC-CMD-002/011/012 and the owner-authorized audit 028 intake. Actor: player commanding attack-capable units. Trigger: Shift-queue Direct Attack among legal movement/gather/build/other supported orders, within the existing 16-order capacity. Result: retain target identity and order sequence; revalidate visibility, hostility and capability when the attack executes. Destroyed, hidden or otherwise invalid targets shall produce an explicit resolved/refused outcome and continue the remaining legal queue under the existing subsequent-tick rule, without hidden tracking, silent waypoint loss or new spending. Stop clears reversible queued orders under SPEC-CMD-007. Owner: Core Gameplay. Verification class: PKG-PHYS; include invalid target at admission/execution, repeat/overflow, manual override and save/replay continuation. Existing SRC queue tests remain mandatory under the parent.
+
+* **SPEC-CMD-011.ATTACKSTATE — Queued attack state and persistence.** DERIVED FROM SPEC-CMD-011.ATTACK and SPEC-CMD-002. Actor: authoritative command resolver. Trigger: admit/execute a queued attack, lose/destroy/change a target, restore a snapshot or replay the command sequence. Result: retain the 16-order/next-tick rules, revalidate current lawful target information, resolve invalid attacks explicitly, preserve subsequent legal orders and produce identical state/checksums across save/replay. No queued target retains hidden live tracking or duplicates a transaction. Owner: Core Gameplay. Verification class: SRC; include invalid-at-admission versus invalid-at-execution, target ID reuse, overflow, Stop override and saved/replayed queue continuations. Physical command reachability remains independently required by ATTACK.
 
 * **SPEC-CMD-012 — Waypoint Vector Breadcrumb Visualization:** While holding `Shift` with units selected, the renderer shall project ground-projected dashed spline vectors connecting all queued destination coordinates, decorated with contextual order glyphs (Move, Attack, Gather, Build).
   * **SPEC-CMD-012.AUTH:** Vectors update dynamically in real-time as units progress along the path.
@@ -437,11 +441,16 @@ Here is the finalized and formatted section §7. Movement, pathfinding, formatio
 
 ## §7.1 Subsurface passage contract
 
-* Entrances and exits are visible, targetable map objects with public capacity and travel time.
-* Eligible Kharuun units queue visibly; each entrance moves at most four units concurrently, with one unit entering every 10 ticks.
-* Transit time is the authored passage length divided by 500 cm/s, rounded up to ticks, with a minimum of 60 ticks.
-* Units have no attack, vision, ability, direction change, or targetability during transit; Resonants and Listening Spines show anonymous vibration along the passage.
-* If the entrance is destroyed after entry, units continue to the exit. If the exit is destroyed or blocked, units wait up to 100 ticks, then return to the entrance; if both ends are gone, they emerge at the nearest authored fallback.
+* **SPEC-MOV-014 — Authored subsurface passage lifecycle.** DERIVED FROM SPEC-MOV-001 and the pre-existing section 7.1 clauses, registered for audit 036 traceability on 2026-09-09. This names the existing exception; it adds no free burrowing or new passage mechanic. Aggregate owner: Core Gameplay. The clauses below preserve their original values and independently govern completion.
+* **SPEC-MOV-014.ENTRANCES —** Entrances and exits are visible authored map objects with public capacity and travel time; target interaction is independently verified under SPEC-MOV-014.TARGET. Owner: Core Gameplay. Verification class: PKG-REND; negative/recovery coverage: hidden/known endpoints and readable public capacity/travel time. Actor: affected passage user; trigger and required result are the conditions above. Save/replay must preserve the corresponding queue/transit/fallback state under existing persistence contracts.
+* **SPEC-MOV-014.CAPACITY —** Eligible Kharuun units queue in deterministic admission order; visible queue presentation is independently verified under SPEC-MOV-014.QUEUEVIEW. Each entrance moves at most four units concurrently, with one unit entering every 10 ticks. Owner: Core Gameplay. Verification class: SRC; negative/recovery coverage: fifth waiting entrant, cancellation and same-tick arrivals. Actor: affected passage user; trigger and required result are the conditions above. Save/replay must preserve the corresponding queue/transit/fallback state under existing persistence contracts.
+* **SPEC-MOV-014.TRANSIT —** Transit time is the authored passage length divided by 500 cm/s, rounded up to ticks, with a minimum of 60 ticks. Owner: Core Gameplay. Verification class: SRC; negative/recovery coverage: shortest legal length and minimum-time rounding. Actor: affected passage user; trigger and required result are the conditions above. Save/replay must preserve the corresponding queue/transit/fallback state under existing persistence contracts.
+* **SPEC-MOV-014.ISOLATION —** Units have no attack, vision, ability, direction change, or targetability during transit. Resonants and Listening Spines receive only authorized anonymous vibration contacts along the passage; visible interpretation is independently verified under SPEC-MOV-014.SENSORVIEW. Owner: Core Gameplay. Verification class: SRC; negative/recovery coverage: attack/vision/ability requests during transit and sensor anonymity. Actor: affected passage user; trigger and required result are the conditions above. Save/replay must preserve the corresponding queue/transit/fallback state under existing persistence contracts.
+* **SPEC-MOV-014.RECOVERY —** If the entrance is destroyed after entry, units continue to the exit. If the exit is destroyed or blocked, units wait up to 100 ticks, then return to the entrance; if both ends are gone, they emerge at the nearest authored fallback. Owner: Core Gameplay. Verification class: SRC; negative/recovery coverage: entrance loss, exit blockage/destruction, timeout and both ends lost. Actor: affected passage user; trigger and required result are the conditions above. Save/replay must preserve the corresponding queue/transit/fallback state under existing persistence contracts.
+
+* **SPEC-MOV-014.TARGET — Passage target interaction.** DERIVED FROM the preserved section 7.1 targetability contract. Actor: player. Trigger: point at and interact with a visible authored entrance/exit. Result: the actual gameplay object is targetable under its existing eligible-command rules, with matching silhouette/selection feedback. Hidden, destroyed and ineligible endpoints refuse safely without a false terrain command. Owner: Player Experience. Verification class: PKG-PHYS; include target loss and cancel/retry.
+* **SPEC-MOV-014.QUEUEVIEW — Visible passage waiting state.** DERIVED FROM the preserved section 7.1 visible-queue contract. Actor: player observing an entrance. Trigger: more eligible units arrive than can enter at the current capacity/cadence. Result: entrants and waiters are visibly distinguishable and reflect the authoritative queue; cancelled or lost units do not remain as false waiters. Owner: Visual Presentation. Verification class: PKG-REND; include full capacity, withdrawal and restored queue state.
+* **SPEC-MOV-014.SENSORVIEW — Anonymous passage contact presentation.** DERIVED FROM SPEC-MOV-014.ISOLATION and SPEC-INFO-005. Actor: player using Resonant/Listening Spine sensing. Trigger: lawful vibration contact during transit. Result: show anonymous passage vibration without exact unit identity, health, direct targeting or false current vision. Owner: Visual Presentation. Verification class: PKG-REND; include fog, expired contact and multiple transiting units. Source information-boundary assertions remain required by ISOLATION/SPEC-FOG-001.
 
 ## §7.2 Environmental boundaries
 
@@ -1274,6 +1283,8 @@ technologies; they do not define six additional upgrades. Preserve both IDs and 
 * **SPEC-MAP-001 —** Spawn fairness. Each standard skirmish map in §17 supports two fixed mirrored-distance spawn regions with equivalent starting build area, resource travel time within 5%, Well approach time within 5%, and no sightline into the opposing start. Mission-authored campaign layouts remain governed by their distinct objective/access contracts, not mirrored skirmish starts.
 * **SPEC-MAP-002 —** Map truth. Every map ships with a machine-readable contract for grid, starts, terrain, resources, Well, passages, objectives, camera bounds, Reshape outcomes, fallbacks, and deterministic hash.
 * **SPEC-MAP-003 —** Post-match. Results show outcome cause, duration, resource curves, unit production/losses, damage, scouting coverage, idle-worker time, Well control/protocol, Logistics blocks, and AI doctrine/difficulty. Rematch preserves settings; Restart uses the same seed; New Match returns to setup.
+* **SPEC-MAP-005 — Mission-appropriate battlefield scale (owner direction, 2026-09-08).** Current prototype map dimensions are not a universal size ceiling. Larger training, campaign and skirmish battlefields may use the strategic scale of Age of Empires and StarCraft II as design references according to the operation's needs. Choose actual dimensions from playable build area, route alternatives, travel times, resource distribution, scouting and mission pacing, not an assumed cross-engine tile conversion. Begin onboarding in a small readable clearing even when its enclosing map is larger. Existing named-map dimensions remain current contracts until individually revised. Each enlarged map requires source-authored geometry and camera/minimap bounds plus pathfinding, AI cadence, fog, save/replay and applicable performance qualification; enlargement alone is not quality or acceptance.
+
 
 ### Approved additional match formats
 
@@ -1803,6 +1814,13 @@ On 2026-09-06 Angelis selected `REL-AUD-023`: Music -6 dB, Ambience -4 dB, 150 m
 * **SPEC-TUT-006 —** Intentional tutorial exit (owner direction, 2026-09-06). Provide a readable, low-emphasis top-right Hold to skip control outside the primary spotlight. Pointer or keyboard activation requires a continuous 1.5-second hold with a circular progress meter. Early release, loss of focus/capture, interruption or sequence replacement cancels the hold. A completed hold opens a modal with Skip this step only, End all tutorials, and a cancel path. The modal blocks gameplay. Skip this step advances the current instructional step and unlocks its dependent controls but records it as skipped, never as verified mastery or an earned completion reward. End all tutorials terminates guidance and restores control immediately after the choice. Neither action establishes readiness proof. Returning from cancel restores the same step and prior pause state.
 
 * **SPEC-TUT-007 —** Purpose-led progressive introduction (owner direction, 2026-09-07). Replace the initial location-centering drills with an in-world welcome explaining who the player is and what the operation will accomplish. Start the guided tutorial with one worker-producing building and no mobile units. Introduce each building/unit through a clear explanation of purpose, a visible demonstration or automatic selection, then a required player action. Teach worker production before construction; introduce and construct buildings progressively rather than pre-spawning the full base. Guide initial placement at named visible locations and explain the local advantage and tradeoff relative to other placements. Cover the tutorial's applicable building roster and necessary units without assuming prior RTS knowledge. Demonstration/automatic selection grants no mastery; actual authorized player actions, skipped steps and earned progress retain SPEC-TUT-003/005/006 separation. Camera and bottom-console corrections precede this tutorial redesign. The training deployment change does not silently alter campaign mission starting forces.
+
+* **SPEC-TUT-008 — Chapter-based optional onboarding (owner-approved replacement, 2026-09-08).** Implement seven linked, replayable chapters: establish a foothold; build a useful outpost; prepare a first force; protect it; scout and interpret information; choose a Future Well protocol; complete an independent command. Tutorial completion is recommended but never a prerequisite for campaign or offline skirmish entry; normal campaign progression and valid-profile requirements remain. Retain legacy tutorial records without inferring new chapter mastery. Retire mandatory centering, camera-distance and waypoint-dwell exercises from the active tutorial. Camera help remains contextual. This supersedes the old SPEC-LSN-001..011 sequence and mandatory tutorial-readiness access predicates; their historical evidence remains retained.
+* **SPEC-TUT-008.FLOW —** Each authored stable chapter/step ID supplies its setup, concise explanation and purpose, target, demonstration, permitted actions, actual success event, acknowledgement, retry and successor. Begin with only the Anchor and nearby Matter seam; no starting mobile units or enemies. Chapter 1 requires two genuinely produced Surveyors to deliver credited Matter. Chapters 2–6 progressively require actual infrastructure, three produced Lancers, defense/repair, scouting and one secured Well protocol. Demonstrations and skipped steps never earn mastery.
+* **SPEC-TUT-008.RECOVERY —** Pause, focus loss, cancelled skipping, checkpoint load and chapter replay restore coherent step state and compatible scenario state. Selection/UI progression cannot depend on an advancing simulation clock; simulation remains authority for gameplay outcomes. Save unseen/demonstrated/skipped/verified progress distinctly and distinguish assisted from independent assessment. A final independent loss offers retry without replaying the economic curriculum.
+* **SPEC-TUT-008.COVERAGE —** Replayable specializations cover efficient command, production/research, Meridian support, Kharuun foundations/force, Choir foundations/force, all Well protocols and campaign/mode orientation. Every catalogued building/unit has a matching lesson and archive entry. Introduce only implemented, qualified mechanics and do not alter campaign state through training.
+* **SPEC-TUT-008.VERIFICATION —** Qualify each chapter's valid/wrong/repeated inputs, missing prerequisites, interruption/retry, non-crediting demonstrations/skips, actual rendered mouse/keyboard route, remapped Mac controls, readable unobstructed instruction, save/load and chapter replay before expanding the next implementation batch. Final uncoached play verifies understanding separately from automated predicates; owner acceptance belongs to Angelis Pseftis.
+
 
 
 ## 22. Accessibility and localization
@@ -3709,6 +3727,7 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-FAC-002.AUTH:** Defensive structures (`Aegis Post`) require unbroken power connectivity to the primary Anchor grid to function.
   * **REL-FAC-002.FAIL:** Severing a Power Link leaving an Aegis Post unpowered shall disable its weapon within 1 simulation tick.
   * **REL-FAC-002.VERIF:** `SRC` (power network graph connectivity tests).
+  * **REL-FAC-002.UX:** Owner-approved 2026-09-08: show subtle ground conduits and energy along confirmed owned network routes, emphasized during infrastructure inspection/placement. Distinguish predicted connection, unfinished construction, operational connection, loss and restoration using geometry/motion, symbols and concise text, with steady alternatives for reduced motion. Presentation consumes current simulation connectivity and configured reach; it must not infer a relay role for Aegis, falsely disable Foundry production, intercept commands, affect navigation or reveal hidden enemies. The separate recorded radius discrepancy is not resolved by this presentation change.
   * **REL-FAC-002.LANE:** Core Gameplay & Factions.
 
 * **REL-FAC-003 — Meridian Power Link Distribution & Throughput:** Power Links (Cost: 90 Matter / 10 Dawn, 100 ticks, 2x2 footprint) shall provide +6 Logistics, function as a Matter drop-off, and extend the power grid.
@@ -4193,13 +4212,13 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
 
 ### §16 Replays and Quality-of-Life (`REL-QOL-*`)
 
-* **REL-QOL-001 — Control Group Assignment & Selection:** Players shall assign selected units to control groups 1 through 9 using `Ctrl + [1–9]`, recall them with `[1–9]`, and append to them using `Shift + [1–9]`.
+* **REL-QOL-001 — Control Group Assignment & Selection:** Players shall assign selected units to control groups 1 through 9 and 0 using `Ctrl + [1–9,0]`, recall them with `[1–9,0]`, and append to them using `Shift + [1–9,0]`, consistent with SPEC-CTL-010.
   * **REL-QOL-001.AUTH:** Dead units are purged from control groups automatically within 1 tick; group membership renders as numbers above unit health bars.
   * **REL-QOL-001.FAIL:** Recalling destroyed units or losing group assignments fails acceptance.
   * **REL-QOL-001.VERIF:** `PKG-PHYS` (control group assignment and recall sweep).
   * **REL-QOL-001.LANE:** Player Experience (`EchoesPlayerController`).
 
-* **REL-QOL-002 — Control Group Camera Centering:** Double-tapping a control group hotkey (`[1–9]` twice within 300 ms) shall immediately center the camera viewport on the group's centroid.
+* **REL-QOL-002 — Control Group Camera Centering:** Double-tapping a control group hotkey (`[1–9,0]` twice within 300 ms) shall immediately center the camera viewport on the group's centroid.
   * **REL-QOL-002.AUTH:** Camera smoothly interpolates to the target coordinates in ≤250 ms.
   * **REL-QOL-002.FAIL:** Failed double-tap detection or erratic camera snaps fails acceptance.
   * **REL-QOL-002.VERIF:** `PKG-PHYS` (double-tap camera centering test).
@@ -5673,6 +5692,9 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-MP-010.VERIF:** `SRC` (client-side prediction acknowledgement test).
   * **REL-MP-010.LANE:** Network & Player Experience.
 
+* **REL-MP-010.RESULT — Local and remote authoritative ability feedback.** DERIVED FROM SPEC-CMD-013, SPEC-UI-004, SPEC-UI-008.F04/F06/F20 and the owner-authorized audit 124 capture. Actor: player issuing an ability locally or through an admitted peer. Trigger: the same legal/illegal ability and mixed-selection cases in equivalent authorized states. Result: distinguish pending acknowledgement from authoritative acceptance/refusal/execution, identify actual executor/count and show matching cost, cooldown and failure/recovery meaning in both routes. Different network latency does not permit a different rule, duplicate spend or false success; remote viewers receive only their lawful information. Owner: Player Experience. Verification class: PKG-PHYS across distinct peers; include one/all eligible casters, repeat input, refusal, lost connection and recovered state.
+* **REL-MP-010.RESULTSTATE — Authoritative ability parity across dispatch paths.** DERIVED FROM REL-MP-010.RESULT and SPEC-CMD-013. Actor: authoritative command dispatcher. Trigger: equivalent local and network-issued abilities plus invalid/stale/duplicate commands. Result: apply the same eligibility, caster-selection, cost, timing and refusal rules; any necessary admission delay is explicit and does not duplicate execution. Save/replay retains the actual admitted sequence, and feedback packets contain only authorized state. Owner: Network/Security. Verification class: PKG-AUTO; compare actual authoritative results and receipts across both paths, including disconnection/reconciliation and replay. Existing prediction alone cannot pass this leaf.
+
 * **REL-MP-011 — Automated Desync Dump Serialization:** When a state checksum mismatch occurs, each connected peer shall immediately serialize a desync diagnostic archive containing: tick number, entity arrays, RNG state, and the last 100 received command packets.
   * **REL-MP-011.AUTH:** Enables deterministic offline debugging of multiplayer desyncs.
   * **REL-MP-011.FAIL:** Desync occurring without diagnostic dump emission fails supportability.
@@ -5787,6 +5809,253 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-EDT-010.LANE:** Editor & Governance.
 
 ---
+
+
+## Gameplay completeness intake — SC2 audit, 2026-09-09
+
+Owner source: Angelis requested, “Make sure all of this is in the requirements and fully captured so it can be part of the continuous workw e are dong.” This intake captures all 162 functional items and 32 feedback events from [SC2GameplayGapAudit.md](SC2GameplayGapAudit.md). That document remains the dated investigation; this master owns binding behavior, and [RequirementsState.md](RequirementsState.md#sc2-audit-intake-and-continuous-work--2026-09-09) owns lifecycle, decisions and evidence. [DeliveryPlan.md](DeliveryPlan.md#sc2-audit-integration-into-continuous-work--2026-09-09) routes the work through existing P0–P7 packages.
+
+The coverage table below is an exact crosswalk, not 162 duplicate requirements. BOUND means implement/qualify the listed existing or explicitly added clauses. DECISION means retain the cited current boundaries and resolve the named TBR before adding the proposed behavior. MIXED means existing obligations continue while only the identified alternative/extension awaits decision. These are scope dispositions, not engineering states. The audit's M/P/V/Q/D labels do not assign lifecycle or prove that an implemented feature is broken.
+
+**Applicability and preserved authority.** SPEC-TUT-008's seven optional chapters supersede the old SPEC-LSN-001..011 sequence and mandatory campaign/skirmish mastery gates, including conflicting access/centering clauses in REL-FTU-005/006/012 and older DEMO-TUT/DEMO-JRN narratives. Historical lesson records remain preserved; compatible teaching outcomes move into the new chapters/specializations without awarding chapter mastery from old bits. All three Well choices, faction rosters, fifteen distinct campaign locations and three named offline skirmish maps, six-participant 3v3, and existing performance/owner gates retain their exact controlling bodies; the crosswalk does not replace their counts or thresholds. SPEC-MOV-001 ground-only, section 7.2 presentation-only elevation, SPEC-BLD-009 one Core, the 200 Logistics ceiling and REL-MP-013/019 hosted-service deferral remain unchanged. No SC2 assets, faction rules, account ecosystem or new live-service platform is authorized by the comparison.
+
+### Player action and feedback coverage
+
+* **SPEC-UI-008 — Complete action-feedback lifecycle.** DERIVED FROM SPEC-UI-004, REL-UI-020/021/022/024, SPEC-FOG-001/002, SPEC-ACC-001/003 and the per-event parentage below; adopted by the 2026-09-09 owner intake. Every applicable player action/event shall connect ordinary input or the stated automatic trigger to the authoritative result, visible feedback, required audible feedback, rejection/interruption and usable recovery. A local acknowledgement is not execution, a save request is not durable completion, a sensor contact is not target identity, and a preview is not authoritative admission. Existing cost, timing, radius, quantity and refund values govern; this record changes none. Aggregate owner: Player Experience. The independently failable leaves below, plus their cited parents, supply verification; no additional aggregate pass or acceptance is implied.
+
+Each event leaf has the following binding fields: **actor** = affected player; **precondition/trigger** = a legal instance of the named event in a supported mode; **input/surface** = normal pointer/keyboard controls and the world/HUD/menu surface appropriate to that event; **result/presentation/failure** = its table cells; **owner** = Player Experience; **verification class** = PKG-PHYS. The pass criterion is zero missing or contradictory required event responses across the applicable positive/negative/recovery cases on the identified candidate, with each numerical condition inherited from its exact parents. Exercise invalid target, cost/prerequisite failure, repeat input, interruption, fog change, focus loss and restoration where applicable; do not invent an action or cost to manufacture a negative case. Save/load and replay shall restore authoritative state and reconstruct presentation without replaying spent transactions or persisting stale transient receipts. A mode/trigger exception must name its controlling exclusion in RequirementsState, not silently omit a leaf. These interaction leaves do not substitute for their parents' simulation tests, rendered/listening checks, human review or owner acceptance.
+
+<!-- SC2_FEEDBACK_BEGIN -->
+| Requirement leaf | Audit event | Trigger | Required player-visible/audible response | Failure and recovery | DERIVED FROM |
+|---|---|---|---|---|---|
+| SPEC-UI-008.F01 | F01 | Hover an interactable | Target identity, ownership, legal action and suitable cursor | No false affordance on decorative objects or hidden targets | `REL-UI-011`, `REL-UI-020`, `SPEC-FOG-001` |
+| SPEC-UI-008.F02 | F02 | Select/deselect | Stable ring/bracket, identity/composition and restrained acknowledgement | Explain unavailable selection where useful; do not leak hidden entities | `SPEC-CTL-001`, `SPEC-CTL-002`, `REL-UI-026`, `REL-AUD-013` |
+| SPEC-UI-008.F03 | F03 | Arm an order | Cursor, action name, target type, range/footprint and cancel hint | Escape/right-click behavior is consistent and spends nothing | `SPEC-CMD-008`, `SPEC-BLD-001`, `REL-UI-020` |
+| SPEC-UI-008.F04 | F04 | Accept an order | Distinct action glyph/marker, brief sound and updated current order | Distinguish command submission from actual execution | `SPEC-CTL-016`, `REL-UI-021`, `REL-MP-010` |
+| SPEC-UI-008.F05 | F05 | Queue an order | Queue position, route/target and append acknowledgement | Explain full queue or incompatible action; preserve prior orders | `SPEC-CMD-011`, `SPEC-CMD-012`, `SPEC-UI-002` |
+| SPEC-UI-008.F06 | F06 | Reject a command | Plain-language reason beside the action, with appropriate sound | Identify remedy: cost, prerequisite, range, vision, state, ownership or mode | `SPEC-UI-004`, `REL-UI-020` |
+| SPEC-UI-008.F07 | F07 | Lose target vision | Last lawful action state and loss-of-contact explanation | Do not track the hidden target through UI, sound, effects or automation | `SPEC-FOG-001`, `SPEC-INFO-004`, `SPEC-CMD-015` |
+| SPEC-UI-008.F08 | F08 | Block a route | Location and no-path/occupied/blocked distinction | Give a useful next action; no endless wandering or silent teleport | `SPEC-MOV-002`, `SPEC-MOV-004` |
+| SPEC-UI-008.F09 | F09 | Start/finish harvesting | Resource, cargo/return status and actual delivery feedback | Do not count cargo as already spendable | `SPEC-RES-004`, `SPEC-HUD-001` |
+| SPEC-UI-008.F10 | F10 | Exhaust a deposit | Depleted location and newly idle worker notification | Finish lawful delivery, then let the player choose reassignment | `SPEC-RES-006`, `REL-QOL-006` |
+| SPEC-UI-008.F11 | F11 | Lose a drop-off | Interrupted route and retained cargo | Explain alternate valid route or need for a new drop-off | `SPEC-RES-005` |
+| SPEC-UI-008.F12 | F12 | Reach Logistics limit | Used/reserved/capacity breakdown and relevant blocked action | Show which network/provider action can resolve the shortage | `SPEC-RES-007`, `SPEC-HUD-001`, `SPEC-HUD-005` |
+| SPEC-UI-008.F13 | F13 | Place a structure | Footprint, valid/invalid symbol, cost and network advisory | No misleading preview; accepted placement can still have a later explained interruption | `SPEC-BLD-001`, `SPEC-BLD-002` |
+| SPEC-UI-008.F14 | F14 | Build/assist/repair | Progress, contributing workers, health and resource expenditure | Show interruption, insufficient funds, destroyed target or maximum health | `SPEC-BLD-003`, `SPEC-BLD-010`, `SPEC-UNIT-001` |
+| SPEC-UI-008.F15 | F15 | Complete construction | Distinct completion cue and now-available function | Show completed-but-unpowered/disconnected state separately | `SPEC-BLD-004`, `REL-FAC-002`, `REL-FAC-004` |
+| SPEC-UI-008.F16 | F16 | Queue/cancel production | Item, time, reservation and exact refund | Distinguish active/waiting slot; preserve unaffected items | `SPEC-BLD-005`, `SPEC-BLD-006`, `REL-QOL-005` |
+| SPEC-UI-008.F17 | F17 | Block emergence | Completed item retained, blocked exit and location | Resume after clearance without duplicate unit or additional charge | `SPEC-BLD-007` |
+| SPEC-UI-008.F18 | F18 | Set rally | Flag/vector or equivalent target marker and queued route | Clear/update when target becomes invalid; disclose fallback | `SPEC-BLD-008`, `REL-CMB-024` |
+| SPEC-UI-008.F19 | F19 | Start/complete research | Prerequisite, cost, producer commitment, progress and actual effect | Explain cancellation/lost facility outcome without phantom upgrades | `SPEC-BLD-002`, `SPEC-BLD-005`, `SPEC-BLD-006`, `REL-FAC-029` |
+| SPEC-UI-008.F20 | F20 | Activate an ability | Executing unit(s), cost, duration, state transition and cooldown | Suppress accidental duplicate commitments; explain partial group execution | `SPEC-CMD-013`, `REL-UI-028` |
+| SPEC-UI-008.F21 | F21 | Interrupt a channel/transformation | Interrupted state and retained/lost cost or progress | Show exactly when commands become available again | `SPEC-UI-002`, `REL-UI-028` |
+| SPEC-UI-008.F22 | F22 | Change network/identity/adaptation | Active benefit, coverage, restriction and commitment | Immediate truthful feedback when connection or eligibility ends | `REL-FAC-006`, `REL-FAC-007`, `REL-FAC-009`, `REL-FAC-011`, `REL-FAC-012`, `REL-FAC-013` |
+| SPEC-UI-008.F23 | F23 | Face impending upkeep/Relay expiry | Conservative warning with countdown and consequence | Do not promise capacity or currency that will no longer exist | `REL-FAC-006`, `REL-FAC-011`, `SPEC-HUD-001`, `SPEC-FOG-002` |
+| SPEC-UI-008.F24 | F24 | Fire/hit/take damage | Readable attack/impact/protection cue, directional threat and health change | Cosmetic effects must agree with authoritative combat | `SPEC-CMB-001`, `SPEC-CMB-003`, `REL-ART-012`, `REL-ART-033` |
+| SPEC-UI-008.F25 | F25 | Come under attack offscreen | Prioritized location-bearing alert and minimap cue | Repeated attacks coalesce without hiding a second dangerous location | `SPEC-FOG-002`, `REL-QOL-009`, `REL-AUD-014` |
+| SPEC-UI-008.F26 | F26 | Lose a unit/building/Core | Readable death/destruction, appropriate sound and consequence | Remove invalid selections/groups/commands without losing player orientation | `SPEC-CMB-009`, `REL-ART-013`, `REL-QOL-001` |
+| SPEC-UI-008.F27 | F27 | Scout a discovery | Resource/route/hostile/objective category, location and certainty | Separate discovery from inference and stale from current knowledge | `SPEC-SCT-004`, `SPEC-SCT-005`, `SPEC-FOG-001` |
+| SPEC-UI-008.F28 | F28 | Commit a Future Well protocol | Choice, price, permanence, timer and map/world state | Explain interrupted/invalid commitment and downstream modeled consequences | `SPEC-WEL-001`, `SPEC-WEL-003`, `SPEC-CAM-003` |
+| SPEC-UI-008.F29 | F29 | Update an objective | New/changed/completed/failed state, timer and location | No objective silently advances or fails behind a cinematic/modal overlay | `SPEC-HUD-002`, `SPEC-OUT-004`, `SPEC-OUT-005`, `SPEC-CIN-002` |
+| SPEC-UI-008.F30 | F30 | Save/load/recover | Pending, completed, failed or recovered state with usable next action | Preserve valid saves; no success message before durable completion | `REL-SAV-001`, `REL-SAV-007`, `REL-SAV-009`, `REL-SAV-010` |
+| SPEC-UI-008.F31 | F31 | Lose connection/desync | Participant state, what is paused/controllable and recovery options | No false reconnect success; safe leave and offline return | `REL-MP-004`, `REL-MP-006`, `REL-MP-010`, `REL-MP-014`, `REL-MP-018` |
+| SPEC-UI-008.F32 | F32 | End a match/mission | Outcome cause, relevant statistics, rewards and next-step choices | Preserve progression and label unavailable/partial replay or statistics | `SPEC-OUT-006`, `SPEC-MAP-003`, `REL-UI-009`, `REL-CAM-024` |
+<!-- SC2_FEEDBACK_END -->
+
+* **SPEC-UI-008.AUDIO — Audible event coverage.** DERIVED FROM SPEC-AUDF-004/005, SPEC-ACC-003, REL-AUD-013/014/020/023 and SPEC-FOG-001/002. Actor: affected player. Trigger: each feedback event with sound required by its parent, including concurrent events. Result: audible identity, urgency, location only when legitimately known, and intelligible priority under combat and dialogue; apply existing rate limits and accessibility equivalents without hiding the sole warning of terminal danger. No cue may announce an unexecuted result or disclose hidden state. Failure/recovery: exercise overlapping threats, repeated commands, reduced dynamic range and mono-compatible output; preserve the minimum critical information rather than adding universal spoken barks. Owner: Audio. Verification class: PKG-REND, listening on the identified build; source asset presence or a physical click alone cannot pass this leaf.
+
+### Bounded additions and uncovered refinements
+
+* **SPEC-CTL-020 — Map-scoped camera bookmarks.** Owner-authorized adoption of audit 016; related parents SPEC-CTL-012, SPEC-UI-006/007 and SPEC-FOG-001. Players shall save, replace, recall and clear multiple camera-location slots through discoverable pointer and remappable keyboard controls. A bookmark names a fixed location rather than following a unit; it preserves useful tactical framing within current camera bounds. It shall not issue a gameplay command or grant vision. Defaults must satisfy REL-UI-023 and the input-context decision TBR-UX-001. Aggregate owner: Player Experience; the following leaves independently govern completion.
+  * **SPEC-CTL-020.OPERATE — Bookmark manipulation.** Actor: player in a supported battlefield view. Trigger: save/replace/recall/clear at least two distinct slots. Result: slot identity and actual stored location are visible; recalling each returns to its own bounded location even after units move; clearing prevents its recall. Missing/empty/stale slots return an explanation without changing selection/orders. Owner: Player Experience. Verification class: PKG-PHYS; include remapped commands, pointer route, focus cancellation and empty-slot recovery.
+  * **SPEC-CTL-020.SCOPE — Bookmark identity and knowledge safety.** Actor: local camera system. Trigger: recall after checkpoint reload, map/replay identity change or perspective change. Result: slots are local to the current viewing session and compatible map identity; same-map checkpoint restoration retains those in-session locations, while map/replay identity change or session exit clears them explicitly. No profile, checkpoint or replay-format persistence is introduced. Expose only the selected player's lawful view and never bypass a cinematic/modal control lock. Owner: Player Experience. Verification class: SRC; include stale map, session teardown, fog, control lock and deterministic save/replay non-mutation cases. Actual recall/clear feedback remains part of OPERATE.
+
+* **SPEC-UI-009 — Recoverable display-setting changes.** DERIVED FROM SPEC-ACC-004/005, REL-UI-008/013, REL-SAV-003 and the owner's adoption of audit 157. A player applying resolution/window-mode changes shall receive a visible Keep/Revert confirmation and displayed 15.0-second wall-time timeout; unconfirmed changes shall not become durable preferences. Existing supported display modes and graphics budgets remain authoritative. Aggregate owner: Player Experience.
+  * **SPEC-UI-009.CONFIRM — Accept or revert a display change.** Actor: player in Options. Trigger: apply a supported changed display mode. Result: Keep commits the chosen mode; Revert or cancellation restores the previous valid mode and usable focus. Failure/recovery: invalid/unsupported mode reports the reason and preserves the previous valid settings. Owner: Player Experience. Verification class: PKG-PHYS; exercise keyboard/pointer, supported extremes and return to gameplay.
+  * **SPEC-UI-009.TIMEOUT — Unconfirmed change recovery.** Actor: display-settings controller. Trigger: displayed confirmation deadline expires, including when simulation is paused. Result: revert no later than the next UI update after that deadline, using elapsed wall time; the reverted mode remains usable. No timed-out change may be saved as confirmed. Owner: Player Experience. Verification class: PKG-PHYS; include focus loss, pause, cancel and cold-start preference check. The 15.0-second duration is the adopted display-confirmation contract; it is measured independently of simulation speed and pause.
+
+* **REL-MP-020 — Session-scoped chat and communication access.** Owner-authorized adoption of audit 121; refines SPEC-SKM-016 and REL-AI-037 without adding hosted accounts or messaging services. Connected match participants shall have discoverable All and Allies text-chat channels, explicit recipient selection, send/cancel controls, and visible sender/channel attribution; existing tactical pings remain governed by REL-AI-037. No chat action may issue a battlefield command. Aggregate owner: Network.
+  * **REL-MP-020.USE — Chat interaction.** Actor: admitted participant. Trigger: open chat, choose All or Allies, type, send or cancel. Result: the intended connected recipients receive the text once with sender/channel attribution; cancellation sends nothing and safely restores gameplay focus. Empty, disconnected, invalid or capacity-limited sends explain failure without falsely acknowledging delivery. Owner: Player Experience. Verification class: PKG-PHYS, across distinct peers; include pointer/keyboard entry, hotkey collisions, leave/rejoin and team/FFA applicability.
+  * **REL-MP-020.AUTHORITY — Communication audience boundary.** Actor: session message receiver. Trigger: receive participant text or ping. Result: authenticate sender/session, enforce current audience/team, and reject spoofed, duplicate, stale or unauthorized messages. Chat cannot mutate simulation orders, units, fog or campaign progress. No observer may send live tactical information to playing participants through in-game chat or pings under REL-MP-021. Owner: Network/Security. Verification class: PKG-AUTO; include forged team/sender, reconnect freshness and offline zero-network cases.
+  * **REL-MP-020.LIFECYCLE — Bounded transient chat.** Actor: session UI. Trigger: receive maximum supported message/history sizes, malformed input or leave session. Result: enforce a maximum 256 UTF-8 bytes per single-line message, a per-sender token-bucket limit of one message per wall-clock second with a burst of two, and at most 128 retained messages/32 KiB of encoded text per client (whichever limit is reached first). Reject invalid UTF-8, C0/C1 controls including line breaks, DEL, and Unicode bidi-format controls; message text is inert and cannot impersonate the separately rendered sender/channel fields. Support muting a sender and clear session chat at teardown. Chat traffic remains subordinate to REL-MP-009's combined bandwidth ceiling; reject/throttle chat rather than delaying authoritative gameplay. Gameplay saves/replays contain no chat transcript; failure cannot exhaust unbounded memory or prevent offline return. Owner: Network. Verification class: PKG-AUTO; include over-limit, malformed-text, mute and teardown cases. The exact limits, audience checks and supported participant load must be retained with the tested candidate; clients cannot choose looser limits.
+
+* **REL-MP-021 — Explicit live-observer role.** Owner-authorized adoption of audit 125; extends REL-MP-007/008/019 and REL-QOL-015/016. An explicit lobby-admitted read-only live-observer role is required. Its supported format combinations, maximum observer count and total connection/load contract shall be resolved under TBR-UX-008 before dependent network capacity is implemented or qualified. Observers cannot replace any of the six playing seats needed by 3v3; no seven-connection capacity is silently inferred from this intake. For each approved observer-enabled format, the lobby shall disclose observer presence and its bound capacity before participants become ready; admission/role changes invalidate readiness. An unavailable or zero-capacity observer implementation does not satisfy the required capability. This is session-local access, not a public broadcast or hosted spectator service. Aggregate owner: Network.
+  * **REL-MP-021.JOIN — Discoverable observer admission.** Actor: prospective observer and lobby host. Trigger: join as observer before synchronized start in a format/capacity approved under TBR-UX-008. Result: admitted role and capacity are visible to all participants; excessive/unauthorized requests fail with a reason. The observer enters a separate perspective/analytical view rather than owning a force. Owner: Player Experience. Verification class: PKG-PHYS, distinct-peer lobby/start/leave/return route at the declared capacity.
+  * **REL-MP-021.ISOLATION — No observer authority or hidden-state escalation.** Actor: session receiver. Trigger: observer commands, chat, role changes, reconnects or perspective requests. Result: observers cannot issue gameplay orders, spend resources, send live chat/pings to playing participants, or become a playing participant while the match is active. Players cannot acquire observer knowledge by changing a local role/perspective field. Observer-only views may inspect both sides only under the explicitly admitted role; they do not alter either player's lawful fog. Owner: Network/Security. Verification class: PKG-AUTO; include forged identity, reconnect/downgrade, mid-match role change and command injection.
+  * **REL-MP-021.CONTINUITY — Participant load and observer loss.** Actor: network session. Trigger: observer joins the admitted pre-match capacity, leaves, disconnects or receives delayed data. Result: supported matches still meet their existing participant/load budgets; observer loss neither concedes a player nor changes simulation checksums or outcome. Indicate stale observer data and preserve participant reconnect/host-migration behavior. Owner: Network. Verification class: PKG-AUTO, at the exact participant/observer combination approved under TBR-UX-008; six-player gameplay qualification alone never qualifies an extra observer connection. Observer visual usability remains subject to REL-QOL-015/016 and JOIN; tests alone do not establish broadcast readability.
+
+### Exact functional coverage crosswalk
+
+All referenced bodies remain active unless the disposition names a decision or prior supersession. Work on a BOUND row must check the exact current per-ID state/evidence before changing source. An unresolved TBR blocks only its dependent choice, not compatible implementation or verification. Audit source observations are dated and shall not overwrite later repairs.
+
+<!-- SC2_FUNCTIONAL_BEGIN -->
+| Audit item | Player capability | Controlling requirements / decisions | Disposition |
+|---|---|---|---|
+| Audit 001 | Click a unit or structure; identify exactly what was selected | `SPEC-CTL-001`, `SPEC-UI-001`, `SPEC-UI-004`, `REL-UI-026` | BOUND |
+| Audit 002 | Drag-select; add/remove with Shift; cancel an unfinished selection | `SPEC-CTL-001`, `SPEC-CTL-002`, `SPEC-UI-004` | BOUND |
+| Audit 003 | Double-click a unit to select matching visible units | `SPEC-CTL-003` | BOUND |
+| Audit 004 | Ctrl-click and Ctrl+Shift-click type selection | `SPEC-CTL-003`, `SPEC-UI-006`, `TBR-UX-002` | DECISION |
+| Audit 005 | Inspect mixed selection by type without losing the full group | `SPEC-UI-003`, `SPEC-CTL-011`, `REL-QOL-003` | BOUND |
+| Audit 006 | Assign, append, recall and double-tap-center ten control groups | `SPEC-CTL-010`, `REL-QOL-001`, `REL-QOL-002` | BOUND |
+| Audit 007 | Remove/transfer group membership without accidentally changing another group | `SPEC-CTL-010`, `TBR-UX-002` | DECISION |
+| Audit 008 | Select and center idle workers; cycle them from a visible counter | `SPEC-CTL-014`, `REL-QOL-006`, `SPEC-RES-006` | BOUND |
+| Audit 009 | Cycle completed production facilities | `SPEC-CTL-014`, `REL-QOL-007` | BOUND |
+| Audit 010 | Select the combat army while leaving workers behind | `SPEC-CTL-014`, `REL-QOL-008` | BOUND |
+| Audit 011 | Learn/use consistent command hotkeys across factions and contexts | `SPEC-CTL-005`, `SPEC-CTL-006`, `SPEC-CTL-007`, `SPEC-UI-006`, `REL-UI-023`, `TBR-UX-001` | MIXED |
+| Audit 012 | Change stance explicitly and read its current behavior | `SPEC-CTL-008` | BOUND |
+| Audit 013 | Pan with keys, screen edges and middle-drag | `SPEC-CTL-012`, `SPEC-UI-007`, `TBR-UX-001` | MIXED |
+| Audit 014 | Zoom while preserving a useful battlefield view | `SPEC-CTL-012`, `SPEC-UI-007` | BOUND |
+| Audit 015 | Click/drag the minimap to navigate; see camera bounds | `SPEC-HUD-006`, `SPEC-UI-007` | BOUND |
+| Audit 016 | Save and recall camera locations | `SPEC-CTL-020` | BOUND |
+| Audit 017 | Cycle economic bases/outposts | `SPEC-BLD-009`, `SPEC-CTL-020`, `TBR-UX-002` | DECISION |
+| Audit 018 | Jump to the latest attack or objective alert; cycle recent locations | `SPEC-CTL-013`, `SPEC-HUD-007`, `REL-QOL-009` | BOUND |
+| Audit 019 | Center a selected unit/group after it moves offscreen | `SPEC-CTL-010`, `REL-QOL-002` | BOUND |
+| Audit 020 | Read unexplored, remembered and currently visible areas immediately | `SPEC-INFO-001`, `SPEC-INFO-002`, `SPEC-INFO-003`, `SPEC-FOG-001`, `SPEC-HUD-006` | BOUND |
+| Audit 021 | Distinguish forces, resources, objectives, Wells and contacts on minimap | `SPEC-HUD-006`, `SPEC-ACC-001`, `REL-UI-024` | BOUND |
+| Audit 022 | Adjust edge speed/dead-zone, cursor and camera comfort separately | `SPEC-ACC-002`, `SPEC-ACC-004`, `REL-ACC-013`, `REL-ACC-014` | BOUND |
+| Audit 023 | Right-click ground to move, visible hostile to attack, resource to gather | `SPEC-CTL-004`, `SPEC-CMD-001`, `SPEC-CMD-002`, `SPEC-UI-004`, `REL-CMB-019` | BOUND |
+| Audit 024 | Issue attack-move with a clear targeting state | `SPEC-CMD-003`, `SPEC-CMD-014`, `SPEC-CTL-005` | BOUND |
+| Audit 025 | Stop immediately; distinguish Stop from Hold | `SPEC-CMD-007`, `SPEC-CTL-005`, `SPEC-CTL-017` | BOUND |
+| Audit 026 | Hold position without unintended chasing | `SPEC-CMD-006`, `SPEC-CTL-005` | BOUND |
+| Audit 027 | Patrol and guard/follow an allied force | `SPEC-CMD-004`, `SPEC-CMD-005`, `SPEC-CTL-005` | BOUND |
+| Audit 028 | Shift-queue mixed movement, attack, gather and build orders | `SPEC-CMD-011`, `SPEC-CMD-011.ATTACK`, `SPEC-CMD-011.ATTACKSTATE` | BOUND |
+| Audit 029 | See queued paths, order glyphs and current-versus-next action | `SPEC-CMD-012`, `SPEC-UI-002`, `SPEC-UI-004` | BOUND |
+| Audit 030 | Remove or revise future unit orders without resetting all work | `SPEC-CMD-011`, `REL-QOL-005`, `TBR-UX-003` | DECISION |
+| Audit 031 | Cross chokepoints without permanent allied trapping | `SPEC-MOV-003`, `SPEC-MOV-008`, `SPEC-MOV-009` | BOUND |
+| Audit 032 | Move at consistent speed in every direction | `SPEC-MOV-006`, `SPEC-MOV-007` | BOUND |
+| Audit 033 | Use Box, Line and Wedge; reform after obstacles | `SPEC-MOV-005`, `SPEC-MOV-011`, `SPEC-CTL-009` | BOUND |
+| Audit 034 | Understand no-path, occupied destination and route-blocked outcomes | `SPEC-MOV-002`, `SPEC-UI-004` | BOUND |
+| Audit 035 | Override AI/automation instantly with a direct order | `SPEC-CTL-017`, `SPEC-CTL-018`, `REL-CMB-027` | BOUND |
+| Audit 036 | Use passages and changed routes safely | `SPEC-MOV-001`, `SPEC-MOV-004`, `SPEC-MOV-014` | BOUND |
+| Audit 037 | Train workers and begin an economy from ordinary entry | `SPEC-BLD-006`, `SPEC-RES-004`, `SPEC-TUT-008` | BOUND |
+| Audit 038 | Assign workers to deposits and understand saturation | `SPEC-RES-003`, `REL-ECO-004` | BOUND |
+| Audit 039 | See cargo, harvest progress, return route and actual deposited income | `SPEC-RES-004`, `SPEC-UI-002`, `SPEC-HUD-001` | BOUND |
+| Audit 040 | Reassign or pull workers; queue construction then return to work | `SPEC-RES-004`, `SPEC-CMD-011`, `SPEC-BLD-001`, `SPEC-BLD-003` | BOUND |
+| Audit 041 | Respond when a deposit empties | `SPEC-RES-006`, `REL-QOL-006` | BOUND |
+| Audit 042 | Recover after losing a drop-off or blocking a hauling route | `SPEC-RES-005`, `SPEC-UI-004` | BOUND |
+| Audit 043 | Expand via allowed drop-offs, power/logistics nodes and protection | `SPEC-BLD-009`, `SPEC-RES-005`, `REL-FAC-002`, `REL-FAC-003` | BOUND |
+| Audit 044 | Read Matter, Dawn, Logistics, reservations and income | `SPEC-RES-001`, `SPEC-HUD-001` | BOUND |
+| Audit 045 | Recognize a Logistics block before placing another production order | `SPEC-RES-007`, `SPEC-HUD-001`, `SPEC-HUD-005` | BOUND |
+| Audit 046 | Predict Relay expiry and Choir upkeep shortfalls | `REL-FAC-006`, `REL-FAC-011`, `SPEC-HUD-007`, `SPEC-UI-008.F23` | BOUND |
+| Audit 047 | Transfer economy between exposed and safer positions | `SPEC-RES-005`, `SPEC-BLD-009`, `REL-FAC-016` | BOUND |
+| Audit 048 | Use worker repair and construction assistance deliberately | `SPEC-BLD-003`, `SPEC-BLD-010`, `SPEC-UNIT-001` | BOUND |
+| Audit 049 | Choose a building from a contextual worker menu | `SPEC-CTL-006`, `SPEC-HUD-004`, `SPEC-BLD-001` | BOUND |
+| Audit 050 | Preview footprint, occupied cells and legal placement | `SPEC-BLD-001`, `REL-BLD-001`, `REL-BLD-002`, `SPEC-UI-004` | BOUND |
+| Audit 051 | Understand connection radius, chain and operational consequences | `REL-FAC-002`, `REL-FAC-003`, `REL-FAC-004`, `SPEC-HUD-003`, `SPEC-HUD-004` | BOUND |
+| Audit 052 | Queue several buildings and return workers to prior work | `SPEC-CMD-011`, `SPEC-BLD-001`, `SPEC-BLD-003` | BOUND |
+| Audit 053 | See construction progress, damage, assistance and completion | `SPEC-BLD-003`, `SPEC-BLD-004`, `SPEC-UI-002`, `SPEC-UI-004` | BOUND |
+| Audit 054 | Cancel incomplete construction and see the correct refund | `SPEC-BLD-005`, `SPEC-HUD-005` | BOUND |
+| Audit 055 | Train multiple units and read remaining time/reservations | `SPEC-BLD-006`, `SPEC-HUD-005` | BOUND |
+| Audit 056 | Cancel/reorder queued production | `SPEC-BLD-005`, `SPEC-BLD-006`, `REL-QOL-005` | BOUND |
+| Audit 057 | Rally to ground, a resource, allied force or queued route | `SPEC-CMD-009`, `SPEC-BLD-008`, `REL-QOL-004` | BOUND |
+| Audit 058 | Recover when a completed unit cannot emerge | `SPEC-BLD-007`, `REL-BLD-009`, `SPEC-HUD-005`, `SPEC-HUD-007` | BOUND |
+| Audit 059 | Read available technology, prerequisite, cost and producer contention | `SPEC-HUD-004`, `SPEC-HUD-005`, `REL-UI-007`, `REL-BLD-011` | BOUND |
+| Audit 060 | Start/cancel research and see completion change actual unit behavior | `SPEC-BLD-002`, `SPEC-BLD-005`, `SPEC-BLD-006`, `REL-FAC-028`, `REL-FAC-029` | BOUND |
+| Audit 061 | Make deeper branching technology/roster decisions | `REL-FAC-028`, `TBR-SCP-003` | DECISION |
+| Audit 062 | Focus fire and deliberately retreat/kite | `SPEC-CMD-002`, `SPEC-CMD-015`, `SPEC-CTL-017`, `SPEC-CTL-018` | BOUND |
+| Audit 063 | Read attack range, facing, cooldown and effective threat | `SPEC-UI-002`, `REL-UI-028`, `SPEC-MOV-010` | BOUND |
+| Audit 064 | See attack windup, release, projectile/beam, impact and damage agreement | `SPEC-CMB-001`, `SPEC-CMB-003`, `SPEC-CMB-006`, `REL-ART-012`, `SPEC-AUDF-004` | BOUND |
+| Audit 065 | Recognize health loss, protection, death and structure destruction | `SPEC-CMB-009`, `REL-ART-013`, `REL-ART-027`, `REL-ART-033` | BOUND |
+| Audit 066 | Use terrain, obstacles, spacing and cover to change a fight | `SPEC-CMB-004`, `SPEC-MOV-005`, `SPEC-MOV-008`, `REL-ART-022` | BOUND |
+| Audit 067 | Cast from one eligible unit in a mixed group | `SPEC-CMD-013`, `SPEC-UI-003` | BOUND |
+| Audit 068 | Cast from all intended eligible units only when explicitly requested | `SPEC-CMD-013`, `REL-UI-022`, `REL-MP-010` | BOUND |
+| Audit 069 | Preview an ability target and cancel without spending | `SPEC-CMD-008`, `SPEC-UI-004`, `REL-UI-020` | BOUND |
+| Audit 070 | Read ability cost, cooldown, active duration and interrupted state | `SPEC-UI-002`, `REL-UI-028`, `SPEC-UI-008.F20`, `SPEC-UI-008.F21` | BOUND |
+| Audit 071 | Deploy/pack Bulwark and understand directional protection | `SPEC-UNIT-003`, `REL-FAC-005`, `REL-ART-010` | BOUND |
+| Audit 072 | Extend Relay and understand connection/expiry/cooldown | `SPEC-UNIT-004`, `REL-FAC-006` | BOUND |
+| Audit 073 | Build/repair Meridian infrastructure and understand Aegis power | `REL-FAC-002`, `REL-FAC-003`, `REL-FAC-004`, `SPEC-BLD-010` | BOUND |
+| Audit 074 | Root/uproot/migrate Kharuun Waystones | `REL-FAC-007`, `REL-ART-011` | BOUND |
+| Audit 075 | Use Kharuun adaptation, cover, sensing and terrain repair | `REL-FAC-008`, `REL-FAC-009`, `REL-FAC-010`, `SPEC-UNIT-005` | BOUND |
+| Audit 076 | Reconcile Choir identity and manage coherence/Phase Anchors | `REL-FAC-011`, `REL-FAC-012`, `REL-FAC-013` | BOUND |
+| Audit 077 | Understand every unit/building's use, limitation and counter | `SPEC-AUTH-005`, `REL-UI-019`, `REL-QA-033`, `REL-QA-034` | BOUND |
+| Audit 078 | Distinguish meaningful counters from simply having more units | `REL-FAC-019`, `REL-FAC-020`, `SPEC-BAL-005`, `REL-QA-035` | BOUND |
+| Audit 079 | Scout with normal vision; react without hidden-state knowledge | `SPEC-FOG-001`, `SPEC-INFO-003`, `REL-AI-029` | BOUND |
+| Audit 080 | Recognize last-known information as stale | `SPEC-INFO-002`, `SPEC-INFO-004`, `SPEC-FOG-001` | BOUND |
+| Audit 081 | Use anonymous sensors without gaining forbidden identities | `SPEC-INFO-005`, `REL-FAC-008`, `SPEC-FOG-001` | BOUND |
+| Audit 082 | Run Explore/Find Matter/Locate Hostiles/Screen Route policies | `SPEC-INFO-007`, `SPEC-INFO-008`, `SPEC-INFO-009`, `SPEC-INFO-010`, `REL-CMB-025`, `REL-CMB-026` | BOUND |
+| Audit 083 | Choose cautious/observe/persist behavior and cancel automation | `SPEC-SCT-003`, `SPEC-SCT-004`, `SPEC-SCT-005`, `REL-CMB-027` | BOUND |
+| Audit 084 | Recognize main routes, flanks, chokes and expansion risk | `SPEC-MAP-001`, `SPEC-MAP-002`, `SPEC-MAP-005`, `REL-ART-021` | BOUND |
+| Audit 085 | Fight over optional vision objectives or attackable route blockers | `SPEC-MOV-001`, `SPEC-MOV-004`, `SPEC-CMB-011`, `TBR-UX-004` | DECISION |
+| Audit 086 | Choose Harvest/Preserve/Reshape with clear benefits and sacrifice | `SPEC-WEL-001`, `SPEC-WEL-002` | BOUND |
+| Audit 087 | Read Well ownership, progress, contention and active protocol without selecting | `SPEC-WEL-004`, `REL-ART-014`, `REL-UI-024` | BOUND |
+| Audit 088 | Respond to Reshape with a fair telegraph and safe route recovery | `SPEC-MOV-004`, `SPEC-WEL-003`, `SPEC-WELLP-003` | BOUND |
+| Audit 089 | Understand how a Well decision affects mission and future progression | `SPEC-CAM-003`, `SPEC-CAM-004`, `SPEC-CAM-006` | BOUND |
+| Audit 090 | Play fair, distinct maps with useful scale and varied tactics | `SPEC-MAP-001`, `SPEC-MAP-004`, `SPEC-SKM-011`, `SPEC-SKM-012`, `SPEC-SKM-013`, `SPEC-CAM-041`, `SPEC-CAM-042` | BOUND |
+| Audit 091 | Pick player/opponent faction, doctrine, difficulty, map, economy and speed | `REL-AI-026`, `SPEC-SKM-001`, `SPEC-SKM-002`, `SPEC-SKM-003`, `SPEC-SKM-004`, `SPEC-SKM-005`, `SPEC-SKM-006`, `SPEC-SKM-007` | BOUND |
+| Audit 092 | Know the win/loss condition before deployment | `SPEC-SKM-009`, `SPEC-OUT-001`, `REL-AI-026` | BOUND |
+| Audit 093 | Fight AI that gathers, builds, produces, researches and expands coherently | `REL-AI-027`, `REL-AI-031`, `REL-AI-036` | BOUND |
+| Audit 094 | Fight AI that scouts fairly and counters observed information | `REL-AI-029`, `REL-AI-030`, `REL-AI-034` | BOUND |
+| Audit 095 | Experience distinct Warden/Raider/Steward/Expansionist/Adaptive play | `REL-AI-032`, `SPEC-SKM-004` | BOUND |
+| Audit 096 | Adjust difficulty without unexplained cheating or dead opponents | `REL-AI-033`, `SPEC-SKM-005` | BOUND |
+| Audit 097 | Face multi-front pressure, defense, retreat and economic recovery | `REL-AI-031`, `REL-AI-035` | BOUND |
+| Audit 098 | Reach valid victory, defeat, draw or concession without stalled endings | `SPEC-OUT-001`, `SPEC-OUT-002`, `SPEC-OUT-003`, `SPEC-OUT-004`, `SPEC-OUT-005`, `SPEC-OUT-007` | BOUND |
+| Audit 099 | Pause/resume and change allowed speed without ambiguity | `SPEC-SKM-007`, `SPEC-SKM-010`, `REL-ACC-015`, `REL-ACC-018`, `REL-ACC-019`, `TBR-UX-005` | MIXED |
+| Audit 100 | Rematch with settings preserved or restart with the same seed | `SPEC-MAP-003`, `REL-UI-009` | BOUND |
+| Audit 101 | Enter through a usable title screen and choose an understandable mode | `REL-FTU-001`, `REL-FTU-002`, `REL-FTU-003`, `SPEC-TUT-008` | BOUND |
+| Audit 102 | Learn who commands, why the operation matters and the immediate goal | `SPEC-CIN-001`, `REL-UI-010`, `SPEC-TUT-007`, `SPEC-TUT-008` | BOUND |
+| Audit 103 | Learn the seven approved chapters from foothold to independent command | `SPEC-TUT-008`, `SPEC-TUT-008.FLOW`, `SPEC-TUT-008.COVERAGE` | BOUND |
+| Audit 104 | Play/practice lesson 6 — Link restoration; replacement chapter/specialization coverage, not restoration of legacy lesson gates | `SPEC-TUT-008.FLOW`, `SPEC-TUT-008.COVERAGE` | BOUND |
+| Audit 105 | Play/practice lesson 7 — Array Foundry; replacement chapter/specialization coverage, not restoration of legacy lesson gates | `SPEC-TUT-008.FLOW`, `SPEC-TUT-008.COVERAGE` | BOUND |
+| Audit 106 | Play/practice lesson 8 — Probe; replacement chapter/specialization coverage, not restoration of legacy lesson gates | `SPEC-TUT-008.FLOW`, `SPEC-TUT-008.COVERAGE` | BOUND |
+| Audit 107 | Play/practice lesson 9 — Board; replacement chapter/specialization coverage, not restoration of legacy lesson gates | `SPEC-TUT-008.FLOW`, `SPEC-TUT-008.COVERAGE` | BOUND |
+| Audit 108 | Play/practice lesson 10 — Future Well; replacement chapter/specialization coverage, not restoration of legacy lesson gates | `SPEC-TUT-008.FLOW`, `SPEC-TUT-008.COVERAGE` | BOUND |
+| Audit 109 | Skip tutorial and retain the choice across save/restart | `SPEC-TUT-006`, `SPEC-TUT-008`, `SPEC-TUT-008.RECOVERY` | BOUND |
+| Audit 110 | Repeat lessons safely without changing campaign history | `SPEC-TUT-008.COVERAGE`, `SPEC-TUT-008.RECOVERY` | BOUND |
+| Audit 111 | Complete tutorial, then a full AI match, results and replay/menu | `SPEC-TUT-008.VERIFICATION`, `DEMO-JRN-001`, `DEMO-JRN-006`, `DEMO-JRN-007` | BOUND |
+| Audit 112 | Play fifteen distinct operations through all authored objectives | `SPEC-CAM-001`, `SPEC-MAP-004`, `SPEC-MSN-001`, `SPEC-MSN-002`, `SPEC-MSN-003`, `SPEC-MSN-004`, `SPEC-MSN-005`, `SPEC-MSN-006`, `SPEC-MSN-007`, `SPEC-MSN-008`, `SPEC-MSN-009`, `SPEC-MSN-010`, `SPEC-MSN-011`, `SPEC-MSN-012`, `SPEC-MSN-013`, `SPEC-MSN-014`, `SPEC-MSN-015` | BOUND |
+| Audit 113 | Read primary/optional/protected/timed objectives and failure reasons | `SPEC-HUD-002`, `SPEC-OUT-004`, `SPEC-OUT-005`, `REL-CAM-022`, `REL-CAM-023` | BOUND |
+| Audit 114 | See and use earned rewards and branch consequences | `SPEC-CAM-003`, `SPEC-CAM-004`, `SPEC-CAM-006`, `REL-CAM-029`, `REL-CAM-030` | BOUND |
+| Audit 115 | Reach the four authored endings with coherent audiovisual closure | `SPEC-CIN-001`, `REL-CIN-006`, `SPEC-CAM-001` | BOUND |
+| Audit 116 | Start and complete the separate 25-sector Conquest run | `REL-CAM-033`, `REL-CAM-034`, `REL-CAM-035`, `REL-CAM-036`, `REL-CAM-037`, `REL-CAM-038` | BOUND |
+| Audit 117 | Open multiplayer, create/join by code and discover LAN games | `REL-MP-007` | BOUND |
+| Audit 118 | Configure participants, factions, AI, teams, map and ready state | `REL-MP-008`, `SPEC-SKM-014`, `SPEC-SKM-018` | BOUND |
+| Audit 119 | Play 2v2, 3v3, comp-stomp and up-to-four-player FFA | `SPEC-SKM-015`, `REL-MP-008`, `REL-MP-018` | BOUND |
+| Audit 120 | See loading/readiness, connection state, latency and actionable join errors | `REL-MP-005`, `REL-MP-006`, `REL-MP-007`, `REL-MP-013`, `REL-MP-018` | BOUND |
+| Audit 121 | Send ally/all chat and map pings through discoverable controls | `REL-AI-037`, `REL-MP-020` | BOUND |
+| Audit 122 | Understand allied vision, unit authority, tribute and victory membership | `SPEC-SKM-016`, `REL-AI-038`, `REL-AI-039`, `REL-MP-019` | BOUND |
+| Audit 123 | Recover from disconnect/reconnect and host loss without false success | `REL-MP-006`, `REL-MP-014`, `REL-MP-018` | BOUND |
+| Audit 124 | Receive identical ability acceptance/refusal/feedback locally and remotely | `SPEC-UI-008.F04`, `SPEC-UI-008.F06`, `SPEC-UI-008.F20`, `SPEC-UI-008.F31`, `REL-MP-010.RESULT`, `REL-MP-010.RESULTSTATE`, `REL-MP-018` | BOUND |
+| Audit 125 | Observe a live match with explicit spectator permissions | `REL-MP-021`, `REL-QOL-015`, `TBR-UX-008` | MIXED |
+| Audit 126 | Use public ranked matchmaking, accounts, friends and hosted relay | `REL-MP-013`, `REL-MP-015`, `REL-MP-019`, `TBR-UX-006` | MIXED |
+| Audit 127 | Save/find replays by date/map with useful match metadata | `REL-QOL-010` | BOUND |
+| Audit 128 | Play/pause/seek, change speed and step one tick | `REL-QOL-011` | BOUND |
+| Audit 129 | Switch player fog/omniscient view and jump event bookmarks | `REL-QOL-011`, `REL-QOL-014` | BOUND |
+| Audit 130 | Take Command from a replay to try another decision | `REL-QOL-013`, `REL-QOL-012` | BOUND |
+| Audit 131 | Inspect live replay income/army/production/loss analytical overlays | `REL-QOL-015` | BOUND |
+| Audit 132 | Follow recorded camera/unit or use a cinematic spectator freecam | `REL-QOL-016`, `TBR-UX-007` | MIXED |
+| Audit 133 | See why the match ended and what each player produced/lost | `SPEC-OUT-006`, `SPEC-MAP-003`, `REL-UI-009` | BOUND |
+| Audit 134 | Review damage, scouting, idle time, Logistics blocks and economy trends | `SPEC-MAP-003` | BOUND |
+| Audit 135 | Compare a loss with timings and decisions instead of only APM | `SPEC-MAP-003`, `REL-QOL-014`, `REL-QOL-015` | BOUND |
+| Audit 136 | Open a unit/building codex, model viewer and mechanics glossary | `SPEC-TUT-004`, `REL-PUB-016`, `REL-PUB-017`, `REL-PUB-020` | BOUND |
+| Audit 137 | Practice counters in a configurable combat lab | `REL-PUB-018` | BOUND |
+| Audit 138 | Create and play custom scenarios/maps | `REL-EDT-001`, `REL-EDT-002`, `REL-EDT-003`, `REL-EDT-004`, `REL-EDT-005`, `REL-EDT-006`, `REL-EDT-007`, `REL-EDT-008`, `REL-EDT-009`, `REL-EDT-010` | BOUND |
+| Audit 139 | Recognize all unit/building roles and affiliation at normal zoom | `REL-ART-002`, `REL-ART-005`, `REL-ACC-002` | BOUND |
+| Audit 140 | See grounded locomotion, turning, stopping and attack motion | `REL-ART-009`, `SPEC-MOV-010` | BOUND |
+| Audit 141 | Read deploy/root/identity/construction transformations over time | `REL-ART-010`, `REL-ART-011`, `SPEC-UI-008.F21`, `SPEC-UI-008.F22` | BOUND |
+| Audit 142 | Read weapon identity, impacts, protection and death under heavy effects | `REL-ART-012`, `REL-ART-033`, `REL-ACC-005` | BOUND |
+| Audit 143 | See faction-specific building collapse rather than one recolored effect | `REL-ART-013` | BOUND |
+| Audit 144 | Navigate attractive terrain without mistaking scenery for gameplay geometry | `REL-ART-015`, `REL-ART-016`, `REL-ART-021`, `REL-ART-022` | BOUND |
+| Audit 145 | Understand title/act/ending scenes as authored drama | `SPEC-CIN-001`, `REL-CIN-001`, `REL-CIN-002`, `REL-CIN-003`, `REL-CIN-004`, `REL-CIN-005`, `REL-CIN-006`, `REL-CIN-008` | BOUND |
+| Audit 146 | Hear selection, orders, refusals, combat, economy and completion clearly | `SPEC-AUDF-004`, `SPEC-AUDF-005`, `REL-AUD-013`, `SPEC-UI-008.AUDIO` | BOUND |
+| Audit 147 | Hear voices over battle and music without losing urgent alerts | `REL-AUD-020`, `REL-AUD-023`, `SPEC-FOG-002` | BOUND |
+| Audit 148 | Read synchronized subtitles with speaker and interruption context | `SPEC-CIN-002`, `REL-ACC-007`, `REL-ACC-008` | BOUND |
+| Audit 149 | Hear location/urgency without relying on stereo or perfect hearing | `SPEC-ACC-003`, `REL-ACC-009` | BOUND |
+| Audit 150 | Play with stable frame pacing and readable low-quality settings | `SPEC-BUD-006`, `REL-PERF-001`, `REL-PERF-002`, `REL-PERF-019`, `REL-PERF-020`, `REL-PERF-024`, `REL-PERF-022` | BOUND |
+| Audit 151 | Remap every gameplay action, detect conflicts and retain the profile | `SPEC-UI-006`, `REL-ACC-011`, `REL-SAV-003` | BOUND |
+| Audit 152 | Use color-vision presets and non-color tactical indicators | `SPEC-ACC-001`, `SPEC-ACC-002`, `REL-ACC-001`, `REL-ACC-002` | BOUND |
+| Audit 153 | Adjust text/subtitle size/background independently of the full HUD | `SPEC-ACC-002`, `REL-ACC-007` | BOUND |
+| Audit 154 | Reduce motion/flashing and tune separate audio categories | `SPEC-ACC-002`, `SPEC-ACC-003`, `REL-ACC-004`, `REL-ACC-005`, `REL-ACC-016`, `REL-AUD-020` | BOUND |
+| Audit 155 | Play menu and battlefield actions through pointer and keyboard equivalents | `REL-UI-022`, `SPEC-ACC-004`, `REL-ACC-012` | BOUND |
+| Audit 156 | Recover focus after Alt-Tab, resizing, modal menus or lost input | `DEMO-INP-011`, `REL-UI-008`, `SPEC-TUT-008.RECOVERY` | BOUND |
+| Audit 157 | Change display settings and revert safely when unusable | `SPEC-UI-009`, `REL-ACC-016`, `REL-SAV-003` | BOUND |
+| Audit 158 | Use additional tactical-pause/speed/macro/threat assistance | `REL-ACC-018`, `REL-ACC-019`, `REL-ACC-020`, `REL-ACC-021`, `REL-ACC-022`, `TBR-UX-005` | MIXED |
+| Audit 159 | Save, see pending versus completed state and reload the same state | `REL-SAV-001`, `REL-SAV-005`, `REL-SAV-006`, `REL-SAV-007`, `SPEC-UI-008.F30` | BOUND |
+| Audit 160 | Recover valid backup after corruption/incompatibility without losing active play | `REL-SAV-009`, `REL-SAV-010` | BOUND |
+| Audit 161 | Understand load waits, save failure, disk error and what can be retried | `REL-SAV-009`, `REL-SAV-010`, `REL-SAV-012`, `SPEC-UI-008.F30` | BOUND |
+| Audit 162 | Quit/concede/restart with clear consequences and protected progression | `SPEC-OUT-002`, `SPEC-OUT-006`, `REL-UI-008`, `REL-UI-009`, `REL-SAV-003` | BOUND |
+<!-- SC2_FUNCTIONAL_END -->
+
+Run `python3 Scripts/check_gameplay_audit_traceability.py` when this intake, the audit inventory or its mappings change. The ordinary `python3 Scripts/check_agent_docs.py` also runs that guard. It checks coverage/identity/disposition links, not whether gameplay works. Scope changes require a dated state/decision entry and the authoritative master edit; do not make the audit or generated receipts a second backlog.
 
 # Identifier index
 
@@ -6291,6 +6560,8 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `REL-MP-017` | Development network boundary. | §26 Multiplayer Release Module (`REL-MP-*`) |
 | `REL-MP-018` | Packaged multiplayer qualification. | §26 Multiplayer Release Module (`REL-MP-*`) |
 | `REL-MP-019` | Session trust and service contracts. | §26 Multiplayer Release Module (`REL-MP-*`) |
+| `REL-MP-020` | Session-scoped chat and communication access. | Bounded additions and uncovered refinements |
+| `REL-MP-021` | Explicit live-observer role. | Bounded additions and uncovered refinements |
 | `REL-PERF-001` | 60 FPS Target on Baseline Apple Silicon: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
 | `REL-PERF-002` | Frame Time Distribution & Spike Ceiling: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
 | `REL-PERF-003` | Game Thread Execution Budget: | §22 Graphics Scalability, Performance, and Stability (`REL-PERF-*`, `REL-STAB-*`) |
@@ -6642,6 +6913,7 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `SPEC-CTL-017` | Fluid Command Interruptibility: | Restored control responsiveness contracts |
 | `SPEC-CTL-018` | Micro-Management Usability Preservation: | Restored control responsiveness contracts |
 | `SPEC-CTL-019` | Simulation Tick Cost Ceiling for Steering: | Restored control responsiveness contracts |
+| `SPEC-CTL-020` | Map-scoped camera bookmarks. | Bounded additions and uncovered refinements |
 | `SPEC-DIF-001` | Story | 16.2 Difficulty |
 | `SPEC-DIF-002` | Standard | 16.2 Difficulty |
 | `SPEC-DIF-003` | Veteran | 16.2 Difficulty |
@@ -6711,6 +6983,7 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `SPEC-MAP-002` | Map truth. Every map ships with a machine-readable contract for grid, starts, terrain, resources, Well, passages, objectives, camera bounds, Reshape o | 17. Skirmish configuration and maps |
 | `SPEC-MAP-003` | Post-match. Results show outcome cause, duration, resource curves, unit production/losses, damage, scouting coverage, idle-worker time, Well control/p | 17. Skirmish configuration and maps |
 | `SPEC-MAP-004` | Distinct story-driven campaign battlefields. | 18.0 Campaign places, connected world, and character continuity |
+| `SPEC-MAP-005` | Mission-appropriate battlefield scale (owner direction, 2026-09-08). | 17. Skirmish configuration and maps |
 | `SPEC-MOD-001` | Simulation core | 26. Technical architecture and content contracts |
 | `SPEC-MOD-002` | Game adapter | 26. Technical architecture and content contracts |
 | `SPEC-MOD-003` | Content compiler | 26. Technical architecture and content contracts |
@@ -6731,6 +7004,7 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `SPEC-MOV-011` | Group Cohesion and Centroid Navigation: | §7.3 Advanced Movement, Control Responsiveness, and Determinism |
 | `SPEC-MOV-012` | Damped Clean Arrival: | §7.3 Advanced Movement, Control Responsiveness, and Determinism |
 | `SPEC-MOV-013` | Movement Determinism & Sanitizer Invariance: | §7.3 Advanced Movement, Control Responsiveness, and Determinism |
+| `SPEC-MOV-014` | Authored subsurface passage lifecycle. | §7.1 Subsurface passage contract |
 | `SPEC-MSN-001` | What the Ledger Keeps | What the Ledger Keeps |
 | `SPEC-MSN-002` | Seven Accounts of Rain | Seven Accounts of Rain |
 | `SPEC-MSN-003` | A City on Reserve | A City on Reserve |
@@ -6888,6 +7162,7 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `SPEC-TUT-005` | Gated onboarding (owner direction, 2026-09-06). Present one small action at a time. Freeze unrelated gameplay and block untaught actions while allowin | 21. Onboarding, tutorial, manual, and learning |
 | `SPEC-TUT-006` | Intentional tutorial exit (owner direction, 2026-09-06). Provide a readable, low-emphasis top-right Hold to skip control outside the primary spotlight | 21. Onboarding, tutorial, manual, and learning |
 | `SPEC-TUT-007` | Purpose-led progressive introduction (owner direction, 2026-09-07). Replace the initial location-centering drills with an in-world welcome explaining  | 21. Onboarding, tutorial, manual, and learning |
+| `SPEC-TUT-008` | Chapter-based optional onboarding (owner-approved replacement, 2026-09-08). | 21. Onboarding, tutorial, manual, and learning |
 | `SPEC-UI-001` | Selection answer. Every selection answers: what is it, what is it doing, what can I order, what will that cost or require, why would I choose it, when | 20. Interface, selection, controls, and player feedback |
 | `SPEC-UI-002` | Selection fields. Show faction, name, role, owner, health, order, stance, target/route, cargo, control group, status, ability cost/cooldown, and every | 20. Interface, selection, controls, and player feedback |
 | `SPEC-UI-003` | Mixed selection. Show composition and deterministic subgroups. The command deck displays only commands legal for at least one selected unit and report | 20. Interface, selection, controls, and player feedback |
@@ -6895,6 +7170,8 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `SPEC-UI-005` | HUD fiction. The field HUD is Mara's command deck: a Compact operations instrument using ledger entries, duty windows, reserve margins, status bands,  | 20. Interface, selection, controls, and player feedback |
 | `SPEC-UI-006` | Remapping. Every gameplay command is remappable; collisions are rejected before save. Prompts, tutorial, help, and tooltips resolve the active binding | 20.1 Default controls |
 | `SPEC-UI-007` | Bottom command console and clear battlefield (owner direction, 2026-09-07). Concentrate the minimap, selection details and command controls in a botto | 20.1 Default controls |
+| `SPEC-UI-008` | Complete action-feedback lifecycle. | Player action and feedback coverage |
+| `SPEC-UI-009` | Recoverable display-setting changes. | Bounded additions and uncovered refinements |
 | `SPEC-UNIT-001` | Surveyor | §12.1 Meridian Compact unit rosters |
 | `SPEC-UNIT-002` | Lancer | §12.1 Meridian Compact unit rosters |
 | `SPEC-UNIT-003` | Bulwark Team | §12.1 Meridian Compact unit rosters |

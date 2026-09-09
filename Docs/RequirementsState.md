@@ -18,6 +18,41 @@ Read state at the exact requirement/build/evidence boundary. Dated entries overr
 only for the IDs and scope they name. A family summary is a navigation aid, not proof that every child
 has its required evidence. Preserve historical claims while recording any missing or conflicting support.
 
+## Backend action and feedback qualification — 2026-09-09
+
+**Engineering state: AGENT VERIFIED at the source, engine-test, network-fault, and automated
+rendered checkpoint-continuation boundaries described below.** This bounded package covers
+`SPEC-CMD-013`, `REL-FAC-005`, `REL-CMB-023`, `REL-BLD-004`, `REL-BLD-006`,
+`REL-BLD-013`, `SPEC-BLD-007`, and `REL-BLD-009`. It does not close those requirements or
+assign owner acceptance.
+
+The backend now validates worker repair and construction assistance, dispatches cancellation to
+one owned unfinished site, and protects online Bulwark selection from duplicate pending orders.
+Player-scoped transient feedback records accepted commands and observed execution outcomes,
+construction, repair, and production events, including exact cost/refund deltas and explicit
+observation loss. HUD presentation remains separately owned. Snapshot 31 and protocol 5 are
+preserved; fresh replay 29 separates revised maintenance behavior from replay-bound historical
+continuations through replay 28. The legacy oracle was produced with the archived original writer.
+
+Retained evidence: [backend receipt](../BuildArtifacts/Evidence/backend-actions-20260909/receipt.json),
+[source manifest](../BuildArtifacts/Evidence/backend-actions-20260909/source-manifest.json), and
+[current integrated identity](../BuildArtifacts/Evidence/backend-actions-20260909/integrated-candidate5-identity.json).
+Native optimized, debug, and ASan/UBSan each passed 126 tests. Candidate 4 passed the full 121-test
+engine suite without warnings/errors and the combined delayed-ACK/dropped-delta recovery route.
+Candidate 5 changes only the bounded graceful-disconnect path and passed all 18 connected
+maintenance/network/persistence tests after rebuilding. The corrected separate-process timeout
+route passed, including the 45-second server cutoff, seat reservation, and resumed-client transport
+fallback. Both historical and current checkpoint routes completed load/action/save/normal exit/new
+process/reload/action with verified archives and scoped cleanup. Their exact restored ticks and
+input sequences are recorded in [rendered evidence](../BuildArtifacts/Evidence/backend-actions-20260909/rendered-route.json).
+Positive rendered repair, assistance, and cancellation remain unqualified because available GUI
+pointer/modifier delivery did not establish those actions; engine execution tests remain distinct. Earlier failed runs
+are retained there with causes and repairs; they are not relabeled as passes.
+
+No packaged physical-input, uncoached human, or owner-acceptance result is claimed. Exact trailing
+30/60-second realized-income telemetry is a separately queued backend follow-up and is unavailable
+to HUD consumers at this gate. Spend/refund or current balance must not be labeled realized income.
+
 ## Global verdicts and identities
 
 * DEMO-GOV-001 stands: the current demo is `HUMAN REJECTED` (owner, 2026-09-02). Rejected
@@ -3207,3 +3242,571 @@ Source inspection found current tutorial instructions hard-coded Command+F, WASD
 2026-09-07 rendered camera observation: the same qualified candidate reached Start tutorial → Operational Readiness → Deploy using delivered keyboard input; Escape bypassed the unfinished cinematic. The captured window is 1280×752 including its 32-pixel title bar (1280×720 game content), with the highlighted Anchor centered in the game area after deployment. This is bounded agent-rendered evidence, not a smoothness or owner pass. Tool-delivered pointer clicks did not establish a selection; the owner was asked for one physical Anchor click to distinguish input-tool delivery from a game defect. Large objective/resource/subtitle panels still obstruct the battlefield. Source remains frozen and HUD/tutorial expansion has not begun. Runtime evidence is under `camera-bottom-hud-20260907/camera-rendered`; the game remains open awaiting this input check.
 
 2026-09-07 Anchor-selection progression repair (`BuildArtifacts/Evidence/tutorial-anchor-selection-20260907/`): the rendered defect (owned Core selected per `[ECHOES_POINTER_SELECTION]`, survey instruction never advancing) was reproduced and closed. New automation `Echoes.Runtime.Campaign.TutorialAnchorSelectionProgression` drives the real controller, RTS camera pawn and 20 Hz fixed steps; it failed before repair only on the programmatic-camera case (`reproducer-focused/index.json`). Established causes: (1) `TickTutorialObservation` returned before refreshing the instruction whenever Unreal reported the game window as not the key window, so a recorded click left the HUD frozen on the stale demand; the first rendered run of the repaired build printed the new `[ECHOES_TUTORIAL_OBSERVATION] held background_window=1` trace immediately after the click; (2) any programmatic camera sample reset the survey observer and the restart cleared `bTutorialCoreSelected`, re-demanding a click the player had made. Also found: the recenter key (`SnapKeyboardTargetToSelection`) wrote the camera location directly with no navigation revision, provenance or battlefield clamp. Repairs: the foreground check now withholds camera credit only, while instruction delivery and the selection gate stay live; a camera-observer restart keeps the Anchor selection while the same owned Core is bound (full `ResetTutorialObservation` still clears it); the recenter key routes through `PanFromPlayerInput`. No lesson credit is granted by selection alone and no assertion was weakened. Transition-only trace logging (`[ECHOES_TUTORIAL_OBSERVATION]`) was added for rendered diagnosis. Focused results: repair set 7/7 (`repair-focused`), gate build 3/3 (`gate-focused`), zero test warnings/errors. Rendered result (`rendered-run2-camera-route/PlayerRoute.log`, `trace-summary.txt`): the repaired build reached Deploy, Escape skipped the cinematic, a display-scope click on the Anchor produced `anchor_selected` and the instruction advanced to the pan step; keyboard pan, wheel zoom to both limits with cursor-centred zoom, and Command+F recenter (`[ECHOES_KEYBOARD_TARGET_SNAP] cameraCentered=true`) advanced the survey to "Anchor verified" and the Archive Recovery Site waypoint. Observed limits: background-delivered tool clicks do not reach Unreal while its window is not key (the earlier tool-click failure was input delivery, not a game defect), and a click landing in the same frame as deployment precedes `survey_begin` and is correctly not credited; the player clicks again. Full integration passed 117/117 (new test added to the exact inventory), zero test warnings/errors, save-isolation probes and cleanup passed, wrapper exit 0 (`repair-integrated`, `repair-integrated-launcher.log`); `repair-integrated-identity.json` confirms no source or library change against `repair-source-identity.json` / `repair-build-identity.json`. This is agent-rendered evidence for the selection/progression gate and the camera route (scrolling, zoom, centering, focus hold); it is not a smoothness judgement, HUD acceptance or owner acceptance. Bottom-console HUD work remains next.
+
+
+### 2026-09-08 — Approved chapter tutorial implementation begins
+
+Owner instructed implementation of the complete chapter-based redesign (SPEC-TUT-008), optional campaign/skirmish access, contextual rather than mandatory camera help, seven core chapters and later specializations. Existing repairs at 95db778 are preserved. Root is sole write/build owner; Chapter1 interface audit is read-only. First bounded batch is shared bottom HUD geometry and tests; implementation is underway, not qualified. Evidence root: BuildArtifacts/Evidence/tutorial-redesign-20260908. No new chapter, player understanding, P0–P4 completion or owner acceptance is claimed.
+
+2026-09-08 HUD batch progress: initial editor build succeeded; focused GameUserSettings, PointerSurfaceCoverage and FieldHudWidget tests passed 3/3 with zero test warnings/errors (`tutorial-redesign-20260908/hud-focused`). Review then identified unpainted/unblocked console gutters; visible backing and matching full-console pointer consumption are added and rebuilding in `hud-build-2.log`. Source is frozen in `hud-source-identity.json`. Captions are retained alongside objectives, not substituted for objective controls. Full integration/rendered checks remain pending.
+
+
+2026-09-08 additional owner direction: maps may be much larger than current prototypes, using Age of Empires/StarCraft II as mission-dependent scale references. SPEC-MAP-005 records this authorization without inventing equivalent tile sizes or enlarging every map. Keep the tutorial's initial home clearing readable; allow the enclosing operation to expand with its learning needs. Retain current named-map contracts until a specific authored enlargement is qualified. This steering does not interrupt closure of the current HUD batch.
+
+
+2026-09-08 HUD candidate 3 subsequent result: editor build succeeded (`hud-build-3.log`); focused HUD tests passed 3/3, then full integration passed 117/117 with zero failures or test warnings, exact inventory and save-isolation cleanup passed (`hud-integrated-3`). `hud-candidate-3-identity.json` and `hud-integrated-3-identity-check.json` bind the unchanged source/libraries. Rendered keyboard input reached Start tutorial → Deploy → Escape past the unfinished cinematic at 1280×720 content (1280×752 window). This exposed a real framing failure: the instruction crossed the Anchor silhouette and the bottom console covered its lower edge. Therefore candidate 3 is not a rendered pass despite its automation result. Game closed cleanly; the bounded repair centers the headquarters in the usable battlefield above instruction/console using the actual viewport aspect ratio. Regression checks now require that visible position and silhouette clearance. Rebuild is running in `hud-build-4.log`; no chapter behavior added while this gate is unresolved. Source reference checked: installed UE5.8 PlayerController.h GetViewportSize and the matching Epic API page.
+
+
+2026-09-08 HUD candidate 4: `hud-build-4.log` succeeded; five focused camera/Anchor/HUD tests passed without warnings or errors and wrapper exit 0 (`hud-focused-4`). Read-only camera review found no blocker; its test limitation is explicit: isolated 1280×720 geometry does not establish another rendered aspect ratio or actual silhouette bounds. `hud-candidate-4-identity.json` records source and libraries. The same candidate reached the menu and deployment with Return, then Escape skipped the unfinished cinematic. Conversation captures show the complete Anchor silhouette at approximately window x=570–710, y=131–271, above its target label and the instruction y=370–405; the bottom console begins y=432. This closes the observed startup overlap at 1280×720 content, not the complete HUD interaction gate. App-scoped clicks did not establish selection. Raising the window did not establish a valid click either; later camera movement has uncertain input attribution and is not scored as a navigation result. Retained runtime log: `hud-rendered-4/PlayerRoute.log`; visual observations are in the task conversation. Game closed cleanly before full integration in `hud-integrated-4`. No pointer interaction, chapter completion, larger-map implementation, player comprehension or owner acceptance is claimed.
+
+
+2026-09-08 HUD candidate 4 final automated result: full Unreal integration passed 117/117, zero warnings/errors, wrapper exit 0, exact inventory and save-isolation denial/cleanup checks passed (`hud-integrated-4-launcher.log`). `hud-integrated-4-identity-check.json` confirms unchanged source/libraries. Source/build identity remains `hud-candidate-4-identity.json`. The startup Anchor/instruction/console overlap is corrected in rendered observation. Next unresolved gate is human mouse selection and bottom-console interaction on this same build; agent app-scoped clicks did not establish it. New chapter behavior remains deferred until that connected interaction gate closes. The approved larger-map allowance is recorded under SPEC-MAP-005; no enlargement is claimed implemented. Owner acceptance and P0–P4 completion remain unassigned.
+
+
+2026-09-08 candidate 4 physical selection result: Angelis reported Done after the requested Anchor click. Fresh rendered inspection shows the Anchor selection ring, populated bottom selection/command panels, and instruction advanced from select Anchor to the legacy pan exercise. `hud-human-4/PlayerRoute.log` records `anchor_selected core=1` and owner-scoped `ECHOES_POINTER_SELECTION selected=1` at 15:28:13 UTC. This verifies the physical selection/progression gate on candidate 4; it does not award camera mastery or qualify the superseded curriculum. The next HUD interaction check is intentional hold-to-skip and normal bottom-console command use after guidance exits.
+
+
+2026-09-08 new physical failure: Angelis reports holding top-right Skip does not work. Current rendered state has no skip-choice modal. Source diagnosis: the visible skip control existed only in NativePaint, while root and canvas are SelfHitTestInvisible; no child registered that rectangle for hit testing, so an empty-space press never reached the hold handler. Epic UE5.8 ESlateVisibility documentation and installed Slate headers confirm this distinction. Added a transparent, visible-when-active UBorder at the exact painted rectangle, preserving battlefield pass-through outside that target. Also release held mouse capture at the 1.5-second transition before opening the modal. Added real Slate hit-grid coverage of the target and its removal during the modal. Build5 is running (`skip-build-5.log`); subsequent tests and physical hold/release/modal checks remain required. Candidate4's 117 passes are historical and do not qualify these new changes. No tutorial expansion while this failure is unresolved.
+
+
+2026-09-08 skip build environment result: restricted `skip-build-5.log` stopped before game compilation on two sustained-wrapper subprocess fixtures returning 127 instead of the expected test exit. A targeted rerun of those same two tests with normal local execution access passed both in 18.942 seconds, exit0. Assertions and fixture source are unchanged. Full normal build is rerunning under `skip-build-5-unrestricted.log`; failure retained as an execution-environment limitation, not a gameplay pass. Source freeze: `skip-source-5-identity.json`.
+
+
+Skip candidate5 normal build succeeded but produced a compiler deprecation warning for ReleaseMouseCapture. It is not accepted as the final implementation. Corrected to UE5.8 ReleaseAllPointerCapture before modal opening and strengthened the regression to require the outer HUD in the actual bubble path, as requested by read-only review. Candidate6 rebuild: `skip-build-6.log`; source receipt `skip-source-6-identity.json`. Physical hold/cancel/modal behavior remains unverified.
+
+
+Skip candidate6 focused result: build succeeded (`skip-build-6.log`); FieldHudWidget, TutorialAnchorSelectionProgression, and ReadinessOperationPersistenceAndReplay passed 3/3 with zero test warnings/errors and wrapper exit0 (`skip-focused-6`). Real Slate hit-grid assertions reach both the dedicated target and the outer HUD hold handler. Source unchanged; libraries frozen in `skip-candidate-6-identity.json`. The game is reopening windowed with isolated saves under `skip-human-6` for physical hold/release/modal verification. Full integration rerun follows that affected-behavior check; candidate4's old full pass does not qualify candidate6. Art lane requested GPU access and was told integration retains the reservation through qualification; isolated lightweight art edits may continue, main checkout remains root-owned.
+
+
+2026-09-08 skip candidate6 physical follow-up: Angelis reports “hold works.” Fresh rendered inspection shows Lesson2 Roster with no modal currently open; runtime feedback at 15:47:11 UTC says “Step skipped. Progress recorded as skipped (no mastery awarded).” This supports the physical hold/step-skip route having progressed, but the intermediate modal was not directly observed in this follow-up. Do not infer full-sequence exit, early-release cancellation or restored normal controls from this result. Next check is End all tutorials through the visible skip-choice modal, followed by bottom-console command use; full candidate6 integration remains pending.
+
+
+2026-09-08 End all tutorials physical result: Angelis reported Done; fresh rendered inspection shows no spotlight, tutorial instruction or skip control, and runtime reports “Tutorial ended. Standard controls restored.” This verifies visible sequence exit, not all controls by interaction. The undimmed view exposes a separate actual HUD defect: the console backing overlays text/buttons. Installed UE5.8 SObjectWidget.cpp lines132–146 confirms child painting precedes NativePaint, whose LayerId already equals the children's maximum. Therefore drawing the backing there covers content even when Super::NativePaint is called later. Corrected by a dedicated low-Z-order canvas child, retaining full-console hit coverage and existing skip repair. Regression requires the backing belong to the child hierarchy below selection. Candidate7 building in `console-build-7.log`, source freeze `console-source-7-identity.json`. Full integration remains pending until this affected rendered failure closes; no chapter expansion.
+
+
+2026-09-08 console candidate7 qualification: build succeeded; focused UI/FieldHud authority routes/Anchor progression passed3/3. Full integration passed117/117 with zero warnings/errors, exact inventory and isolated-save denial/cleanup checks passed, wrapper exit0 (`console-integrated-7-launcher.log`). `console-integrated-7-identity-check.json` confirms unchanged source/libraries against `console-candidate-7-identity.json`. Candidate7 reopening under `console-human-7` for physical console readability and command checks; earlier candidate6 owner hold/step-skip/end-all evidence is preserved but does not alone qualify this new rendered candidate. No chapter expansion or owner acceptance claimed.
+
+
+Candidate7 rendered observation: the same qualified build reached Start tutorial → Deploy with keyboard input and Escape past the unfinished cinematic. At1280×720 content, the resource/objective text and minimap now render above the console backing and are visibly readable even under tutorial dimming. Fresh conversation capture establishes removal of the backing-over-content defect. The current tutorial is at its initial Anchor step; physical End all tutorials and a bottom-console command remain to recheck on candidate7. Existing caption still references legacy End control and old curriculum; approved chapter replacement remains pending and no mastery/completion is inferred.
+
+
+Candidate7 physical End all tutorials recheck: Angelis reported Done. Fresh1280×720 rendered inspection shows no tutorial spotlight/instruction/skip control, clearly readable resource/objective/selection/command text, selected Anchor, and its Surveyor command. Normal-mode console rendering is now observed after physical guidance exit on this candidate. The ledger currently shows Logistics14/12; a production command may correctly refuse capacity rather than produce a unit. Next input check is the actual Surveyor command response, without assuming production success or changing resource expectations.
+
+
+Candidate7 next physical input: owner replied Done to the requested Surveyor command-card click. Fresh screenshot instead shows an existing Surveyor selected in the world, and the bottom selection text/command card correctly changes to its worker controls. Runtime records owner-scoped selection entity4 at16:19:26 UTC, with no observed production command or capacity refusal. Do not record production input as verified. Record this naming/target ambiguity as player-test confusion relevant to the redesign: Surveyor can mean the unit or its production button. Next check uses the distinct Power Link command in the bottom-right worker card to verify placement-preview entry.
+
+
+Candidate7 physical construction result: owner reports the preview appears but has no distinguishable green/red feedback and placement succeeded. Current screenshot shows the new Power Link, Matter410/Dawn110 versus prior500/120, and Logistics14/18 versus14/12, consistent with90Matter/10Dawn and+6capacity. Runtime records two FOOTPRINT_BLOCKED refusals before Construction order queued at16:25:16UTC. This confirms command-card→placement→construction/economy progression; no invalid-placement charge is inferred without a contemporaneous accounting trace. Correction: assistant's green-valid instruction was wrong; current preview source intends cyan valid/red invalid. Owner additionally identifies missing explanation/feedback for network range, supported objects, and connection chains. Preserve this as an unresolved player-facing gate under SPEC-TUT-008 and REL-FAC-002/003, not an accepted tutorial result. Next inspection targets the built Power Link's selected information before implementing range/connection feedback from authoritative simulation state.
+
+
+2026-09-08 Power Link feedback batch (SPEC-TUT-008, REL-FAC-002/003): owner selection confirmed a generic Resource Drop-off card with no range/connection explanation. The game was closed before edits; root retains main checkout write/build ownership. Current source adds canonical selected Meridian building names, owned live-view coverage/connection geometry, configured center-to-center range and connected/drop-off/capacity purpose text. Placement now exposes validity and network advisory in text. Found the preview color defect: code wrote BaseColor while the authored M_EchoesPresentationVFX uses Color; corrected the binding with an actual-material parameter regression. No SimCore rules, saves or replay protocol changed. Read-only review identified DPI clipping and Aegis wording defects; both corrected (Aegis is excluded from node-connection claims). First network build8 failed compilation on a local fixture variable collision and a missing layout argument; retained network-build-8.log, no test pass claimed. Build9 uses network-source-9-identity.json; tests and rendered route remain pending. Earlier console candidate7's 117 passes do not qualify this new source. No chapter expansion or owner acceptance.
+
+
+2026-09-08 network candidate9: build succeeded (network-build-9.log). Focused Unreal tests passed 4/4 with zero entries/warnings/errors and sandbox-wrapper exit0: FieldHudAuthority, BuildPlacementPreview, FieldHudWidget, TutorialAnchorSelectionProgression. This verifies actual material Color parameter availability, dynamic 4-tile coverage conversion, exact-radius two-hop connectivity, broken chain/incomplete node presentation, replay overlay suppression, and valid disconnected placement advisory. network-focused-9-identity-check.json reports no changed source/library files against network-candidate-9-identity.json. Full integration is running; rendered range/connection/placement legibility and owner acceptance remain open.
+
+
+2026-09-08 network candidate9 integrated qualification: full suite passed117/117, zero test warnings/errors; exact inventory and save-isolation denial/cleanup checks passed, wrapper exit0. network-integrated-9-identity-check.json confirms no changed source/library files. Same candidate launched windowed1280x720 with isolated saves under network-human-9 for the rendered route. Build8 failure remains preserved. Physical visibility/use of the new network overlay is not yet verified; no tutorial chapter expansion or owner acceptance.
+
+
+Network candidate9 rendered entry: fresh game window observed at1280x752 including32px title bar (1280x720 content). Main menu renders. App-scoped Return entered Journeys and recovery despite Start tutorial's primary styling; Escape returned. An app-scoped click at visible Start tutorial moved the displayed cursor there but did not activate it; another menu row showed hover. This is unresolved synthetic input-targeting evidence, not proof of a physical player defect or successful tutorial entry. Stopped equivalent attempts and requested the owner's physical Start tutorial click. New power overlay/color behavior remains unverified in rendered interaction. Game remains open under network-human-9, same frozen candidate; no source changes after qualification.
+
+
+2026-09-08 owner Power Link follow-up: physical Anchor selection showed cyan range and rooted connection lines, 8-tile text; Surveyor selection removed the inspector. Power Link command showed cyan preview and “connects when completed” in retained rendered inspection. Owner reported blocked-placement wording and confirmed red over an occupied footprint. After a later placement the selected completed Power Link displayed disconnected/dashed-white range, resources410/110 and Logistics14/12. Exact message/position at that click was not retained, so root cause is unresolved. Owner requested diagnostic logging rather than relying on recollection. New opt-in EchoesPlacementTrace joins an attempt GUID and exact previous/resolved preview to the admitted command sequence, then authoritative resolution, building ID, construction charges/completion and connectivity/accounting changes. It uses existing UE_LOG and scoped simulation observations, changes no gameplay rules/serialization, and throttles sampled previews to4Hz while preserving state transitions and exact click snapshots. Epic UE5.8 logging documentation consulted. Build10 is running; source identity placement-trace-source-10-identity.json. Synthetic boundary-crossing coverage is not evidence of the owner's historical cause. Rendered reproduction remains required before tutorial expansion.
+
+
+Placement diagnostics review/build10: compilation succeeded. Read-only review identified non-retired sequences when authority removes a command without a receipt and repeated command-line parsing when disabled. Candidate11 caches the startup opt-in and logs resolution_missing when an outstanding sequence is absent from both pending commands and authoritative receipts, then retires it. click_resolved additionally records whether placement remained active after refresh/focus handling. Candidate11 rebuild pending; source frozen in placement-trace-source-11-identity.json. No gameplay or serialized-state changes; current rendered mismatch remains unattributed.
+
+
+Placement trace candidate11: build succeeded, four focused tests passed with EchoesPlacementTrace enabled, zero test warnings/errors and wrapper exit0. Emission review (placement-trace-focused-11-emission-check.json) verifies an actual M01 bridge order: sequence1 creates building35 for90Matter/10Dawn, completes, and joins the network, restoring the pre-existing Link as well (Logistics14/12→14/24). This demonstrates the logger, not the owner's earlier cause. Synthetic preview boundary records explicitly change raw position and connects1→0. Earlier network-human-9 log confirms the owner's selected disconnected building was newly created entity35, so selection of the pre-existing Link is not the explanation. Exact clicked coordinates remain absent historically. Source/library hashes unchanged. Full integration with logging disabled is running. No tutorial expansion or owner acceptance.
+
+
+Placement trace candidate11 final automated qualification: full integration117/117, zero test warnings/errors, exact inventory and save-isolation cleanup/denial checks passed, wrapper exit0. Logging-disabled full run emitted0 [ECHOES_PLACEMENT] records; four enabled focused tests and actual emission checks passed earlier. placement-trace-integrated-11-identity-check.json reports unchanged source/libraries. SetupAndBuild.md documents flag, fields and evidence limits; author/creator remain Angelis Pseftis. Game relaunched1280x720 with -EchoesPlacementTrace and -EchoesShellInputTrace under placement-trace-human-11. Four prior owner test-save files were copied with hashes in save-source-manifest.json; original network-human-9 files remain intact. Checkpoint recovery and next physical placement trace are pending. Logging is implemented and automatically verified; prior player-placement cause, rendered reproduction and tutorial/P0–P4 acceptance remain open.
+
+
+2026-09-08 candidate11 physical recovery: owner clicked Recover interrupted session. Rendered battlefield restored Matter410/Dawn110, Logistics14/12 and the placed Link. PlayerRoute.log records ECHOES_RECOVERY_SUCCESS operation16 tick12000 crc50663FED. Live diagnostic baseline identifies completed disconnected building35 at raw(2230,5310), Anchor1 at raw(10240,10240). This establishes the saved building's actual position/state, not its earlier preview message. Unexpected recovery behavior: legacy tutorial spotlight/pan guidance reappeared after the owner had ended all tutorials before saving; record as an unresolved skip-state recovery issue under SPEC-TUT-008. Continue bounded physical placement trace; do not treat recovered simulation state as correct tutorial-state recovery or expand chapters.
+
+
+2026-09-08 conduit feedback continuation: candidate11 physical traces confirm two connected owner placements (buildings36/37), identical previous/resolved target positions, genuine90Matter/10Dawn charges and completion. Building36 also restored building35; Logistics14/12→14/24→14/30. PlayerRoute.log under placement-trace-human-11 retains events17:39:01–17:39:31UTC. Owner did not notice the placement message; readability remains unresolved. Quicksave request3 succeeded at tick22309,17:42:23UTC. Owner approved physical ground conduits, placement prediction, distinct assembly/offline cues and restoration feedback using actual network state. First bounded source batch adds persistent owned operational conduits and steady reduced-motion energy, retaining selected coverage. No SimCore or serialization changes. Source identity conduit-source-12-identity.json; build, tests and rendered acceptance pending. Ghost placement, construction and outage symbols remain subsequent work after qualifying this first batch. Skip-state recovery defect and full chapter redesign remain open.
+
+
+Conduit qualification: build12 returned success but emitted an include-order error in the earlier diagnostics include; repaired before test qualification. Build13 retained as failed: new actor regression passed TObjectPtr to raw-pointer TestNotNull. Corrected explicit Get() in candidate14. No assertion was weakened and no runtime failure was hidden. Added collision/navigation/overlap, live instance placement, reduced-motion and unavailable-authority cleanup checks. Candidate14 build pending; no player-visible qualification yet.
+
+
+Conduit candidate14: build succeeded after the retained test-only pointer-type failure. Four focused checks passed with zero warnings/errors, wrapper exit0 and unchanged source/library hashes (conduit-focused-14-identity-check.json). New actor regression confirms no collision/navigation/overlap, expected route geometry, reduced-motion behavior and stale-authority cleanup. Full integration is running on conduit-candidate-14-identity.json. Player-facing evidence is still pending; no chapter expansion or owner acceptance.
+
+
+Conduit candidate14 automated qualification: full117/117 passed,0warnings/errors, exact inventory and save-isolation cleanup/denial checks passed; wrapper exit0. conduit-integrated-14-identity-check.json reports unchanged source/libraries. Four focused tests also passed. Source actor is noncolliding, non-navigating, transient and live-player-scoped. Game launched at1280x720 under conduit-human-14 with five hash-recorded copies of actual owner save files; originals retained. Rendered route, readability and owner acceptance remain pending. Ghost placement, construction, disconnected/Aegis endpoints and restoration cues remain unimplemented in this bounded candidate. No P0–P4 completion, chapter expansion or P5 readiness claimed.
+
+
+Candidate14 rendered launch observed: native window1280x752 including32px title bar, content1280x720. Main menu visibly loaded with Journeys and recovery. No conduit appearance or physical recovery pass is claimed from the menu. Await owner click to resume the retained base.
+
+
+Candidate14 physical recovery follow-up: owner clicked Journeys and recovery, then Recover interrupted session. Rendered base restores Matter230/Dawn90 and Logistics14/30; ground connection geometry is visible between owned structures beneath the tutorial dimming overlay. PlayerRoute.log records recovery operation16 tick48005 crcA336A044 at20:53:55UTC. The previously reported skip-state recovery defect recurs: Anchor-selection guidance reactivates after tutorials were ended. Conduit motion/clarity without dimming is not yet verified; next physical step opens the hold-to-skip choices to remove guidance. No acceptance assigned.
+
+
+Candidate14 owner feedback: buildings within reach appear to lack lines. Rendered Aegis below Anchor has no conduit; actual diagnostic building14 has aegis=1 at restored tick48006. Confirmed presentation omission, not a demonstrated power simulation failure. Candidate15 adds owned Aegis terminal conduits from reached operational relays and selected powered/offline role text, without placing Aegis in the relay graph. Regression covers connection, no downstream relay through Aegis, replay exclusion, severance and restoration. Quicksave request2 succeeded at tick50652 before closing game. Candidate15 not yet built or qualified; candidate14 remains historical.
+
+
+Candidate15 built successfully. Focused FieldHudAuthority passed with0warnings/errors and wrapper exit0, including actual powered Aegis terminal geometry, non-relay behavior beyond it, replay exclusion, severance/offline text and restored conduit after relay restoration. Source/library identity check unchanged. Full integration now running; copied actual owner save files into conduit-human-15 with hashes for the next rendered check. Original saves retained. This fixes the confirmed missing Aegis line in source; owner visibility/clarity remains unverified on15.
+
+
+Candidate15 full integration failed116/117: ProductionFog initial synchronization exceeded1.5ms; all Aegis checks passed. Retained conduit-integrated-15 report and unchanged identity. Same unchanged ProductionFog test passed in isolation (conduit-fog-isolated-15, wrapper0); initial failure report lacked measured duration, so exact overrun magnitude/cause is unknown. Source inspection found both fog paths update the already-hidden layer on every knowledge transition. Candidate16 avoids those redundant instance writes, retains all performance assertions, adds exact initial/peak timing diagnostics and layer-transform transitions through discovery/exploration/visibility/reset. This is a performance improvement addressing observed budget risk, not proven attribution of the historical overrun. Build/focused/full requalification pending. No new conduit effects added while integration is open.
+
+
+Candidate16 built successfully. Focused ProductionFog and FieldHudAuthority passed2/2, wrapper0. Initial fog sync0.799417ms and peak incremental0.014707ms satisfy unchanged assertions; explicit layer-transition geometry checks and Aegis severance/restoration checks pass. Identity unchanged. Full integration is running; earlier15 full-suite timing failure retained, not relabelled. No player-visible qualification of the corrected Aegis line yet.
+
+
+Candidate16 integrated qualification: full117/117,0warnings/errors, wrapper0; exact inventory/save-isolation cleanup/denial passed. Identity unchanged. Fog initial0.650875ms, peak incremental0.015210ms in full run; all unchanged performance assertions and new layer-state checks pass. Earlier15 failure retained. Rendered candidate16 at1280x720: native keyboard Down/Return traversed main→Journeys→Recover→Confirm, restored actual base, and shows the formerly missing Anchor→Aegis conduit. This is automated rendered keyboard interaction plus visual inspection, not owner acceptance or proof of mouse targeting/motion quality. App mouse click moved the visible cursor but did not select Anchor; repeated equivalent clicks stopped. Recovery again reactivates tutorial guidance despite EndAll before save. Fix this integration defect before further mechanics expansion.
+
+Latest owner direction: continue all building/unit mechanics and feedback autonomously, using SC2 as a usability reference and no routine questions. Preserve approved Echoes behavior and integration-first sequencing; no P5/readiness/owner-acceptance claim. Blizzard primary guides reviewed: [Buildings](https://news.blizzard.com/en-us/article/4488317/game-guide-buildings), [Simplified Controls](https://news.blizzard.com/en-us/article/6640645/game-guide-simplified-controls), [Special Control](https://news.blizzard.com/en-us/article/4552955/game-guide-special-control). References support discoverable contextual commands, purposeful rallying and clear selection; they do not replace Echoes requirements. Read-only roster audit identifies generic non-Meridian names/purpose and missing special-ability cards, plus a concrete Relay smart-cast filter defect (ActivateRelaySupply expects Dropoff rather than ScoutUnit). These remain next bounded mechanics work after current recovery/network qualification.
+
+
+Candidate16 rendered material failure: PlayerRoute.log at21:19:57 records M_EchoesPresentationVFX missing InstancedStaticMeshes usage; default material used. This explains grey conduits and prevents claiming intended energy appearance despite automatic/rendered geometry passes. Candidate17 source generator repairs existing material in place and sets usage on future creation, preserving references. Scoped generation log proves before=False, repaired=True; command editor exit0. Actual material usage assertion added to BuildPlacementPreview regression. Generated asset hash included alongside generator in source17 identity. Build/focused/full/rendered shader requalification pending. Saved opt-out recovery defect has a read-only diagnosis (existing bTutorialOptOut is never set by EndAll; recovery unconditionally reauthorizes), retained for the next repair after this display failure.
+
+
+Candidate17 built successfully; focused material/network/fog3/3 passed, wrapper0. Actual material usage assertion now detects the prior fallback condition. Fog initial0.655878ms and peak0.015501ms; unchanged timing assertions pass. Source/generator/material/library identity unchanged. Full integration running; rendered intended shader still pending. No additional mechanics behavior introduced during this repair.
+
+
+Candidate17 integrated qualification:117/117 passed,0warnings/errors, wrapper0, inventory/save-isolation checks passed. Source/generator/material/library hashes unchanged. Fog initial0.722665ms, peak0.014540ms; earlier timing failure remains historical. Candidate17 launched1280x720 with actual owner save copies for rendered material inspection. Material fallback/energy appearance remains the active verification gate; no saved-opt-out or Relay mechanics edits yet.
+
+
+Candidate17 rendered qualification: native keyboard menu→Journeys→Recover→Confirm restores actual owner quicksave tick50652 crcAC6F17B0 at1280x720. Cyan conduits now render, including Anchor→Aegis; no missing instanced-usage warning found. Intended color/material fallback defect closed on17; motion/readability without tutorial dimming and owner acceptance remain open. Recovery still reactivates guidance. Candidate18 now persists EndAll via existing schema2 profile bTutorialOptOut before releasing modal; failure rolls back profile and retains guidance/modal. Recovery and bound quick-load honor the bit, and training admission allows opted-out learning checkpoints without reauthorizing guidance. Explicit tutorial replay remains available. No checkpoint schema change or mastery awarded. Tests extend authentic save/fresh-controller recovery/quick-load and fault-injected profile persistence. Broader obsolete campaign/skirmish mastery access gate remains separately open under approved optional-tutorial requirements. Build18 pending.
+
+
+Recovery18 built but focused0/2 failed on new fixture prerequisites, retained recovery-focused-18. HUD test initialized its profile while simulation was unpaused; SelectJourneySlot correctly refuses that. Manual-replay test invoked Tutorial from Gameplay, where no such menu action is offered, so dispatch correctly ignored it. Candidate19 moves profile initialization inside the paused skip modal and enters Title before invoking its actual Tutorial action. Assertions retained; no production relaxation. Build/retest pending.
+
+
+Candidate19 built; focused PlayerShellRoutes passes durable EndAll/fresh recovery/bound quick-load/manual replay. ControllerAuthorityRoutes fails after pause resume because its now-initialized real profile activates the obsolete mastery access guard. This is a production compatibility defect under SPEC-TUT-008, not a reason to seed mastery in the fixture. Candidate20 replaces that guard with valid-profile access across deployment, resume and recovery; keeps campaign progression and profile failure boundaries. Briefing and skip text remove the obsolete lock. Historical denial assertions are superseded by the owner-approved optional-access contract: test actual unmastered skirmish deploy/resume/recovery and campaign briefing, retaining no-mastery, persistence failure, checksum and byte-preservation assertions. No new unit/building mechanic introduced. Epic UE5.8 save/load documentation rechecked: separate profile/playthrough data and small paused/menu persistence fit the existing schema2 store; no save-format migration or claim of replacing the store with USaveGame. Build20 pending.
+
+
+Candidate20 built. Focused ControllerAuthorityRoutes passes; PlayerShellRoutes failed three dependent recovery assertions because the added campaign route created another checkpoint in the same timestamp interval as training. Candidate21 moves campaign coverage after training recovery checks, preserving all assertions and authentic saves. Read-only review also identified explicit Start Tutorial retaining the opt-out preference;21 now commits opt-in for explicit tutorial/practice and rolls back profile/practice on failed storage. Adds failure/retry, durable opt-in, real checkpoint/load retaining guidance, and corrupt-profile admission rejection. Removes unused restored-mode variable. No mastery or campaign progression granted by opting in/out. Focused/full/rendered requalification pending.
+
+
+Candidate21 built; HUD routes pass, shell route failed two new navigation assertions. Title Journeys offers Recover (Load is pause-only), so the direct Load dispatch was correctly ignored. After explicit opt-in, Campaign correctly offers the first-run optional-training confirmation, which the fixture omitted. Candidate22 follows offered Recover and Campaign confirmation, adds early prerequisite guards for both, retains guidance/mastery assertions, and changes no production code. Earlier failures retained; qualification pending.
+
+
+Candidate22 built; focused PlayerShellRoutes and ControllerAuthorityRoutes pass2/2 with wrapper0 and unchanged source/library identity. Covers EndAll commit failure/retry, opted-out fresh recovery/quick-load, explicit restart opt-in persistence/recovery, unmastered skirmish deployment/resume/recovery, campaign briefing, corrupt-profile refusal and existing HUD routes. Full integration now pending/running. Structural document check passed142 Markdown/87 skills/1297 links; no owner acceptance or broader roster completion implied.
+
+
+Candidate22 full integration117/117, zero test warnings/errors, source/library identity unchanged. SaveIsolation records editor exit0, cleanup success, synthetic denial and protected-policy checks passed. Rendered qualification next uses recovery-human-22 copies of six original candidate14 save files with SHA-256 manifest; candidate21 copy was never launched. No roster completion or owner acceptance assigned.
+
+
+Candidate22 rendered native-keyboard route at1280x720 passed optional skirmish setup/deploy/pause/resume/return, Slot1 owner training recovery, pause-menu save and load, and complete process restart/recovery. Original tick50652 crcAC6F17B0 restored with230Matter/90Dawn/14-of-30Logistics and no tutorial spotlight/dimming; Anchor-to-Aegis cyan conduit visible. New explicit save tick51472 completed. This closes opted-out recovery and mandatory-access defects for this candidate at automated keyboard/rendered evidence level; physical Hold-to-EndAll was not repeated, human understanding and owner acceptance remain open. Rendered route JSON/logs retained under recovery-human-22. Found next presentation defects: loaded battlefield retains FIELD MENU status, and save progress exposes raw codes/ticks. Candidate23 is limited to clear shared save/recovery receipts, keeping diagnostic logs and persistence unchanged, before Relay feedback work.
+
+
+Candidate23 built; affected integration checks AsyncCheckpointLifecycle, AsyncCheckpointReplayBindingFailure and PlayerShellRoutes pass3/3, wrapper0, identity unchanged. Small presentation-only receipt correction is qualified against real pending/completed storage, retained failure preservation and both restored-status routes; last full117 suite belongs to22, not relabelled as23. Rendered save/load receipt check is next with copies of22 saves/profile; no simulation or serialization change.
+
+
+Candidate23 rendered keyboard recovery/save receipt check passed at1280x720: recovery acknowledgement visible in pause, autosave uses plain language, manual pending and actual completion display distinct Saving checkpoint… / Checkpoint saved. messages. Source serialization and diagnostic evidence unchanged. Recovery-load waiting indicator and notification priority remain future feedback refinements; no smooth-load/human-acceptance claim. Candidate23 game closed normally. Next bounded mechanic: correct Relay smart-cast selector and expose its implemented ability state/command without changing authored +4/400/800 mechanics.
+
+
+Candidate24 Relay batch: reproduced smart-cast selector choosing an invalid infrastructure caster (relay-repro-24-result.log); selector now delegates admission to ValidateRelaySupply. Focused corrected regression passed. Full native optimized/debug/address-undefined-sanitizer configurations each pass109/109 (relay-native-24.log, exit0). Relay Skiff roster name, role/limitation, Extend Relay command-card dispatch and owned-state readiness/active/disconnected/cooldown feedback implemented in source; no +4/400/800 balance change. Source frozen in relay-source-24-identity.json (493 files). Unreal build and integration/rendered checks pending; no completion or acceptance assigned. Network-client scoped ability feedback remains outside this live-local batch.
+
+
+Candidate24 review found a compatibility display defect before qualification: HUD reconstruction of current Power Link connectivity does not represent historical replay-bound link rules. Candidate24 is not accepted for integration; after its in-flight build ends, repair by consuming authoritative owner-scoped Relay connectivity and add the command-card controller route regression. Online Relay feedback remains open (REL-FAC-006): scoped network snapshots currently omit ability timers/state, so this batch must not claim multiplayer HUD equivalence.
+
+
+Candidate25 corrects candidate24 before scope expansion. Candidate24 editor build succeeded, but its reviewed historical display mismatch prevented qualification. PlayerView now supplies owner-only transient ConnectedRelayUnits computed by simulation authority; HUD no longer reconstructs network rules. Authentic schema29 replay baseline checksum is verified before adding test-only Link/Skiff probes under that historical policy. All110 native tests pass in optimized/debug/address-undefined-sanitizer configurations (relay-native-25.log, exit0). Added mixed-force command-card dispatch, executed activation, disabled-state and stale-repeat regression. Source frozen in relay-source-25-identity.json; editor build and Unreal/rendered qualification pending. No save/replay schema or balance change.
+
+
+Candidate25a: editor build25 succeeded; only a native test assertion changed afterward to exercise a real opponent view (all110 native tests pass across optimized/debug/sanitizers, exit0). Focused Unreal result3/4: controller dispatch, Relay adapter and widget pass; FieldHudAuthority fails disconnect feedback, retained in relay-focused-25a (wrapper3). Isolated relay-disconnect-probe confirms tick201, destination reached, active=false, capacity18, connected0: existing simulation ends the ability on disconnection and retains cooldown. HUD hid disconnection behind cooldown. Candidate26 fixes presentation to show Disconnected: +0 Logistics plus remaining cooldown, preserving the failed assertion and all gameplay rules. Build/integration/rendered requalification pending.
+
+
+Candidate26 build succeeded; focused Unreal checks pass4/4 (FieldHudAuthority, RelaySupply, ControllerAuthorityRoutes, FieldHudWidget), wrapper0. Previously failing disconnect assertion remains unchanged and now passes. Source/library identity recorded in relay-candidate-26-identity.json. Full integration and rendered route pending; no roster completion or owner acceptance.
+
+
+Candidate26 full integration passes117/117 with zero test warnings/errors, wrapper0, save isolation/cleanup passed, source/library changed[]. Evidence: relay-integrated-26 and relay-integrated-26-identity-check.json. Rendered route launched with isolated copied saves under relay-human-26 at requested1280x720; qualification underway.
+
+
+Candidate26 rendered native-keyboard route verified at1280x720: authentic copied outpost recovery, F7 mixed-force selection, Equals Extend Relay activation (Logistics30->34), pause/save/load restoring active bonus, expiry to30 with cooldown, D pan plus Space reticle order moving actual force out of connection, visible Disconnected:+0 Logistics/Cooldown26s, pause/exit confirmation/title, CmdQ exit0. No controller calls/seeded completion used for this rendered route. CUA mouse click and scroll moved pointer but did not trigger actions; mouse route remains unqualified. Found faint disabled text and raw coded keyboard refusal. Candidate27 applies explicit FButtonStyle disabled brush per Epic UE5.8 docs/installed SButton.cpp, keeps disabled admission intact, and logs Relay refusal codes while showing plain explanations. Build/affected integration/rendered recheck pending.
+
+
+Candidate27 built and affected Unreal checks pass4/4, wrapper0. Disabled-action readability test also confirms activation remains refused. Latest full117 suite is candidate26; no simulation/native source changed in27. Rendered recheck launched under relay-human-27 with copied26 saves.
+
+
+Candidate27 rendered check: plain Relay refusal is verified and diagnostics retained, but disabled child text still dims despite explicit button brush. Candidate27 is not accepted as the readability fix. Candidate28 moves the authoritative ability status into a normal text line above the command grid and leaves the disabled button label/state intact; timer updates no longer expand the button. Earlier lifecycle and failure assertions retained. Candidate27 exited normally; candidate28 build/affected integration/rendered checks pending.
+
+
+Candidate28 build succeeded (relay-build-28.log, exit0), source unchanged and libraries frozen in relay-candidate-28-identity.json. Following the host permission-mode change to restricted workspace execution with escalation unavailable, the required focused launcher failed BEFORE starting Unreal: relay-focused-28/SaveIsolation/launcher-result.json records prelaunch_failure=true, synthetic denial probe failure71, sandbox-exec: sandbox_apply: Operation not permitted; wrapper exit9, cleanup succeeded. This is an unavailable verification prerequisite, not a gameplay test failure. Do not bypass the protected-save policy. Candidate28 focused integration and rendered readability remain unverified; candidate26 retains last full117 pass and rendered Relay lifecycle/disconnection, candidate27 retains4 focused passes/plain refusal but failed rendered readability. Resume candidate28 focused checks and rendered route when the host permits the required sandbox launcher, before any new mechanics. No completion/P4 readiness/owner acceptance assigned.
+
+
+Candidate28 verification resumed after owner restored full execution access. Unchanged source/library identity confirmed; relay-focused-28-retry passes4/4 with wrapper0. Original prelaunch permission failure remains preserved. Rendered status-line verification launched under relay-human-28 with copied saves; final visual result pending.
+
+
+Candidate28 rendered keyboard recheck passes at1280x720: separate bright cooldown/ready/active status, fixed button grid through changes, actual Equals activation with30->34capacity, pause/resume retaining active state. Plain refusal retained. relay-human-28/rendered-route.json records scope; mouse route and human acceptance remain open. This closes the rendered readability defect from27 at automated keyboard evidence level. Latest full117 suite remains26, affected checks28 pass4/4. Next bounded work is Bulwark deployment control/state feedback, preserving mechanics and exact requirements.
+
+
+Bulwark batch29 diagnosis: new native Bulwark deployment commitment timing test reproduces immediate shield activation (bulwark-repro-29.log,0/1, exit1), violating SPEC-UNIT-003/REL-FAC-00520-tick Deploy/15-tick Pack. Inspection also finds DamageAfterDirectionalCover tests attackerForward>0 only: front half-plane180degrees instead of REL-FAC-005.AUTH120degrees. Normal local selection dispatch multicasts rather than SPEC-CMD-013 smart-cast, and selector excludes deployed units needed for Pack. These are open gameplay defects, not presentation acceptance. Transition/arc compatibility architecture is under review before production edits; latest qualified runtime remains28. New native failing regression is intentionally retained; no full-suite pass claimed for dirty test29.
+
+Bulwark batch29 implementation update (qualification pending): the explicit 20-tick Deploy and
+15-tick Pack commitments now run in EchoesSimCore; the completed deployed state changes only
+at the deadline. Repeated phase requests are refused with a readable adapter explanation.
+Current combat applies the required 120-degree frontal arc; replay versions24–27 retain the
+old instant toggle and half-plane behavior through a separate version cutoff. Schema31 appends
+ordered transition records; protocol5/view3 transmit facing, phase and deadline. Historical
+schemas remain loadable. The migration fixtures now explicitly project representable schema31
+state to30 before older conversions and refuse active commitments rather than erase them.
+
+A genuine pre-repair candidate28 schema30/replay27 writer was archived before production edits.
+`Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-receipt.json` binds its source/driver/baseline
+hashes and original tick1/tick2 checksums. It is not a released-build claim or a new-schema
+projection. Native debug29c passes114/114, including exact timing, 16 mirrored angular-boundary
+cases, repeated input, mid-deploy/mid-pack save/load, malformed transition refusal, keyframe/delta
+round trips and the original replay oracle. Build29 succeeds (208.18s). Source/build identity is
+`BuildArtifacts/Evidence/tutorial-redesign-20260908/bulwark-candidate-29-identity.json`.
+Affected Unreal integration is running; full integration and rendered interaction remain open.
+Candidate28 remains the latest rendered-qualified runtime. Existing movement/order behavior is
+preserved during commitments; the review suggestion to immobilize the unit is not adopted as an
+unstated balance change. SPEC-UNIT-003 describes movable cover and REL-FAC-005 explicitly defines
+35% deployed movement; their coordinate-anchor wording does not by itself define a phase movement
+lock. Smart-cast dispatch, command-card direction targeting and complete Bulwark feedback remain
+in the same open unit work package. No P0–P4 completion, P5 advancement or owner acceptance claim.
+
+Batch29 qualification update: affected Unreal checks pass5/5 with zero test warnings/errors
+(`bulwark-focused-29/index.json`): BulwarkDeployment, ProtocolAdmission,
+SeveralVoicesOneCommand, TheBrokenSun and alternate-resolution persistence. The launcher exits0;
+save-isolation cleanup, protected-path policy and denial probe all pass. The same source then
+passes114/114 native tests in optimized, debug and address/undefined-sanitizer configurations
+(`bulwark-native-qualified-29.log`, wrapper0). macOS leak-capture limitations remain unchanged.
+The full Unreal suite is running against identified candidate29; rendered qualification is pending.
+A fresh skirmish is required to exercise current commitments: a resumed replay-bound old match
+intentionally preserves its original gameplay policy and is not evidence of new-match timing.
+
+Full Unreal candidate29 result:116/117 pass; FactionResearch fails only its stale assertion
+that the current replay version is27. The version was intentionally advanced to28 for Bulwark
+commitments, with27 retained as the Link mechanics compatibility cutoff. This is an outdated
+fixture, not a passed candidate or a research gameplay defect. The failing report remains at
+`bulwark-integrated-29/index.json`; version-assertion repair and subsequent results must qualify
+the successor before rendered testing or additional mechanics. No coverage removal is authorized.
+
+Candidate30 closes the integration fixture failure: Research focused1/1 and full Unreal117/117,
+zero test warnings/errors, wrapper0 and save-isolation cleanup pass; source/build recheck has no
+changes. Rendered30 is NOT qualified: native keyboard fresh-skirmish route at1280x720 accepted
+Bulwark deployment but focusing the selected force via the alternate End diagnostic key puts the
+force behind the bottom console. Source diagnosis: SnapKeyboardTargetToSelection moves the raw
+camera pivot to the centroid, whereas headquarters deployment correctly compensates the actual
+ground projection and HUD. A missing regression is being added before repair. CUA super+F/ctrl+F
+did not reproduce the owner's previously confirmed physical Command+F behavior; this is retained
+as an input-tool limitation pending stronger attribution, not a claimed Mac user regression.
+Mixed selection also reported four unrelated units as rejected and lacks Bulwark state feedback.
+The route was paused, saved through the visible menu (Checkpoint saved), and closed normally.
+`bulwark-human-30/rendered-route.json` retains exact scope and saved-file identities. Camera
+framing must close before expanding unit behavior. No rendered/P0–P4 completion or acceptance claim.
+
+Focus regression31 reproduces the rendered framing defect in
+TutorialAnchorSelectionProgression: the measured clear-battlefield ground center does not match
+the selected Anchor (`focus-repro-31/index.json`,0/1,wrapper3). The original test only checked
+navigation revision/selection survival. Its new projection assertion is retained unchanged.
+The related keyboard reticle also used the full viewport midpoint over the console. Repair now
+shares clear-battlefield geometry across headquarters framing, selected-force framing, keyboard
+ground/entity targeting and the rendered reticle. Keyboard offsets remain relative to that
+stable area, including when status text fades, and cannot target through bottom chrome. Current
+build31 is in progress; neither the regression repair nor rendered framing is claimed passed yet.
+Epic UE5.8 orthographic-camera documentation and installed LocalPlayer/PlayerController projection
+API declarations were checked before these changes. The no-Blueprint framing repair remains
+presentation-only; Bulwark simulation/save/replay/wire code is unchanged from qualified30.
+
+
+Camera candidate31 qualification update: `focus-build-31b.log` records a successful rebuild.
+The projection regression and six affected camera/HUD/input checks pass (7/7,
+`focus-fixed-31/index.json`, launcher exit0). Read-only review found an invalid-projection
+failure path that moved the camera before returning false; this is repaired by resolving the
+complete ground projection before mutating navigation/input. The added horizontal-camera
+regression verifies refusal preserves position, navigation revision and movement/edge input.
+`focus-candidate-31-identity.json` freezes the seven changed source files and build hashes
+against candidate30. Full integration and same-candidate rendered qualification are running;
+no rendered or release acceptance is asserted. Historical focus-repro31 failure is retained.
+
+Candidate31 full integration passes117/117 (`focus-integrated-31/index.json`,wrapper0,
+protected denial and cleanup pass). Identity check reports no source/build drift. The same
+candidate's native-keyboard rendered route recovered the prior checkpoint and focused five
+combat units visibly above the console at1280x720 content size. Pause/save receipt and clean
+close were observed (`focus-human-31/rendered-route.json`). End was an alternate automated
+diagnostic; this does not replace physical Mac Command+F evidence. Camera obstruction is
+closed for this route. Bulwark state feedback and mixed-selection rejection wording remain
+the next unit-specific failure; no complete Bulwark/P0-P4 or owner acceptance claim.
+
+
+Bulwark feedback candidate32 is under qualification. Owned local and scoped-network views
+now share state/progress text and a barrier direction command. Mixed-selection role feedback
+is compact and keeps Relay status; non-Bulwarks no longer inflate local rejection counts.
+The card arms a battlefield target rather than casting into its own UI coordinates. Source
+regressions exercise genuine deployment/packing, remote owner visibility and card arming.
+`bulwark-feedback-build-32.log` failed (exit6): root wrote the widget while its compile was
+running; the compiler read a partial file ending in a function parameter. The complete source
+was subsequently checked; this is an integration-process failure, not a waived result. Source
+writes are frozen for rebuild32b and qualification. No32 build/test/rendered pass is asserted.
+Closest-only ability dispatch / Ctrl-all remains a separate unresolved SPEC-CMD-013 gate;
+this feedback batch does not claim to fix it. Network keyframes have no tick-rate field, so
+network feedback reports exact phase/progress without inventing a seconds conversion.
+
+
+Rebuild32b passed (`bulwark-feedback-build-32b.log`). The four selected feedback/runtime
+checks pass (`bulwark-feedback-focused-32/index.json`,wrapper0): FieldHudAuthority,
+ControllerAuthorityRoutes, FieldHudWidget and BulwarkDeployment. A requested CommandDeck
+filter was incorrectly named and matched no test; CommandDeckModel is included by the full
+integration run now executing. The network-owner assertion passes with unchanged fixture:
+ScopedEntityState defaults are health1/max1/completedtrue, contrary to a review
+assumption disproved by the header and focused result. This is model-level network coverage; no remote rendered session is claimed.
+`bulwark-feedback-candidate-32-identity.json` identifies six source changes from qualified31.
+No32 rendered pass or complete unit acceptance is claimed pending direct inspection.
+
+Candidate32 full integration passed117/117 with wrapper0, cleanup/protected denial pass,
+and unchanged source/build identity (`bulwark-feedback-integrated-32`). On2026-09-09 the
+same candidate was recovered via the rendered menus. Native Backslash input visibly produced
+Packing26% with protection retained, Mobile/inactive, Deploying20% without protection,
+and Deployed frontal protection. The mixed-force card and state remained readable at1280x720;
+unrelated units no longer counted as rejected. Pause/save receipt was observed before closing.
+Evidence: `bulwark-feedback-human-32b/rendered-route.json`. CUA mouse and short-drag did not
+activate the card; prior alternate input armed it, but the interrupted target gesture has no
+verified result. Mouse-card, remote-rendered and owner gates remain explicitly open. The
+next existing gameplay failure is SPEC-CMD-013 multi-cast dispatch;32 does not fix that behavior.
+
+
+Local Bulwark dispatch33 is in qualification for SPEC-CMD-013. The controller now resolves
+its caster list through the existing SimCore smart-cast eligibility/distance rules, filtering
+pending ToggleDeploy actors before resolution. Empty selected candidates explicitly produce
+no order (the core resolver's empty-list all-unit search is not used). Ctrl selects every
+eligible caster exactly once; normal input selects one. New regression uses genuine queued
+commands and transitions to check successive clicks, tie order, mixed ownership/roles,
+duplicate IDs, no-selection safety and pack/redeploy eligibility. Build33 is pending.
+The network path still uses the older multi-cast route and is not qualified for CMD-013;
+its aggregate admission response needs a bounded reconciliation repair before claiming
+network rapid-click correctness. SimCore/save/replay formats are unchanged by local33.
+
+
+Build33 passed; its five focused checks passed with wrapper0 and unchanged identity
+(`bulwark-dispatch-focused-33`). Read-only review then found an uncovered admission mismatch:
+a packed Bulwark exactly under the target is selected first but the adapter rejects its missing
+facing, preventing fallback to the next caster. Existing fixture casters were all equidistant,
+so those checks did not establish geometric nearest ordering. Candidate33's rendered run was
+closed at the title before qualification. Repro34 adds missing-direction normal/Ctrl cases,
+an unequal-distance case and the valid same-position packing exception; assertions are not
+weakened. No completed dispatch or owner acceptance claim is made from the earlier5/5.
+
+
+Repro34 failed as expected: CommandDeckModel0/1, two errors identifying missing-direction
+normal and Ctrl selection (`bulwark-direction-repro-34/index.json`,wrapper3). Unequal-distance
+and same-position packing checks passed. The resolver now mirrors the adapter's direction
+prerequisite before choosing candidates: packed actors at the target are excluded, deployed
+actors remain eligible to pack. The no-caster message now explains pointing away and waiting
+for active transitions. Build34 is running; subsequent results remain required.
+
+
+Direction build34 passed (`bulwark-direction-build-34.log`), then all five affected checks
+passed (`bulwark-direction-focused-34/index.json`,wrapper0), including both unchanged
+previously failing assertions. `bulwark-direction-candidate-34-identity.json` freezes the
+source/build for full integration now running. Rendered two-caster qualification remains
+pending; the prior33 five-test pass is not substituted for this repaired candidate's results.
+
+
+Candidate34 full integration completed: `bulwark-direction-integrated-34/index.json`
+117/117, wrapper0; save isolation cleanup and protected denial passed, source/build identity
+unchanged. Rendered fresh skirmish at 1280x720 produced a second Bulwark through the Foundry;
+normal Backslash visibly deployed exactly one of two selected Bulwarks (20% then1/2 deployed).
+Checkpoint save receipt was visible before normal exit. Retained route:
+`bulwark-direction-human-34/rendered-route.json`. CUA Ctrl chord only dispatched one packing
+order; modifier and mouse-card input remain unqualified, with no owner acceptance claim.
+
+This route reproduced a new input integration failure: semicolon also activated the inherited
+Unreal debug camera. Installed UE5.8 BaseInput.ini binds Semicolon to ToggleDebugCamera; its
+PlayerInput::GetBind permits extra modifiers. Other inherited function/page shortcuts overlap
+game actions too. Candidate35 clears the development DebugExecBindings layer in project input
+config and extends SharedKeyDispatch to detect actual initialized debug/action overlaps.
+Build35 is running; no pass is inferred yet. No gameplay behavior expansion in this repair.
+
+Separate existing feedback gate confirmed by read-only review: a v27 replay-bound checkpoint
+can resume live with instant Bulwark semantics while the HUD advertises current 1s/0.75s timing.
+That mismatch remains unresolved; current local dispatch fixes do not qualify online multicast.
+
+
+Candidate35 qualified for the inherited-debug-key repair: build passed, focused3/3 and
+full117/117 passed (`input-debug-focused-35`, `input-debug-integrated-35`), wrapper0 and
+save-isolation cleanup/protected-denial checks passed. `input-debug-candidate-35-identity.json`
+and full-run `identity-check.json` retain unchanged source/build attribution. Rendered fresh
+1280x720 skirmish: semicolon queued and completed one Bulwark without debug-camera takeover;
+F2 opened technology without changing render mode; normal Backslash deployed one of two
+selected Bulwarks with visible progress and1/2deployed state. Pause/save produced a visible
+Checkpoint saved receipt before normal exit. Route: `input-debug-human-35/rendered-route.json`.
+This closes the reproduced development-key collision, not physical modifier/mouse, online,
+legacy feedback, complete player journey or owner acceptance gates. Legacy feedback review
+also found120-degree guidance applied to the old front-half-plane barrier, so the historical
+repair must address both arc and timing claims.
+
+
+Historical Bulwark HUD reproduction36 failed exactly two assertions in
+`bulwark-legacy-repro-36/index.json` (0/1, wrapper3): live historical guidance advertised timed
+deployment and the current120-degree arc. The test loads the authentic schema30 baseline,
+verifies original replay27 final checksum17785241889350991135, restores a snapshot and
+continues its replay prefix before inspecting the live HUD; instantaneous deployment remains
+asserted. Its build and source identity are retained separately from the fix.
+
+Repair36 adds transient `PlayerView::UsesBulwarkCommitmentRules()` from simulation authority.
+Historical live HUD now suppresses commitment seconds and uses front-facing protection text;
+current local and compatible online games keep current arc guidance. No snapshot, replay,
+checksum or network format changes. The original failing assertions are unchanged; build36
+is running and subsequent focused/full/rendered results remain required. Root remains the
+single write/build/editor owner.
+
+
+Repair36 build passed (`bulwark-legacy-build-36.log`,198.21s), and the affected HUD,
+Bulwark mechanics and command-deck checks passed3/3 (`bulwark-legacy-focused-36/index.json`,
+wrapper0, cleanup/protected-denial pass), including the unchanged previously failing historical
+assertions and current timing assertion. `bulwark-legacy-candidate-36-identity.json` freezes
+four changed source files from candidate35. Standalone simulation and full integration are
+next; rendered recovery remains pending. A copied candidate28 checkpoint has an embedded
+replay27 header; its original files and copy hashes are retained in
+`bulwark-legacy-human-36/checkpoint-provenance.json`. Header inspection does not replace
+runtime checksum admission. Document routing/link checks passed separately.
+
+
+Candidate36 full qualification and Art handoff — 2026-09-09: optimized native114/114 and
+full Unreal117/117 passed; full wrapper0, zero warnings/errors, cleanup/protected-denial pass,
+and source/build hashes unchanged. Evidence: `bulwark-legacy-native-36`,
+`bulwark-legacy-integrated-36`, `bulwark-legacy-candidate-36-identity.json`.
+Rendered1280x720 recovery of a retained replay27 checkpoint succeeded. Deployment/packing
+showed matching states, single-Bulwark text omitted current commitment timings, and deployed
+text correctly described front-facing protection. A subsequent save visibly reached
+Checkpoint saved. `bulwark-legacy-human-36/rendered-route.json` retains the route and limits;
+reloading that newly saved continuation was not performed before handoff. No owner acceptance.
+
+Owner assigned HUD/all-menu presentation to Art task01a0772f-7d98-7cd2-8d56-2254d585cf17.
+After this ledger update, mechanics root releases the editor/build slot and presentation
+widgets/layout/tests to Art; it will not edit those paths or launch competing heavy runs.
+Simulation, checkpoint, command dispatch, HUD data-model and tutorial progression logic remain
+with the mechanics task, with no source writes during Art qualification without coordination.
+Preserve all dirty changes. Art becomes integration owner for its presentation candidate and
+must establish a new source/build identity and affected input/recovery/rendered results.
+Outstanding mechanics gate: online Bulwark still multicasts through the generic selection
+path; bounded client pending reconciliation review is available. Physical mouse/modifier,
+connected journey, tutorial redesign, full roster and owner gates remain open; P5 not cleared.
+
+
+Save/recovery connected qualification resumed — 2026-09-09: the owner renewed the
+save/recovery gate before additional mechanics. Root retains main checkout integration and
+exclusive build/editor ownership; Art, backend and M01 environment tasks confirmed isolated
+source-only work. This supersedes the earlier presentation handoff until recovery qualification
+finishes. Candidate36 production policy/HUD repair remains unchanged. Candidate37 extends
+existing QuickSaveLoad coverage across authentic replay27 and current rules, two changed-state
+saves, fresh scenario reload, deadlines/facing/checksums and displayed timing/coverage. This
+adapter restart is not a process-restart claim. The original schema29 second-save test remains.
+Corrupt-generation admission now checks active tick/checksum non-mutation, and asynchronous
+write fault injection checks byte-identical prior primary/backup plus failed player feedback.
+Build37 passed; incremental build37b and focused/full results remain pending.
+
+Required regression gate for gameplay-rule or HUD changes affecting restored state: run the
+existing QuickSaveLoad, FieldHudAuthority, asynchronous checkpoint lifecycle/binding-failure,
+checkpoint worker, autosave recovery and PlayerShellRoutes checks; qualify the required full
+suite; then exercise historical and current load/play/save/process-exit/restart/reload/play
+through the rendered UI on the same identified build. Include tutorial opt-out and actual
+policy feedback. Preserve original saves and use isolated copies/fault injection. Native or
+adapter checks alone cannot close this gate. Owner acceptance remains with Angelis.
+
+Candidate37 focused result:6/7 passed; QuickSaveLoad failed before gameplay because the
+24x24 historical combat fixture did not satisfy the game adapter's 64x64 Glass Scar context.
+This is a fixture prerequisite defect, not save restoration failure. Original failure retained
+in recovery-roundtrip-focused-37 (wrapper3). Candidate38 uses a separately emitted fixture
+from the hash-verified unchanged candidate28 writer, with the actual Glass Scar terrain/seed;
+its own historical checksum16781565848365372905 is recorded by that writer. The original
+24x24 fixture and checksum remain unchanged. Current fixture likewise uses legal context.
+Admission checks and behavioral assertions are unchanged. Build38/qualification pending.
+
+Candidate38 focused result:6/7 passed; corrected map admission succeeded, then the
+command adapter correctly refused MATCH_FINISHED because the combat-only fixture lacked
+headquarters. Candidate39 supplies both headquarters in the authentic writer and current
+fixture, preserving the same transition/checksum/HUD assertions. Writer39 self-verified the
+new scenario checksum4590309749637731261; writer38 fixture/driver/receipt remain retained
+under bulwark-checkpoint-writer-38. Scope cleanup now also stops presentation before world
+teardown on failed prerequisites. No production changes. Build39/qualification pending.
+
+Candidate39 build passed (25.04s) and focused recovery checks passed7/7, zero warnings/errors,
+wrapper0 and isolated-save cleanup/denial checks passed. This includes both changed-state
+Bulwark generations under historical/current policy, retained schema29 second-save regression,
+corrupt non-mutation, failed primary/backup preservation, completion-only saved feedback and
+tutorial preference/controller recovery. Identity:recovery-roundtrip-candidate-39-identity.json.
+Full integration is running. Actual process restart/reload UI remains required; copied
+historical/current player checkpoints and their hashes are prepared in recovery-roundtrip-human-39.
+
+Candidate39 full Unreal suite passed117/117, zero failures/warnings/not-run, wrapper0.
+Save-isolation cleanup, denial probe and empty scoped storage passed; files/build identity
+comparison is unchanged. Evidence:recovery-roundtrip-integrated-39. Production simulation
+remains byte-identical to candidate36's native114/114 qualification; no native rerun claimed.
+Rendered historical/current process-restart routes are now underway on candidate39.
+
+Save/recovery candidate39 qualification — 2026-09-09: both connected rendered keyboard
+routes passed in actual1280x720 Development game windows on the unchanged identified build.
+Historical: loaded retained checkpoint55036, deployed Bulwark12 with historical front-facing
+coverage and no current timing claim, saved55807, saw Checkpoint saved, exited process0,
+restarted/recovered55807 from primary, verified deployed state/resources and packed afterward.
+Tutorial opt-out remained effective throughout historical recovery. Current: loaded1399,
+observed current120-degree coverage and1s/.75s guidance, started packing (visible26%), paused,
+saved1813, saw Checkpoint saved, exited0, restarted/recovered1813 from primary, continued from
+Mobile into a new timed deployment (visible15%, then deployed with matching coverage).
+Both restarted processes exited0. Original save hashes and source/build hashes remain intact.
+
+Evidence:recovery-roundtrip-human-39/rendered-route.json, copy-provenance.json,
+original-save-integrity.json and identity-check.json; historical/current PlayerRoute.log and
+RestartRoute.log support the actual CUA menu/keyboard interaction recorded in this task.
+Focused7/7 and fullUnreal117/117 remain passed. The current repair is a presentation-policy
+repair; second-save compatibility and tutorial profile preferences remain separately protected.
+Write fault injection fails before filesystem replacement and preserves both prior valid byte
+generations; corrupt/incompatible admission preserves active state. No persistence rewrite.
+
+Remaining evidence limits: automated rendered keyboard interaction is not physical mouse or
+held-modifier qualification, human comprehension or owner acceptance. End was only a diagnostic
+alternate. Historical load waiting UX remains unpolished; exact transition deadlines and replay
+checksums are tested by the connected adapter regression, not inferred from screenshots.
+No outstanding failure remains in this bounded recovery batch. Original37/38 fixture failures
+and36 presentation reproduction are retained with subsequent39 results. Other gameplay,
+tutorial, presentation, packaged-journey and P0–P4 acceptance gates remain open; P5 not cleared.
+
+## SC2 audit intake and continuous work — 2026-09-09
+
+**Owner direction:** “Make sure all of this is in the requirements and fully captured so it can be part of the continuous workw e are dong.” The owner authorizes capture/adoption of the audit's applicable gameplay requirements, not a finding that they are implemented or accepted. The master [gameplay completeness intake](Requirements.md#gameplay-completeness-intake--sc2-audit-2026-09-09) binds every audit item 001–162 and feedback event F01–F32. Its crosswalk is the sole current intake mapping; [SC2GameplayGapAudit.md](SC2GameplayGapAudit.md) remains the dated source assessment. Do not copy its M/P/V/Q/D labels into lifecycle fields or use them instead of newer candidate evidence.
+
+### Intake identity and lifecycle
+
+Documentation baseline: main at `6b559889a4e7b0ed7fd86aee37b64728bd516017` with existing dirty work; source/audit identity and before-file hashes are retained in [intake.json](../BuildArtifacts/Evidence/sc2-requirements-capture-20260909/intake.json). This task owns only the master/state, audit applicability note, delivery/index pointers, and document-traceability guard. No gameplay implementation, build, package, physical-input session, listening review, human review or owner acceptance is performed by this intake.
+
+| Requirement / affected scope | Current engineering state for this intake | Remaining evidence / responsibility |
+|---|---|---|
+| SPEC-UI-008; SPEC-UI-008.F01 through SPEC-UI-008.F32; SPEC-UI-008.AUDIO | OPEN for the newly registered full event coverage | Player Experience owns event leaves; Audio owns listening leaf. Existing partial event implementations and earlier passes remain valid only at their original scope. Qualify all applicable events/negative cases on an identified candidate. |
+| SPEC-CTL-020; SPEC-CTL-020.OPERATE; SPEC-CTL-020.SCOPE | OPEN | Player Experience: session-local camera bookmarks and map/fog/input-lock safety; no new profile/save/replay format; input defaults depend on TBR-UX-001. |
+| SPEC-UI-009; SPEC-UI-009.CONFIRM; SPEC-UI-009.TIMEOUT | OPEN for newly explicit acceptance scope | Player Experience: existing confirmation/revert source is an implementation lead, not a pass of the new traceable clauses. Reuse it and prove pointer/keyboard/timeout/cold-start outcomes. |
+| REL-MP-020; REL-MP-020.USE; REL-MP-020.AUTHORITY; REL-MP-020.LIFECYCLE | OPEN | Network owns session communication; Player Experience supplies real-peer interaction evidence and Network/Security owns audience/admission tests. No hosted messaging service. |
+| REL-MP-021; REL-MP-021.JOIN; REL-MP-021.ISOLATION; REL-MP-021.CONTINUITY | OPEN | Network: explicit admitted live observers, capacity/mode decision TBR-UX-008, no active participant role escalation, six playing seats preserved, no observer-to-player live tactical channel. Separate from replay viewing. |
+| SPEC-MOV-014; SPEC-MOV-014.ENTRANCES/CAPACITY/TRANSIT/ISOLATION/RECOVERY/TARGET/QUEUEVIEW/SENSORVIEW | OPEN for the newly registered leaf evidence | Core Gameplay: the prior section 7.1 requirements/values are preserved, now identifiable per leaf. Do not implement a second passage system or promote unbound historical evidence. |
+| SPEC-CMD-011.ATTACK and SPEC-CMD-011.ATTACKSTATE | OPEN | Core Gameplay: direct-attack queue reachability, admission/execution visibility and negative/recovery cases. Parent SPEC-CMD-011's prior evidence remains scoped; no 16-order/next-tick threshold changed. |
+| REL-MP-010.RESULT and REL-MP-010.RESULTSTATE | OPEN | Player Experience and Network/Security: equivalent local/remote ability admission, authoritative result and feedback with distinct interaction and automated-state evidence. Prediction alone is insufficient. |
+| REL-QOL-001/002 with SPEC-CTL-010 | Existing per-ID lifecycle retained; scope clarified to all ten groups | Player Experience: zero-group assignment/append/recall/double-tap must receive the same evidence as groups 1–9. Existing 300 ms and camera timing clauses retained. |
+| Audit 103–110 → SPEC-TUT-008 and its existing child clauses | Existing chapter implementation/evidence state retained; no mastery inferred | Campaign/Player Experience: seven optional chapters plus specializations replace legacy sequence/gating. Five unavailable legacy practice buttons are evidence leads, not instructions to restore obsolete drills. |
+| All other BOUND audit rows | Existing exact per-ID state/evidence remains controlling | Before source changes, read the latest entry and candidate identity; implement actual gaps or obtain the missing evidence class. Neither a broad OPEN default nor an old audit proves a current defect. |
+
+All new requirements have no assigned owner-acceptance date or COMPLETE state. New names register behavior and evidence obligations; they do not reset unrelated work. The current candidate39 save/recovery evidence and earlier scoped Power Link/Relay/Bulwark repairs remain preserved. The master crosswalk, not a second per-row status spreadsheet, links work to exact authoritative state.
+
+### Decisions and explicit non-adoption boundaries
+
+These TBR records capture every optional/conflicting audit branch. OPEN means a material choice is unresolved, not that the whole delivery plan stops. The owner requested complete capture; that does not silently resolve conflicting existing defaults or adopt features the audit explicitly marked as optional/non-fitting. Continue all compatible bound work.
+
+* **TBR-UX-001 — Default command/camera input context.** OPEN. Audit 011/013; SPEC-CTL-005's A/S commands overlap SPEC-CTL-012's WASD camera input, and SPEC-CTL-007's contextual W can also overlap camera pan. SPEC-UI-006 and REL-UI-023 require unambiguous bindings. Options: (A) an RTS command-first default with camera movement on non-conflicting keys/edge/middle drag; (B) a WASD camera-first default with a coherently remapped command grid; (C) explicit selectable presets with a visible active context and individually collision-free bindings. Recommendation: explicit presets, one owner-selected default. Cost/dependencies: input migration, tutorial prompts, Mac modifiers, accessibility and physical-key tests; affected default key choice must be decided before its implementation is accepted. This does not defer idle-worker/production selectors, alert history or remapping infrastructure. Current source bindings are not a resolution.
+* **TBR-UX-002 — Optional selection and base-navigation extensions.** OPEN. Audit 004/007/017. Decide independently whether to add Ctrl/Ctrl+Shift same-type selection, explicit group transfer/removal shortcuts and base/outpost cycling, or retain the required double-click, overlapping groups, idle/production/army selectors and newly adopted fixed camera bookmarks. Recommendation: first qualify required selectors; price each extra independently. Any base cycle must define the eligible Core/drop-off/outpost set without adding another Core. Costs: extra modifier contexts, eligibility rules and pointer/keyboard teaching. No optional extension may replace an already bound selector or silently alter overlapping group semantics.
+* **TBR-UX-003 — Editable unit-order queue.** OPEN. Audit 030. Options: keep Shift append plus Stop/replace as the unit-order interaction; or add explicit removal/reordering of future reversible unit orders. Recommendation: complete visible breadcrumbs and queue truth first, then decide editing semantics. Production reorder/cancel remains mandatory under REL-QOL-005 and SPEC-BLD-005/006 regardless. If chosen, the unit-order extension must define active-versus-future items, irreversible Well/research/adaptation boundaries, costs/refunds, input and replay behavior. Cost: extra command model/UI/compatibility tests; not authority to undo irreversible decisions.
+* **TBR-UX-004 — Additional tactical map interactables.** OPEN. Audit 085 and the audit's SC2 difference table. Options: retain only existing authored Wells/passages/routes/cover; or specify individual new vision objectives/attackable route blockers for named maps. Recommendation: use existing map/Well rules until a purpose and counterplay contract exists. Ground-only, presentation-only elevation and the hidden-system exclusions remain binding; arbitrary destructible scenery, high-ground vision rules, flight, burrowing, transports and garrisons are not adopted by the comparison. Cost: map authority, fog, AI, pathing, save/replay and rendered validation for each new object. No generic permission to turn art into gameplay.
+* **TBR-UX-005 — Pause, speed and optional assistance reconciliation.** OPEN. Audit 099/158. Existing SPEC-SKM-010 prohibits battlefield orders during pause, while REL-ACC-018 requires active queueing; SPEC-SKM-007 and REL-ACC-015/019 specify different discrete/continuous speed ranges. REL-ACC-020's fixed 16-worker saturation assumption also needs reconciliation with SPEC-RES-003's one active extraction position and measured worker routes. Options: explicit mode/preset-specific applicability with one authoritative value table; or owner-selected common rules and retained supersession records for the alternatives. Recommendation: define pause/menu contexts separately and bind assistance targets to an approved economy rule, not SC2 worker ratios. Costs: tutorial/UI/audio pacing, deterministic admission, accessibility and save/replay tests. REL-ACC-021/022 and other compatible assistance/comfort obligations remain active; this record does not withdraw them or approve automation of irreversible choices under REL-CMB-027.
+* **TBR-UX-006 — Public service and platform extensions.** DEFERRED/NOT ADOPTED for this release except already bound local obligations. Audit 126 and the difference table. REL-MP-013/019 retain hosted-service deferral; REL-MP-015 still requires its bounded rating calculation and is not proof of trusted public ranking. Accounts, public matchmaking/friends, hosted broadcast, co-op commander progression, mutators and a marketplace/Arcade service are not implied. Existing direct/LAN multiplayer, session chat/observer additions, comp-stomp, Conquest, editor and required trophies/profiles continue. Any later hosted proposal must resolve service ownership, cost, privacy, trust and outage behavior; do not misclassify the current lobby/reconnect work as deferred.
+* **TBR-UX-007 — Recorded-camera and unit-follow replay controls.** OPEN for these extensions only. Audit 132. REL-QOL-016's required freecam remains bound. Options: qualify that freecam alone; or additionally record/reproduce player camera tracks and/or add an explicit unit-follow mode. Recommendation: finish transport/freecam before extending recording formats. Costs: camera-track storage, replay compatibility, selected-player fog and lost-unit behavior. No camera recording or data-format change is inferred from a generic observer/freecam requirement.
+
+* **TBR-UX-008 — Live-observer capacity and supported combinations.** OPEN. Audit 125; REL-MP-021 requires the capability, but existing six-participant 3v3 does not imply a seventh supported connection. Options: (A) qualify one observer in addition to six active participants (seven total connections); (B) initially support observers only in explicitly smaller participant formats, preserving ordinary six-player 3v3 without observers; or (C) another explicitly bounded combination with measured cost. Recommendation: price/measure option A before adopting it; do not replace an active playing seat with an observer or claim a zero-observer implementation satisfies the feature. Dependencies/cost: REL-MP-008/009/018 role/capacity/bandwidth contracts, SPEC-BUD-006 full-load scene, hidden-state exposure, host memory, network limits and separate observer rendering. Before dependent implementation/qualification, record selected maxima and format applicability in the master and propagate them to those exact load/network clauses. Other multiplayer/Conquest work continues.
+
+* **TBR-SCP-003 — Existing roster and technology breadth decision.** OPEN; state binding for the master's pre-existing decision, not a second proposal. Audit 061 compares keeping the compact faction roster/two sequential technologies against the existing proposed review target of at least eight fieldable unit roles, six constructed building roles and ten meaningful technology decisions per faction, unless the smaller roster demonstrates equivalent depth. Recommendation: qualify present strategic depth before adopting expansion. Dependencies/cost: roster, research, economy, AI, campaign introduction, art/audio and matchup qualification. Existing faction contracts remain binding until the owner chooses; this intake does not expand their counts. Existing one-Core, ground-only, presentation-only elevation, weighted 200 Logistics and English/platform/hosting scope are unchanged; a Unity-specific 30-entity memory or SC2 supply count does not amend this Unreal master.
+
+### Continued execution and verification boundary
+
+Resume the first unfinished applicable [DeliveryPlan package](DeliveryPlan.md#sc2-audit-integration-into-continuous-work--2026-09-09), not another roadmap. At each bounded task: select the audit/event references, resolve their master IDs and latest state, preserve current ownership, implement or verify the actual remaining gap, and append the evidence at its exact candidate/class boundary here. New crosswalk/registry/traceability checks validate capture only. Do not turn their success into gameplay AGENT VERIFIED, EVIDENCE READY, HUMAN ACCEPTED or COMPLETE.
+
+
+### Intake semantic review refinement — 2026-09-09
+
+The bounded review added explicit local/remote ability result/receipt parity (REL-MP-010.RESULT/RESULTSTATE), separated passage targetability/queue/sensor presentation from deterministic source checks, and added queued-attack state/replay assertions. Camera bookmarks are session-local; cross-session profile persistence is not inferred. Display confirmation now binds the existing 15.0-second wall-time behavior as an explicit requirement, still OPEN pending its own evidence. Session chat binds 256 UTF-8 bytes, one message/second with burst two, 128 messages/32 KiB history, inert/control-safe rendering and the existing combined bandwidth ceiling; these are requirements, not measured results. Observer capacity is explicitly unresolved under TBR-UX-008. Structural checks and in-memory guard failure cases certify document capture only.
+
+**Capture QA:** All 162 functional items and 32 feedback events have exact bindings/dispositions; six new parent identities and 55 new subordinate clauses were registered. Requirement registry, gameplay-audit traceability and ordinary agent-document checks pass. Seven in-memory missing/duplicate/unknown-ID/unrecorded-decision/future-row cases are rejected by the coverage guard. Bounded semantic review found no remaining consequential issue after the refinements above. [Capture receipt](../BuildArtifacts/Evidence/sc2-requirements-capture-20260909/capture-qa.json) and [negative cases](../BuildArtifacts/Evidence/sc2-requirements-capture-20260909/guard-negative-cases.json) retain the document-only results. No gameplay lifecycle promotion or owner acceptance follows from these checks.

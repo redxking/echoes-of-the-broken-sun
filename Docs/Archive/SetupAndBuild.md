@@ -4,7 +4,7 @@ author: Angelis Pseftis
 creator: Angelis Pseftis
 status: Build procedure reference; dated host and run evidence
 created: 2026-08-28
-updated: 2026-09-04
+updated: 2026-09-08
 ---
 
 # Setup and Build Guide
@@ -358,3 +358,33 @@ The retained `.utrace` is loaded after capture by the installed UE 5.8.2 app-bun
 ## Distribution boundary
 
 A free Apple Account is enough for local Xcode development. The current package is signed only ad hoc so it can be validated locally; that is not an identity-bearing distribution signature. Developer ID signing, notarization, and Mac App Store distribution require the appropriate Apple Developer Program credentials. No Developer ID signing, notarization, App Store readiness, or compatibility beyond the tested host may be claimed until observed and recorded.
+
+## Placement diagnostics
+
+For a bounded placement investigation, add `-EchoesPlacementTrace` to the existing game
+launch and retain its `-abslog` under the investigation's evidence directory. It is off
+by default and does not alter construction, network rules, save state, or replay commands.
+Implementation follows Epic's [Unreal logging guidance](https://dev.epicgames.com/documentation/unreal-engine/logging-in-unreal-engine).
+
+Filter the resulting log for `[ECHOES_PLACEMENT]`. Correlate these records in order:
+
+1. `attempt` identifies one armed preview. `preview` samples record screen pointer,
+   viewport dimensions, world and exact simulation coordinates, validity, candidate node,
+   network radius, and resource/Logistics totals. Samples are limited to four per second
+   except semantic transitions.
+2. `click_previous_preview` preserves the last displayed evaluation;
+   `click_resolved` records the fresh evaluation at confirmation. Compare both positions
+   and connection states. A previous valid preview is not proof of the clicked position.
+3. `queued` joins the attempt to `sequence`. `queue_authority` records the actual admitted
+   command coordinates and execution tick. Admission is not application.
+4. `resolved` records the simulation outcome. `construction` joins the sequence to a
+   building ID, creation/completion/cancellation, exact charges/refunds and accounting.
+   Construction transitions are 0 Created, 2 Completed, 3 Cancelled; progress spam is omitted.
+5. `building_state` records completion, network and Aegis state changes by building ID.
+   Include `generation` when joining sequences/IDs across scenario changes. Existing
+   buildings may have sequence 0 because they predate this trace.
+
+Retain the source/build identity and rendered interaction evidence alongside the log.
+The trace cannot recover a previous unrecorded click, prove visual legibility, or establish
+that a player understood the feedback. `[ECHOES_PLACEMENT_TEST]` records are explicitly
+synthetic test evidence and must not be attributed to the owner's playthrough.

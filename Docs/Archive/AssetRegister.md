@@ -4,7 +4,7 @@ author: Angelis Pseftis
 creator: Angelis Pseftis
 status: Authoritative asset provenance register
 created: 2026-08-28
-updated: 2026-09-04
+updated: 2026-09-09
 ---
 
 # Asset and License Register
@@ -78,6 +78,7 @@ revision, and evidence boundary. Follow [AGENTS.md](../../AGENTS.md) for generat
 | CONCEPT-024 | Tri-Faction Combat Visual Effects Grammar at `site/assets/concepts/echoes-combat-vfx-grammar.jpg` (1,376 × 768) and WebP | Project concept generation, 2026-09-05; prompt recorded below | Direction and project authorship: Angelis Pseftis | Retain for project concept presentation and VFX design | Public Combat VFX Grammar visual target | Development concept reference; not a runtime or production asset |
 | CONCEPT-025 | Five Campaign Character Leads Visual Identity & Roster Sheet (`SPEC-CANON-009..013`, `DEMO-NAR-010`) | Project character design specification, 2026-09-05; specifications recorded below | Direction and project authorship: Angelis Pseftis | Retain for project concept presentation and character design | Public Character Dossier visual target | Development concept reference; not a runtime or production asset |
 | CONCEPT-026 | Hollow Choir Four-Unit Roster Concept Architecture Sheet (`SPEC-CHOIR-001..004`) | Project roster design specification, 2026-09-05; specifications recorded below | Direction and project authorship: Angelis Pseftis | Retain for project concept presentation and roster architecture | Public Hollow Choir Roster visual target | Development concept reference; not a runtime or production asset |
+| UI-001 | Command Bridge menu backdrop at `ArtSource/UI/command-bridge-background.png`; intended texture `/Game/Art/UI/T_EBS_CommandBridge` | Derived from CONCEPT-013 with painted UI removed; source/output hashes in `ArtSource/UI/provenance.json`; import recipe `Scripts/import_hud_art.py` | Direction and project authorship: Angelis Pseftis | Owner-directed in-game HUD/menu work, 2026-09-09; original source provenance retained | Title menu backdrop beneath native interactive controls | Unreal Texture2D import/save verified 2026-09-09; rendered and owner visual review pending; static derived plate, not the real-time 3D bridge scene |
 | CAPTURE-001 | Meridian and Kharuun in-engine roster captures under `site/assets/engine` | Local UE 5.8.2 Metal editor runs using ART-001 | Angelis Pseftis | Project-owned derivative capture; Unreal Engine subject to its applicable EULA | Public implementation evidence | Current-source development capture; not package or final-art evidence |
 | CAPTURE-002 | Dormant, Harvest, Preserve, and Reshape Future Well captures under `site/assets/engine` | Local UE 5.8.2 Metal editor runs using ART-002 and the non-shipping art-review fixture | Angelis Pseftis | Project-owned derivative capture; Unreal Engine subject to its applicable EULA | Public implementation evidence | Current-source development captures; not package, gameplay-usability, or final-art evidence |
 | CAPTURE-003 | Glass Scar overview, Ash Cut, Buried Causeway, and Folded Verge captures under `site/assets/engine` | Local UE 5.8.2 Metal editor runs using ART-002, ART-003, and the non-shipping environment-review fixture | Angelis Pseftis | Project-owned derivative capture; Unreal Engine subject to its applicable EULA | Public implementation evidence | Current-source development captures; not package, gameplay-usability, or final-art evidence |
@@ -1043,3 +1044,47 @@ Before shipping, reconcile their production provenance with AudioDirection secti
 master requirements; preservation alone does not establish a general production-policy exception.
 No listening quality, loop suitability, cue completeness, Unreal import, runtime binding, or mix
 acceptance is claimed by this intake.
+
+
+2026-09-08 Meridian conduit qualification: M_EchoesPresentationVFX regenerated in place through Scripts/generate_art_assets.py to compile instanced-static-mesh usage. Original project-authored material and creator Angelis Pseftis retained; no external asset/license change. Evidence: BuildArtifacts/Evidence/tutorial-redesign-20260908/conduit-material-generation-17.log and conduit-source-17-identity.json. Previous runtime used the default fallback material; intended energy appearance remains pending rendered qualification.
+
+
+### M01 cliff-material reuse validation — 2026-09-09
+
+**Author and owner:** Angelis Pseftis. The existing original basalt family and
+`cliff-surface-3d-basalt-v4` asset recipe are retained. Validation now checks the actual required
+graph outputs, registered Metallic/Roughness parameter identity and finite defaults, and absence
+of an emissive output before reusing a material with the current revision tag. The rebuilt path
+uses the same checks and verifies its newly created output-node bindings. A matching tag no longer
+bypasses those output/scalar checks; full graph identity remains unchecked. Valid reuse performs
+no save, rewrite or recompile.
+
+Five source-level reuse/refusal tests pass, including missing output, connected emissive,
+incorrect parameter/value, non-finite roughness and rebuilt-node mismatch. These use a read-only
+test double. Actual Unreal graph readback passed in `material-readback-v5.json`; rendered comparison
+is recorded separately and is not implied by the validator. No material
+output or recipe revision has changed. Evidence:
+`/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/m01-environment-completion-20260909/cliff-validator-source.json`.
+
+### M01 service-material roughness candidate — 2026-09-09
+
+**Author and owner:** Angelis Pseftis. The registered original ServiceCeramic family is retained.
+The coordinated read-only Unreal check found all four `MI_M01Evacuation_*` instances at material
+revision v4, with roughness `.93`, metallic/emissive zero, and the expected non-sRGB mask texture.
+The cliff output/scalar checks also passed on the loaded v4 basalt master. These are editor asset
+observations; no scene-quality acceptance is assigned.
+
+Source candidate `m01-evacuation-material-v5` changes only the service roughness multiplier to `.72`.
+With the registered MRE source green range 190–213 and the shared surface formula, effective roughness
+is .89647–.96141 instead of values above 1.0 that saturate the variation. The source guard checks the
+matte floor, unclipped maximum and nonconstant texture response. Existing colors, emissive/metallic
+values, source textures, geometry and `m01-evacuation-props-v13` mesh revision are retained. Shared
+civic-service uses, including M03, inherit these material instances and require the same visual check.
+
+The v5 source is integrated and generated. Protected asset readback verifies all four instances,
+the actual shared roughness graph, and ten M01/M03 mesh bindings; source texture bytes and v13 recipe
+remain unchanged. Arrival/archive rendered stills were inspected on the generated candidate; surfaces remain matte.
+This is bounded authoring review, not M03 visual qualification or full M01 acceptance.
+The earlier baseline is retained as
+`material-readback-headless.json` in the environment evidence root above; its current game module hash
+is recorded there separately from the preceding candidate39 startup attempt.

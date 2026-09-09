@@ -34,125 +34,38 @@ knowledge, no lore dumps.
 
 ---
 
-## Part A — Tutorial: "The Readiness Check"
+## Part A — Build understanding through a small operation
 
-Fiction: the evacuation deploys within the hour. Mara walks her command through the readiness
-check the Compact runs before any operation — "We check the route before we need it." Each
-lesson ends only when the game state proves the action (DEMO-TUT-015); Mara's acknowledgment
-names the thing secured; her why-line prices it in operational terms.
+Owner-approved replacement structure, 2026-09-08; implementation and player acceptance remain separate. The opening cinematic and campaign dialogue outside this section retain their existing identity. Mara guides linked training chapters. The player is a commander, not a directly controlled character. No camera mastery drill, compulsory failure, unexplained starting army or campaign-access gate remains in this curriculum.
 
-### Lesson 1 — Survey (camera; TUT-003)
+Each beat uses a stable chapter/step identity. The registered runtime step definition must supply this copy, its visible target and its actual success predicate together. A demonstration does not execute the action. Teaching is caption-complete and uses current input bindings. These are source-authoring lines, not a claim that generated voice or runtime steps already exist.
 
-| Beat | Speaker | Line |
-|---|---|---|
-| explain | Mara | `tut_survey_01` — "Before anything moves, we see the ground. Sweep the basin." |
-| highlight | Mara | `tut_survey_02` — "Edge of the world moves the view. The wheel brings it closer. [recenter key] brings you home to the Anchor." |
-| act | — | *player pans, zooms both bounds, recenters* |
-| verify | gate | camera pose delta + zoom bounds crossed + recenter within epsilon (Player-lane reads) |
-| acknowledge | Mara | `tut_survey_03` — "Good. The basin's on your board — scar, crossings, and our corridor." |
-| why | Mara | `tut_survey_04` — "A commander who can't look can't warn anyone. Seeing first is the cheapest thing we do." |
+| Chapter | Mara: introduction and immediate purpose | Show, then player action | Specific acknowledgement |
+|---|---|---|---|
+| foothold | “Welcome, Commander. You direct the crews and structures here. We'll turn this clearing into a working outpost, then prepare it for the field.” | Inspect Anchor; show Surveyor production, require training; identify/select worker; show gathering and require assignment; follow credited delivery; repeat with a second worker. | “Two Surveyors working. Matter is reaching the reserve. We can build on that.” |
+| outpost | “Our crews need somewhere to deliver their loads, and our next force needs support. Build the network where it serves both.” | Explain/build Power Link near seam; explain/build Array Foundry behind approach with clear exit. | “The link is operating and the Foundry is ready. We have supply and a place to assemble the force.” |
+| force | “Surveyors keep the outpost working. Lancers protect it. Assemble three at the safe rally point.” | Explain/produce Lancer; show queue/cost/capacity; set rally; produce three and move the selected group. | “Three Lancers on station. Reinforcements now know where to report.” |
+| protect | “The approach is exposed. Connect an Aegis here, then we'll check the defense with an announced drill.” | Build connected Aegis; demonstrate attack-move; intercept; separate retreat exercise; repair damaged structure. | “The approach is secure and the damage is repaired. Keep the workers behind that protection.” |
+| information | “We cannot make a sound decision about ground we haven't seen. Send a Relay Skiff to the marked site.” | Produce scout; discover named location; acknowledge discovery; explain actual fog states; use alert; return. | “Site found. The map now records what the scout saw. Old reports still need checking.” |
+| future | “This is a practice Well. Its choices will not change the campaign. Read what each commitment gives—and what it costs.” | Establish control; compare actual values; intentionally choose/confirm; defend telegraph; observe result. | “The commitment is complete. The result follows the choice you protected.” |
+| command | “This operation is yours. Establish income, prepare a force and destroy the opposing Command Core. Keep your Anchor intact.” | No prescribed sequence; normal economy/build/production/scout/combat; optional requested hints. Explain that campaign objectives differ. | “The opposing Core is down and ours stands. Operation complete.” |
 
-### Lesson 2 — Roster (selection; TUT-004)
+### First chapter: exact teaching beats
 
-| Beat | Speaker | Line |
-|---|---|---|
-| explain | Mara | `tut_roster_01` — "Now the roster. Every asset answers when named. Left-click the Surveyor." |
-| highlight | — | *Surveyor highlighted* |
-| verify | gate | selection set == {staged Surveyor}; then cleared on terrain click |
-| acknowledge | Mara | `tut_roster_02` — "That ring means it's listening. Click open ground — released. Selection is a channel, not a leash." |
-| why | Mara | `tut_roster_03` — "You'll command forty things at once out there. Knowing exactly who's listening is the difference between an order and an accident." |
+1. **foothold.welcome:** The welcome above. Show the home clearing with Anchor and seam only. Continue advances explanation, not mastery.
+2. **foothold.anchor:** “This is your Anchor: headquarters and Surveyor producer. It receives the Matter your workers bring home. Protect it.” Automatically inspect; identify the production button without issuing a command.
+3. **foothold.train_first:** “Train a Surveyor. A Surveyor gathers Matter, builds structures and repairs damage.” Demonstrate actual bound command, then await real worker production.
+4. **foothold.select_first:** “Select your Surveyor. The lower panel shows who will receive your next order.” Require actual worker selection; explain name, health and current order without a tooltip quiz.
+5. **foothold.gather_first:** “Assign the Surveyor to this Matter seam. It will cut a load, carry it home and return for more.” Demonstrate the target and current binding, then require the accepted assignment and credited delivery.
+6. **foothold.delivery:** “That load is in the reserve. Carried Matter becomes spendable when it reaches a working drop-off.” Highlight the real resource update, without additional resource grants.
+7. **foothold.second_worker:** “Train one more Surveyor and assign it to the seam. Keep both crews working.” Reduced guidance; require second real worker production and delivery.
+8. **foothold.complete:** Specific two-worker acknowledgement; preserve checkpoint and offer next chapter, replay or exit. No timer, camera-centering or artificial bonus gate.
 
-### Lesson 3 — Section muster (drag-select; TUT-005)
+### Specializations and recovery copy
 
-| Beat | Speaker | Line |
-|---|---|---|
-| explain | Mara | `tut_muster_01` — "One at a time is for repairs. Drag a box around the whole section." |
-| verify | gate | selection ⊇ staged units, provenance = drag |
-| acknowledge | Mara | `tut_muster_02` — "Whole section, one motion. That's how the Compact moves anything heavier than a wrench." |
-| why | Mara | `tut_muster_03` — "Duty windows are short. Muster fast, and the window is yours instead of the enemy's." |
+Efficient command; production/research; Meridian support; Kharuun foundations/force; Choir foundations/force; Well protocols; campaign/mode orientation follow the approved chapter plan. Explain each object's purpose, operation and limitation before asking for its use. Use actual implemented mechanics and hydrated numeric values, never generic faction promises.
 
-### Lesson 4 — The route check (move, context orders, stop; TUT-007)
-
-| Beat | Speaker | Line |
-|---|---|---|
-| explain | Mara | `tut_route_01` — "Route check. Right-click sends them where you point. The order reads the target — ground means go, a shard seam means gather, trouble means fight." |
-| act/verify | gate | Move order issued + arrival (order cleared at destination); Stop clears an active order |
-| acknowledge | Mara | `tut_route_02` — "Held exactly where you stopped them. An order you can end is the only kind worth giving." |
-| why | Mara | `tut_route_03` — "Routes are promises. The check is how we keep them." |
-
-### Lesson 5 — The reserve (gather/deliver; TUT-008; Dawn framing per ruling #6)
-
-| Beat | Speaker | Line |
-|---|---|---|
-| explain | Mara | `tut_reserve_01` — "The city's reserve is thin. Put the Surveyor on the Matter seam — it cuts, carries, and books the load at the Anchor." |
-| verify | gate | Gather->Deliver cycle observed; resource delta >= threshold |
-| acknowledge | Mara | `tut_reserve_02` — "First load booked. Matter is honest work — the strata always has more." |
-| why (Dawn) | Mara | `tut_reserve_03` — "Dawn is different. Every shard we spend is a future somebody doesn't get. We spend it — but we log WHY. Remember that when the cost feels light." |
-
-### Lesson 6 — Link restoration (build/placement; TUT-009)
-
-| Beat | Speaker | Line |
-|---|---|---|
-| explain | Mara | `tut_link_01` — "Severed link on the corridor. Put a Power Link at the marked footprint — the ghost shows green where the ground will take it." |
-| invalid-feedback | Mara | `tut_link_02` — *(on rejected placement)* "Red means the ground disagrees. Find footing the network can hold." |
-| verify | gate | one rejected placement observed + completed Power Link within radius (relay-discovery pattern) |
-| acknowledge | Mara | `tut_link_03` — "Link's live. The corridor has power and eyes again." |
-| why | Mara | `tut_link_04` — "The Compact is the network. Every structure you place is a promise the next crew can stand on." |
-
-### Lesson 7 — The foundry (production/rally; TUT-010)
-
-| Beat | Speaker | Line |
-|---|---|---|
-| explain | Mara | `tut_foundry_01` — "Spin up the Foundry. Queue a Lancer — the cost comes off the ledger the moment you commit." |
-| verify | gate | new Lancer entity + resource decrease + arrival at rally point |
-| acknowledge | Mara | `tut_foundry_02` — "Fresh Lancer, on station at your rally. The queue keeps building while you fight — set it and trust it." |
-| why | Mara | `tut_foundry_03` — "Battles are won by whoever still has a next unit. The Foundry is your next unit." |
-
-### Lesson 8 — Perimeter probe (combat, guard; TUT-011; Guard's fiction is protection)
-
-| Beat | Speaker | Line |
-|---|---|---|
-| explain | Mara | `tut_probe_01` — "Contact on the perimeter — small, and ours to handle. Lancers forward. The Bulwark holds the line; [guard key] puts it on the Surveyor — its whole job becomes that one life." |
-| verify | gate | staged hostiles destroyed, player retains >= K units, Guard order held on the worker |
-| acknowledge | Mara | `tut_probe_02` — "Probe broken. Nobody we're responsible for got touched. That's the whole report." |
-| why | Mara | `tut_probe_03` — "Out there it won't be a probe. Composition, cover, and a guarded worker — that's how a fight becomes arithmetic instead of grief." |
-
-### Lesson 9 — The board (objectives/minimap/alerts; TUT-012)
-
-| Beat | Speaker | Line |
-|---|---|---|
-| explain | Mara | `tut_board_01` — "Top of your deck: the duty ledger — what's open, what's held, what's closed. Corner: the basin entire. When something happens off-screen, the deck flags it; [alert key] takes you straight there." |
-| verify | gate | objective row transitioned + camera moved to alert site |
-| acknowledge | Mara | `tut_board_02` — "You found it without hunting. The deck watches so you can think." |
-| why | Mara | `tut_board_03` — "A commander's real enemy is the thing happening where she isn't looking." |
-
-### Lesson 10 — The Well (Future Well choice; TUT-013)
-
-| Beat | Speaker | Line |
-|---|---|---|
-| explain | Mara | `tut_well_01` — "Last item, and it isn't drill. That's a Future Well. Inside are futures that never happened — held, coherent, and ours to decide about. Walk the Surveyor up and read the panel. Harvest ends it for power now. Preserve holds it and pays slowly. Reshape spends it to change the ground itself, for a while." |
-| verify | gate | wellChoice committed on the well entity; immediate effect observed in sim state |
-| acknowledge | Mara | `tut_well_02` — "Committed and logged. Whatever you chose — that's now the only version of this that ever happens." |
-| why | Mara | `tut_well_03` — "There's no clean answer at a Well. There's only the answer you can stand behind in the ledger. You just made your first one. The next one won't be practice." |
-
-### Mastery gate close (JRN-003 transition; TUT-020)
-
-| Beat | Speaker | Line |
-|---|---|---|
-| close | Mara | `tut_close_01` — "Readiness check complete — survey, roster, routes, reserve, links, foundry, perimeter, board, and one Well you'll be thinking about tonight. The window opens now. This one is real." |
-
-### Hint escalation lines (TUT-017 — one per lesson, second-stage; fired on ticks-without-fact-change, never completing the action)
-
-`tut_hint_survey` — "The view answers the screen edge and the wheel. Try the corner of the world."
-`tut_hint_roster` — "One click, on the Surveyor itself. It's waiting."
-`tut_hint_muster` — "Press, drag a corner across the section, release."
-`tut_hint_route` — "Right-click the marked ground. They know the way from there."
-`tut_hint_reserve` — "Right-click the bright seam. The Surveyor handles the rest."
-`tut_hint_link` — "The footprint marker, on open ground near the corridor. Green ghost, then commit."
-`tut_hint_foundry` — "Select the Foundry, then its Lancer entry. The ledger covers it."
-`tut_hint_probe` — "Lancers on the contact; the guard order on the Surveyor. In that order is fine."
-`tut_hint_board` — "The flash in the corner is real. [alert key] jumps to it."
-`tut_hint_well` — "The Surveyor, to the Well. The panel does not commit until you do."
+On failure name the cause and the available corrective action. Missing target/setup is a recoverable setup error, never an instruction to click something absent. Combat loss offers a phase retry. Skip one step records skipped, never verified. Ending tutorials restores ordinary control and does not lock campaign/skirmish. Reduced motion substitutes a static clear indicator for animated demonstration.
 
 ---
 
