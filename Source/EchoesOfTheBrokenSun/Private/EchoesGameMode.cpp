@@ -2217,6 +2217,12 @@ void AEchoesGameMode::BeginPlay()
         {
             Controller->StartPointerCombatGuardReview();
         }
+        if (FParse::Param(
+                FCommandLine::Get(),
+                TEXT("EchoesDisplayRevertReview")))
+        {
+            Controller->StartDisplayRevertReview();
+        }
         if ((FParse::Param(
                  FCommandLine::Get(),
                  TEXT("EchoesFutureWellArtReview")) ||

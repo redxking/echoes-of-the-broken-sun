@@ -349,6 +349,24 @@ bool FEchoesPointerSurfaceCoverageTest::RunTest(const FString& Parameters)
         TEXT("A cursor-targeted deck action arms rather than firing"),
         static_cast<int32>(Controller->GetArmedDeckAction()),
         static_cast<int32>(EEchoesCommandDeckAction::BuildBarracks));
+    // A build action delegates its prompt to BeginBuildPlacement, which speaks for
+    // whichever path it takes: the blueprint instructions when the preview arms, or
+    // the specific refusal otherwise. The deck handler used to overwrite that in the
+    // same frame with the cursor-target prompt, so a player holding a blueprint was
+    // told to pick a target and a refused build never showed its reason. Assert on
+    // the prompts that must not appear rather than on one exact refusal string, so
+    // this keeps holding whichever BeginBuildPlacement path this fixture reaches.
+    TestFalse(
+        TEXT("A build action keeps its own prompt instead of the cursor-target one"),
+        Controller->GetStatusMessage().Contains(
+            TEXT("Select a target on the battlefield")));
+    TestFalse(
+        TEXT("A build action never borrows the repair prompt"),
+        Controller->GetStatusMessage().Contains(
+            TEXT("Select a damaged allied target")));
+    TestFalse(
+        TEXT("A build action still says something to the player"),
+        Controller->GetStatusMessage().IsEmpty());
     Controller->PresentTitleScreen();
     TestEqual(
         TEXT("A scenario transition disarms the pending order"),

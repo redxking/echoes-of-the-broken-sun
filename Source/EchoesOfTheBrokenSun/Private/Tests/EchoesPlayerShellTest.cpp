@@ -229,6 +229,56 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
         TestTrue(TEXT("Unconfirmed display automatically reverts after fifteen seconds"),
             Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Options && Settings->GetScreenResolution() == KeptResolution);
         TestEqual(TEXT("Timeout never commits the abandoned display choice"), Controller->GetPlayerProfile().Resolution, KeptResolution);
+        Controller->HandleShellAction(EEchoesShellAction::ResolutionNext);
+        Controller->HandleShellAction(EEchoesShellAction::ApplyDisplay);
+        const FString ConfirmationBody = Controller->BuildShellView().Body.ToString();
+        Controller->HandleShellAction(EEchoesShellAction::RevertDisplay);
+        TestTrue(TEXT("Display confirmation displays the remaining wall time"),
+            ConfirmationBody.Contains(TEXT("reverts automatically in 15 seconds")));
+        // SPEC-UI-009.CONFIRM/.TIMEOUT restore "the previous valid mode", and .TIMEOUT
+        // additionally requires the reverted mode to remain usable. The stored setting
+        // is not that mode whenever the window never adopted it: a -windowed command
+        // line, an engine clamp during window creation, or a mode the platform refused
+        // all leave GameUserSettings describing a window that does not exist. Reverting
+        // to the stored value then puts the window into a presentation the player never
+        // chose - observed as a borderless full-display window while Options and the
+        // engine both reported 1280x720, with no route back through a greyed-out Apply.
+        {
+            struct FScopedInjectedPresentation final
+            {
+                ~FScopedInjectedPresentation()
+                { AEchoesPlayerController::SetLiveDisplayPresentationForTesting(false); }
+            } InjectedPresentation;
+            Settings->SetScreenResolution(FIntPoint(1280, 720));
+            Settings->SetFullscreenMode(EWindowMode::WindowedFullscreen);
+            AEchoesPlayerController::SetLiveDisplayPresentationForTesting(
+                true, FIntPoint(1280, 720), EWindowMode::Windowed);
+            Controller->HandleShellAction(EEchoesShellAction::Back);
+            Controller->HandleShellAction(EEchoesShellAction::Options);
+            const FEchoesShellView MismatchedView = Controller->BuildShellView();
+            const auto FindButton = [&MismatchedView](EEchoesShellAction Action)
+            {
+                return MismatchedView.Buttons.FindByPredicate(
+                    [Action](const FEchoesShellButton& Button) { return Button.Action == Action; });
+            };
+            const FEchoesShellButton* ModeButton = FindButton(EEchoesShellAction::WindowMode);
+            const FEchoesShellButton* ApplyButton = FindButton(EEchoesShellAction::ApplyDisplay);
+            TestTrue(TEXT("Options reports the window on screen, not a stored mode the window never adopted"),
+                ModeButton != nullptr && ModeButton->Label.ToString().Contains(TEXT("Windowed")));
+            TestTrue(TEXT("Apply stays reachable while the stored display settings do not describe the window"),
+                ApplyButton != nullptr && ApplyButton->bEnabled);
+            Controller->HandleShellAction(EEchoesShellAction::ResolutionNext);
+            Controller->HandleShellAction(EEchoesShellAction::ApplyDisplay);
+            TestTrue(TEXT("Mismatched display apply still enters confirmation"),
+                Controller->GetPlayerFlow().Current() == EEchoesShellScreen::DisplayConfirmation);
+            Controller->HandleShellAction(EEchoesShellAction::RevertDisplay);
+            TestTrue(TEXT("Revert returns to Options from a mismatched presentation"),
+                Controller->GetPlayerFlow().Current() == EEchoesShellScreen::Options);
+            TestTrue(TEXT("Revert restores the window mode actually on screen"),
+                Settings->GetFullscreenMode() == EWindowMode::Windowed);
+            TestEqual(TEXT("Revert restores the resolution actually on screen"),
+                Settings->GetScreenResolution(), FIntPoint(1280, 720));
+        }
         FString RestoreError; Original.ApplySettings(*Settings, RestoreError);
         Settings->SetScreenResolution(PriorConfirmedResolution);
         Settings->SetFullscreenMode(PriorConfirmedMode);

@@ -5060,6 +5060,200 @@ void AEchoesPlayerController::NotifyRuntimeReady()
         7.0f);
 }
 
+#if !UE_BUILD_SHIPPING
+void AEchoesPlayerController::LogDisplayRevertReviewPresentation(const TCHAR* Stage) const
+{
+    const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
+    FIntPoint LiveResolution = FIntPoint(0, 0);
+    EWindowMode::Type LiveMode = EWindowMode::Windowed;
+    const bool bLive = GetLiveDisplayPresentation(LiveResolution, LiveMode);
+    const auto ModeName = [](EWindowMode::Type Mode)
+    {
+        return Mode == EWindowMode::Windowed ? TEXT("Windowed")
+            : Mode == EWindowMode::WindowedFullscreen ? TEXT("Borderless") : TEXT("Fullscreen");
+    };
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_DISPLAY_REVERT_REVIEW_PRESENTATION] stage=%s live=%d liveWindow=(%d,%d) liveMode=%s settings=(%d,%d) settingsMode=%s matches=%d agentDriven=true physicalInput=false"),
+        Stage,
+        bLive ? 1 : 0,
+        LiveResolution.X,
+        LiveResolution.Y,
+        ModeName(LiveMode),
+        Settings != nullptr ? Settings->GetScreenResolution().X : 0,
+        Settings != nullptr ? Settings->GetScreenResolution().Y : 0,
+        Settings != nullptr ? ModeName(Settings->GetFullscreenMode()) : TEXT("None"),
+        (bLive && Settings != nullptr &&
+         LiveResolution == Settings->GetScreenResolution() &&
+         LiveMode == Settings->GetFullscreenMode()) ? 1 : 0);
+}
+
+void AEchoesPlayerController::StartDisplayRevertReview()
+{
+    if (bDisplayRevertReviewActive) return;
+    bDisplayRevertReviewActive = true;
+    DisplayRevertReviewStage = 0;
+    DisplayRevertReviewStageElapsedSeconds = 0.0f;
+    DisplayRevertReviewTotalElapsedSeconds = 0.0f;
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_DISPLAY_REVERT_REVIEW_STARTED] contract=SPEC-UI-009.CONFIRM+SPEC-UI-009.TIMEOUT controlledNonshipping=true"));
+    LogDisplayRevertReviewPresentation(TEXT("launch"));
+}
+
+void AEchoesPlayerController::FinishDisplayRevertReview(
+    const TCHAR* Result, const FString& Detail)
+{
+    bDisplayRevertReviewActive = false;
+    LogDisplayRevertReviewPresentation(TEXT("final"));
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_DISPLAY_REVERT_REVIEW_COMPLETE] result=%s stage=%d detail=%s agentDriven=true osInjection=false unaidedHuman=false controlledNonshipping=true"),
+        Result,
+        DisplayRevertReviewStage,
+        *Detail);
+    FString OutputPath;
+    if (FParse::Value(
+            FCommandLine::Get(), TEXT("EchoesDisplayRevertReviewOutput="), OutputPath) &&
+        !OutputPath.IsEmpty())
+    {
+        FScreenshotRequest::RequestScreenshot(OutputPath, true, false, false, FIntRect(), true);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_DISPLAY_REVERT_REVIEW_CAPTURE] requested=true showUI=true output=%s"),
+            *OutputPath);
+    }
+}
+
+void AEchoesPlayerController::RunDisplayRevertReviewStage(float DeltaTime)
+{
+    DisplayRevertReviewStageElapsedSeconds += DeltaTime;
+    DisplayRevertReviewTotalElapsedSeconds += DeltaTime;
+    // The unattended deadline is fifteen seconds of wall time, so the whole route
+    // needs headroom beyond it. Ending on a budget rather than hanging keeps a
+    // failed run an observable result instead of a timed-out process.
+    if (DisplayRevertReviewTotalElapsedSeconds > 90.0f)
+    {
+        FinishDisplayRevertReview(TEXT("FAILED"), TEXT("ROUTE_BUDGET_EXPIRED"));
+        return;
+    }
+    const auto Advance = [this](int32 NextStage)
+    {
+        DisplayRevertReviewStage = NextStage;
+        DisplayRevertReviewStageElapsedSeconds = 0.0f;
+    };
+    if (DisplayRevertReviewStage == 0)
+    {
+        // Let the window settle before reading it; the engine applies the launch
+        // resolution asynchronously.
+        if (DisplayRevertReviewStageElapsedSeconds < 2.0f) return;
+        if (!GetLiveDisplayPresentation(
+                DisplayRevertReviewEntryResolution, DisplayRevertReviewEntryMode))
+        {
+            FinishDisplayRevertReview(TEXT("FAILED"), TEXT("NO_LIVE_WINDOW"));
+            return;
+        }
+        LogDisplayRevertReviewPresentation(TEXT("settled"));
+        HandleShellAction(EEchoesShellAction::Options);
+        if (PlayerFlow.Current() != EEchoesShellScreen::Options)
+        {
+            FinishDisplayRevertReview(
+                TEXT("FAILED"),
+                FString::Printf(TEXT("OPTIONS_UNREACHABLE_FROM_SCREEN_%d"),
+                    static_cast<int32>(PlayerFlow.Current())));
+            return;
+        }
+        Advance(1);
+        return;
+    }
+    if (DisplayRevertReviewStage == 1)
+    {
+        if (DisplayRevertReviewStageElapsedSeconds < 0.5f) return;
+        const FEchoesShellView OptionsView = BuildShellView();
+        const FEchoesShellButton* ApplyButton = OptionsView.Buttons.FindByPredicate(
+            [](const FEchoesShellButton& Button)
+            { return Button.Action == EEchoesShellAction::ApplyDisplay; });
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_DISPLAY_REVERT_REVIEW_OPTIONS] applyPresent=%d applyEnabled=%d pending=(%d,%d) pendingMode=%s"),
+            ApplyButton != nullptr ? 1 : 0,
+            ApplyButton != nullptr && ApplyButton->bEnabled ? 1 : 0,
+            PendingDisplayResolution.X,
+            PendingDisplayResolution.Y,
+            PendingDisplayMode == EWindowMode::Windowed ? TEXT("Windowed")
+                : PendingDisplayMode == EWindowMode::WindowedFullscreen ? TEXT("Borderless")
+                                                                       : TEXT("Fullscreen"));
+        HandleShellAction(EEchoesShellAction::ResolutionNext);
+        HandleShellAction(EEchoesShellAction::ApplyDisplay);
+        if (PlayerFlow.Current() != EEchoesShellScreen::DisplayConfirmation)
+        {
+            FinishDisplayRevertReview(TEXT("FAILED"), TEXT("CONFIRMATION_NOT_SHOWN"));
+            return;
+        }
+        Advance(2);
+        return;
+    }
+    if (DisplayRevertReviewStage == 2)
+    {
+        // Read the applied presentation once the engine has reshaped the window.
+        if (DisplayRevertReviewStageElapsedSeconds < 2.0f) return;
+        GetLiveDisplayPresentation(
+            DisplayRevertReviewAppliedResolution, DisplayRevertReviewAppliedMode);
+        LogDisplayRevertReviewPresentation(TEXT("applied"));
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_DISPLAY_REVERT_REVIEW_CONFIRMATION] body=%s"),
+            *BuildShellView().Body.ToString());
+        Advance(3);
+        return;
+    }
+    if (DisplayRevertReviewStage == 3)
+    {
+        // Unattended: no Keep, no Revert. The deadline must expire on its own.
+        if (PlayerFlow.Current() == EEchoesShellScreen::DisplayConfirmation) return;
+        Advance(4);
+        return;
+    }
+    if (DisplayRevertReviewStage == 4)
+    {
+        if (DisplayRevertReviewStageElapsedSeconds < 2.0f) return;
+        FIntPoint RevertedResolution = FIntPoint(0, 0);
+        EWindowMode::Type RevertedMode = EWindowMode::Windowed;
+        const bool bLive = GetLiveDisplayPresentation(RevertedResolution, RevertedMode);
+        const bool bRestored = bLive &&
+            RevertedResolution == DisplayRevertReviewEntryResolution &&
+            RevertedMode == DisplayRevertReviewEntryMode;
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_DISPLAY_REVERT_REVIEW_TIMEOUT] elapsed=%.2f screen=%d entry=(%d,%d) applied=(%d,%d) reverted=(%d,%d) entryMode=%d appliedMode=%d revertedMode=%d restored=%d"),
+            DisplayRevertReviewTotalElapsedSeconds,
+            static_cast<int32>(PlayerFlow.Current()),
+            DisplayRevertReviewEntryResolution.X,
+            DisplayRevertReviewEntryResolution.Y,
+            DisplayRevertReviewAppliedResolution.X,
+            DisplayRevertReviewAppliedResolution.Y,
+            RevertedResolution.X,
+            RevertedResolution.Y,
+            static_cast<int32>(DisplayRevertReviewEntryMode),
+            static_cast<int32>(DisplayRevertReviewAppliedMode),
+            static_cast<int32>(RevertedMode),
+            bRestored ? 1 : 0);
+        FinishDisplayRevertReview(
+            bRestored ? TEXT("PASSED") : TEXT("FAILED"),
+            bRestored ? TEXT("WINDOW_RESTORED_TO_ENTRY_PRESENTATION")
+                      : TEXT("WINDOW_NOT_RESTORED"));
+        return;
+    }
+}
+#endif
+
 void AEchoesPlayerController::StartPointerCombatGuardReview()
 {
 #if !UE_BUILD_SHIPPING
@@ -8880,6 +9074,10 @@ void AEchoesPlayerController::PlayerTick(float DeltaTime)
     if (bPointerCombatGuardReviewActive)
     {
         RunPointerCombatGuardReviewStage(DeltaTime);
+    }
+    if (bDisplayRevertReviewActive)
+    {
+        RunDisplayRevertReviewStage(DeltaTime);
     }
 #endif
     if (bSelectionButtonDown)
@@ -13598,11 +13796,21 @@ void AEchoesPlayerController::ActivateCommandDeckAction(
             {
                 BeginBuildPlacement(echoes::sim::EntityType::UtilityStructure);
             }
-            SetStatusMessage(
-                Action == EEchoesCommandDeckAction::RepairAtCursor
-                    ? TEXT("Select a damaged allied target or unfinished structure. Right-click cancels.")
-                    : TEXT("Select a target on the battlefield. Right-click cancels."),
-                8.0f);
+            else
+            {
+                // Only RepairAtCursor arms a bare cursor target and so owns this
+                // prompt. The three build actions delegate to BeginBuildPlacement,
+                // which already published the message for whichever path it took -
+                // the blueprint instructions on success, or the specific refusal
+                // (replay read-only, online-only, tutorial, sim-not-ready, invalid
+                // worker, preview-unavailable) otherwise. Emitting a generic target
+                // prompt here overwrote all of them in the same frame, so a player
+                // holding a blueprint was told to pick a target, and a refused build
+                // never showed its reason.
+                SetStatusMessage(
+                    TEXT("Select a damaged allied target or unfinished structure. Right-click cancels."),
+                    8.0f);
+            }
             return;
         case EEchoesCommandDeckAction::CancelConstruction:
             CancelSelectedConstruction();

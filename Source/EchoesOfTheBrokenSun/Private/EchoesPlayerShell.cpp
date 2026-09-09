@@ -15,6 +15,7 @@
 #include "GenericPlatform/GenericApplication.h"
 #include "Engine/GameViewportClient.h"
 #include "UnrealClient.h"
+#include "Widgets/SWindow.h"
 
 #define LOCTEXT_NAMESPACE "EchoesPlayerShell"
 
@@ -181,12 +182,7 @@ bool AEchoesPlayerController::OpenOnlineLocalMenuShellScreen(
     switch (Screen)
     {
         case EEchoesShellScreen::Options:
-            if (const UEchoesGameUserSettings* Settings =
-                    UEchoesGameUserSettings::Get())
-            {
-                PendingDisplayResolution = Settings->GetScreenResolution();
-                PendingDisplayMode = Settings->GetFullscreenMode();
-            }
+            SeedPendingDisplayFromLivePresentation();
             ShellMessage.Reset();
             PlayerFlow.Push(Screen);
             break;
@@ -473,11 +469,20 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
         break;
     }
     case EEchoesShellScreen::DisplayConfirmation:
+    {
         View.Title = LOCTEXT("KeepDisplayTitle", "Keep these display settings?");
-        View.Body = LOCTEXT("KeepDisplayBody", "Choose Keep to save this display mode. It will revert automatically after 15 seconds.");
+        // SPEC-UI-009 requires the timeout itself to be displayed. RefreshShell rebuilds
+        // this view every PlayerTick, so the remaining wall time counts down on screen
+        // instead of restating a fixed fifteen seconds that may already have elapsed.
+        const double RemainingSeconds = DisplayRevertDeadline > 0.0
+            ? DisplayRevertDeadline - FPlatformTime::Seconds() : 15.0;
+        View.Body = FText::Format(
+            LOCTEXT("KeepDisplayBody", "Choose Keep to save this display mode. It reverts automatically in {0} seconds."),
+            FText::AsNumber(FMath::Clamp(FMath::CeilToInt(RemainingSeconds), 0, 15)));
         Button(LOCTEXT("RevertDisplay", "Revert"), EEchoesShellAction::RevertDisplay);
         Button(LOCTEXT("KeepDisplay", "Keep"), EEchoesShellAction::KeepDisplay);
         break;
+    }
     case EEchoesShellScreen::Options:
         View.Title = LOCTEXT("Options", "Options");
         View.Body = LOCTEXT("OptionsBody", "Audio, camera and UI changes are saved immediately. Apply a display change, then choose Keep.");
@@ -501,8 +506,19 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
             Button(LOCTEXT("ResolutionUp", "Next resolution"), EEchoesShellAction::ResolutionNext);
             const FText ModeName = PendingDisplayMode == EWindowMode::Windowed ? LOCTEXT("Windowed", "Windowed") : PendingDisplayMode == EWindowMode::WindowedFullscreen ? LOCTEXT("Borderless", "Borderless") : LOCTEXT("Fullscreen", "Fullscreen");
             Button(FText::Format(LOCTEXT("DisplayMode", "Display mode: {0} — change"), ModeName), EEchoesShellAction::WindowMode);
+            // Apply is also offered when the stored settings do not describe the window
+            // on screen. Without that, a player whose window mode disagrees with the
+            // saved preference sees a greyed-out Apply and has no route back to a
+            // presentation that matches what Options reports.
+            FIntPoint LiveResolution = Settings->GetScreenResolution();
+            EWindowMode::Type LiveMode = Settings->GetFullscreenMode();
+            const bool bSettingsDescribeWindow =
+                !GetLiveDisplayPresentation(LiveResolution, LiveMode) ||
+                (LiveResolution == Settings->GetScreenResolution() &&
+                 LiveMode == Settings->GetFullscreenMode());
             Button(LOCTEXT("ApplyDisplay", "Apply display settings"), EEchoesShellAction::ApplyDisplay,
-                PendingDisplayResolution != Settings->GetScreenResolution() || PendingDisplayMode != Settings->GetFullscreenMode());
+                PendingDisplayResolution != Settings->GetScreenResolution() ||
+                PendingDisplayMode != Settings->GetFullscreenMode() || !bSettingsDescribeWindow);
 
             Toggle(LOCTEXT("DynamicRange", "Reduced dynamic range"), Settings->IsReducedDynamicRangeEnabled(), EEchoesShellAction::DynamicRange);
 
@@ -723,8 +739,7 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
             ApplyConfirmedDefaultBindings();
         break;
     case EEchoesShellAction::Options:
-        if (const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
-        { PendingDisplayResolution = Settings->GetScreenResolution(); PendingDisplayMode = Settings->GetFullscreenMode(); }
+        SeedPendingDisplayFromLivePresentation();
         ShellMessage.Reset(); PlayerFlow.Push(EEchoesShellScreen::Options); break;
     case EEchoesShellAction::ResolutionPrevious:
     case EEchoesShellAction::ResolutionNext:
@@ -747,6 +762,16 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
         if (UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
         {
             PreviousDisplayResolution = Settings->GetScreenResolution(); PreviousDisplayMode = Settings->GetFullscreenMode();
+            // Restore what the player is looking at. Taking the restore point from the
+            // stored setting reverts to a presentation the window may never have had,
+            // and a borderless value restored over a windowed session leaves the window
+            // filling the display while Options reports the smaller resolution.
+            {
+                FIntPoint LiveResolution = PreviousDisplayResolution;
+                EWindowMode::Type LiveMode = PreviousDisplayMode;
+                if (GetLiveDisplayPresentation(LiveResolution, LiveMode))
+                { PreviousDisplayResolution = LiveResolution; PreviousDisplayMode = LiveMode; }
+            }
             Settings->SetScreenResolution(PendingDisplayResolution); Settings->SetFullscreenMode(PendingDisplayMode);
             if (!FApp::IsUnattended() && GetWorld()->WorldType != EWorldType::PIE) Settings->ApplyResolutionSettings(false);
             DisplayRevertDeadline = FPlatformTime::Seconds() + 15.0;
@@ -914,6 +939,74 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
     }
     }
     RefreshShell();
+}
+
+#if WITH_DEV_AUTOMATION_TESTS
+namespace
+{
+bool GEchoesLiveDisplayPresentationInjected = false;
+FIntPoint GEchoesLiveDisplayResolutionInjected = FIntPoint(1280, 720);
+EWindowMode::Type GEchoesLiveDisplayModeInjected = EWindowMode::Windowed;
+}
+
+void AEchoesPlayerController::SetLiveDisplayPresentationForTesting(
+    bool bPresent, FIntPoint Resolution, EWindowMode::Type Mode)
+{
+    GEchoesLiveDisplayPresentationInjected = bPresent;
+    GEchoesLiveDisplayResolutionInjected = Resolution;
+    GEchoesLiveDisplayModeInjected = Mode;
+}
+#endif
+
+bool AEchoesPlayerController::GetLiveDisplayPresentation(
+    FIntPoint& OutResolution, EWindowMode::Type& OutMode) const
+{
+#if WITH_DEV_AUTOMATION_TESTS
+    if (GEchoesLiveDisplayPresentationInjected)
+    {
+        OutResolution = GEchoesLiveDisplayResolutionInjected;
+        OutMode = GEchoesLiveDisplayModeInjected;
+        return true;
+    }
+#endif
+    const UWorld* World = GetWorld();
+    if (World == nullptr || World->WorldType == EWorldType::PIE) return false;
+    const UGameViewportClient* ViewportClient = World->GetGameViewport();
+    if (ViewportClient == nullptr || ViewportClient->Viewport == nullptr) return false;
+    const TSharedPtr<SWindow> Window = ViewportClient->GetWindow();
+    if (!Window.IsValid()) return false;
+    // SWindow, not FViewport::GetWindowMode(): the viewport's copy is only updated
+    // when a resize runs, so it still reports the constructor's Windowed default on
+    // a game that started borderless and was never resized.
+    OutMode = Window->GetWindowMode();
+    const FIntPoint ViewportSize = ViewportClient->Viewport->GetSizeXY();
+    if (OutMode == EWindowMode::Windowed && ViewportSize.X > 0 && ViewportSize.Y > 0)
+    {
+        OutResolution = ViewportSize;
+        return true;
+    }
+    // FSceneViewport::ResizeFrame forces a borderless or exclusive-fullscreen window
+    // to the whole display rectangle and renders the requested resolution through
+    // screen percentage, so the window size there is the monitor, not the preference.
+    if (const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
+        OutResolution = Settings->GetScreenResolution();
+    return true;
+}
+
+void AEchoesPlayerController::SeedPendingDisplayFromLivePresentation()
+{
+    if (const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get())
+    {
+        PendingDisplayResolution = Settings->GetScreenResolution();
+        PendingDisplayMode = Settings->GetFullscreenMode();
+    }
+    FIntPoint LiveResolution = PendingDisplayResolution;
+    EWindowMode::Type LiveMode = PendingDisplayMode;
+    if (GetLiveDisplayPresentation(LiveResolution, LiveMode))
+    {
+        PendingDisplayResolution = LiveResolution;
+        PendingDisplayMode = LiveMode;
+    }
 }
 
 void AEchoesPlayerController::RevertPendingDisplay()

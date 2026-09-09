@@ -19,6 +19,47 @@ work rather than restarting from a dated phase note. One write owner per checkou
 bounded independent read-only review and explicitly disjoint work are allowed under the shared contract.
 The retired lane-fleet roster and missing lock files do not govern current work.
 
+## Connected player input outcome — 2026-09-09
+
+The P1/P2/P4 connected-input qualification is carried forward on route
+`connected-input-20260909T204502Z`: phase1 and phase2 both exited 0, the route is finalized,
+and scoped cleanup was verified. Pointer selection, command-card production with visible
+hotkeys, settings persistence across a cold restart, quick save and reload, a terminal match
+outcome with statistics, replay playback and archive persistence, and concession each
+produced an observed result. A keyboard-only control path (Tab cycling plus a reticle) also
+works, so keyboard and pointer are separately usable.
+
+One reproduced defect was repaired: arming a build action overwrote its own prompt, hiding
+both the blueprint instructions and every specific refusal reason. It is fixed, covered by a
+regression assertion proven to fail without the fix, and rechecked in a rendered route.
+
+The display half of the first open defect is now repaired: see
+[Recoverable display-setting changes](RequirementsState.md#recoverable-display-setting-changes--2026-09-09).
+The auto-revert restored the stored window mode rather than the live one, so a display
+change made from a window whose presentation disagreed with the saved preference left the
+window borderless at the full display. It now restores the presentation the player is
+actually looking at, proven in a rendered route and by the engine's own viewport log.
+Whether the field HUD reads correctly in a *deliberately* borderless session at a
+sub-native resolution is untouched by that repair and stays open; so does concession
+reporting a Command Core loss that did not happen. The
+[bounded evidence record](RequirementsState.md#connected-player-input-settings-recovery-result-and-replay--2026-09-09)
+keeps agent-synthetic input, packaged execution, audio, performance, and owner acceptance
+distinct — none of them is claimed. The predecessor route
+`connected-input-20260909T201800Z` is retired unclosable after a concurrent lane changed its
+pinned candidate mid-run; treat that as the reason to keep one writer per candidate while a
+protected route is live, not as a defect in the game.
+
+## Three-failure repair outcome — 2026-09-09
+
+The requested controls-persistence oracle, resource-content overflow, and Options grouping repairs
+are agent verified on one rebuilt candidate: four focused checks and all 133 Unreal tests passed
+without warnings/errors. Rendered keyboard checks covered the resource strip at 80%, 100%, and
+150%; a camera rebind and UI scale survived normal exit and a fresh process. The layout decision
+is Accessibility → Controls → Camera → Display → Audio, with semantic paired-row assertions.
+The [bounded evidence record](RequirementsState.md#controls-persistence-resource-strip-and-options-grouping--2026-09-09)
+keeps pointer, packaged, durability, and owner-acceptance gates distinct. Continue the existing
+player-journey sequence from this repaired baseline; do not restart these three investigations.
+
 ## Sequence and observable outcomes
 
 | Focus | Work to qualify | Outcome to demonstrate |

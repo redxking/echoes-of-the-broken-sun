@@ -178,6 +178,15 @@ public:
     [[nodiscard]] TArray<uint32> GetValidControlGroup(int32 GroupIndex) const;
     void NotifyRuntimeReady();
     void StartPointerCombatGuardReview();
+    /**
+     * Bounded non-shipping driver for SPEC-UI-009.CONFIRM/.TIMEOUT in a real
+     * rendered window: open Options, apply a changed display mode, then let the
+     * fifteen-second wall-time deadline expire unattended and report the window
+     * the player is left with. Runs the ordinary shell actions, so it exercises
+     * the production path rather than a parallel one. Agent-driven; it is not
+     * physical input and not human acceptance.
+     */
+    void StartDisplayRevertReview();
     void NotifyRuntimeFailure(const FString& FailureCode);
     void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
     void NotifyCampaignPrologueFinished(
@@ -291,6 +300,17 @@ public:
     const TArray<FEchoesReplayMetadata>& GetReplayBrowserEntries() const { return ReplayBrowserEntries; }
     void AppendMatchResultDossier(FEchoesShellView& View) const;
     void RevertPendingDisplay();
+    /**
+     * The live game window, which is the only authority for the presentation the
+     * player is actually looking at. UEchoesGameUserSettings can disagree with it:
+     * a -windowed/-ResX command line, an engine clamp during window creation, or a
+     * mode the platform refused all leave the stored preference describing a window
+     * that was never adopted. SPEC-UI-009.CONFIRM/.TIMEOUT restore "the previous
+     * valid mode", so the previous mode is read from here, not from the setting.
+     * Returns false when no game window exists (unattended automation, PIE), where
+     * the caller must fall back to the stored settings.
+     */
+    bool GetLiveDisplayPresentation(FIntPoint& OutResolution, EWindowMode::Type& OutMode) const;
     void RefreshShell();
     bool InitializePlayerProfile();
     bool CommitPlayerProfile();
@@ -831,6 +851,9 @@ private:
         const echoes::sim::net::ScopedViewKeyframe& Keyframe);
     void FinishNetworkClientSmoke();
     void RunPointerCombatGuardReviewStage(float DeltaTime);
+    void RunDisplayRevertReviewStage(float DeltaTime);
+    void FinishDisplayRevertReview(const TCHAR* Result, const FString& Detail);
+    void LogDisplayRevertReviewPresentation(const TCHAR* Stage) const;
     bool MoveReviewPointerToEntity(uint32 EntityId, const TCHAR* StageLabel);
     void FailPointerCombatGuardReview(const FString& Reason);
 
@@ -986,6 +1009,14 @@ private:
         run cannot rewrite a player-owned setting. */
     float PointerReviewPriorHudScale = -1.0f;
     bool bPointerCombatGuardReviewActive = false;
+    bool bDisplayRevertReviewActive = false;
+    int32 DisplayRevertReviewStage = 0;
+    float DisplayRevertReviewStageElapsedSeconds = 0.0f;
+    float DisplayRevertReviewTotalElapsedSeconds = 0.0f;
+    FIntPoint DisplayRevertReviewEntryResolution = FIntPoint(0, 0);
+    EWindowMode::Type DisplayRevertReviewEntryMode = EWindowMode::Windowed;
+    FIntPoint DisplayRevertReviewAppliedResolution = FIntPoint(0, 0);
+    EWindowMode::Type DisplayRevertReviewAppliedMode = EWindowMode::Windowed;
     double StatusMessageExpiresAt = 0.0;
     double ControlGroupAssignmentExpiresAt = 0.0;
     double NewCampaignConfirmationExpiresAt = 0.0;
@@ -1110,6 +1141,17 @@ private:
     bool bTacticalPaused = false;
     uint64 PresentedCheckpointRequestId = 0;
     bool bPresentedCheckpointPending = false;
+#if WITH_DEV_AUTOMATION_TESTS
+public:
+    // Unattended automation has no game window, so the live presentation must be
+    // injectable to exercise the settings/window disagreement that this repair covers.
+    static void SetLiveDisplayPresentationForTesting(
+        bool bPresent,
+        FIntPoint Resolution = FIntPoint(1280, 720),
+        EWindowMode::Type Mode = EWindowMode::Windowed);
+private:
+#endif
+    void SeedPendingDisplayFromLivePresentation();
     FIntPoint PendingDisplayResolution = FIntPoint(1280, 720);
     EWindowMode::Type PendingDisplayMode = EWindowMode::Windowed;
     FIntPoint PreviousDisplayResolution = FIntPoint(1280, 720);

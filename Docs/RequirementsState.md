@@ -18,6 +18,177 @@ Read state at the exact requirement/build/evidence boundary. Dated entries overr
 only for the IDs and scope they name. A family summary is a navigation aid, not proof that every child
 has its required evidence. Preserve historical claims while recording any missing or conflicting support.
 
+## Recoverable display-setting changes — 2026-09-09
+
+**Engineering state: AGENT VERIFIED at the source, engine-test, and agent-rendered window
+boundary** for `SPEC-UI-009`, `SPEC-UI-009.CONFIRM`, and `SPEC-UI-009.TIMEOUT`. Both leaves keep
+their `PKG-PHYS` verification class and remain OPEN against it: no packaged build and no physical
+input were used. No owner acceptance is assigned.
+
+**Defect repaired — the revert restored a stored preference, not the window.**
+`AEchoesPlayerController` read both the pending display choice and the Apply restore point from
+`UEchoesGameUserSettings`. That object can describe a window that was never adopted: a
+`-windowed`/`-ResX` command line, an engine clamp during window creation, or a mode the platform
+refused all leave the stored `FullscreenMode` disagreeing with the live `SWindow`. In that state
+applying any resolution change requested the *stored* mode, and `FSceneViewport::ResizeFrame`
+forces a `WindowedFullscreen` window to the whole display rectangle (UE 5.8
+`Engine/Source/Runtime/Engine/Private/Slate/SceneViewport.cpp`), so the window went borderless at the full display while Options and the engine still reported the
+smaller resolution. The unattended revert then restored the same stored mode, changed nothing, and
+left the player there. This is the mechanism behind the borderless-at-2560x1440 window recorded in
+the [connected-input result](#connected-player-input-settings-recovery-result-and-replay--2026-09-09).
+
+The pending choice and the restore point now come from the live window
+(`AEchoesPlayerController::GetLiveDisplayPresentation`), falling back to the stored settings when no
+game window exists. `Apply display settings` is additionally enabled whenever the stored settings do
+not describe the window on screen, because a greyed-out Apply left a player in that state with no
+route back. The confirmation body now counts down the remaining wall time instead of restating a
+fixed fifteen seconds, which is what `SPEC-UI-009` asks to be displayed.
+
+**Observed.** Rendered route
+[`display-revert-20260909T180500Z/rendered-02`](../BuildArtifacts/Evidence/display-revert-20260909T180500Z/rendered-02/DisplayRevertReview.log)
+reproduced the condition live — `liveWindow=(1280,720) liveMode=Windowed settings=(1280,720)
+settingsMode=Borderless matches=0` — then applied a display change and was left alone. The engine's
+own `LogViewport` records `1280x720 Windowed -> 1440x900 Windowed -> 1280x720 Windowed`, the
+fifteen-second deadline expired unattended (15.1 s of wall time), and the window returned to its
+entry presentation (`restored=1`). The
+[capture](../BuildArtifacts/Evidence/display-revert-20260909T180500Z/rendered-02/DisplayRevertReview.png)
+shows Options complete at 1280x720 reporting `Resolution: 1280 x 720`.
+The run's scoped `GameUserSettings.ini` afterwards holds `ResolutionSizeX=1280` and
+`LastUserConfirmedResolutionSizeX=1280`, so the abandoned 1440x900 change never became a durable
+preference — `SPEC-UI-009`'s "unconfirmed changes shall not become durable preferences" and
+`SPEC-UI-009.TIMEOUT`'s "no timed-out change may be saved as confirmed", observed rather than
+inferred. `FullscreenMode` settled at `2` (Windowed), matching the window that was on screen
+instead of the `1` the file was seeded with. `Scripts/run_display_revert_review.sh` re-runs this
+check and fails if the window is left in a presentation the player did not choose.
+
+**Regression cover.** `Echoes.Runtime.UI.PlayerShellRoutes` gained four assertions. With the fix
+elements reverted and rebuilt, that test fails on exactly those four and nothing else
+([negative report](../BuildArtifacts/Evidence/display-revert-20260909T180500Z/focused-negative/index.json)).
+With the fix restored the full suite passes **133/133 with zero warnings and errors**
+([report](../BuildArtifacts/Evidence/display-revert-20260909T180500Z/full-03/index.json)). Unattended
+automation has no game window, so the live presentation is injected through a
+`WITH_DEV_AUTOMATION_TESTS` hook; production reads the real `SWindow`.
+
+**Borderless is a mismatch by design, and is not the repaired defect.** A player who deliberately
+chooses Borderless at a sub-native resolution still gets a full-display window while the settings
+hold the smaller value; the engine renders the requested resolution through screen percentage. A
+[borderless run](../BuildArtifacts/Evidence/display-revert-20260909T180500Z/rendered-borderless/DisplayRevertBorderless.log)
+confirmed apply and revert behave correctly there and that the Options panel renders complete at
+2560x1440. Whether the *field* HUD reads correctly in that geometry is the separate open defect and
+was not observed: no match ran in any rendered run here.
+
+**Not established.** Packaged execution, physical keyboard or pointer input, exclusive-fullscreen
+apply/revert, multi-monitor, focus loss during the confirmation, interrupted settings-write
+durability, and owner acceptance are each separate gates. The
+[receipt](../BuildArtifacts/Evidence/display-revert-20260909T180500Z/session.json) records the
+candidate identity, commands, and the inconclusive field-HUD probe.
+
+## Connected player input, settings, recovery, result and replay — 2026-09-09
+
+**Engineering state: AGENT VERIFIED at the source, engine-test, and agent-rendered
+input boundary** for the observations named below, affecting `SPEC-CTL-001`,
+`SPEC-CTL-004`, `SPEC-CTL-006`, `SPEC-CTL-012`, `SPEC-UI-006`, `SPEC-UI-007`,
+`SPEC-HUD-004`, `SPEC-HUD-005`, `SPEC-HUD-006`, `DEMO-INP-010`, and
+`SPEC-SAV-001`..`SPEC-SAV-005`. No requirement-wide state, no owner acceptance, and no
+per-ID verification class is assigned; none of these IDs carries one in the master.
+
+Route [`connected-input-20260909T204502Z`](../BuildArtifacts/Evidence/connected-input-20260909T204502Z/player/receipt.json)
+ran phase1 and phase2 under the protected launcher against a candidate pinned at
+`bc2d552860fca646d0d0ad9db68aca104a51de39`. Both phases exited 0 without timing out, the
+route is `FINALIZED`, and scoped cleanup was verified.
+
+Observed through displayed affordances only: Options emits one Accessibility group, then
+Controls, Camera, Display, Audio, Back. A display change to 1440x900 raised the Keep/Revert
+prompt and the unattended 15-second timeout restored 1280x720
+(`systemresolution.resx` 1440 -> 1280 in the phase1 engine log); `Apply display settings`
+then correctly greyed out with no pending change, as did the audio `Increase` controls at
+maximum. High contrast applied immediately, persisted as `bHighContrastHud=True`, and was
+still applied after a fresh process. Pointer selection reported
+`[ECHOES_POINTER_SELECTION] entity=1 selected=1`. The command card carried its hotkeys
+(`WORKER Q`; `BARRACKS B`, `DROPOFF N`, `UTILITY M`, `REPAIR R`, `STOP X`) and three
+successive `WORKER: 1 production order queued` orders were accepted from it. A quick save
+committed (`[ECHOES_CHECKPOINT_COMPLETE] result=success ... bytes=141918`) and reloaded to
+`Checkpoint restored. Ready for your command.` The match reached a terminal outcome
+(`[ECHOES_MATCH_FINISHED] outcome=2 tick=8180`) with a per-player statistics screen; the
+replay opened from it, played, exposed perspective and event bookmarks, and the archive
+still listed that replay after a cold restart. Concession produced a result screen.
+Return-to-menu, load, concede, and quit each required an explicit confirmation.
+
+A keyboard-only control path exists and was exercised: `Tab`/`Backspace` cycle owned
+entities, arrow keys drive a screen reticle with `Space` to order and `Home` to exit
+(`[ECHOES_KEYBOARD_TARGET_NUDGE]`, `[ECHOES_KEYBOARD_SELECTION]`).
+
+**Defect repaired.** `AEchoesPlayerController::ActivateCommandDeckAction` grouped the three
+build actions with `RepairAtCursor` and then set a cursor-target status message
+unconditionally. `BeginBuildPlacement` already publishes the message for every path it
+takes, so the generic prompt overwrote both the blueprint instructions and every specific
+refusal (replay read-only, online-only, tutorial, sim-not-ready, invalid worker,
+preview-unavailable) in the same frame. The owner's earlier session shows the overwrite on
+3 of 3 armings. The prompt now belongs to `RepairAtCursor` alone. `Echoes.Runtime.Controls.
+PointerSurfaceCoverage` gained a regression assertion; with the fix reverted the suite fails
+132/133 on exactly that assertion, and with it restored the suite passes 133/133 with zero
+warnings and errors. Rendered recheck route
+[`prompt-fix-rendered-20260909T213320Z`](../BuildArtifacts/Evidence/prompt-fix-rendered-20260909T213320Z/player/receipt.json)
+(both phases exit 0, `FINALIZED`) armed a build from the command card and observed
+`Placement valid - connects when completed. ... Left-click places; right-click cancels.`
+with zero occurrences of the wrong prompt in the engine log.
+
+**Defect open — HUD panels clip under a mismatched window presentation.** After the display
+apply/auto-revert cycle the window stayed borderless at the full 2560x1440 display while
+Options and the engine both reported 1280x720. In that state the resource ledger truncated
+mid-value (`LOGISTICS 13/` against a logged `logistics=13/18`, `KHARUUN ASSEMBLI`), and the
+objectives, selection, command-card and results-action panels clipped their content. The
+same panels at a genuinely windowed 1280x720 render completely with high contrast still
+enabled, so contrast is not the cause. The auto-revert restores the resolution value but not
+the window presentation. Not repaired; no requirement state is changed for it.
+
+**Defect open — concession reports the wrong cause.** Conceding emits `DEFEAT - your Command
+Core has fallen.` when the Core did not fall. Not repaired.
+
+**Not established by this route.** Agent-synthetic pointer input is its own evidence class
+and is never human play. Box-select and additive selection were not exercised
+(`additive=false` on every recorded selection). The phase1 match recorded `Actions: 0` for
+the agent-driven player because pointer input did not reach the viewport while the window
+presentation was mismatched, so its defeat carries no balance or competitive meaning.
+Packaged execution, audio and listening review, performance, interrupted settings-write
+durability, human physical-input acceptance, and owner acceptance all remain separate gates.
+
+**Predecessor route retired unclosable.** [`connected-input-20260909T201800Z`](../BuildArtifacts/Evidence/connected-input-20260909T201800Z/observation/candidate-identity-note.md)
+holds a valid phase1 record, including the owner's own hands-on session, but another lane
+edited pinned source at 20:24:05Z and 20:25:44Z inside that phase and rebuilt both dylibs,
+so `launch --phase phase2`, `finalize` and `abort` all now refuse on candidate identity or
+launched-phase state. Its protected scope cannot be tool-cleaned and was left in place
+rather than removed by hand.
+
+## Controls persistence, resource strip, and Options grouping — 2026-09-09
+
+**Engineering state: AGENT VERIFIED for the three bounded repairs** affecting `SPEC-UI-006`,
+`SPEC-UI-007`, `SPEC-ACC-002`, `SPEC-ACC-004`, `SPEC-PLAT-001`, and `DEMO-INP-010`.
+No requirement-wide or owner acceptance state is assigned.
+
+The persistence oracle now reconstructs the effective input configuration from the captured hierarchy,
+the physical saved delta using Unreal's saved-layer replacement semantics, and command-line overrides.
+It retains exact live/disk mapping equality, accepted replacement, and reset assertions. Production
+persistence was unchanged. The resource-monitor button no longer adds fixed padding inside the
+already padded ledger; child containment is checked at 80%, 100%, and 150%. Options emits one
+Accessibility group, then Controls, Camera, Display, and Audio. Pair tests locate semantic actions
+and scroll each row into view before checking geometry instead of assuming fixed indices.
+
+The rebuilt dirty candidate based on `865ad04216f343bde2855c49420ab506bf796a65` passed all four
+focused tests and the full **133/133 Unreal tests with zero warnings/errors**. Protected rendered
+keyboard checks observed contained resource text at all three scales, coherent Options grouping,
+an accepted Camera Zoom In binding to Num5 that moved the live camera, and the same binding plus
+150% scale after normal exit and a new process. Native-app screenshots are retained in the task's
+tool history; the receipt records their observations and the two process identities.
+
+Evidence: [repair receipt](../BuildArtifacts/Evidence/ui-three-failures-20260909T192938Z/session.json),
+[candidate identity](../BuildArtifacts/Evidence/ui-three-failures-20260909T192938Z/candidate-manifest.json),
+[full engine report](../BuildArtifacts/Evidence/ui-three-failures-20260909T192938Z/full-01/index.json), and
+[protected process receipt](../BuildArtifacts/Evidence/ui-three-failures-20260909T192938Z/player/receipt.json).
+These are source, engine-test, and agent-operated rendered keyboard observations. Pointer activation
+was not verified through the available app-scoped input route; packaged execution, human physical-input
+acceptance, and interrupted-write durability remain separate gates.
+
 ## Backend action and feedback qualification — 2026-09-09
 
 **Engineering state: AGENT VERIFIED at the source, engine-test, network-fault, and automated
