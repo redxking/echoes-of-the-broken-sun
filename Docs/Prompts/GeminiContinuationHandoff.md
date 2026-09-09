@@ -1,9 +1,24 @@
-# Echoes continuation handoff
+# Echoes continuation handoff — spent
 
 **Author and owner:** Angelis Pseftis
-**Maintained:** 2026-09-06
+**Issued:** 2026-09-06
+**Closed:** 2026-09-09
+**Standing:** spent one-shot handoff, retained as history. Do not open a session from this prompt.
 
-## Assignment and authority
+This handoff was written for a Gemini continuation that never took the work. Development continued on
+`main` without it, and the Gemini Vision capability it assumes was removed from scope on the day it was
+written — see [SeeLoopWorkflow.md](../SeeLoopWorkflow.md).
+
+Everything below describes the state of the checkout on 2026-09-06: a pinned base commit, evidence
+directories from that date, process identifiers, and specialists whose work was already stopped. None of
+it is current. To start work now, use [AgentProjectBrief.md](AgentProjectBrief.md) with
+[GameDevelopmentWorkflow.md](GameDevelopmentWorkflow.md), and take current state from
+[DeliveryPlan.md](../DeliveryPlan.md) and [RequirementsState.md](../RequirementsState.md).
+
+The owner decisions recorded under "Latest owner decisions" below remain owner decisions and are not
+withdrawn by this closure; the Gemini Vision entry among them is the one that retired the See Loop.
+
+## Assignment and authority (historical, 2026-09-06)
 
 Continue the existing Echoes development task in place. Finish the approved P0–P4 obligations and close applicable failures before P5. Do not restart completed work or create another delivery plan. Immediate work is the gated tutorial described below. Only Angelis accepts requirements or readiness. This handoff is a continuation aid, not a replacement requirements master.
 

@@ -1,11 +1,37 @@
+# Echoes of the Broken Sun — repository ignore rules
+# Author and owner: Angelis Pseftis
+#
+# `main` is published publicly. Nothing machine-local, credential-bearing,
+# regenerable, or AI-session-specific belongs in a commit. The owner-authored
+# agent contract (AGENTS.md, the client entry points, .opencode/skills) is
+# tracked deliberately and is re-included explicitly at the end of the AI block.
+#
+# core.ignorecase is true on macOS: keep patterns specific so a generic rule
+# cannot swallow a tracked path such as Build/Mac/Resources.
+
+# ── macOS, editors, IDEs ──────────────────────────────────────────────
 .DS_Store
+._*
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+.fseventsd
 .idea/
 .vscode/
+*.code-workspace
+.vs/
+.zed/
+.fleet/
+.history/
+*.swp
+*~
+
+# ── Unreal generated and machine-local build state ────────────────────
 Binaries/
 DerivedDataCache/
 Intermediate/
 Saved/
-.vs/
 *.VC.db
 *.opensdf
 *.sdf
@@ -14,15 +40,129 @@ Saved/
 *.xcodeproj
 *.xcworkspace
 .build/
-BuildArtifacts/*
-!BuildArtifacts/.gitkeep
+*.dSYM/
 Build/Mac/FileOpenOrder/
 Build/Mac/*.PackageVersionCounter
+Build/Receipts/
+Config/DefaultEngine.ini.local
+Config/*.local.ini
 Content/Data/Generated/
-__pycache__/
-*.pyc
+
+# ── Evidence, packages, local worktrees ───────────────────────────────
+BuildArtifacts/*
+!BuildArtifacts/.gitkeep
+Worktrees/*
+Packages/
+*.dmg
+*.pkg
+*.ipa
+*.zip
+*.7z
+*.tar.gz
+
+# ── Credentials, signing material, private configuration ──────────────
 .env
 .env.*
-Config/DefaultEngine.ini.local
-Worktrees/*
+*.p12
+*.pfx
+*.cer
+*.crt
+*.pem
+*.key
+*.keystore
+*.jks
+*.mobileprovision
+*.provisionprofile
+AuthKey_*.p8
+*.keychain
+*.keychain-db
+.netrc
+.npmrc
+.pypirc
+secrets.json
+credentials.json
+service-account*.json
+notarytool-*.json
+app-store-connect*.json
 
+# ── Language and tool caches, logs, merge residue ─────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.venv/
+venv/
+node_modules/
+.next/
+.turbo/
+.vercel/
+.pnpm-store/
+npm-debug.log*
+yarn-error.log*
+*.log
+*.pid
+*.tmp
+*.orig
+*.rej
+
+# ── AI assistant and agent tooling ────────────────────────────────────
+# Local settings, session state, transcripts, caches and per-machine service
+# bindings for every assistant, present or future. These are per-machine
+# artifacts of how the work was done, not part of the game or its contract.
+.claude/*
+.claude.json
+CLAUDE.local.md
+.codex/
+.openai/
+.gemini/
+GEMINI.local.md
+.antigravity/
+.copilot/
+.github/copilot-*.local.md
+.cursor/
+.cursorrules.local
+.windsurf/
+.windsurfrules.local
+.cline/
+.clinerules.local
+.roo/
+.roomodes
+.aider*
+.continue/
+.cody/
+.sourcegraph/
+.codeium/
+.tabnine/
+.devin/
+.sweep/
+.opencode/*
+AGENTS.local.md
+.mcp.local.json
+mcp.local.json
+ai-transcripts/
+agent-sessions/
+*.aiconversation
+
+# Local model weights and AI runtime data are never pushed.
+LocalAI/
+LocalCache/
+*.gguf
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+
+# Owner-authored agent contract — tracked deliberately, keep these visible.
+!AGENTS.md
+!CLAUDE.md
+!GEMINI.md
+!.mcp.json
+!.claude/skills
+!.agents/skills
+!.opencode/skills/

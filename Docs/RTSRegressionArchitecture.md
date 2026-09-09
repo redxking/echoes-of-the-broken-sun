@@ -2,7 +2,11 @@
 
 **Author and owner:** Angelis Pseftis
 **Date:** 2026-09-05
-**Status:** Implementation in progress; current source/evidence boundary is recorded below.
+**Standing correction:** 2026-09-09
+**Status:** Dated design deliverable. Its plan and evidence boundary describe the 2026-09-05 inspection
+of `release/world-map-concept-pass`; neither was re-verified afterwards. Treat every completion statement
+below as historical and confirm current implementation in source and
+[RequirementsState.md](RequirementsState.md) before relying on it.
 
 This is the authoritative file for this design deliverable. It is subordinate to
 [Requirements.md](Requirements.md), [RequirementsState.md](RequirementsState.md), and the existing

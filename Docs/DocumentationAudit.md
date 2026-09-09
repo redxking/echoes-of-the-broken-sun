@@ -21,8 +21,9 @@ changes were preserved; they are not this audit's implementation or validation e
 ## Completed corrections
 
 - [AGENTS.md](../AGENTS.md) now owns the shared operating contract. Client entry points refer to it.
-  The contract is no longer hidden by `.gitignore`; it is a new local file and must be included explicitly
-  when these changes are eventually committed. Workspace-level pointers are outside the Git checkout.
+  The contract is no longer hidden by `.gitignore`. At audit time it was an uncommitted local file; it has
+  since been committed and is tracked, and the ignore rules re-include it explicitly so a future broad rule
+  cannot hide it again. Workspace-level pointers are outside the Git checkout.
 - [Docs/README.md](README.md) separates normative requirements, lifecycle/decisions, creative canon,
   operational references, and history. Archived paths that still hold active creative/build/provenance
   references are explained. The old untracked/no-history assertion was removed.

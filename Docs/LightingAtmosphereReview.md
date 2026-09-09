@@ -3,11 +3,17 @@ title: M01 lighting and atmosphere review
 author: Angelis Pseftis
 creator: Angelis Pseftis
 created: 2026-09-05
-updated: 2026-09-05
-status: In progress; camera comparison complete, sun correction awaiting compilation and fresh load
+updated: 2026-09-09
+status: Dated 2026-09-05 lighting pass record; its open items were not re-executed after that date
 ---
 
 # M01 lighting and atmosphere review
+
+**Standing (corrected 2026-09-09):** this is a dated record of the 2026-09-05 pass, not live work.
+The closing items it leaves open — sun-fix compilation and fresh load, whole-map motion, packaged
+performance, stress, accessibility, and owner acceptance — were not re-executed after 2026-09-05, and
+this correction re-ran none of them. Verify current lighting state against source and
+[RequirementsState.md](RequirementsState.md) before acting on any finding here.
 
 This is the authoritative record for the Phase 5 lighting pass authorized on
 2026-09-05. It follows [Requirements.md](Requirements.md),
