@@ -1497,3 +1497,52 @@ blockquote small {
     flex: 1 1 130px;
   }
 }
+
+/* Audio toggle button icon/text spans */
+.audio-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.audio-text {
+  font: 600 11px 'DM Mono', monospace;
+  letter-spacing: 0.04em;
+}
+
+/* Lab toggle modifier classes — inherit .lab-btn, just clarify selection */
+.lab-hud-toggle,
+.lab-menu-toggle {
+  min-width: 180px;
+}
+
+/* Gallery evidence-badge in context */
+.gallery-display-area .evidence-figure {
+  position: relative;
+}
+
+.gallery-display-area .evidence-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+}
+
+/* Gallery display image transitions */
+#gallery-display-img,
+#ui-showcase-display-img {
+  transition: opacity 0.15s ease;
+  min-height: 200px;
+  object-fit: cover;
+  width: 100%;
+  height: auto;
+}
+
+/* Engine roster figure spacing */
+#faction-engine-roster-figure {
+  margin-top: 20px;
+}
+
+/* Faction display panel grid spacing fix */
+.faction-display-panel .evidence-figure + .evidence-figure {
+  margin-top: 16px;
+}
