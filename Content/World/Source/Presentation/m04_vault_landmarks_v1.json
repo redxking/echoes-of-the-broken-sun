@@ -1,0 +1,204 @@
+{
+  "format": "echoes-mission-landmarks",
+  "version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M04",
+  "map_id": "unburied-road-vaults",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-004",
+    "map_concepts_reference": "MapConcepts#M04"
+  },
+  "terrain_source_path": "Content/World/Source/Campaign/m04_unburied-road-vaults_v1.json",
+  "terrain_source_sha256": "532c6953893689090f55a6e03147b1824537a6e707de36a7cd9eb9130141d36d",
+  "records": [
+    {
+      "id": "vault-paving-01",
+      "kind": "RoadPaving",
+      "x": 14,
+      "y": 28,
+      "yaw": 0
+    },
+    {
+      "id": "vault-roadvault-01a",
+      "kind": "RoadVault",
+      "x": 17,
+      "y": 31,
+      "yaw": 0
+    },
+    {
+      "id": "vault-spinemarker-01b",
+      "kind": "SpineMarker",
+      "x": 11,
+      "y": 31,
+      "yaw": 90
+    },
+    {
+      "id": "vault-paving-02",
+      "kind": "RoadPaving",
+      "x": 14,
+      "y": 37,
+      "yaw": 90
+    },
+    {
+      "id": "vault-roadvault-02a",
+      "kind": "RoadVault",
+      "x": 17,
+      "y": 35,
+      "yaw": 90
+    },
+    {
+      "id": "vault-spinemarker-02b",
+      "kind": "SpineMarker",
+      "x": 11,
+      "y": 35,
+      "yaw": 180
+    },
+    {
+      "id": "vault-paving-03",
+      "kind": "RoadPaving",
+      "x": 20,
+      "y": 43,
+      "yaw": 180
+    },
+    {
+      "id": "vault-roadvault-03a",
+      "kind": "RoadVault",
+      "x": 18,
+      "y": 35,
+      "yaw": 180
+    },
+    {
+      "id": "vault-spinemarker-03b",
+      "kind": "SpineMarker",
+      "x": 20,
+      "y": 32,
+      "yaw": 270
+    },
+    {
+      "id": "vault-paving-04",
+      "kind": "RoadPaving",
+      "x": 32,
+      "y": 28,
+      "yaw": 270
+    },
+    {
+      "id": "vault-roadvault-04a",
+      "kind": "RoadVault",
+      "x": 36,
+      "y": 31,
+      "yaw": 270
+    },
+    {
+      "id": "vault-spinemarker-04b",
+      "kind": "SpineMarker",
+      "x": 28,
+      "y": 31,
+      "yaw": 0
+    },
+    {
+      "id": "vault-paving-05",
+      "kind": "RoadPaving",
+      "x": 32,
+      "y": 37,
+      "yaw": 0
+    },
+    {
+      "id": "vault-roadvault-05a",
+      "kind": "RoadVault",
+      "x": 36,
+      "y": 35,
+      "yaw": 0
+    },
+    {
+      "id": "vault-spinemarker-05b",
+      "kind": "SpineMarker",
+      "x": 28,
+      "y": 35,
+      "yaw": 90
+    },
+    {
+      "id": "vault-paving-06",
+      "kind": "RoadPaving",
+      "x": 38,
+      "y": 43,
+      "yaw": 90
+    },
+    {
+      "id": "vault-roadvault-06a",
+      "kind": "RoadVault",
+      "x": 38,
+      "y": 35,
+      "yaw": 90
+    },
+    {
+      "id": "vault-spinemarker-06b",
+      "kind": "SpineMarker",
+      "x": 37,
+      "y": 35,
+      "yaw": 180
+    },
+    {
+      "id": "vault-paving-07",
+      "kind": "RoadPaving",
+      "x": 50,
+      "y": 28,
+      "yaw": 180
+    },
+    {
+      "id": "vault-roadvault-07a",
+      "kind": "RoadVault",
+      "x": 47,
+      "y": 31,
+      "yaw": 180
+    },
+    {
+      "id": "vault-spinemarker-07b",
+      "kind": "SpineMarker",
+      "x": 53,
+      "y": 31,
+      "yaw": 270
+    },
+    {
+      "id": "vault-paving-08",
+      "kind": "RoadPaving",
+      "x": 49,
+      "y": 35,
+      "yaw": 270
+    },
+    {
+      "id": "vault-roadvault-08a",
+      "kind": "RoadVault",
+      "x": 47,
+      "y": 35,
+      "yaw": 270
+    },
+    {
+      "id": "vault-spinemarker-08b",
+      "kind": "SpineMarker",
+      "x": 47,
+      "y": 34,
+      "yaw": 0
+    },
+    {
+      "id": "vault-paving-09",
+      "kind": "RoadPaving",
+      "x": 44,
+      "y": 40,
+      "yaw": 0
+    },
+    {
+      "id": "vault-roadvault-09a",
+      "kind": "RoadVault",
+      "x": 44,
+      "y": 35,
+      "yaw": 0
+    },
+    {
+      "id": "vault-spinemarker-09b",
+      "kind": "SpineMarker",
+      "x": 44,
+      "y": 34,
+      "yaw": 90
+    }
+  ]
+}

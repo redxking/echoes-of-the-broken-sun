@@ -1,0 +1,267 @@
+{
+  "format": "echoes-mission-landmarks",
+  "version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M06",
+  "map_id": "names-without-births-district",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-006",
+    "map_concepts_reference": "MapConcepts#M06"
+  },
+  "terrain_source_path": "Content/World/Source/Campaign/m06_names-without-births-district_v1.json",
+  "terrain_source_sha256": "a70ce5089096fe776884eead58441bb19538a34bc818ae52adf6b3ddcb6190a4",
+  "records": [
+    {
+      "id": "district-paving-01",
+      "kind": "DistrictPaving",
+      "x": 16,
+      "y": 22,
+      "yaw": 0
+    },
+    {
+      "id": "district-censushall-01a",
+      "kind": "CensusHall",
+      "x": 11,
+      "y": 28,
+      "yaw": 0
+    },
+    {
+      "id": "district-shelterframe-01b",
+      "kind": "ShelterFrame",
+      "x": 10,
+      "y": 28,
+      "yaw": 90
+    },
+    {
+      "id": "district-paving-02",
+      "kind": "DistrictPaving",
+      "x": 16,
+      "y": 16,
+      "yaw": 90
+    },
+    {
+      "id": "district-censushall-02a",
+      "kind": "CensusHall",
+      "x": 11,
+      "y": 29,
+      "yaw": 90
+    },
+    {
+      "id": "district-shelterframe-02b",
+      "kind": "ShelterFrame",
+      "x": 26,
+      "y": 25,
+      "yaw": 180
+    },
+    {
+      "id": "district-paving-03",
+      "kind": "DistrictPaving",
+      "x": 14,
+      "y": 48,
+      "yaw": 180
+    },
+    {
+      "id": "district-censushall-03a",
+      "kind": "CensusHall",
+      "x": 11,
+      "y": 41,
+      "yaw": 180
+    },
+    {
+      "id": "district-shelterframe-03b",
+      "kind": "ShelterFrame",
+      "x": 14,
+      "y": 58,
+      "yaw": 270
+    },
+    {
+      "id": "district-paving-04",
+      "kind": "DistrictPaving",
+      "x": 22,
+      "y": 44,
+      "yaw": 270
+    },
+    {
+      "id": "district-censushall-04a",
+      "kind": "CensusHall",
+      "x": 26,
+      "y": 40,
+      "yaw": 270
+    },
+    {
+      "id": "district-shelterframe-04b",
+      "kind": "ShelterFrame",
+      "x": 26,
+      "y": 39,
+      "yaw": 0
+    },
+    {
+      "id": "district-paving-05",
+      "kind": "DistrictPaving",
+      "x": 32,
+      "y": 22,
+      "yaw": 0
+    },
+    {
+      "id": "district-censushall-05a",
+      "kind": "CensusHall",
+      "x": 33,
+      "y": 25,
+      "yaw": 0
+    },
+    {
+      "id": "district-shelterframe-05b",
+      "kind": "ShelterFrame",
+      "x": 34,
+      "y": 25,
+      "yaw": 90
+    },
+    {
+      "id": "district-paving-06",
+      "kind": "DistrictPaving",
+      "x": 28,
+      "y": 16,
+      "yaw": 90
+    },
+    {
+      "id": "district-censushall-06a",
+      "kind": "CensusHall",
+      "x": 28,
+      "y": 25,
+      "yaw": 90
+    },
+    {
+      "id": "district-shelterframe-06b",
+      "kind": "ShelterFrame",
+      "x": 29,
+      "y": 25,
+      "yaw": 180
+    },
+    {
+      "id": "district-paving-07",
+      "kind": "DistrictPaving",
+      "x": 32,
+      "y": 48,
+      "yaw": 180
+    },
+    {
+      "id": "district-censushall-07a",
+      "kind": "CensusHall",
+      "x": 33,
+      "y": 40,
+      "yaw": 180
+    },
+    {
+      "id": "district-shelterframe-07b",
+      "kind": "ShelterFrame",
+      "x": 30,
+      "y": 40,
+      "yaw": 270
+    },
+    {
+      "id": "district-paving-08",
+      "kind": "DistrictPaving",
+      "x": 32,
+      "y": 44,
+      "yaw": 270
+    },
+    {
+      "id": "district-censushall-08a",
+      "kind": "CensusHall",
+      "x": 33,
+      "y": 39,
+      "yaw": 270
+    },
+    {
+      "id": "district-shelterframe-08b",
+      "kind": "ShelterFrame",
+      "x": 34,
+      "y": 40,
+      "yaw": 0
+    },
+    {
+      "id": "district-paving-09",
+      "kind": "DistrictPaving",
+      "x": 48,
+      "y": 22,
+      "yaw": 0
+    },
+    {
+      "id": "district-censushall-09a",
+      "kind": "CensusHall",
+      "x": 51,
+      "y": 28,
+      "yaw": 0
+    },
+    {
+      "id": "district-shelterframe-09b",
+      "kind": "ShelterFrame",
+      "x": 52,
+      "y": 28,
+      "yaw": 90
+    },
+    {
+      "id": "district-paving-10",
+      "kind": "DistrictPaving",
+      "x": 45,
+      "y": 16,
+      "yaw": 90
+    },
+    {
+      "id": "district-censushall-10a",
+      "kind": "CensusHall",
+      "x": 45,
+      "y": 13,
+      "yaw": 90
+    },
+    {
+      "id": "district-shelterframe-10b",
+      "kind": "ShelterFrame",
+      "x": 45,
+      "y": 12,
+      "yaw": 180
+    },
+    {
+      "id": "district-paving-11",
+      "kind": "DistrictPaving",
+      "x": 39,
+      "y": 37,
+      "yaw": 180
+    },
+    {
+      "id": "district-censushall-11a",
+      "kind": "CensusHall",
+      "x": 37,
+      "y": 37,
+      "yaw": 180
+    },
+    {
+      "id": "district-shelterframe-11b",
+      "kind": "ShelterFrame",
+      "x": 36,
+      "y": 37,
+      "yaw": 270
+    },
+    {
+      "id": "district-paving-12",
+      "kind": "DistrictPaving",
+      "x": 46,
+      "y": 37,
+      "yaw": 270
+    },
+    {
+      "id": "district-censushall-12a",
+      "kind": "CensusHall",
+      "x": 51,
+      "y": 37,
+      "yaw": 270
+    },
+    {
+      "id": "district-shelterframe-12b",
+      "kind": "ShelterFrame",
+      "x": 52,
+      "y": 37,
+      "yaw": 0
+    }
+  ]
+}

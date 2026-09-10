@@ -1,0 +1,141 @@
+{
+  "format": "echoes-mission-landmarks",
+  "version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M07",
+  "map_id": "listening-spine-ridge",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-007",
+    "map_concepts_reference": "MapConcepts#M07"
+  },
+  "terrain_source_path": "Content/World/Source/Campaign/m07_listening-spine-ridge_v1.json",
+  "terrain_source_sha256": "7977033d5ced5032741fcebe4dffbd243803a61e61e1af382e7de8faafa6bfd0",
+  "records": [
+    {
+      "id": "ridge-paving-01",
+      "kind": "RidgePaving",
+      "x": 14,
+      "y": 28,
+      "yaw": 0
+    },
+    {
+      "id": "ridge-listeningspine-01a",
+      "kind": "ListeningSpine",
+      "x": 5,
+      "y": 28,
+      "yaw": 0
+    },
+    {
+      "id": "ridge-anchorstone-01b",
+      "kind": "AnchorStone",
+      "x": 5,
+      "y": 27,
+      "yaw": 90
+    },
+    {
+      "id": "ridge-paving-02",
+      "kind": "RidgePaving",
+      "x": 14,
+      "y": 50,
+      "yaw": 90
+    },
+    {
+      "id": "ridge-listeningspine-02a",
+      "kind": "ListeningSpine",
+      "x": 19,
+      "y": 54,
+      "yaw": 90
+    },
+    {
+      "id": "ridge-anchorstone-02b",
+      "kind": "AnchorStone",
+      "x": 19,
+      "y": 55,
+      "yaw": 180
+    },
+    {
+      "id": "ridge-paving-03",
+      "kind": "RidgePaving",
+      "x": 32,
+      "y": 28,
+      "yaw": 180
+    },
+    {
+      "id": "ridge-listeningspine-03a",
+      "kind": "ListeningSpine",
+      "x": 32,
+      "y": 13,
+      "yaw": 180
+    },
+    {
+      "id": "ridge-anchorstone-03b",
+      "kind": "AnchorStone",
+      "x": 32,
+      "y": 12,
+      "yaw": 270
+    },
+    {
+      "id": "ridge-paving-04",
+      "kind": "RidgePaving",
+      "x": 32,
+      "y": 50,
+      "yaw": 270
+    },
+    {
+      "id": "ridge-listeningspine-04a",
+      "kind": "ListeningSpine",
+      "x": 32,
+      "y": 54,
+      "yaw": 270
+    },
+    {
+      "id": "ridge-anchorstone-04b",
+      "kind": "AnchorStone",
+      "x": 32,
+      "y": 55,
+      "yaw": 0
+    },
+    {
+      "id": "ridge-paving-05",
+      "kind": "RidgePaving",
+      "x": 48,
+      "y": 20,
+      "yaw": 0
+    },
+    {
+      "id": "ridge-listeningspine-05a",
+      "kind": "ListeningSpine",
+      "x": 53,
+      "y": 20,
+      "yaw": 0
+    },
+    {
+      "id": "ridge-anchorstone-05b",
+      "kind": "AnchorStone",
+      "x": 53,
+      "y": 19,
+      "yaw": 90
+    },
+    {
+      "id": "ridge-paving-06",
+      "kind": "RidgePaving",
+      "x": 25,
+      "y": 50,
+      "yaw": 90
+    },
+    {
+      "id": "ridge-listeningspine-06a",
+      "kind": "ListeningSpine",
+      "x": 25,
+      "y": 54,
+      "yaw": 90
+    },
+    {
+      "id": "ridge-anchorstone-06b",
+      "kind": "AnchorStone",
+      "x": 24,
+      "y": 54,
+      "yaw": 180
+    }
+  ]
+}

@@ -334,3 +334,71 @@ class Landmarks(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DressedMissionCoverage(unittest.TestCase):
+    """M04-M07 were undressed: only three packs existed, so ActiveMissionLandmarkPack
+    returned nullptr for ordinals 4-15 and those battlefields rendered as tinted
+    ground. These assertions hold the newly dressed missions in place and, more
+    importantly, refuse a pack whose meshes are not actually registered on disk --
+    the runtime refuses the whole pack in that case, and a green suite should not
+    disagree with it.
+    """
+
+    HEADER = ROOT / "Content/World/Generated/Presentation/EchoesMissionLandmarks.h"
+    ENVIRONMENT = ROOT / "Content/Art/Generated/World/Environment"
+    DRESSED = ("M01", "M02", "M03", "M04", "M05", "M06", "M07")
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.header = cls.HEADER.read_text()
+
+    def test_seven_packs_are_declared(self) -> None:
+        self.assertIn(
+            "std::array<Pack, %d> kPacks" % len(self.DRESSED), self.header,
+            "the pack table must declare every dressed mission",
+        )
+        for code in self.DRESSED:
+            with self.subTest(mission=code):
+                self.assertIn('"%s", %s::kMapId' % (code, code.lower()), self.header)
+
+    def test_every_kind_mesh_is_registered_on_disk(self) -> None:
+        import re
+
+        meshes = set()
+        for block in re.findall(r"kKindMeshes\{\{(.*?)\}\}", self.header):
+            meshes |= {token.strip().strip('"') for token in block.split(",") if token.strip()}
+        self.assertTrue(meshes, "no kind meshes were emitted")
+        missing = sorted(
+            name for name in meshes
+            if not (self.ENVIRONMENT / ("SM_World_%s.uasset" % name)).is_file()
+        )
+        self.assertEqual(
+            missing, [],
+            "these kind meshes are not registered, so the runtime refuses the whole pack",
+        )
+
+    def test_each_dressed_mission_places_records_at_its_objectives(self) -> None:
+        import glob
+
+        for code in ("M04", "M05", "M06", "M07"):
+            with self.subTest(mission=code):
+                pack_path = glob.glob(str(
+                    ROOT / "Content/World/Source/Presentation" / (code.lower() + "_*_landmarks_v1.json")
+                ))
+                self.assertEqual(len(pack_path), 1)
+                pack = json.loads(Path(pack_path[0]).read_text())
+                terrain = json.loads((ROOT / pack["terrain_source_path"]).read_text())
+                objectives = [
+                    (site["x"], site["y"]) for site in terrain["required_passable"]
+                    if not site["id"].startswith("resource")
+                ]
+                placed = {(record["x"], record["y"]) for record in pack["records"]}
+                near = [
+                    site for site in objectives
+                    if any(abs(px - site[0]) + abs(py - site[1]) <= 6 for px, py in placed)
+                ]
+                self.assertEqual(
+                    len(near), len(objectives),
+                    "every objective site must have authored props within six tiles",
+                )

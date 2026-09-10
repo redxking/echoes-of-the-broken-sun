@@ -18,6 +18,14 @@ MISSIONS = {
     "M03": ("ark-city-reserve-service", "CampaignCityReserve", (
         ("LifeSupportBank", True, "rotated-3x1"), ("TransitSupport", True, "rotated-3x1"),
         ("ArchiveStack", True, "rotated-3x1"), ("ReservePaving", False, None))),
+    "M04": ("unburied-road-vaults", "CampaignUnburiedRoad", (
+        ("RoadVault", True, None, "CavernFormation"), ("RoadPaving", False, None, "CavernGround"), ("SpineMarker", True, None, "BasaltFormation"))),
+    "M05": ("terms-of-continuance-corridor", "CampaignTermsOfContinuance", (
+        ("CeasefireMarker", True, None, "CivicFormation"), ("CorridorPaving", False, None, "CivicGround"), ("RelayMast", True, None, "BasaltFormation"))),
+    "M06": ("names-without-births-district", "CampaignNamesWithoutBirths", (
+        ("CensusHall", True, None, "CivicFormation"), ("DistrictPaving", False, None, "CivicGround"), ("ShelterFrame", True, None, "BasaltFormation"))),
+    "M07": ("listening-spine-ridge", "CampaignShapeOfSilence", (
+        ("ListeningSpine", True, None, "ChoirFormation"), ("RidgePaving", False, None, "ChoirGround"), ("AnchorStone", True, None, "BasaltFormation"))),
     "M02": ("shivergrass-migration-basin", "CampaignSevenAccounts", (
         ("ObservationSill", True, "rotated-3x1"), ("RootingShoulder", True, None),
         ("PassagePaving", False, None))),
@@ -115,7 +123,9 @@ def parse_pack(root, supplied):
     if terrain_doc.get("mission_code") != mission or terrain_doc.get("map_id") != map_id:
         raise CompileError("terrain identity mismatch")
     masks = variants(terrain_doc, terrain_digest, mission, map_id, operation)
-    kinds = {name: (i, solid, footprint) for i, (name, solid, footprint) in enumerate(kind_specs)}
+    # A kind may name an existing registered mesh family as a fourth element.
+    # Without one the mesh is the historical per-mission asset, SM_World_<M><Kind>.
+    kinds = {spec[0]: (i, spec[1], spec[2]) for i, spec in enumerate(kind_specs)}
     records = doc["records"]
     if not isinstance(records, list) or not records or len(records) > 128: raise CompileError("records required and bounded")
     ids, occupied, parsed = set(), set(), []
@@ -155,14 +165,16 @@ def parse_pack(root, supplied):
         if any(any((cell in mask) != solid for cell in cells) for mask in masks):
             raise CompileError("record terrain mismatch across doctrine variants")
         parsed.append((identifier, kind_index, x, y, yaw, solid, *footprint, *pivot))
+    kind_meshes = [spec[3] if len(spec) > 3 else "%s%s" % (mission, spec[0]) for spec in kind_specs]
     return {"mission": mission, "ordinal": ordinal, "map_id": map_id, "operation": operation, "kinds": kind_specs,
+            "kind_meshes": kind_meshes,
             "digest": digest, "terrain_digest": terrain_digest, "records": parsed}
 
 def render(packs):
     lines = ["// GENERATED FILE - do not edit by hand.", "#pragma once", "#include <array>", "#include <cstddef>", "#include <cstdint>", "#include <string_view>",
         "namespace echoes::world::mission_landmarks {",
         "struct Record { const char* id; std::uint8_t kind, x, y; std::uint16_t yaw; bool requires_blocked; std::uint8_t footprint_x0, footprint_x1, footprint_y0, footprint_y1; std::int8_t pivot_x_half_tiles, pivot_y_half_tiles; };",
-        "struct Pack { std::string_view mission_code, map_id, operation_mode, terrain_source_sha256, source_sha256; std::uint8_t mission_ordinal; const Record* records; std::size_t record_count; const char* const* kind_names; std::size_t kind_count; };", ""]
+        "struct Pack { std::string_view mission_code, map_id, operation_mode, terrain_source_sha256, source_sha256; std::uint8_t mission_ordinal; const Record* records; std::size_t record_count; const char* const* kind_names; const char* const* kind_meshes; std::size_t kind_count; };", ""]
     for pack in packs:
         ns = pack["mission"].lower()
         lines += ["namespace %s {" % ns, 'inline constexpr const char* kMapId = "%s";' % pack["map_id"],
@@ -171,13 +183,14 @@ def render(packs):
             'inline constexpr const char* kTerrainSourceSha256 = "%s";' % pack["terrain_digest"],
             'inline constexpr const char* kSourceSha256 = "%s";' % pack["digest"],
             "inline constexpr std::array<const char*, %d> kKindNames{{%s}};" % (len(pack["kinds"]), ", ".join('"%s"' % k[0] for k in pack["kinds"])),
+            "inline constexpr std::array<const char*, %d> kKindMeshes{{%s}};" % (len(pack["kind_meshes"]), ", ".join('"%s"' % m for m in pack["kind_meshes"])),
             "inline constexpr std::array<Record, %d> kRecords{{" % len(pack["records"])]
         lines += ['    Record{"%s", %d, %d, %d, %d, %s, %d, %d, %d, %d, %d, %d},' % (a,b,c,d,e,"true" if f else "false",g,h,i,j,k,l) for a,b,c,d,e,f,g,h,i,j,k,l in pack["records"]]
         lines += ["}};", "} // namespace %s" % ns, ""]
     lines += ["inline constexpr std::array<Pack, %d> kPacks{{" % len(packs)]
     for pack in packs:
         ns = pack["mission"].lower()
-        lines.append('    {"%s", %s::kMapId, %s::kOperationMode, %s::kTerrainSourceSha256, %s::kSourceSha256, %s::kMissionOrdinal, %s::kRecords.data(), %s::kRecords.size(), %s::kKindNames.data(), %s::kKindNames.size()},' % (pack["mission"],ns,ns,ns,ns,ns,ns,ns,ns,ns))
+        lines.append('    {"%s", %s::kMapId, %s::kOperationMode, %s::kTerrainSourceSha256, %s::kSourceSha256, %s::kMissionOrdinal, %s::kRecords.data(), %s::kRecords.size(), %s::kKindNames.data(), %s::kKindMeshes.data(), %s::kKindNames.size()},' % (pack["mission"],ns,ns,ns,ns,ns,ns,ns,ns,ns,ns))
     lines += ["}};", "inline constexpr const Pack* FindPack(std::uint8_t ordinal, std::string_view map_id) { for (const auto& pack : kPacks) if (pack.mission_ordinal == ordinal && pack.map_id == map_id) return &pack; return nullptr; }", "",
         "// Legacy M01 aliases preserve existing generated-header consumers.",
         "inline constexpr const char* kMapId = m01::kMapId;", "inline constexpr std::uint8_t kMissionOrdinal = m01::kMissionOrdinal;",

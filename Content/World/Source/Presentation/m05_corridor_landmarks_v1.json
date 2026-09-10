@@ -1,0 +1,204 @@
+{
+  "format": "echoes-mission-landmarks",
+  "version": 1,
+  "author": "Angelis Pseftis",
+  "mission_code": "M05",
+  "map_id": "terms-of-continuance-corridor",
+  "production_brief": {
+    "mission_requirement": "SPEC-MSN-005",
+    "map_concepts_reference": "MapConcepts#M05"
+  },
+  "terrain_source_path": "Content/World/Source/Campaign/m05_terms-of-continuance-corridor_v1.json",
+  "terrain_source_sha256": "fa1443c58ef754de49d09218ce5b499f269f5a3776397fe86553bcf255110a4e",
+  "records": [
+    {
+      "id": "corridor-paving-01",
+      "kind": "CorridorPaving",
+      "x": 14,
+      "y": 27,
+      "yaw": 0
+    },
+    {
+      "id": "corridor-ceasefiremarker-01a",
+      "kind": "CeasefireMarker",
+      "x": 17,
+      "y": 30,
+      "yaw": 0
+    },
+    {
+      "id": "corridor-relaymast-01b",
+      "kind": "RelayMast",
+      "x": 11,
+      "y": 30,
+      "yaw": 90
+    },
+    {
+      "id": "corridor-paving-02",
+      "kind": "CorridorPaving",
+      "x": 14,
+      "y": 39,
+      "yaw": 90
+    },
+    {
+      "id": "corridor-ceasefiremarker-02a",
+      "kind": "CeasefireMarker",
+      "x": 10,
+      "y": 42,
+      "yaw": 90
+    },
+    {
+      "id": "corridor-relaymast-02b",
+      "kind": "RelayMast",
+      "x": 10,
+      "y": 43,
+      "yaw": 180
+    },
+    {
+      "id": "corridor-paving-03",
+      "kind": "CorridorPaving",
+      "x": 20,
+      "y": 47,
+      "yaw": 180
+    },
+    {
+      "id": "corridor-ceasefiremarker-03a",
+      "kind": "CeasefireMarker",
+      "x": 10,
+      "y": 47,
+      "yaw": 180
+    },
+    {
+      "id": "corridor-relaymast-03b",
+      "kind": "RelayMast",
+      "x": 9,
+      "y": 47,
+      "yaw": 270
+    },
+    {
+      "id": "corridor-paving-04",
+      "kind": "CorridorPaving",
+      "x": 32,
+      "y": 27,
+      "yaw": 270
+    },
+    {
+      "id": "corridor-ceasefiremarker-04a",
+      "kind": "CeasefireMarker",
+      "x": 37,
+      "y": 30,
+      "yaw": 270
+    },
+    {
+      "id": "corridor-relaymast-04b",
+      "kind": "RelayMast",
+      "x": 27,
+      "y": 30,
+      "yaw": 0
+    },
+    {
+      "id": "corridor-paving-05",
+      "kind": "CorridorPaving",
+      "x": 32,
+      "y": 39,
+      "yaw": 0
+    },
+    {
+      "id": "corridor-ceasefiremarker-05a",
+      "kind": "CeasefireMarker",
+      "x": 27,
+      "y": 34,
+      "yaw": 0
+    },
+    {
+      "id": "corridor-relaymast-05b",
+      "kind": "RelayMast",
+      "x": 37,
+      "y": 34,
+      "yaw": 90
+    },
+    {
+      "id": "corridor-paving-06",
+      "kind": "CorridorPaving",
+      "x": 32,
+      "y": 47,
+      "yaw": 90
+    },
+    {
+      "id": "corridor-ceasefiremarker-06a",
+      "kind": "CeasefireMarker",
+      "x": 35,
+      "y": 60,
+      "yaw": 90
+    },
+    {
+      "id": "corridor-relaymast-06b",
+      "kind": "RelayMast",
+      "x": 28,
+      "y": 60,
+      "yaw": 180
+    },
+    {
+      "id": "corridor-paving-07",
+      "kind": "CorridorPaving",
+      "x": 50,
+      "y": 27,
+      "yaw": 180
+    },
+    {
+      "id": "corridor-ceasefiremarker-07a",
+      "kind": "CeasefireMarker",
+      "x": 47,
+      "y": 30,
+      "yaw": 180
+    },
+    {
+      "id": "corridor-relaymast-07b",
+      "kind": "RelayMast",
+      "x": 53,
+      "y": 30,
+      "yaw": 270
+    },
+    {
+      "id": "corridor-paving-08",
+      "kind": "CorridorPaving",
+      "x": 44,
+      "y": 38,
+      "yaw": 270
+    },
+    {
+      "id": "corridor-ceasefiremarker-08a",
+      "kind": "CeasefireMarker",
+      "x": 44,
+      "y": 34,
+      "yaw": 270
+    },
+    {
+      "id": "corridor-relaymast-08b",
+      "kind": "RelayMast",
+      "x": 44,
+      "y": 33,
+      "yaw": 0
+    },
+    {
+      "id": "corridor-paving-09",
+      "kind": "CorridorPaving",
+      "x": 44,
+      "y": 47,
+      "yaw": 0
+    },
+    {
+      "id": "corridor-ceasefiremarker-09a",
+      "kind": "CeasefireMarker",
+      "x": 53,
+      "y": 46,
+      "yaw": 0
+    },
+    {
+      "id": "corridor-relaymast-09b",
+      "kind": "RelayMast",
+      "x": 54,
+      "y": 46,
+      "yaw": 90
+    }
+  ]
+}
