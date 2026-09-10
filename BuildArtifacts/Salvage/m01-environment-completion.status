@@ -1,0 +1,12 @@
+ M Docs/Archive/AssetRegister.md
+ M Docs/WorldMapWorkLog.md
+ M Scripts/echoes_cliff_material.py
+ M Scripts/echoes_evacuation_props.py
+ M Scripts/generate_art_assets.py
+ M Scripts/generate_art_assets.sh
+ M Scripts/test_content.sh
+ M Source/EchoesOfTheBrokenSun/Private/EchoesCliffMesh.cpp
+ M Tests/Content/test_evacuation_props.py
+ M Tests/World/test_glass_scar_compiled_map.py
+?? Tests/Content/test_cliff_material_validation.py
+?? Tests/Tools/test_art_generation_routing.py

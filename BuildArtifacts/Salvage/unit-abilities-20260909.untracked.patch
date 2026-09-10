@@ -1,0 +1,231 @@
+diff --git a/Source/EchoesSimCore/Public/EchoesSimCore/IntervalBinding.h b/Source/EchoesSimCore/Public/EchoesSimCore/IntervalBinding.h
+new file mode 100644
+index 0000000..023db90
+--- /dev/null
++++ b/Source/EchoesSimCore/Public/EchoesSimCore/IntervalBinding.h
+@@ -0,0 +1,118 @@
++#pragma once
++
++#include <cstdint>
++#include <limits>
++
++namespace echoes::sim {
++
++// SPEC-UNIT-011: fixed simulation ticks; presentation never advances a tether.
++// These defaults are the approved contract, not balance values inferred from visuals.
++struct IntervalBindingRules final {
++    std::uint64_t durationTicks = 80;
++    std::uint64_t lineOfSightGraceTicks = 20;
++    std::int32_t dawnCost = 25;
++    std::int32_t acquisitionRangeCm = 500;
++    std::int32_t breakRangeCm = 700;
++    std::int32_t movementPercent = 65;
++};
++
++// Stored on the caster. The target's slow/ability lock is derived from live
++// tethers, so overlapping Wardens cannot multiply the same 35% movement slow.
++struct IntervalBindingState final {
++    std::uint32_t target = 0;
++    std::uint64_t expiresAtTick = 0;
++    std::uint64_t lineOfSightLostAtTick = 0;
++    bool trackingLineOfSightLoss = false;
++
++    friend bool operator==(const IntervalBindingState&,
++                           const IntervalBindingState&) = default;
++};
++
++enum class IntervalBindingEnd : std::uint8_t {
++    None,
++    Expired,
++    CasterUnavailable,
++    TargetUnavailable,
++    RangeBroken,
++    LineOfSightBroken,
++};
++
++// Simulation supplies these facts from authoritative positions/ownership and
++// terrain line tests. Camera visibility, animation and wall-clock time are absent.
++struct IntervalBindingObservation final {
++    bool casterAvailable = false;
++    bool targetAvailable = false;
++    bool withinBreakRange = false;
++    bool hasLineOfSight = false;
++};
++
++// Compare squared fixed-point distance without floating point or square roots.
++// Reject large deltas before squaring so malformed/adversarial positions cannot
++// overflow even though both endpoint coordinates are signed 32-bit values.
++[[nodiscard]] inline bool WithinIntervalBindingRange(
++    std::int64_t deltaXRaw, std::int64_t deltaYRaw, std::int32_t rangeRaw) {
++    if (rangeRaw < 0) return false;
++    const std::int64_t radius = rangeRaw;
++    if (deltaXRaw < -radius || deltaXRaw > radius ||
++        deltaYRaw < -radius || deltaYRaw > radius) return false;
++    return deltaXRaw * deltaXRaw + deltaYRaw * deltaYRaw <= radius * radius;
++}
++
++// Loader-side structural validation; entity existence/ownership and spatial
++// conditions are checked against Simulation only after the whole snapshot loads.
++// A malformed record must never be partially installed into an active match.
++[[nodiscard]] inline bool IsValidIntervalBindingState(
++    const IntervalBindingState& state, std::uint64_t tick,
++    const IntervalBindingRules& rules = {}) {
++    if (state.target == 0) return state == IntervalBindingState{};
++    if (state.expiresAtTick <= tick || state.expiresAtTick < rules.durationTicks ||
++        state.expiresAtTick - tick > rules.durationTicks) return false;
++    if (!state.trackingLineOfSightLoss) return state.lineOfSightLostAtTick == 0;
++    return state.lineOfSightLostAtTick >= state.expiresAtTick - rules.durationTicks &&
++        state.lineOfSightLostAtTick <= tick &&
++        tick - state.lineOfSightLostAtTick < rules.lineOfSightGraceTicks;
++}
++
++[[nodiscard]] inline bool StartIntervalBinding(
++    IntervalBindingState& state, std::uint32_t target, std::uint64_t tick,
++    const IntervalBindingRules& rules = {}) {
++    // Admission and payment belong to Simulation. Invalid deadlines must leave
++    // an existing tether intact and must be rejected before charging resources.
++    if (target == 0 || rules.durationTicks == 0 ||
++        tick > std::numeric_limits<std::uint64_t>::max() - rules.durationTicks) {
++        return false;
++    }
++    state = {target, tick + rules.durationTicks, 0, false};
++    return true;
++}
++
++[[nodiscard]] inline IntervalBindingEnd AdvanceIntervalBinding(
++    IntervalBindingState& state, std::uint64_t tick,
++    const IntervalBindingObservation& observation,
++    const IntervalBindingRules& rules = {}) {
++    if (state.target == 0) return IntervalBindingEnd::None;
++    IntervalBindingEnd reason = IntervalBindingEnd::None;
++    if (!observation.casterAvailable) reason = IntervalBindingEnd::CasterUnavailable;
++    else if (!observation.targetAvailable) reason = IntervalBindingEnd::TargetUnavailable;
++    else if (tick >= state.expiresAtTick) reason = IntervalBindingEnd::Expired;
++    else if (!observation.withinBreakRange) reason = IntervalBindingEnd::RangeBroken;
++    else if (observation.hasLineOfSight) {
++        state.lineOfSightLostAtTick = 0;
++        state.trackingLineOfSightLoss = false;
++    } else {
++        // Timestamp loss rather than counting calls. Repeated observations in
++        // one tick, pause, and save/reload cannot consume the 20-tick grace early.
++        if (!state.trackingLineOfSightLoss) {
++            state.lineOfSightLostAtTick = tick;
++            state.trackingLineOfSightLoss = true;
++        }
++        if (tick >= state.lineOfSightLostAtTick &&
++            tick - state.lineOfSightLostAtTick >= rules.lineOfSightGraceTicks) {
++            reason = IntervalBindingEnd::LineOfSightBroken;
++        }
++    }
++    if (reason != IntervalBindingEnd::None) state = {};
++    return reason;
++}
++
++} // namespace echoes::sim
+diff --git a/Tests/Native/IntervalBindingTests.cpp b/Tests/Native/IntervalBindingTests.cpp
+new file mode 100644
+index 0000000..d546a68
+--- /dev/null
++++ b/Tests/Native/IntervalBindingTests.cpp
+@@ -0,0 +1,101 @@
++// Author: Angelis Pseftis
++// Standalone deterministic boundary checks. This is not Simulation, save-file,
++// network, rendered-input, or owner qualification of the eventual ability.
++#include "EchoesSimCore/IntervalBinding.h"
++#include <iostream>
++#include <limits>
++using namespace echoes::sim;
++
++int main() {
++    int failures = 0;
++    const auto check = [&](bool condition, const char* message) {
++        if (!condition) { std::cerr << message << '\n'; ++failures; }
++        return condition;
++    };
++    // Echoes uses 200cm tiles and Q22.10 coordinates: 500cm=2560 raw,
++    // 700cm=3584 raw. Boundary oracles are independent of the range helper.
++    check(WithinIntervalBindingRange(2560, 0, 2560), "500cm acquisition boundary is inclusive");
++    check(!WithinIntervalBindingRange(2565, 0, 2560), "501cm cannot acquire");
++    check(WithinIntervalBindingRange(3584, 0, 3584), "700cm tether boundary is inclusive");
++    check(!WithinIntervalBindingRange(3589, 0, 3584), "701cm breaks the tether");
++    check(WithinIntervalBindingRange(1536, 2048, 2560), "3-4-5 diagonal uses circular range");
++    check(!WithinIntervalBindingRange(2560, 2560, 2560), "square-corner target is outside circular range");
++    check(!WithinIntervalBindingRange(std::numeric_limits<std::int64_t>::min(), 0, 2560),
++          "extreme negative delta fails safely");
++    check(!WithinIntervalBindingRange(std::numeric_limits<std::int64_t>::max(), 0, 2560),
++          "extreme positive delta fails safely");
++    const IntervalBindingObservation clear{true, true, true, true};
++    const IntervalBindingObservation hidden{true, true, true, false};
++    IntervalBindingState state;
++    if (!check(StartIntervalBinding(state, 42, 100), "valid bind starts")) return 1;
++    check(AdvanceIntervalBinding(state, 179, clear) == IntervalBindingEnd::None && state.target == 42,
++          "bind remains active before its 80-tick deadline");
++    check(AdvanceIntervalBinding(state, 180, clear) == IntervalBindingEnd::Expired && state == IntervalBindingState{},
++          "expiry clears all tether authority at exactly 80 ticks");
++    check(AdvanceIntervalBinding(state, 181, clear) == IntervalBindingEnd::None,
++          "expiry emits no repeated termination");
++
++    if (!check(StartIntervalBinding(state, 42, 200), "LOS fixture starts")) return 1;
++    check(AdvanceIntervalBinding(state, 205, hidden) == IntervalBindingEnd::None, "LOS loss starts grace");
++    for (int i = 0; i < 100; ++i)
++        check(AdvanceIntervalBinding(state, 205, hidden) == IntervalBindingEnd::None,
++              "same-tick repeated observation cannot burn grace");
++    auto restored = state; // Only reducer state copying, not save-file coverage.
++    check(AdvanceIntervalBinding(restored, 224, hidden) == IntervalBindingEnd::None,
++          "copied interrupted tether retains 19-tick grace");
++    check(AdvanceIntervalBinding(restored, 225, hidden) == IntervalBindingEnd::LineOfSightBroken,
++          "copied interrupted tether breaks after 20 elapsed ticks");
++    check(AdvanceIntervalBinding(state, 224, clear) == IntervalBindingEnd::None &&
++          !state.trackingLineOfSightLoss, "clear LOS resets continuous loss");
++    check(AdvanceIntervalBinding(state, 225, hidden) == IntervalBindingEnd::None &&
++          state.lineOfSightLostAtTick == 225, "new LOS interruption gets new grace");
++    check(AdvanceIntervalBinding(state, 244, hidden) == IntervalBindingEnd::None, "new grace survives 19 ticks");
++    check(AdvanceIntervalBinding(state, 245, hidden) == IntervalBindingEnd::LineOfSightBroken, "new grace expires exactly");
++
++    if (!check(StartIntervalBinding(state, 42, 0), "zero-tick LOS fixture starts")) return 1;
++    check(AdvanceIntervalBinding(state, 0, hidden) == IntervalBindingEnd::None &&
++          state.trackingLineOfSightLoss, "loss at tick zero has an explicit presence flag");
++    check(AdvanceIntervalBinding(state, 19, hidden) == IntervalBindingEnd::None,
++          "tick-zero loss retains its original deadline");
++    check(AdvanceIntervalBinding(state, 20, hidden) == IntervalBindingEnd::LineOfSightBroken,
++          "tick-zero loss does not restart its grace timer");
++
++    for (const auto reason : {IntervalBindingEnd::CasterUnavailable, IntervalBindingEnd::TargetUnavailable,
++                              IntervalBindingEnd::RangeBroken}) {
++        if (!check(StartIntervalBinding(state, 42, 300), "hard break fixture starts")) return 1;
++        auto observation = clear;
++        if (reason == IntervalBindingEnd::CasterUnavailable) observation.casterAvailable = false;
++        if (reason == IntervalBindingEnd::TargetUnavailable) observation.targetAvailable = false;
++        if (reason == IntervalBindingEnd::RangeBroken) observation.withinBreakRange = false;
++        check(AdvanceIntervalBinding(state, 301, observation) == reason && state == IntervalBindingState{},
++              "death, missing target or range breach immediately release authority");
++    }
++    if (!check(StartIntervalBinding(state, 42, 400), "retarget fixture starts")) return 1;
++    const auto prior = state;
++    check(!StartIntervalBinding(state, 0, 410) && state == prior, "invalid target leaves existing tether unchanged");
++    check(!StartIntervalBinding(state, 43, std::numeric_limits<std::uint64_t>::max() - 79) && state == prior,
++          "overflow deadline leaves existing tether unchanged");
++    check(StartIntervalBinding(state, 43, 410) && state.target == 43 && state.expiresAtTick == 490,
++          "successful recast replaces prior tether without stale grace");
++    check(IsValidIntervalBindingState(state, 410), "live deadline is structurally loadable");
++    auto corrupt = state;
++    corrupt.expiresAtTick = 410;
++    check(!IsValidIntervalBindingState(corrupt, 410), "expired loaded authority is rejected");
++    corrupt = state; corrupt.expiresAtTick = 491;
++    check(!IsValidIntervalBindingState(corrupt, 410), "oversized remaining lifetime is rejected");
++    corrupt = state; corrupt.lineOfSightLostAtTick = 400;
++    check(!IsValidIntervalBindingState(corrupt, 410), "untracked stale LOS timestamp is rejected");
++    corrupt = state; corrupt.trackingLineOfSightLoss = true; corrupt.lineOfSightLostAtTick = 411;
++    check(!IsValidIntervalBindingState(corrupt, 410), "future LOS-loss time is rejected");
++    corrupt.expiresAtTick = 450; // Cast at370: the loss at390 can actually occur.
++    corrupt.lineOfSightLostAtTick = 390;
++    check(!IsValidIntervalBindingState(corrupt, 410), "exhausted LOS grace is rejected");
++    corrupt.lineOfSightLostAtTick = 391;
++    check(IsValidIntervalBindingState(corrupt, 410), "remaining single-tick LOS grace is retained");
++    corrupt.lineOfSightLostAtTick = 369;
++    check(!IsValidIntervalBindingState(corrupt, 380), "LOS loss before the cast is rejected");
++    corrupt.target = 0;
++    check(!IsValidIntervalBindingState(corrupt, 410), "empty target with residual authority is rejected");
++    std::cout << "Interval binding reducer failures: " << failures << '\n';
++    return failures ? 1 : 0;
++}

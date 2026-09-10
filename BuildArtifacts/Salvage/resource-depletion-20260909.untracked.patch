@@ -1,0 +1,1552 @@
+diff --git a/Scripts/test_resource_depletion.sh b/Scripts/test_resource_depletion.sh
+new file mode 100755
+index 0000000..b2bb00b
+--- /dev/null
++++ b/Scripts/test_resource_depletion.sh
+@@ -0,0 +1,13 @@
++#!/usr/bin/env bash
++set -euo pipefail
++script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++project_dir="$(cd "${script_dir}/.." && pwd)"
++build_dir="$(mktemp -d "${TMPDIR:-/tmp}/echoes-resource-depletion.XXXXXX")"
++trap 'rm -rf "${build_dir}"' EXIT
++"${CXX:-clang++}" -std=c++20 -O0 -g -Wall -Wextra -Wpedantic -Werror \
++    -I "${project_dir}/Source/EchoesSimCore/Public" \
++    "${project_dir}/Source/EchoesSimCore/Private/Simulation.cpp" \
++    "${project_dir}/Source/EchoesSimCore/Private/NetworkProtocol.cpp" \
++    "${project_dir}/Tests/Native/ResourceDepletionTests.cpp" \
++    -o "${build_dir}/resource_depletion_tests"
++"${build_dir}/resource_depletion_tests"
+diff --git a/Tests/Native/Fixtures/LegacyReplay/historical_schema30_bulwark_checkpoint_writer.cpp b/Tests/Native/Fixtures/LegacyReplay/historical_schema30_bulwark_checkpoint_writer.cpp
+new file mode 100644
+index 0000000..d52612d
+--- /dev/null
++++ b/Tests/Native/Fixtures/LegacyReplay/historical_schema30_bulwark_checkpoint_writer.cpp
+@@ -0,0 +1,68 @@
++// Author: Angelis Pseftis
++// Run against the archived pre-repair candidate28 simulation, never a projection
++// of a newer writer. The receipt binds its dirty source hashes and baseline.
++#include "EchoesSimCore/Simulation.h"
++#include <fstream>
++#include <iostream>
++using namespace echoes::sim;
++
++int main(int argc, char** argv) {
++    if (argc != 2 || kSnapshotVersion != 30 || kReplayVersion != 27) return 2;
++    Simulation simulation({64, 64, 20, 0xE0C0B5A1ULL});
++    // Historical Glass Scar context, matching the real checkpoint admission contract.
++    for (int y = 30; y <= 34; ++y) {
++        for (int x = 8; x <= 55; ++x) {
++            if ((x >= 12 && x <= 15) || (x >= 29 && x <= 35) ||
++                (x >= 48 && x <= 51)) continue;
++            if (!simulation.SetTerrainTile(x, y, Terrain::Blocked)) return 11;
++        }
++    }
++    if (!simulation.AddPlayer(0, Faction::MeridianCompact, {0, 0}) ||
++        !simulation.AddPlayer(1, Faction::KharuunAssemblies, {0, 0})) return 3;
++    const auto bulwark = simulation.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::HeavyUnit, Vec2::FromTiles(10, 10));
++    const auto lancer = simulation.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Soldier, Vec2::FromRaw(9 * kFixedScale + kFixedScale / 2,
++                                        10 * kFixedScale));
++    const auto enemy = simulation.SpawnEntity(1, Faction::KharuunAssemblies,
++        EntityType::Soldier, Vec2::FromTiles(11, 10));
++    if (!bulwark || !lancer || !enemy) return 4;
++    // A game-adapter continuation needs both headquarters alive, not just combat actors.
++    if (!simulation.SpawnEntity(0, Faction::MeridianCompact, EntityType::CommandCore,
++            Vec2::FromTiles(4, 4)) ||
++        !simulation.SpawnEntity(1, Faction::KharuunAssemblies, EntityType::CommandCore,
++            Vec2::FromTiles(54, 54))) return 12;
++    simulation.CaptureReplayBaseline();
++    Command deploy{};
++    deploy.player = 0; deploy.sequence = 1;
++    deploy.type = CommandType::ToggleDeploy; deploy.actor = bulwark;
++    deploy.position = Vec2::FromTiles(12, 10);
++    Command attack{};
++    attack.player = 1; attack.sequence = 1;
++    attack.type = CommandType::Attack; attack.actor = enemy; attack.target = lancer;
++    if (!simulation.QueueCommand(deploy) || !simulation.QueueCommand(attack)) return 5;
++    simulation.Step();
++    if (!simulation.FindEntity(bulwark) || !simulation.FindEntity(bulwark)->deployed)
++        return 6;
++    const auto deployedChecksum = simulation.ReplayStateChecksum();
++    const auto coveredHealth = simulation.FindEntity(lancer)->hitPoints;
++    Command pack = deploy;
++    pack.executeTick = 1; pack.sequence = 2;
++    if (!simulation.QueueCommand(pack)) return 7;
++    simulation.Step();
++    if (simulation.FindEntity(bulwark)->deployed) return 8;
++    std::string error;
++    const auto replay = simulation.ExportReplay(&error);
++    const auto verified = Simulation::ReplayToEnd(replay, &error);
++    if (!verified || !error.empty() ||
++        verified->ReplayStateChecksum() != replay.finalChecksum) return 9;
++    std::ofstream output(argv[1], std::ios::binary);
++    output.write(reinterpret_cast<const char*>(replay.initialSnapshot.data()),
++                 replay.initialSnapshot.size());
++    if (!output) return 10;
++    std::cout << "{\"snapshot_version\":30,\"replay_version\":27,"
++        "\"final_tick\":2,\"final_checksum\":" << replay.finalChecksum
++        << ",\"deployed_tick1_checksum\":" << deployedChecksum
++        << ",\"covered_lancer_health\":" << coveredHealth
++        << ",\"self_verified\":true}\n";
++}
+diff --git a/Tests/Native/Fixtures/LegacyReplay/historical_schema30_bulwark_writer.cpp b/Tests/Native/Fixtures/LegacyReplay/historical_schema30_bulwark_writer.cpp
+new file mode 100644
+index 0000000..3d2e8d6
+--- /dev/null
++++ b/Tests/Native/Fixtures/LegacyReplay/historical_schema30_bulwark_writer.cpp
+@@ -0,0 +1,55 @@
++// Author: Angelis Pseftis
++// Run against the archived pre-repair candidate28 simulation, never a projection
++// of a newer writer. The receipt binds its dirty source hashes and baseline.
++#include "EchoesSimCore/Simulation.h"
++#include <fstream>
++#include <iostream>
++using namespace echoes::sim;
++
++int main(int argc, char** argv) {
++    if (argc != 2 || kSnapshotVersion != 30 || kReplayVersion != 27) return 2;
++    Simulation simulation({24, 24, 20, 0x42554c5741524bULL});
++    if (!simulation.AddPlayer(0, Faction::MeridianCompact, {0, 0}) ||
++        !simulation.AddPlayer(1, Faction::KharuunAssemblies, {0, 0})) return 3;
++    const auto bulwark = simulation.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::HeavyUnit, Vec2::FromTiles(10, 10));
++    const auto lancer = simulation.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Soldier, Vec2::FromRaw(9 * kFixedScale + kFixedScale / 2,
++                                        10 * kFixedScale));
++    const auto enemy = simulation.SpawnEntity(1, Faction::KharuunAssemblies,
++        EntityType::Soldier, Vec2::FromTiles(11, 10));
++    if (!bulwark || !lancer || !enemy) return 4;
++    simulation.CaptureReplayBaseline();
++    Command deploy{};
++    deploy.player = 0; deploy.sequence = 1;
++    deploy.type = CommandType::ToggleDeploy; deploy.actor = bulwark;
++    deploy.position = Vec2::FromTiles(12, 10);
++    Command attack{};
++    attack.player = 1; attack.sequence = 1;
++    attack.type = CommandType::Attack; attack.actor = enemy; attack.target = lancer;
++    if (!simulation.QueueCommand(deploy) || !simulation.QueueCommand(attack)) return 5;
++    simulation.Step();
++    if (!simulation.FindEntity(bulwark) || !simulation.FindEntity(bulwark)->deployed)
++        return 6;
++    const auto deployedChecksum = simulation.ReplayStateChecksum();
++    const auto coveredHealth = simulation.FindEntity(lancer)->hitPoints;
++    Command pack = deploy;
++    pack.executeTick = 1; pack.sequence = 2;
++    if (!simulation.QueueCommand(pack)) return 7;
++    simulation.Step();
++    if (simulation.FindEntity(bulwark)->deployed) return 8;
++    std::string error;
++    const auto replay = simulation.ExportReplay(&error);
++    const auto verified = Simulation::ReplayToEnd(replay, &error);
++    if (!verified || !error.empty() ||
++        verified->ReplayStateChecksum() != replay.finalChecksum) return 9;
++    std::ofstream output(argv[1], std::ios::binary);
++    output.write(reinterpret_cast<const char*>(replay.initialSnapshot.data()),
++                 replay.initialSnapshot.size());
++    if (!output) return 10;
++    std::cout << "{\"snapshot_version\":30,\"replay_version\":27,"
++        "\"final_tick\":2,\"final_checksum\":" << replay.finalChecksum
++        << ",\"deployed_tick1_checksum\":" << deployedChecksum
++        << ",\"covered_lancer_health\":" << coveredHealth
++        << ",\"self_verified\":true}\n";
++}
+diff --git a/Tests/Native/Fixtures/LegacyReplay/historical_schema31_assist_writer.cpp b/Tests/Native/Fixtures/LegacyReplay/historical_schema31_assist_writer.cpp
+new file mode 100644
+index 0000000..663f7c1
+--- /dev/null
++++ b/Tests/Native/Fixtures/LegacyReplay/historical_schema31_assist_writer.cpp
+@@ -0,0 +1,95 @@
++// Author: Angelis Pseftis
++// Compile against the captured candidate36 Simulation.cpp and Simulation.h.
++// The receipt must bind those actual source hashes; never relabel a new writer.
++#include "EchoesSimCore/Simulation.h"
++#include <fstream>
++#include <iostream>
++using namespace echoes::sim;
++
++int main(int argc, char** argv) {
++    if (argc != 2 || kSnapshotVersion != 31 || kReplayVersion != 28) return 2;
++    Simulation sim({32, 32, 20, 0x43414e43454c4153ULL});
++    if (!sim.AddPlayer(0, Faction::MeridianCompact, {2000, 500}) ||
++        !sim.AddPlayer(1, Faction::KharuunAssemblies, {2000, 500})) return 3;
++    const auto core = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::CommandCore, Vec2::FromTiles(4, 4));
++    const auto builder = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Worker, Vec2::FromTiles(7, 8));
++    const auto assistant = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Worker, Vec2::FromTiles(8, 7));
++    const auto staleAssistant = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Worker, Vec2::FromTiles(7, 12));
++    if (!core || !builder || !assistant || !staleAssistant) return 4;
++    sim.CaptureReplayBaseline();
++    Command build{};
++    build.player = 0; build.sequence = 1; build.type = CommandType::Build;
++    build.actor = builder; build.buildType = EntityType::Dropoff;
++    build.position = Vec2::FromTiles(8, 8);
++    if (!sim.QueueCommand(build)) return 5;
++    sim.Step();
++    const auto view = sim.CreatePlayerView(0);
++    if (!view || view->ConstructionReceipts().empty()) return 6;
++    const auto site = view->ConstructionReceipts().front().structure;
++    const auto buildChecksum = sim.ReplayStateChecksum();
++    Command cancel{};
++    cancel.executeTick = 1; cancel.player = 0; cancel.sequence = 2;
++    cancel.type = CommandType::CancelConstruction; cancel.actor = site;
++    Command assist = build;
++    assist.executeTick = 1; assist.sequence = 3; assist.actor = assistant;
++    assist.target = site;
++    if (!sim.QueueCommand(cancel) || !sim.QueueCommand(assist)) return 7;
++    sim.Step();
++    const auto* revived = sim.FindEntity(site);
++    const auto* helper = sim.FindEntity(assistant);
++    if (!revived || revived->hitPoints <= 0 || !helper ||
++        helper->order.type != OrderType::Build) return 8;
++    const auto resurrectionChecksum = sim.ReplayStateChecksum();
++    const auto revivedHealth = revived->hitPoints;
++    const auto refunded = sim.FindPlayer(0)->resources;
++    Command stale = build;
++    stale.executeTick = 2; stale.sequence = 4; stale.actor = staleAssistant;
++    stale.target = site + 100; stale.position = Vec2::FromTiles(8, 12);
++    if (!sim.QueueCommand(stale)) return 11;
++    sim.Step();
++    const auto finalView = sim.CreatePlayerView(0);
++    if (!finalView || finalView->ConstructionReceipts().empty()) return 12;
++    EntityId staleCreated = 0;
++    for (const auto& receipt : finalView->ConstructionReceipts()) {
++        if (receipt.transition == ConstructionTransition::Created &&
++            receipt.commandSequence == stale.sequence) staleCreated = receipt.structure;
++    }
++    if (!staleCreated || sim.FindPlayer(0)->resources.material >= refunded.material)
++        return 13;
++    std::string error;
++    const auto replay = sim.ExportReplay(&error);
++    const auto verified = Simulation::ReplayToEnd(replay, &error);
++    if (!verified || !error.empty() ||
++        verified->ReplayStateChecksum() != replay.finalChecksum) return 9;
++    auto continued = Simulation::LoadSnapshot(sim.SaveSnapshot(), &error);
++    if (!continued || !continued->ContinueReplayRecording(replay, &error)) return 14;
++    cancel.executeTick = continued->CurrentTick(); cancel.sequence = 5;
++    assist.executeTick = continued->CurrentTick(); assist.sequence = 6;
++    if (!continued->QueueCommand(cancel) || !continued->QueueCommand(assist)) return 15;
++    continued->Step();
++    if (!continued->FindEntity(site) || continued->FindEntity(site)->hitPoints <= 0 ||
++        continued->ExportReplay().version != 28) return 16;
++    const auto continuation = continued->ExportReplay(&error);
++    if (!Simulation::ReplayToEnd(continuation, &error)) return 17;
++    std::ofstream output(argv[1], std::ios::binary);
++    output.write(reinterpret_cast<const char*>(replay.initialSnapshot.data()),
++        static_cast<std::streamsize>(replay.initialSnapshot.size()));
++    if (!output) return 10;
++    std::cout << "{\"snapshot_version\":31,\"replay_version\":28,"
++        "\"final_tick\":3,\"final_checksum\":" << replay.finalChecksum
++        << ",\"build_tick1_checksum\":" << buildChecksum
++        << ",\"revived_site\":" << site
++        << ",\"revived_health\":" << revivedHealth
++        << ",\"resurrection_tick2_checksum\":" << resurrectionChecksum
++        << ",\"stale_created_site\":" << staleCreated
++        << ",\"refunded_material\":" << refunded.material
++        << ",\"refunded_dawnshards\":" << refunded.dawnshards
++        << ",\"final_material\":" << sim.FindPlayer(0)->resources.material
++        << ",\"final_dawnshards\":" << sim.FindPlayer(0)->resources.dawnshards
++        << ",\"continued_tick4_checksum\":" << continuation.finalChecksum
++        << ",\"self_verified\":true}\n";
++}
+diff --git a/Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-baseline.bin b/Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-baseline.bin
+new file mode 100644
+index 0000000000000000000000000000000000000000..d27dee3a6d0a3f3befca57fd707c25d02c9a1a6a
+GIT binary patch
+literal 8919
+zcmeHMJ8Km|6rP*6QKN`TgdhP$QbYtTY!pnuG!c<VFj#0|3e!kH0u~BOK$Ku%Wu3x8
+z(iqUf%EH>8U?CP_X`yxezS%jmXXZ}!KDZAO?}3w<Iqy01?QGb4efIXv)5e%_$Hy_w
+zFU;Jzu{di?9~QOfqBFRKF#`{}wH`*XSayPn8?Ru@z>8oeeF9zu4}r~5V~$}s#Cb$g
+z6XRvzw+J|e@mD|ofJX8m`S-O;?&G4cN6zw()1~T{V6q2WBZbJhg@N^NxWdZ(H(?jh
+zK(Ug(6q4GrOqn$6zm6EEzyk=dhVcMnqCq?}f+8l@X7dV)3_J(6puuPm;|NEbAA6MY
+zmpTP6%ufK0xc&`eZq6Drfq`)~5hDSie}X^Ou?hBPqYSyHyKXJ{1%LC9Gye*B8*K9<
+z2z$aF#N^7fc+Q}Fihzu@&?Nruy9C7XRm{uqv+QiW4RXGLjP*~r!o1Ge>S0qaI7k14
+zq%X3rXUvpQv;I6&*8dm00k+RC{s2N20~i8|@kbo-tay+72Gj2nK*%^Tejp-5EzvIn
+zKL*qPlT%pyW1XTD{w~9iJ!iZx;1p&UQ|=teKLc3?rr#Mb>-Ye+b|>?Fu&$V5{E7aD
+zJIk{AQ}-YH#yp}+JwK8|?n-ZiobREW0>5*Gd7U_^aZAnZ)E;&&l)l6!W$R2SoAu{C
+zb{_l_{2Xli2N3ZdBQ9eS{PDTVz`Q?reskba6aiQB6@Pe-;25h&>SW(DFfm2{?@pmw
+z0%=I=;nF_8d~dPVY3DzNIb)94i>w$eun?SQ#e96Y2pKu|Nw+cHL9`+9UL!r@pYa^4
+zoDwhG{|hkjOFj3)m$uZg<nX}SK2pc{OW=n^eEX12=Jz%<z7{^W+$))}C06=wTZRSM
+zZkwgsbQJKJvKn6gd{DoENfk=jB|G8qdmpbM*!gl1pMHtfx8gLPF<PQ2xsN7n8o@*w
+zlxX=f@3{PXB}fomFjgvMYS-Jq!!O)H`gNm|Yo*Z}jn=dOA3IPVhEfm*@N){=CQ^)A
+zp~PAdhzms|_KFtCtHMZvDuvrZtK=pMRCFj%6k=R_1!=KTgkrl2TA$FjR#YE`8qS&A
+zgzH8e%r_}ic(ELCu2$ke(V#pq*MS0ss;E(U6Nm3osHA?H?5EdudD12fb$M64^quTL
+z4?~^o_WsO83<cM8a*;Ce{Rln0IE<^rS`ml~MI`o$7Rjr^NP;TGZm*Xn<?$=2XkC!G
+z5bL*WbO_!<TT5LDS^GrwVW{E!(SCD(x9d3AF3s>_Ip82ju2rFwdEl^%JP>P#K+$~s
+zW)9z_R!RLd*-x+S@}x}|>hi97={wnh9)>#E?fsc6xVo|6H_QC3J#4=|<1;RQkgWGd
+zNgXbJ`D<PN0XCEbtASwEwnhGhwPMa81GdU9(d1R|5STwA?DqRN)k1q=tM+8^ik(K$
+z*ebuBlefXOerkn@r@gRMDYgK!NUFvfpV(`C!k2DHrX7`lq4k<JdOddd;IQ~9w{Tio
+dUuku5X<^*dsx+5(C{60E*6!^*czNN(%0G^lZ+id$
+
+literal 0
+HcmV?d00001
+
+diff --git a/Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-checkpoint-baseline.bin b/Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-checkpoint-baseline.bin
+new file mode 100644
+index 0000000000000000000000000000000000000000..1ab842886d9d7f62a8415903e4ee149f0c8a9644
+GIT binary patch
+literal 41297
+zcmeHPzl$A39G~~@E_XT4C_&@`K>~_g5gRQ8QBc7&f=EONHa1syjRYhRL}57yLa<0>
+zeS(FgF`$B#h_!!!g+;WG6c!d*>*q5&GjDcwci!%7@yNT+z<0kh^Zha3?`OU{Z}(X4
+zjo06K>nUT*tB#%k|ML5v?t>XKx7YmTc_)4wyaH{xam;oxICK*;$6p4oK<|RM=uOad
+z&>4_<+?exVd+aC8$3%Y>=qorp0DrK73))W2I<I%!;=wNh`_O6r<78d&duKie8zU#N
+z=3Owxf7=C?vp<1eqirrm9+$<;@?I6Gl-eJ|#|6+P9NYjuOP>IUd$!Mh(j3g@bIezu
+zD<J0oCdk0YW8~OBV$@~t<Mj2y^;v*B4!>>m%`?Va1f$=$u|^sV`1$%{94DZ#H<2Q9
+zde4ph`o8`cH`hM`-2>V6;e?nFgS5FYZ9P{IegcQ|b+xem-ggVIj$c7PS3ieNH|Su^
+zFEGdWFS@{j%<0DLBp$F2{CxAc`0)^4MM|ai+*8K?FX%SN-oLn@glr9fHCkGKtRwCf
+z&yl}Dw0i+XNIz-)V2UMb8|^C4M<Ck&-~_h*G45(z_4gtai8=lK4C<;G`t)axU;j1C
+zRUq0u4PqSMf~?+?bsmf>ZE5{^`5$gCbMbebf5eUJcv;u|<Ja(KWzfNz-#~Z(`q~8+
+zWZo#^ccZ@T+Rd&fJuazAZd^seQhT0b&w>5~-2z$sP((b(SeI$@^~d|J0`dId{#^m>
+zA_$n8UvS|$f^BRyA186IK&&a+-*<ut63jN+adT+zU;b_}*2~WR9QyRRV-K<gw}l1g
+z+$*lfn~Npm_x+MfjAsya*m$n7eag#zU90S}UYP%9Al5JC%!fbPK8|ay9vItql+ph+
+z&<6|u_9nelpWBdxSa{zuR}y`DU)^WhAv8!fZH8`_;{@+1E8*eK8}&C3+l;eB$#%H?
+z!6ryp?EG=@HXGjC{K!du1h<W<q&Zax8jFc-%X_Pb^{<nEyz-UcWeq-?<-`u#hD8{-
+zjSS<_9hR_~5D)@FKnMr{A+Rz8@EBm91IR;j(S$KNoZ>hQ)X$NJc8cs%JTw*pLO=)z
+z0U;m+G6>*r0O5I|{aBGPT!<q3)^o{1tG^f9qu;OCBT4K>J4o%vI%wICbkMdR=U@%(
+zrvlJZDSgu|1p5?w=2vYW-@=TgC(O)rBZG`yuPAcRtCJN32U)GWupsfgLrH~z5D)@F
+zKnMr{As_^V!1^JuUf%&sdI@lEA*Fjf@g*jhm%PF?{*Y7TAX<JE_KoFB0%$lW*uquY
+z$FK1P;lm_kP-Y$+l$z6S()~AOVc7}+As_^VfDkwx2u%8^b<YZgNQEbjk_WZ$oKbrz
+z2q9X&B!Gr_frAy>C(DmdAaO8y16FOnc+h1eqr;zGe{lc>%hSYRSZHm{N;2<RZ@vBo
+z(37O5g@6zc0zyCt2mv7=1cZPP5CTF#2nYfDFD(Rv5D)@FKnMr{As_^VfDjM@LO=)z
+z0U@yd2sFO~NWSwJHjF_UX3^A&?a^-v2aFQ?(GF7ku?|}HBOSEu$2nL-`>6m7sG3-%
+zg<vck&|kHE`d!d~kQ0?g28nFYFmf<Rzoir$v?RkP#+A)*ztR)}LO=)z0U;m+gn$qb
+z0_%eSzXMpGY-W>kac?1|a7=uO3Fc)R5}6k{Sh0O$`H}=04hpt#)%Njgd_njy2^o}`
+z2M49*w3~GQO<7pBLO=)z0U;m+P6q;$ernybLLpM&Nu%UJEj(w`UJ62pmM;mQVP4>1
+z#rDba;}b|6jNX7%+b<q;8OiAIr`KN`K*91faTpd_TeFhPyVqN@zX5b7saYW)1cZPP
+z5CTF#2nYcoAOwVf5D)@FV5YwTs0f6B5D)@FKnMr{As_^VfDjM@LO=+d4g``9JIoe8
+zudtKb<^UYDi81L0hG!|-GiDcTpZ!epA3SucY<5rk*(GAHHkHq<gPD029I4&}BV7lb
+z0r4*+=fRM1wml4~ZXg5Hw7Cq9RFA+&_dweq=6eB*JDY0{L#lQ0%(;7{2S}a7wo|h~
+zSDWgczJ!-l=o0au00t=8`*k)qzd{#u6={;#)-BaKD-#`2ex}9i+qyOFCmcY2nDQlC
+zN62%{7mPnj|BI9vSUhGV@t8};WBQ24=N^4z+xvy6yJfS_=AO+wn|GRYcVzKwHp-xw
+a4L4|I<Mvv!Yyw`(?Cl)?_0q?`&;JKvbgt_F
+
+literal 0
+HcmV?d00001
+
+diff --git a/Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-checkpoint-receipt.json b/Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-checkpoint-receipt.json
+new file mode 100644
+index 0000000..4f6772c
+--- /dev/null
++++ b/Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-checkpoint-receipt.json
+@@ -0,0 +1,20 @@
++{
++  "snapshot_version": 30,
++  "replay_version": 27,
++  "final_tick": 2,
++  "final_checksum": 4590309749637731261,
++  "deployed_tick1_checksum": 2586799233569234620,
++  "covered_lancer_health": 105,
++  "self_verified": true,
++  "author": "Angelis Pseftis",
++  "base_commit": "6b559889a4e7b0ed7fd86aee37b64728bd516017",
++  "source_kind": "dirty candidate28 simulation captured before Bulwark repair; not a released build",
++  "sha256": {
++    "Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h": "1b1e12aa80b87f25a08843c8e9d1a1863bca3711535315de9a03e63c394ef29c",
++    "Source/EchoesSimCore/Private/Simulation.cpp": "d17bec51f5c4a5388c5c9e36d47d86fc790f29982c7a76a1f923b3291072f5eb"
++  },
++  "source_archive": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/tutorial-redesign-20260908/bulwark-writer-29",
++  "baseline_sha256": "97d91324405515a225bb0b7f9229b2a03b105862f965b16328dc0dec03b802c6",
++  "driver_sha256": "1eabfaa3c5b6d88caef9ed1ab8e9062f16cf978e5f854a656fc9e754f34afa4a",
++  "scope": "Authentic unchanged candidate28 writer, Glass Scar checkpoint context with both headquarters; not a released-build claim."
++}
+diff --git a/Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-receipt.json b/Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-receipt.json
+new file mode 100644
+index 0000000..e59f485
+--- /dev/null
++++ b/Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-receipt.json
+@@ -0,0 +1,20 @@
++{
++  "snapshot_version": 30,
++  "replay_version": 27,
++  "final_tick": 2,
++  "final_checksum": 17785241889350991135,
++  "deployed_tick1_checksum": 17379539004213711755,
++  "covered_lancer_health": 105,
++  "self_verified": true,
++  "author": "Angelis Pseftis",
++  "base_commit": "6b559889a4e7b0ed7fd86aee37b64728bd516017",
++  "source_kind": "dirty candidate28 simulation captured before Bulwark repair; not a released build",
++  "sha256": {
++    "Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h": "1b1e12aa80b87f25a08843c8e9d1a1863bca3711535315de9a03e63c394ef29c",
++    "Source/EchoesSimCore/Private/Simulation.cpp": "d17bec51f5c4a5388c5c9e36d47d86fc790f29982c7a76a1f923b3291072f5eb"
++  },
++  "baseline_sha256": "f36ad5257bdeff34e0c124acd321236c80c6d775ba23c49502bcfb73d929c120",
++  "driver_sha256": "aba8619dd503357cac0d62d142736e499f5afaa49221cf7a0a48a8392b8559b6",
++  "source_archive": "/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/tutorial-redesign-20260908/bulwark-writer-29",
++  "scope": "Pre-repair candidate28 schema30/replay27 instant deploy, cover and pack; captured before mechanics changes, not a released-build claim."
++}
+diff --git a/Tests/Native/Fixtures/LegacyReplay/schema31-assist-baseline.bin b/Tests/Native/Fixtures/LegacyReplay/schema31-assist-baseline.bin
+new file mode 100644
+index 0000000000000000000000000000000000000000..599523fa5ad3dd9e02e1bfb4b79afe1f4cc054b1
+GIT binary patch
+literal 13356
+zcmeHNziU)M5Po+_OpF>uL?Q$|&?1F`C}^Wa5|Ty<Vi1Cj%@xK%1Q9G09tR=>5i9Ey
+z7LrCm3o8X{3;zHMu@Dgp3$6A0_RYMvyV-j$x!e^m?7-aY{Mgyq*?DvKlAWJjT0E8{
+zNlWk$=+eyP`MJfJxuglE3eJeZ70?toBD_t;!L&ut5PAVL1zrPk(fhzVz+J%PK$08;
+z*~_s98Wa7cz!z{h4f<mUAAqrp1V5k2;<;Z0c3Uj}h%OYrI@3Lv7%9Y>>mZDORRSxU
+zzXm%8h6_&fQb?*tsb$jZ{0@8^0S?2#J<#3si3IV?COP&%(wsbjJOwTQx&KSR1U~kY
+z;{2GS(0q+k>xJtd1&&GnMlnuKB*_#A{o249aRB+#`ePhx!2E11L+<Ii@VdU%ALHiw
+zE5O%4vp$?KC(MBl5~iu=6v_v1NMBcbtiKzw0PFZ7#%1->7TeqgYd(jJ@lQ!$xlU|t
+zvSu?JBYz5-7v(oYQ_HB=`8-p`{};FlG|w+SP(r2#KpgPvk9EYeVjuYp<h-*eLi+LR
+z2O^fJ0nST-cY&P$P86p8!G|DJf9GMyoYUV&V5ny3Q+tlCKLc3`<h<iR#_<Md><(x9
+zU|c@<^{4u8a+YQBhx#A$#&uK|dVX{b?UlI=)_eu!H1MSamg{tqMc1vd8Jfe+gqj!M
+zq>N83Wv}zu$4&vi10MlR{!m2hW2{RbwEp<qr9k!%p5Fp+96?}e@(Ca8BRIwlpm8$q
+zDUdbA`Cmn0r36wJIxcITUw&^f){`=S0%Q6dGmWgErm*0gXT|mSaIs|c+*`6S_8{62
+z*w+XT`7xQ*Du=8W?*B26^-DeX!!K=(V_E8fvAv~^{+EF_3;*UJZDoBMnmiUhx7;g{
+zzSUQ_x3ytGG}~tAW;qJ@Oc@QEKOfXDKth93X2}eA{P~<*!(!)`i_RHRZ_O3ayazQv
+zQ(}`QOd5-cFrwZvHtQ7n^9l#{8Hc1lJk%tkjYgxpviygc9Hi@SE8Or_jH7MLK+M37
+z%K&-+T986;d#WT28T3;hTEO<dZGFH&U;S4kD5S1Ff#Qh5^S7;62VLA7aUgSL=22Ih
+z48-37wK=L7Xw1MsG7x*fK++nW#thUZ1F;9x=BQ$zF#`k1fZGF{S7T-Dbya55e(Lqb
+zw448J>jMt#_ycP9J=hLR##Qre2Z8AjSsp43!s^07k9u{`Wx5fEQd4Fhbv4NV|6Np*
+zP-B=e12F>w$Uy7?14wFg88c9$48$H#qr-}!#taM~1J;|U8S>8q*~?+m+<?OcI9|x!
+z%%yDKm2soD(tM@4vbI532;4tY6!Jcg<Zhd}pxVmr!0{ej3Jl*-g94y;L)#gf-$fPH
+zBNcn8P<zgLX7x5%3m&F+_Et5c*k*EiXKz)@fm_x;>Zr`4TI-%zS*;J{J*qkN#5t>r
+zYast}4X#sSZ1Y^o<~hgaC-&_bRX>&+cUZce(#@1^#ovd!Xn<>!29i%GjVQM&4b8FA
+WIE~N=!CA?1`1IDV53@hdb^Zf{D1Ds(
+
+literal 0
+HcmV?d00001
+
+diff --git a/Tests/Native/Fixtures/LegacyReplay/schema31-assist-receipt.json b/Tests/Native/Fixtures/LegacyReplay/schema31-assist-receipt.json
+new file mode 100644
+index 0000000..4f7e3f1
+--- /dev/null
++++ b/Tests/Native/Fixtures/LegacyReplay/schema31-assist-receipt.json
+@@ -0,0 +1,31 @@
++{
++  "snapshot_version": 31,
++  "replay_version": 28,
++  "final_tick": 3,
++  "final_checksum": 11158670247431818854,
++  "build_tick1_checksum": 15184406205934481610,
++  "revived_site": 5,
++  "revived_health": 100,
++  "resurrection_tick2_checksum": 6147976594409906386,
++  "stale_created_site": 6,
++  "refunded_material": 1972,
++  "refunded_dawnshards": 500,
++  "final_material": 1862,
++  "final_dawnshards": 500,
++  "continued_tick4_checksum": 11730326658415312458,
++  "self_verified": true,
++  "author": "Angelis Pseftis",
++  "creator": "Angelis Pseftis",
++  "created": "2026-09-09T14:14:08.446644+00:00",
++  "provenance": "Compiled and executed against archived candidate36 source, not the repaired current writer",
++  "compiler": "clang++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -O0 -g",
++  "writer": "historical_schema31_assist_writer.cpp",
++  "writer_sha256": "561f865841bde13d12455e0f2f9980d1a06ee64866e2618a3bc7375f6b8cc0f6",
++  "baseline_sha256": "b74c21c721ab928fef57f81b7c0f590993959a7b383e5f01de401b71d17b5890",
++  "archived_source_sha256": {
++    "Source/EchoesSimCore/Private/NetworkProtocol.cpp": "6ca8ce519211266c57853f6fc6b5cdda22d879a44c79c2ab0ba430e57c8514f4",
++    "Source/EchoesSimCore/Private/Simulation.cpp": "a8221e9704c4accc50fb1d73984769ffb9cf4221f8314b15977b4031d5be7895",
++    "Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h": "dc1e5dfdf5b06628824eb25d71f7ae3980dbcf3c546aea55006f71213d73699c",
++    "Source/EchoesSimCore/Public/EchoesSimCore/NetworkProtocol.h": "90d24fab018ccfac0efdfd3092bd2006a403a2ddf268efd0cabfbd314dbc5171"
++  }
++}
+diff --git a/Tests/Native/GameplayFeedbackTests.inl b/Tests/Native/GameplayFeedbackTests.inl
+new file mode 100644
+index 0000000..a2f76f0
+--- /dev/null
++++ b/Tests/Native/GameplayFeedbackTests.inl
+@@ -0,0 +1,582 @@
++// Author and owner: Angelis Pseftis
++// Source-only native coverage for the bounded transient player feedback feed.
++
++void TestGameplayFeedbackCommandResolutionAndBounds() {
++    using namespace echoes::feedback;
++
++    Simulation sim({24, 24, 20, 0x4645454442415345ULL});
++    AddTwoPlayers(sim);
++    const EntityId core = sim.SpawnEntity(
++        0, Faction::MeridianCompact, EntityType::CommandCore,
++        Vec2::FromTiles(4, 4));
++    const EntityId worker = sim.SpawnEntity(
++        0, Faction::MeridianCompact, EntityType::Worker,
++        Vec2::FromTiles(5, 4));
++    REQUIRE(core && worker);
++
++    GameplayFeedbackState feed;
++    REQUIRE(feed.BeginGeneration(11, 0) == GameplayFeedbackStatus::Accepted);
++    Command stop = MakeCommand(2, 0, 1, CommandType::Stop, worker);
++    Command noEffect = MakeCommand(2, 0, 2, CommandType::Repair, worker);
++    noEffect.target = core; // A complete, undamaged target is a semantic no-op.
++    REQUIRE(sim.QueueCommand(stop));
++    REQUIRE(feed.TrackQueued(stop, 11, sim.CurrentTick()) ==
++        GameplayFeedbackStatus::Accepted);
++    REQUIRE(sim.QueueCommand(noEffect));
++    REQUIRE(feed.TrackQueued(noEffect, 11, sim.CurrentTick()) ==
++        GameplayFeedbackStatus::Accepted);
++    REQUIRE(feed.History().size() == 2);
++    REQUIRE(feed.History()[0].tick == 0);
++    REQUIRE(feed.History()[0].eventId == 1);
++
++    for (int index = 0; index < 3; ++index) {
++        sim.Step();
++        REQUIRE(feed.ObserveFixedStep(sim, 0, 11) ==
++            GameplayFeedbackStatus::Accepted);
++    }
++    REQUIRE(feed.PendingCount() == 0);
++    const auto applied = std::find_if(
++        feed.History().begin(), feed.History().end(),
++        [](const GameplayFeedbackEvent& event) {
++            return event.kind == GameplayFeedbackKind::Applied &&
++                event.sequence == 1;
++        });
++    const auto refused = std::find_if(
++        feed.History().begin(), feed.History().end(),
++        [](const GameplayFeedbackEvent& event) {
++            return event.kind == GameplayFeedbackKind::NoEffect &&
++                event.sequence == 2;
++        });
++    REQUIRE(applied != feed.History().end());
++    REQUIRE(applied->tick == 2);
++    REQUIRE(applied->resolutionOutcome == CommandResolutionOutcome::Applied);
++    REQUIRE(refused != feed.History().end());
++    REQUIRE(refused->tick == 2);
++    REQUIRE(refused->resolutionOutcome != CommandResolutionOutcome::Applied);
++    REQUIRE(feed.ObserveFixedStep(sim, 0, 11) ==
++        GameplayFeedbackStatus::Duplicate);
++
++    GameplayFeedbackState observer;
++    REQUIRE(observer.BeginGeneration(14, 0) ==
++        GameplayFeedbackStatus::Accepted);
++    sim.Step();
++    REQUIRE(observer.ObserveFixedStep(sim, 0, 14) ==
++        GameplayFeedbackStatus::Accepted);
++    sim.Step(2);
++    REQUIRE(observer.ObserveFixedStep(sim, 0, 14) ==
++        GameplayFeedbackStatus::ObservationGap);
++    REQUIRE(observer.Loss().missedObservationTicks == 1);
++    REQUIRE(observer.Loss().reseedRequired);
++
++    GameplayFeedbackState bounded;
++    REQUIRE(bounded.BeginGeneration(12, 0) ==
++        GameplayFeedbackStatus::Accepted);
++    for (std::size_t index = 0;
++         index < GameplayFeedbackState::PendingLimit; ++index) {
++        Command queued = MakeCommand(
++            sim.CurrentTick(), 0, 100 + index,
++            CommandType::Stop, worker);
++        REQUIRE(sim.QueueCommand(queued));
++        REQUIRE(bounded.TrackQueued(queued, 12, sim.CurrentTick()) ==
++            GameplayFeedbackStatus::Accepted);
++    }
++    Command overflow = MakeCommand(
++        sim.CurrentTick(), 0, 100 + GameplayFeedbackState::PendingLimit,
++        CommandType::Stop, worker);
++    REQUIRE(sim.QueueCommand(overflow));
++    REQUIRE(bounded.TrackQueued(overflow, 12, sim.CurrentTick()) ==
++        GameplayFeedbackStatus::CapacityExceeded);
++    REQUIRE(bounded.PendingCount() == GameplayFeedbackState::PendingLimit);
++    REQUIRE(bounded.Loss().untrackedCommands == 1);
++    REQUIRE(bounded.Loss().reseedRequired);
++
++    REQUIRE(bounded.BeginGeneration(13, 0) ==
++        GameplayFeedbackStatus::Accepted);
++    REQUIRE(bounded.PendingCount() == 0);
++    REQUIRE(bounded.History().empty());
++    REQUIRE(!bounded.Loss().reseedRequired);
++    Command restarted = MakeCommand(
++        sim.CurrentTick(), 0, 1000, CommandType::Stop, worker);
++    REQUIRE(sim.QueueCommand(restarted));
++    REQUIRE(bounded.TrackQueued(restarted, 13, sim.CurrentTick()) ==
++        GameplayFeedbackStatus::Accepted);
++    REQUIRE(bounded.History().front().eventId == 1);
++
++    GameplayFeedbackState retained;
++    REQUIRE(retained.BeginRemoteStream(20, 0, 0) ==
++        GameplayFeedbackStatus::Accepted);
++    for (std::uint64_t eventId = 1;
++         eventId <= GameplayFeedbackState::HistoryLimit + 1; ++eventId) {
++        GameplayFeedbackEvent remote{};
++        remote.generation = 20;
++        remote.eventId = eventId;
++        remote.recipient = 0;
++        remote.tick = eventId;
++        remote.kind = GameplayFeedbackKind::Queued;
++        remote.sequence = eventId;
++        REQUIRE(retained.IngestRemote(remote, 0, 20) ==
++            GameplayFeedbackStatus::Accepted);
++    }
++    REQUIRE(retained.History().size() == GameplayFeedbackState::HistoryLimit);
++    REQUIRE(retained.History().front().eventId == 2);
++    REQUIRE(retained.Loss().evictedHistoryEvents == 1);
++}
++
++void TestGameplayFeedbackExecutionHorizon() {
++    using namespace echoes::feedback;
++
++    Simulation source({16, 16, 20, 0x46454544484f5249ULL});
++    REQUIRE(source.AddPlayer(
++        0, Faction::MeridianCompact, ResourcePool{100, 0}));
++    const EntityId worker = source.SpawnEntity(
++        0, Faction::MeridianCompact, EntityType::Worker,
++        Vec2::FromTiles(4, 4));
++    REQUIRE(worker != 0);
++
++    constexpr std::size_t kSnapshotCurrentTickOffset = 2407;
++    constexpr Tick kTerminalTick =
++        std::numeric_limits<Tick>::max() / 2;
++    std::vector<std::uint8_t> nearHorizon = source.SaveSnapshot();
++    REQUIRE(ReadU64(nearHorizon, kSnapshotCurrentTickOffset) == 0);
++    WriteU64(
++        nearHorizon, kSnapshotCurrentTickOffset, kTerminalTick - 1);
++    ResignSnapshot(nearHorizon);
++    std::string error;
++    std::optional<Simulation> horizon =
++        Simulation::LoadSnapshot(nearHorizon, &error);
++    REQUIRE(horizon.has_value());
++    REQUIRE(horizon->CurrentTick() == kTerminalTick - 1);
++    REQUIRE(Simulation::IsExecutableCommandTick(kTerminalTick - 1));
++    REQUIRE(!Simulation::IsExecutableCommandTick(kTerminalTick));
++
++    Command executable = MakeCommand(
++        kTerminalTick - 1, 0, 1, CommandType::Stop, worker);
++    Command terminal = MakeCommand(
++        kTerminalTick, 0, 2, CommandType::Stop, worker);
++    REQUIRE(horizon->QueueCommand(executable));
++    // Historical replay compatibility deliberately keeps this raw envelope
++    // admissible even though Step cannot execute the terminal boundary tick.
++    REQUIRE(horizon->QueueCommand(terminal));
++
++    GameplayFeedbackState feed;
++    REQUIRE(feed.TrackQueued(executable, 60, horizon->CurrentTick()) ==
++        GameplayFeedbackStatus::Accepted);
++    REQUIRE(feed.PendingCount() == 1);
++    REQUIRE(feed.History().size() == 1);
++    REQUIRE(feed.TrackQueued(terminal, 60, horizon->CurrentTick()) ==
++        GameplayFeedbackStatus::ExecutionUnavailable);
++    REQUIRE(feed.PendingCount() == 1);
++    REQUIRE(feed.History().size() == 1);
++    REQUIRE(feed.Loss().untrackedCommands == 1);
++
++    horizon->Step();
++    REQUIRE(horizon->CurrentTick() == kTerminalTick);
++    REQUIRE(feed.ObserveFixedStep(*horizon, 0, 60) ==
++        GameplayFeedbackStatus::Accepted);
++    REQUIRE(feed.PendingCount() == 0);
++    const auto applied = horizon->FindCommandResolutionReceipt(0, 1);
++    REQUIRE(applied.has_value());
++    REQUIRE(applied->outcome == CommandResolutionOutcome::Applied);
++    REQUIRE(!horizon->FindCommandResolutionReceipt(0, 2).has_value());
++    REQUIRE(std::any_of(
++        feed.History().begin(), feed.History().end(),
++        [](const GameplayFeedbackEvent& event) {
++            return event.sequence == 1 &&
++                event.kind == GameplayFeedbackKind::Applied;
++        }));
++    REQUIRE(std::none_of(
++        feed.History().begin(), feed.History().end(),
++        [](const GameplayFeedbackEvent& event) {
++            return event.sequence == 2;
++        }));
++
++    const std::uint64_t terminalChecksum = horizon->StateChecksum();
++    const std::size_t terminalHistorySize = feed.History().size();
++    horizon->Step();
++    REQUIRE(horizon->CurrentTick() == kTerminalTick);
++    REQUIRE(horizon->StateChecksum() == terminalChecksum);
++    REQUIRE(feed.ObserveFixedStep(*horizon, 0, 60) ==
++        GameplayFeedbackStatus::Duplicate);
++    REQUIRE(feed.History().size() == terminalHistorySize);
++    REQUIRE(std::none_of(
++        feed.History().begin(), feed.History().end(),
++        [](const GameplayFeedbackEvent& event) {
++            return event.sequence == 2 &&
++                event.kind == GameplayFeedbackKind::NoEffect;
++        }));
++}
++
++void TestGameplayFeedbackConstructionAndRepairDeltas() {
++    using namespace echoes::feedback;
++
++    SimulationConfig buildConfig{32, 32, 20, 0x464545444255494cULL};
++    buildConfig.rules.poweredAegis.connectionRadiusRaw = 8 * kFixedScale;
++    Simulation build(buildConfig);
++    AddTwoPlayers(build, {2000, 500}, {1000, 500});
++    const EntityId core = build.SpawnEntity(
++        0, Faction::MeridianCompact, EntityType::CommandCore,
++        Vec2::FromTiles(4, 4));
++    const EntityId builder = build.SpawnEntity(
++        0, Faction::MeridianCompact, EntityType::Worker,
++        Vec2::FromTiles(7, 8));
++    REQUIRE(core && builder);
++    const ResourcePool beforeBuild = build.FindPlayer(0)->resources;
++    Command buildOrder = MakeCommand(
++        build.CurrentTick(), 0, 1, CommandType::Build, builder);
++    buildOrder.buildType = EntityType::Dropoff;
++    buildOrder.position = Vec2::FromTiles(8, 8);
++    GameplayFeedbackState construction;
++    REQUIRE(build.QueueCommand(buildOrder));
++    REQUIRE(construction.TrackQueued(
++        buildOrder, 30, build.CurrentTick()) ==
++        GameplayFeedbackStatus::Accepted);
++
++    EntityId site = 0;
++    for (int step = 0; step < 140; ++step) {
++        build.Step();
++        const GameplayFeedbackStatus status =
++            construction.ObserveFixedStep(build, 0, 30);
++        REQUIRE(status == GameplayFeedbackStatus::Accepted);
++        if (site == 0) {
++            const auto created = std::find_if(
++                construction.History().begin(), construction.History().end(),
++                [](const GameplayFeedbackEvent& event) {
++                    return event.kind ==
++                        GameplayFeedbackKind::ConstructionCreated;
++                });
++            if (created != construction.History().end()) site = created->target;
++        }
++        if (site != 0 && build.FindEntity(site) != nullptr &&
++            build.FindEntity(site)->completed) break;
++    }
++    REQUIRE(site != 0);
++    const Entity* completedSite = build.FindEntity(site);
++    REQUIRE(completedSite != nullptr && completedSite->completed);
++    const ResourcePool buildCost{
++        beforeBuild.material - build.FindPlayer(0)->resources.material,
++        beforeBuild.dawnshards - build.FindPlayer(0)->resources.dawnshards};
++    std::int64_t observedProgress = 0;
++    std::size_t progressEvents = 0;
++    bool sawCreated = false;
++    bool sawCompleted = false;
++    for (const GameplayFeedbackEvent& event : construction.History()) {
++        if (event.kind == GameplayFeedbackKind::ConstructionCreated) {
++            sawCreated = true;
++            REQUIRE(event.target == site);
++            REQUIRE((event.resourcesSpent == FeedbackResourceDelta{
++                buildCost.material, buildCost.dawnshards}));
++        } else if (event.kind ==
++                   GameplayFeedbackKind::ConstructionProgressed) {
++            ++progressEvents;
++            observedProgress += event.progressDelta;
++        } else if (event.kind ==
++                   GameplayFeedbackKind::ConstructionCompleted) {
++            sawCompleted = true;
++            REQUIRE(event.target == site);
++        }
++    }
++    REQUIRE(sawCreated && sawCompleted);
++    REQUIRE(observedProgress == completedSite->constructionRequired);
++    REQUIRE(progressEvents > 0 && progressEvents <= 6);
++    REQUIRE(!construction.Loss().reseedRequired);
++
++    SimulationConfig repairConfig{24, 24, 20, 0x4645454452455041ULL};
++    repairConfig.rules.poweredAegis.connectionRadiusRaw = 8 * kFixedScale;
++    Simulation repair(repairConfig);
++    AddTwoPlayers(repair, {1000, 500}, {1000, 500});
++    const EntityId repairCore = repair.SpawnEntity(
++        0, Faction::MeridianCompact, EntityType::CommandCore,
++        Vec2::FromTiles(4, 4));
++    const EntityId damaged = repair.SpawnEntity(
++        0, Faction::MeridianCompact, EntityType::Dropoff,
++        Vec2::FromTiles(10, 4), 490);
++    const EntityId worker = repair.SpawnEntity(
++        0, Faction::MeridianCompact, EntityType::Worker,
++        Vec2::FromTiles(10, 5));
++    REQUIRE(repairCore && damaged && worker);
++    const std::int32_t healthBefore = repair.FindEntity(damaged)->hitPoints;
++    const std::int32_t matterBefore = repair.FindPlayer(0)->resources.material;
++    Command repairOrder = MakeCommand(
++        repair.CurrentTick(), 0, 1, CommandType::Repair, worker);
++    repairOrder.target = damaged;
++    GameplayFeedbackState repairs;
++    REQUIRE(repair.QueueCommand(repairOrder));
++    REQUIRE(repairs.TrackQueued(
++        repairOrder, 31, repair.CurrentTick()) ==
++        GameplayFeedbackStatus::Accepted);
++    // The feed waits through its bounded inactive window before publishing a
++    // short repair burst, preserving one exact aggregate instead of flooding.
++    for (int step = 0; step < 45; ++step) {
++        repair.Step();
++        REQUIRE(repairs.ObserveFixedStep(repair, 0, 31) ==
++            GameplayFeedbackStatus::Accepted);
++    }
++    std::int64_t restored = 0;
++    std::int64_t spent = 0;
++    std::size_t repairEvents = 0;
++    for (const GameplayFeedbackEvent& event : repairs.History()) {
++        if (event.kind != GameplayFeedbackKind::RepairApplied) continue;
++        ++repairEvents;
++        restored += event.healthDelta;
++        spent += event.resourcesSpent.material;
++        REQUIRE(event.actor == worker && event.target == damaged);
++    }
++    REQUIRE(repairEvents == 1);
++    REQUIRE(restored ==
++        repair.FindEntity(damaged)->hitPoints - healthBefore);
++    REQUIRE(spent == matterBefore - repair.FindPlayer(0)->resources.material);
++    REQUIRE(restored == 10 && spent == 1);
++}
++
++void TestGameplayFeedbackBlockedProductionRecovery() {
++    using namespace echoes::feedback;
++
++    SimulationConfig config{24, 24, 20, 0x4645454450524f44ULL};
++    auto& workerRules = config.rules.archetypes[0][
++        static_cast<std::size_t>(EntityType::Worker)];
++    workerRules.cost = {10, 0};
++    workerRules.productionTicks = 2;
++    Simulation sim(config);
++    REQUIRE(sim.AddPlayer(
++        0, Faction::MeridianCompact, ResourcePool{100, 0}));
++    const EntityId producer = sim.SpawnEntity(
++        0, Faction::MeridianCompact, EntityType::CommandCore,
++        Vec2::FromTiles(12, 12));
++    REQUIRE(producer != 0);
++    Command produce = MakeCommand(
++        sim.CurrentTick(), 0, 1, CommandType::Produce, producer);
++    produce.buildType = EntityType::Worker;
++    GameplayFeedbackState feed;
++    REQUIRE(sim.QueueCommand(produce));
++    REQUIRE(feed.TrackQueued(produce, 40, sim.CurrentTick()) ==
++        GameplayFeedbackStatus::Accepted);
++    sim.Step();
++    REQUIRE(feed.ObserveFixedStep(sim, 0, 40) ==
++        GameplayFeedbackStatus::Accepted);
++    Command waiting = MakeCommand(
++        sim.CurrentTick(), 0, 2, CommandType::Produce, producer);
++    waiting.buildType = EntityType::Worker;
++    REQUIRE(sim.QueueCommand(waiting));
++    REQUIRE(feed.TrackQueued(waiting, 40, sim.CurrentTick()) ==
++        GameplayFeedbackStatus::Accepted);
++    for (std::int32_t y = 0; y < 24; ++y) {
++        for (std::int32_t x = 0; x < 24; ++x) {
++            REQUIRE(sim.SetTerrainTile(x, y, Terrain::Blocked));
++        }
++    }
++    for (int step = 0; step < 100; ++step) {
++        sim.Step();
++        REQUIRE(feed.ObserveFixedStep(sim, 0, 40) ==
++            GameplayFeedbackStatus::Accepted);
++    }
++    const auto blocked = std::find_if(
++        feed.History().begin(), feed.History().end(),
++        [](const GameplayFeedbackEvent& event) {
++            return event.kind ==
++                GameplayFeedbackKind::ProductionSpawnBlocked;
++        });
++    REQUIRE(blocked != feed.History().end());
++    REQUIRE(blocked->recipient == 0 && blocked->producer == producer);
++    REQUIRE(blocked->itemId != 0);
++    const ProductionItemId blockedItemId = blocked->itemId;
++
++    REQUIRE(sim.SetTerrainTile(14, 14, Terrain::Open));
++    REQUIRE(sim.SetTerrainTile(15, 14, Terrain::Open));
++    REQUIRE(sim.SetTerrainTile(14, 15, Terrain::Open));
++    REQUIRE(sim.SetTerrainTile(15, 15, Terrain::Open));
++    for (int step = 0; step < 3; ++step) {
++        sim.Step();
++        REQUIRE(feed.ObserveFixedStep(sim, 0, 40) ==
++            GameplayFeedbackStatus::Accepted);
++    }
++    const auto resumed = std::find_if(
++        feed.History().begin(), feed.History().end(),
++        [](const GameplayFeedbackEvent& event) {
++            return event.kind ==
++                GameplayFeedbackKind::ProductionSpawnResumed;
++        });
++    const auto completed = std::find_if(
++        feed.History().begin(), feed.History().end(),
++        [](const GameplayFeedbackEvent& event) {
++            return event.kind == GameplayFeedbackKind::ProductionCompleted;
++        });
++    REQUIRE(resumed != feed.History().end());
++    REQUIRE(completed != feed.History().end());
++    REQUIRE(resumed->itemId == blockedItemId);
++    REQUIRE(completed->itemId == blockedItemId);
++    REQUIRE(completed->actor != 0);
++    REQUIRE(std::any_of(
++        feed.History().begin(), feed.History().end(),
++        [](const GameplayFeedbackEvent& event) {
++            return event.kind == GameplayFeedbackKind::ProductionQueued;
++        }));
++    REQUIRE(std::any_of(
++        feed.History().begin(), feed.History().end(),
++        [](const GameplayFeedbackEvent& event) {
++            return event.kind == GameplayFeedbackKind::ProductionActivated;
++        }));
++    REQUIRE(feed.History().size() < GameplayFeedbackState::HistoryLimit);
++}
++
++void TestGameplayFeedbackRemoteLineageAndLoss() {
++    using namespace echoes::feedback;
++
++    GameplayFeedbackState remote;
++    REQUIRE(remote.BeginRemoteStream(50, 0, 40, true) ==
++        GameplayFeedbackStatus::Accepted);
++    REQUIRE(remote.Generation() == 50 && remote.LastEventId() == 40);
++    REQUIRE(remote.Loss().retainedHistoryWasTruncated);
++    GameplayFeedbackEvent event{};
++    event.generation = 50;
++    event.eventId = 41;
++    event.recipient = 0;
++    event.tick = 100;
++    event.kind = GameplayFeedbackKind::Queued;
++    event.sequence = 1;
++    REQUIRE(remote.IngestRemote(event, 0, 50) ==
++        GameplayFeedbackStatus::Accepted);
++    REQUIRE(remote.IngestRemote(event, 0, 50) ==
++        GameplayFeedbackStatus::Duplicate);
++
++    GameplayFeedbackEvent gap = event;
++    gap.eventId = 43;
++    gap.sequence = 3;
++    REQUIRE(remote.IngestRemote(gap, 0, 50) ==
++        GameplayFeedbackStatus::OutOfOrder);
++    REQUIRE(remote.LastEventId() == 41);
++    REQUIRE(remote.Loss().reseedRequired);
++    GameplayFeedbackEvent wrongOwner = event;
++    wrongOwner.eventId = 42;
++    wrongOwner.sequence = 2;
++    wrongOwner.recipient = 1;
++    REQUIRE(remote.IngestRemote(wrongOwner, 0, 50) ==
++        GameplayFeedbackStatus::WrongRecipient);
++    GameplayFeedbackEvent wrongGeneration = event;
++    wrongGeneration.eventId = 42;
++    wrongGeneration.sequence = 2;
++    wrongGeneration.generation = 51;
++    REQUIRE(remote.IngestRemote(wrongGeneration, 0, 50) ==
++        GameplayFeedbackStatus::WrongGeneration);
++    GameplayFeedbackEvent validNext = event;
++    validNext.eventId = 42;
++    validNext.sequence = 2;
++    std::vector<GameplayFeedbackEvent> malformedEvents;
++    const auto AddMalformed = [&](const auto& mutate) {
++        GameplayFeedbackEvent malformed = validNext;
++        mutate(malformed);
++        malformedEvents.push_back(malformed);
++    };
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.kind = static_cast<GameplayFeedbackKind>(255);
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.commandType = static_cast<CommandType>(255);
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.resolutionOutcome =
++            static_cast<CommandResolutionOutcome>(255);
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.entityType = static_cast<EntityType>(255);
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.productionBlockReason =
++            static_cast<ProductionStartBlockReason>(255);
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.resourcesSpent.material = -1;
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.resourcesRefunded.dawnshards = -1;
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.healthDelta = -1;
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.progressDelta = -1;
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.sequence = 0;
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.kind = GameplayFeedbackKind::Applied;
++        malformed.resolutionOutcome = CommandResolutionOutcome::NoEffect;
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.kind = GameplayFeedbackKind::NoEffect;
++        malformed.resolutionOutcome = CommandResolutionOutcome::Applied;
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.kind = GameplayFeedbackKind::ConstructionCreated;
++        malformed.target = 0;
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.kind = GameplayFeedbackKind::ConstructionProgressed;
++        malformed.actor = 1;
++        malformed.target = 2;
++        malformed.progressDelta = 0;
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.kind = GameplayFeedbackKind::RepairApplied;
++        malformed.actor = 1;
++        malformed.target = 2;
++        malformed.healthDelta = 0;
++    });
++    AddMalformed([](GameplayFeedbackEvent& malformed) {
++        malformed.kind = GameplayFeedbackKind::ProductionQueued;
++        malformed.producer = 1;
++        malformed.itemId = 0;
++    });
++    const std::size_t historyBeforeMalformed = remote.History().size();
++    for (const GameplayFeedbackEvent& malformed : malformedEvents) {
++        REQUIRE(remote.IngestRemote(malformed, 0, 50) ==
++            GameplayFeedbackStatus::InvalidEvent);
++        REQUIRE(remote.LastEventId() == 41);
++        REQUIRE(remote.History().size() == historyBeforeMalformed);
++    }
++    GameplayFeedbackEvent next = event;
++    next.eventId = 42;
++    next.sequence = 2;
++    REQUIRE(remote.IngestRemote(next, 0, 50) ==
++        GameplayFeedbackStatus::Accepted);
++
++    GameplayFeedbackLoss sourceLoss{};
++    sourceLoss.reseedRequired = true;
++    sourceLoss.retainedHistoryWasTruncated = true;
++    sourceLoss.evictedHistoryEvents = 7;
++    sourceLoss.untrackedCommands = 3;
++    sourceLoss.lostTransientReceipts = 2;
++    sourceLoss.missedObservationTicks = 5;
++    REQUIRE(remote.ReportRemoteObservationLoss(sourceLoss, 0, 50) ==
++        GameplayFeedbackStatus::Accepted);
++    REQUIRE(remote.ReportRemoteObservationLoss(sourceLoss, 0, 50) ==
++        GameplayFeedbackStatus::NoChange);
++    REQUIRE(remote.ReportRemoteObservationLoss(sourceLoss, 1, 50) ==
++        GameplayFeedbackStatus::WrongRecipient);
++    REQUIRE(remote.ReportRemoteObservationLoss(sourceLoss, 0, 51) ==
++        GameplayFeedbackStatus::WrongGeneration);
++    REQUIRE(remote.LastEventId() == 42);
++    REQUIRE(remote.Loss().evictedHistoryEvents == 7);
++    REQUIRE(remote.Loss().untrackedCommands == 3);
++    REQUIRE(remote.Loss().lostTransientReceipts == 2);
++    REQUIRE(remote.Loss().missedObservationTicks == 5);
++
++    // Ordinary ingestion cannot switch generation or establish a new floor.
++    GameplayFeedbackEvent future = next;
++    future.generation = 51;
++    future.eventId = 100;
++    REQUIRE(remote.IngestRemote(future, 0, 51) ==
++        GameplayFeedbackStatus::WrongGeneration);
++    REQUIRE(remote.Generation() == 50 && remote.LastEventId() == 42);
++    REQUIRE(remote.BeginRemoteStream(51, 1, 99) ==
++        GameplayFeedbackStatus::Accepted);
++    REQUIRE(remote.History().empty());
++    REQUIRE(remote.Recipient() == 1 && remote.LastEventId() == 99);
++    REQUIRE(!remote.Loss().reseedRequired);
++    future.recipient = 1;
++    future.sequence = 10;
++    REQUIRE(remote.IngestRemote(future, 1, 51) ==
++        GameplayFeedbackStatus::Accepted);
++    remote.Reset();
++    REQUIRE(remote.Generation() == 0 && remote.History().empty());
++}
+diff --git a/Tests/Native/NetworkActionDispatchTests.inl b/Tests/Native/NetworkActionDispatchTests.inl
+new file mode 100644
+index 0000000..28e2b93
+--- /dev/null
++++ b/Tests/Native/NetworkActionDispatchTests.inl
+@@ -0,0 +1,227 @@
++// Author and owner: Angelis Pseftis
++// Native coverage of client intent selection against real authority snapshots.
++
++void TestNetworkBulwarkGestureDispatch() {
++    using echoes::network::BulwarkActionDispatchState;
++    using echoes::network::BulwarkAdmissionResult;
++    Simulation sim({64, 64, 20, 0x4e455442554c57ULL});
++    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, {1000, 500}));
++    REQUIRE(sim.AddPlayer(1, Faction::MeridianCompact, {1000, 500}));
++    const auto near = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::HeavyUnit, Vec2::FromTiles(10, 10));
++    const auto far = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::HeavyUnit, Vec2::FromTiles(20, 10));
++    const auto peer = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::HeavyUnit, Vec2::FromTiles(10, 20));
++    const auto scout = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::ScoutUnit, Vec2::FromTiles(14, 14));
++    const auto enemy = sim.SpawnEntity(1, Faction::MeridianCompact,
++        EntityType::HeavyUnit, Vec2::FromTiles(15, 15));
++    REQUIRE(near && far && peer && scout && enemy);
++    const std::vector<EntityId> selected{enemy, scout, peer, far, near, near, 999999};
++    const Vec2 target = Vec2::FromTiles(15, 15);
++    std::uint64_t snapshotId = 0;
++    const auto snapshot = [&]() {
++        auto player = sim.CreatePlayerView(0);
++        REQUIRE(player.has_value());
++        net::ScopedViewKeyframe view;
++        REQUIRE(net::BuildScopedViewKeyframe(*player, ++snapshotId, 0, view));
++        return view;
++    };
++    auto view = snapshot();
++    BulwarkActionDispatchState pending;
++    const auto checksum = sim.StateChecksum();
++    REQUIRE(pending.Resolve(view, 0, target, {}, false).empty());
++    REQUIRE(pending.Resolve(view, 1, target, selected, false).empty());
++    auto first = pending.Resolve(view, 0, target, selected, false);
++    REQUIRE(first.size() == 1 && first[0].actor == near);
++    REQUIRE(pending.ReserveBatch(1, first));
++    // A second gesture before either acknowledgement or new snapshot chooses
++    // the next entity by exact distance and stable identifier.
++    auto second = pending.Resolve(view, 0, target, selected, false);
++    REQUIRE(second.size() == 1 && second[0].actor == far);
++    REQUIRE(pending.ReserveBatch(2, second));
++    auto third = pending.Resolve(view, 0, target, selected, false);
++    REQUIRE(third.size() == 1 && third[0].actor == peer);
++    REQUIRE(sim.StateChecksum() == checksum); // Input bookkeeping is cosmetic.
++
++    REQUIRE(pending.ApplyAdmission(1, 0, 1, 0, 3, view) ==
++        BulwarkAdmissionResult::Rejected);
++    REQUIRE(!pending.IsPending(near));
++    REQUIRE(pending.IsPending(far));
++    net::CommandAdmissionContext context;
++    net::CommandRequest deploy;
++    deploy.sequence = 1;
++    deploy.executeTick = 3;
++    deploy.type = CommandType::ToggleDeploy;
++    deploy.actor = far;
++    deploy.position = target;
++    REQUIRE(net::AdmitCommandRequest(deploy, context, sim) ==
++        net::CommandAdmissionStatus::Accepted);
++    REQUIRE(pending.ApplyAdmission(2, 1, 0, 0, 3, view) ==
++        BulwarkAdmissionResult::Applied);
++    sim.Step(3);
++    view = snapshot();
++    pending.ReconcileAcceptedView(view);
++    REQUIRE(pending.IsPending(far)); // Tick 3 has not executed yet.
++    sim.Step();
++    view = snapshot();
++    pending.ReconcileAcceptedView(view);
++    REQUIRE(sim.FindEntity(far)->deploymentPhase == BulwarkDeploymentPhase::Deploying);
++    auto during = pending.Resolve(view, 0, target, std::vector<EntityId>{far}, false);
++    REQUIRE(during.empty());
++    sim.Step(19);
++    view = snapshot();
++    REQUIRE(sim.FindEntity(far)->deployed);
++    // Pack may target the caster's own position; deploy must have a direction.
++    auto pack = pending.Resolve(view, 0, sim.FindEntity(far)->position,
++        std::vector<EntityId>{far}, false);
++    REQUIRE(pack.size() == 1 && pack[0].baselineDeployed);
++    REQUIRE(pending.ReserveBatch(3, pack));
++    deploy.sequence = 2;
++    deploy.executeTick = sim.CurrentTick() + 3;
++    deploy.position = sim.FindEntity(far)->position;
++    REQUIRE(net::AdmitCommandRequest(deploy, context, sim) ==
++        net::CommandAdmissionStatus::Accepted);
++    REQUIRE(pending.ApplyAdmission(3, 1, 0, sim.CurrentTick(), 3, view) ==
++        BulwarkAdmissionResult::Applied);
++    pending.ReconcileAcceptedView(view);
++    REQUIRE(pending.IsPending(far)); // Already deployed is not pack completion.
++    sim.Step(4);
++    view = snapshot();
++    pending.ReconcileAcceptedView(view);
++    REQUIRE(sim.FindEntity(far)->deployed);
++    REQUIRE(sim.FindEntity(far)->deploymentPhase == BulwarkDeploymentPhase::Packing);
++    REQUIRE(pending.Resolve(view, 0, target, std::vector<EntityId>{far}, false).empty());
++    sim.Step(14);
++    view = snapshot();
++    pending.ReconcileAcceptedView(view);
++    REQUIRE(!sim.FindEntity(far)->deployed);
++    REQUIRE(pending.Resolve(view, 0, sim.FindEntity(far)->position,
++        std::vector<EntityId>{far}, false).empty());
++    auto all = pending.Resolve(view, 0, target, selected, true);
++    REQUIRE(all.size() == 3);
++    REQUIRE(all[0].actor == near && all[1].actor == far && all[2].actor == peer);
++}
++
++void TestNetworkBulwarkPendingRecovery() {
++    using echoes::network::BulwarkActionDispatchState;
++    using echoes::network::BulwarkAdmissionResult;
++    Simulation sim({32, 32, 20, 0x4e45545245434fULL});
++    AddTwoPlayers(sim);
++    const auto a = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::HeavyUnit, Vec2::FromTiles(10, 10));
++    const auto b = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::HeavyUnit, Vec2::FromTiles(15, 10));
++    REQUIRE(a && b);
++    std::uint64_t nextSnapshot = 0;
++    const auto snapshot = [&]() {
++        auto player = sim.CreatePlayerView(0);
++        REQUIRE(player.has_value());
++        net::ScopedViewKeyframe view;
++        REQUIRE(net::BuildScopedViewKeyframe(*player, ++nextSnapshot, 0, view));
++        return view;
++    };
++    auto view = snapshot();
++    BulwarkActionDispatchState pending;
++    const std::vector<EntityId> selected{b, a};
++    auto all = pending.Resolve(view, 0, Vec2::FromTiles(20, 10), selected, true);
++    REQUIRE(all.size() == 2);
++    REQUIRE(pending.ReserveBatch(1, all));
++    REQUIRE(!pending.ReserveBatch(1, all));
++    REQUIRE(pending.ApplyAdmission(1, 1, 1, 0, 3, view) ==
++        BulwarkAdmissionResult::Applied);
++    // The count-only partial response conservatively holds both actors. Even
++    // unchanged state cannot free them until their assigned tick has run.
++    sim.Step(3);
++    view = snapshot();
++    pending.ReconcileAcceptedView(view);
++    REQUIRE(pending.IsPending(a) && pending.IsPending(b));
++    sim.Step();
++    view = snapshot();
++    pending.ReconcileAcceptedView(view);
++    REQUIRE(pending.PendingActorCount() == 0);
++    // A newer snapshot may arrive before the reliable admission callback.
++    REQUIRE(pending.ReserveBatch(2, all));
++    REQUIRE(pending.ApplyAdmission(2, 1, 1, 0, 3, view) ==
++        BulwarkAdmissionResult::Applied);
++    REQUIRE(pending.PendingActorCount() == 0);
++    REQUIRE(pending.ReserveBatch(3, all));
++    REQUIRE(pending.RejectBatch(3));
++    REQUIRE(pending.PendingBatchCount() == 0);
++    REQUIRE(pending.ReserveBatch(4, all));
++    pending.Reset();
++    REQUIRE(pending.PendingActorCount() == 0);
++    REQUIRE(pending.PendingBatchCount() == 0);
++    REQUIRE(!pending.ReserveBatch(0, all));
++    REQUIRE(pending.ReserveBatch(5, all));
++    REQUIRE(pending.ApplyAdmission(5, 1, 1,
++        std::numeric_limits<Tick>::max(), 3, view) ==
++        BulwarkAdmissionResult::TickOverflow);
++    REQUIRE(pending.PendingActorCount() == 0);
++}
++
++void TestNetworkBulwarkArithmeticBounds() {
++    using echoes::network::BulwarkActionDispatchState;
++    using echoes::network::BulwarkAdmissionResult;
++    // Defensive helper arithmetic fixture, deliberately outside map bounds.
++    // This does not claim that the wire decoder admits an off-map entity.
++    net::ScopedViewKeyframe view;
++    view.player = 0;
++    const auto low = std::numeric_limits<std::int32_t>::min();
++    const auto high = std::numeric_limits<std::int32_t>::max();
++    for (EntityId id : {EntityId{1}, EntityId{2}}) {
++        net::ScopedEntityState actor;
++        actor.id = id;
++        actor.owner = 0;
++        actor.faction = Faction::MeridianCompact;
++        actor.type = EntityType::HeavyUnit;
++        actor.completed = true;
++        actor.hitPoints = actor.maxHitPoints = 100;
++        actor.position = Vec2::FromRaw(low + static_cast<std::int32_t>(id - 1), low);
++        view.entities.push_back(actor);
++    }
++    const std::vector<EntityId> selected{1, 2};
++    BulwarkActionDispatchState pending;
++    const auto chosen = pending.Resolve(view, 0, Vec2::FromRaw(high, high), selected, false);
++    REQUIRE(chosen.size() == 1 && chosen[0].actor == 2);
++    REQUIRE(pending.ReserveBatch(1, chosen));
++    REQUIRE(pending.ApplyAdmission(1, -1, 2, 0, 3, view) ==
++        BulwarkAdmissionResult::InvalidCounts);
++    REQUIRE(!pending.HasBatch(1));
++    REQUIRE(pending.ReserveBatch(2, chosen));
++    REQUIRE(pending.ApplyAdmission(2, 2, -1, 0, 3, view) ==
++        BulwarkAdmissionResult::InvalidCounts);
++    REQUIRE(!pending.HasBatch(2));
++}
++
++void TestNetworkSnapshotAcknowledgementBackpressure() {
++    using echoes::network::SnapshotFlowControl;
++    using echoes::network::SnapshotSendDecision;
++    SnapshotFlowControl flow;
++    REQUIRE(flow.Evaluate(0, 100.0) == SnapshotSendDecision::Send);
++    flow.RecordSend(0, 100.0);
++    for (std::size_t pending = 1; pending < 8; ++pending) {
++        REQUIRE(flow.Evaluate(pending, 100.0 + pending * 0.5) ==
++            SnapshotSendDecision::Send);
++        flow.RecordSend(pending, 100.0 + pending * 0.5);
++    }
++    REQUIRE(flow.Evaluate(8, 104.0) == SnapshotSendDecision::WaitForAcknowledgement);
++    REQUIRE(flow.Evaluate(8, 108.0) == SnapshotSendDecision::WaitForAcknowledgement);
++    REQUIRE(flow.Evaluate(8, 144.999) == SnapshotSendDecision::WaitForAcknowledgement);
++    // Full-window retransmissions and continued sends cannot renew the timeout.
++    flow.RecordSend(8, 144.0);
++    REQUIRE(flow.Evaluate(8, 145.0) == SnapshotSendDecision::TimedOut);
++    flow.RecordValidAcknowledgement(7, 145.0);
++    REQUIRE(flow.Evaluate(7, 145.0) == SnapshotSendDecision::Send);
++    flow.RecordSend(7, 145.5);
++    REQUIRE(flow.Evaluate(8, 189.999) == SnapshotSendDecision::WaitForAcknowledgement);
++    REQUIRE(flow.Evaluate(8, 190.0) == SnapshotSendDecision::TimedOut);
++    flow.RecordValidAcknowledgement(0, 190.0);
++    REQUIRE(flow.Evaluate(0, 1000.0) == SnapshotSendDecision::Send);
++    flow.RecordSend(0, 1000.0);
++    REQUIRE(flow.Evaluate(1, 1044.999) == SnapshotSendDecision::Send);
++    REQUIRE(flow.Evaluate(1, 1045.0) == SnapshotSendDecision::TimedOut);
++    flow.Reset();
++    REQUIRE(flow.Evaluate(0, 2000.0) == SnapshotSendDecision::Send);
++}
+diff --git a/Tests/Native/ResourceDepletionTests.cpp b/Tests/Native/ResourceDepletionTests.cpp
+new file mode 100644
+index 0000000..a3739b0
+--- /dev/null
++++ b/Tests/Native/ResourceDepletionTests.cpp
+@@ -0,0 +1,61 @@
++#include "EchoesSimCore/Simulation.h"
++#include <algorithm>
++#include <iostream>
++#include <stdexcept>
++using namespace echoes::sim;
++#define CHECK(x) do { if (!(x)) throw std::runtime_error(#x); } while (false)
++
++void CheckDeposit(PlayerId owner, Faction faction, int stock) {
++    Simulation sim(SimulationConfig{32,32,20,0xDE910ULL});
++    CHECK(sim.AddPlayer(0, faction, ResourcePool{0,0}));
++    CHECK(sim.AddPlayer(1, faction, ResourcePool{0,0}));
++    CHECK(sim.SpawnEntity(owner, faction, EntityType::CommandCore, Vec2::FromTiles(4,8)));
++    const auto node = sim.SpawnResourceNode(Vec2::FromTiles(10,8),stock);
++    const auto other = sim.SpawnResourceNode(Vec2::FromTiles(11,8),50);
++    const auto hidden = sim.SpawnResourceNode(Vec2::FromTiles(30,30),80);
++    const auto worker = sim.SpawnEntity(owner,faction,EntityType::Worker,Vec2::FromTiles(10,8));
++    CHECK(worker && node && other && hidden);
++    sim.Step();
++    const auto view = sim.CreatePlayerView(owner);
++    CHECK(view.has_value());
++    const auto seen = std::find_if(view->Entities().begin(), view->Entities().end(),
++        [node](const Entity& e){ return e.id == node; });
++    CHECK(seen != view->Entities().end());
++    CHECK(seen->resourceRemaining == stock);
++    CHECK(std::none_of(view->Entities().begin(),view->Entities().end(),
++        [hidden](const Entity& e){return e.id == hidden;}));
++    Command gather{}; gather.executeTick=sim.CurrentTick(); gather.player=owner;
++    gather.sequence=1; gather.type=CommandType::Gather; gather.actor=worker; gather.target=node;
++    CHECK(sim.QueueCommand(gather));
++    sim.Step(10);
++    std::string error;
++    auto restored=Simulation::LoadSnapshot(sim.SaveSnapshot(), &error);
++    CHECK(restored.has_value());
++    int previous=sim.FindEntity(node)->resourceRemaining;
++    for (int tick=0;tick<20000 && sim.FindPlayer(owner)->resources.material<stock;++tick) {
++        sim.Step(); restored->Step();
++        const auto* n=sim.FindEntity(node); const auto* w=sim.FindEntity(worker);
++        CHECK(n && w); CHECK(n->resourceRemaining>=0 && n->resourceRemaining<=previous);
++        CHECK(n->resourceRemaining+w->cargo+sim.FindPlayer(owner)->resources.material==stock);
++        previous=n->resourceRemaining;
++    }
++    CHECK(sim.FindEntity(node)->resourceRemaining==0);
++    CHECK(sim.FindPlayer(owner)->resources.material==stock);
++    CHECK(sim.FindEntity(worker)->cargo==0);
++    CHECK(sim.FindEntity(worker)->harvestState==HarvestState::Idle);
++    CHECK(sim.FindEntity(other)->resourceRemaining==50);
++    CHECK(sim.StateChecksum()==restored->StateChecksum());
++    auto exhausted=Simulation::LoadSnapshot(sim.SaveSnapshot(), &error);
++    CHECK(exhausted.has_value());
++    sim.Step(100); exhausted->Step(100);
++    CHECK(sim.FindPlayer(owner)->resources.material==stock);
++    CHECK(sim.StateChecksum()==exhausted->StateChecksum());
++}
++int main() {
++    try {
++        for (auto faction : {Faction::MeridianCompact,Faction::KharuunAssemblies,Faction::HollowChoir})
++            for (PlayerId owner : {PlayerId{0},PlayerId{1}}) CheckDeposit(owner,faction,17);
++        CheckDeposit(0,Faction::MeridianCompact,1500);
++        std::cout << "PASS: 7 deposit cases; public stock, hidden exclusion, conservation, partial final loads, depletion, idle, save/load.\n";
++    } catch(const std::exception& e) { std::cerr << "FAIL: " << e.what() << '\n'; return 1; }
++}
+diff --git a/Tests/Native/WorkerMaintenanceTests.inl b/Tests/Native/WorkerMaintenanceTests.inl
+new file mode 100644
+index 0000000..b721140
+--- /dev/null
++++ b/Tests/Native/WorkerMaintenanceTests.inl
+@@ -0,0 +1,208 @@
++// Author and owner: Angelis Pseftis
++void TestWorkerMaintenanceAdmissionAndAssist() {
++    SimulationConfig config{40, 40, 20, 0x4d41494e5441494eULL};
++    config.rules.poweredAegis.connectionRadiusRaw = 8 * kFixedScale;
++    Simulation sim(config);
++    AddTwoPlayers(sim, {2000, 500}, {2000, 500});
++    const auto core = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::CommandCore, Vec2::FromTiles(4, 4));
++    const auto link = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Dropoff, Vec2::FromTiles(10, 4), 100);
++    const auto worker = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Worker, Vec2::FromTiles(10, 5));
++    const auto builder = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Worker, Vec2::FromTiles(7, 8));
++    const auto assistant = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Worker, Vec2::FromTiles(8, 7));
++    const auto disconnected = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Worker, Vec2::FromTiles(35, 35));
++    const auto soldier = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Soldier, Vec2::FromTiles(9, 6));
++    const auto opposingCore = sim.SpawnEntity(1, Faction::KharuunAssemblies,
++        EntityType::CommandCore, Vec2::FromTiles(30, 30));
++    const auto tender = sim.SpawnEntity(1, Faction::KharuunAssemblies,
++        EntityType::Worker, Vec2::FromTiles(29, 30));
++    REQUIRE(core && link && worker && builder && assistant && disconnected &&
++        soldier && opposingCore && tender);
++    REQUIRE(sim.ValidateRepair(0, worker, link) == RepairResult::Valid);
++    REQUIRE(sim.ValidateRepair(0, soldier, link) == RepairResult::InvalidWorker);
++    REQUIRE(sim.ValidateRepair(0, tender, link) == RepairResult::InvalidWorker);
++    REQUIRE(sim.ValidateRepair(0, worker, worker) == RepairResult::InvalidTarget);
++    REQUIRE(sim.ValidateRepair(0, worker, opposingCore) == RepairResult::InvalidTarget);
++    REQUIRE(sim.ValidateRepair(0, worker, soldier) == RepairResult::Undamaged);
++    REQUIRE(sim.ValidateRepair(0, disconnected, link) == RepairResult::Disconnected);
++    REQUIRE(sim.ValidateConstructionAssist(0, assistant, core) ==
++        ConstructionAssistResult::SiteComplete);
++    REQUIRE(sim.ValidateConstructionAssist(0, assistant, opposingCore) ==
++        ConstructionAssistResult::InvalidSite);
++    REQUIRE(sim.ValidateConstructionAssist(0, soldier, link) ==
++        ConstructionAssistResult::InvalidWorker);
++
++    sim.CaptureReplayBaseline();
++    const auto hpBefore = sim.FindEntity(link)->hitPoints;
++    const auto fundsBefore = sim.FindPlayer(0)->resources.material;
++    auto repair = MakeCommand(sim.CurrentTick(), 0, 1, CommandType::Repair, worker);
++    repair.target = link;
++    REQUIRE(sim.QueueCommand(repair));
++    sim.Step(20);
++    REQUIRE(sim.FindEntity(link)->hitPoints == hpBefore + 10);
++    REQUIRE(sim.FindPlayer(0)->resources.material == fundsBefore - 1);
++    REQUIRE(sim.QueueCommand(MakeCommand(sim.CurrentTick(), 0, 2, CommandType::Stop, worker)));
++    auto build = MakeCommand(sim.CurrentTick(), 0, 3, CommandType::Build, builder);
++    build.buildType = EntityType::Dropoff;
++    build.position = Vec2::FromTiles(8, 8);
++    REQUIRE(sim.QueueCommand(build));
++    sim.Step();
++    auto player = sim.CreatePlayerView(0);
++    REQUIRE(player.has_value() && !player->ConstructionReceipts().empty());
++    const auto site = player->ConstructionReceipts().back().structure;
++    REQUIRE(sim.FindEntity(site) != nullptr && !sim.FindEntity(site)->completed);
++    REQUIRE(sim.ValidateConstructionAssist(0, builder, site) ==
++        ConstructionAssistResult::WorkerBusy);
++    REQUIRE(sim.ValidateConstructionAssist(0, assistant, site) ==
++        ConstructionAssistResult::Valid);
++    const auto paid = sim.FindPlayer(0)->resources;
++    auto assist = MakeCommand(sim.CurrentTick(), 0, 4, CommandType::Build, assistant);
++    assist.target = site;
++    assist.position = sim.FindEntity(site)->position;
++    REQUIRE(sim.QueueCommand(assist));
++    sim.Step();
++    REQUIRE(sim.FindEntity(assistant)->order.type == OrderType::Build);
++    REQUIRE(sim.FindEntity(assistant)->order.target == site);
++    REQUIRE(sim.FindPlayer(0)->resources == paid);
++    std::string error;
++    auto restored = Simulation::LoadSnapshot(sim.SaveSnapshot(), &error);
++    REQUIRE(restored.has_value());
++    REQUIRE(restored->StateChecksum() == sim.StateChecksum());
++    auto replayed = Simulation::ReplayToEnd(sim.ExportReplay(), &error);
++    REQUIRE(replayed.has_value());
++    REQUIRE(replayed->StateChecksum() == sim.StateChecksum());
++}
++
++void TestConstructionAssistCancellationRace() {
++    SimulationConfig config{32, 32, 20, 0x43414e43454c4153ULL};
++    Simulation sim(config);
++    AddTwoPlayers(sim);
++    const auto core = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::CommandCore, Vec2::FromTiles(4, 4));
++    const auto builder = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Worker, Vec2::FromTiles(7, 8));
++    const auto assistant = sim.SpawnEntity(0, Faction::MeridianCompact,
++        EntityType::Worker, Vec2::FromTiles(8, 7));
++    REQUIRE(core && builder && assistant);
++    sim.CaptureReplayBaseline();
++    auto build = MakeCommand(0, 0, 1, CommandType::Build, builder);
++    build.buildType = EntityType::Dropoff;
++    build.position = Vec2::FromTiles(8, 8);
++    REQUIRE(sim.QueueCommand(build));
++    sim.Step();
++    const auto created = sim.CreatePlayerView(0);
++    REQUIRE(created.has_value() && !created->ConstructionReceipts().empty());
++    const auto site = created->ConstructionReceipts().front().structure;
++    REQUIRE(sim.ValidateConstructionAssist(0, assistant, site) == ConstructionAssistResult::Valid);
++    const auto paid = sim.FindPlayer(0)->resources;
++    const auto cost = sim.FindEntity(site)->constructionInvestedCost;
++    auto cancel = MakeCommand(sim.CurrentTick(), 0, 2, CommandType::CancelConstruction, site);
++    auto assist = MakeCommand(sim.CurrentTick(), 0, 3, CommandType::Build, assistant);
++    assist.target = site;
++    assist.position = build.position;
++    assist.buildType = EntityType::Dropoff;
++    REQUIRE(sim.QueueCommand(cancel));
++    REQUIRE(sim.QueueCommand(assist));
++    sim.Step();
++    REQUIRE(sim.FindEntity(site) == nullptr);
++    REQUIRE(sim.FindEntity(assistant)->order.type != OrderType::Build);
++    REQUIRE(sim.FindCommandResolutionReceipt(0, assist.sequence)->outcome == CommandResolutionOutcome::NoEffect);
++    REQUIRE(sim.FindPlayer(0)->resources == (ResourcePool{
++        paid.material + cost.material * 75 / 100,
++        paid.dawnshards + cost.dawnshards * 75 / 100}));
++    const auto afterCancel = sim.FindPlayer(0)->resources;
++    const auto entityCount = sim.Entities().size();
++    assist.executeTick = sim.CurrentTick();
++    assist.sequence = 4;
++    REQUIRE(sim.QueueCommand(assist));
++    sim.Step();
++    REQUIRE(sim.FindPlayer(0)->resources == afterCancel);
++    REQUIRE(sim.Entities().size() == entityCount);
++    REQUIRE(sim.FindCommandResolutionReceipt(0, assist.sequence)->outcome == CommandResolutionOutcome::NoEffect);
++    std::string error;
++    const auto replayed = Simulation::ReplayToEnd(sim.ExportReplay(), &error);
++    REQUIRE(replayed.has_value());
++    REQUIRE(replayed->StateChecksum() == sim.StateChecksum());
++}
++
++void TestAuthenticSchema31ConstructionAssistReplay() {
++    // The receipt and baseline are emitted only by the archived candidate36
++    // writer, whose source hashes accompany the retained oracle.
++    const auto receiptBytes = ReadLegacyReplayFixture("schema31-assist-receipt.json");
++    const std::string receiptText(receiptBytes.begin(), receiptBytes.end());
++    const auto Oracle = [&](const std::string& key) -> std::uint64_t {
++        const auto start = receiptText.find('"' + key + '"');
++        REQUIRE(start != std::string::npos);
++        const auto colon = receiptText.find(':', start);
++        REQUIRE(colon != std::string::npos);
++        return std::stoull(receiptText.substr(colon + 1));
++    };
++    REQUIRE(Oracle("snapshot_version") == 31);
++    REQUIRE(Oracle("replay_version") == 28);
++    ReplayRecord replay;
++    replay.version = kBulwarkCommitmentReplayVersion;
++    replay.initialSnapshot = ReadLegacyReplayFixture("schema31-assist-baseline.bin");
++    replay.finalTick = 3;
++    replay.finalChecksum = Oracle("final_checksum");
++    auto build = MakeCommand(0, 0, 1, CommandType::Build, 2);
++    build.buildType = EntityType::Dropoff;
++    build.position = Vec2::FromTiles(8, 8);
++    auto cancel = MakeCommand(1, 0, 2, CommandType::CancelConstruction, 5);
++    auto assist = build;
++    assist.executeTick = 1; assist.sequence = 3; assist.actor = 3; assist.target = 5;
++    auto stale = build;
++    stale.executeTick = 2; stale.sequence = 4; stale.actor = 4;
++    stale.target = 105; stale.position = Vec2::FromTiles(8, 12);
++    replay.commands = {build, cancel, assist, stale};
++    std::string error;
++    auto incremental = Simulation::BeginReplaySimulation(replay, &error);
++    REQUIRE(incremental.has_value());
++    for (Tick tick = 0; tick < 3; ++tick) {
++        for (const auto& command : replay.commands) {
++            if (command.executeTick == tick) REQUIRE(incremental->QueueCommand(command));
++        }
++        incremental->Step();
++        if (tick == 0) REQUIRE(incremental->ReplayStateChecksum() == Oracle("build_tick1_checksum"));
++        if (tick == 1) REQUIRE(incremental->ReplayStateChecksum() == Oracle("resurrection_tick2_checksum"));
++    }
++    REQUIRE(incremental->ReplayStateChecksum() == replay.finalChecksum);
++    auto old = Simulation::ReplayToEnd(replay, &error);
++    REQUIRE(old.has_value());
++    REQUIRE(old->FindEntity(5) != nullptr && old->FindEntity(5)->hitPoints > 0);
++    REQUIRE(old->FindEntity(6) != nullptr);
++    REQUIRE(old->FindPlayer(0)->resources.material == static_cast<std::int32_t>(Oracle("final_material")));
++    REQUIRE(old->FindPlayer(0)->resources.dawnshards == static_cast<std::int32_t>(Oracle("final_dawnshards")));
++    const auto report = Simulation::BuildMatchReport(replay, &error);
++    REQUIRE(report.has_value() && report->finalChecksum == replay.finalChecksum);
++    auto continued = Simulation::LoadSnapshot(old->SaveSnapshot(), &error);
++    REQUIRE(continued.has_value());
++    REQUIRE(continued->ContinueReplayRecording(replay, &error));
++    cancel.executeTick = continued->CurrentTick(); cancel.sequence = 5;
++    assist.executeTick = continued->CurrentTick(); assist.sequence = 6;
++    REQUIRE(continued->QueueCommand(cancel));
++    REQUIRE(continued->QueueCommand(assist));
++    continued->Step();
++    REQUIRE(continued->FindEntity(5) != nullptr && continued->FindEntity(5)->hitPoints > 0);
++    const auto prefix = continued->ExportReplay(&error);
++    REQUIRE(prefix.version == kBulwarkCommitmentReplayVersion);
++    REQUIRE(prefix.finalChecksum == Oracle("continued_tick4_checksum"));
++    REQUIRE(Simulation::ReplayToEnd(prefix, &error).has_value());
++    // A deliberately new recording rebases the same live world to the repaired
++    // semantics, rather than silently changing the historical continuation.
++    continued->CaptureReplayBaseline();
++    REQUIRE(continued->ExportReplay().version == kMaintenanceReplayVersion);
++    cancel.executeTick = continued->CurrentTick(); cancel.sequence = 7;
++    assist.executeTick = continued->CurrentTick(); assist.sequence = 8;
++    REQUIRE(continued->QueueCommand(cancel));
++    REQUIRE(continued->QueueCommand(assist));
++    continued->Step();
++    REQUIRE(continued->FindEntity(5) == nullptr);
++    REQUIRE(continued->FindCommandResolutionReceipt(0, 8)->outcome == CommandResolutionOutcome::NoEffect);
++    REQUIRE(Simulation::ReplayToEnd(continued->ExportReplay(), &error).has_value());
++}

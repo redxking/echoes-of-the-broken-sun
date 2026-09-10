@@ -1,0 +1,26 @@
+ M Docs/Requirements.md
+ M Docs/RequirementsState.md
+ M Source/EchoesOfTheBrokenSun/Private/EchoesEntityView.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerController.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesSimulationSubsystem.cpp
+ M Source/EchoesOfTheBrokenSun/Public/EchoesEntityView.h
+ M Source/EchoesSimCore/Private/NetworkProtocol.cpp
+ M Source/EchoesSimCore/Private/Simulation.cpp
+ M Source/EchoesSimCore/Public/EchoesSimCore/NetworkProtocol.h
+ M Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h
+ M Tests/Native/Fixtures/LegacyReplay/README.md
+ M Tests/Native/SimCoreTests.cpp
+?? Scripts/test_resource_depletion.sh
+?? Tests/Native/Fixtures/LegacyReplay/historical_schema30_bulwark_checkpoint_writer.cpp
+?? Tests/Native/Fixtures/LegacyReplay/historical_schema30_bulwark_writer.cpp
+?? Tests/Native/Fixtures/LegacyReplay/historical_schema31_assist_writer.cpp
+?? Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-baseline.bin
+?? Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-checkpoint-baseline.bin
+?? Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-checkpoint-receipt.json
+?? Tests/Native/Fixtures/LegacyReplay/schema30-bulwark-receipt.json
+?? Tests/Native/Fixtures/LegacyReplay/schema31-assist-baseline.bin
+?? Tests/Native/Fixtures/LegacyReplay/schema31-assist-receipt.json
+?? Tests/Native/GameplayFeedbackTests.inl
+?? Tests/Native/NetworkActionDispatchTests.inl
+?? Tests/Native/ResourceDepletionTests.cpp
+?? Tests/Native/WorkerMaintenanceTests.inl

@@ -1,0 +1,61 @@
+diff --git a/ArtSource/EBS-KHA-UNT-002/diag_texture_channels_inengine.py b/ArtSource/EBS-KHA-UNT-002/diag_texture_channels_inengine.py
+index 35b5b12..1ff9061 100644
+--- a/ArtSource/EBS-KHA-UNT-002/diag_texture_channels_inengine.py
++++ b/ArtSource/EBS-KHA-UNT-002/diag_texture_channels_inengine.py
+@@ -47,12 +47,32 @@ def uv_wire(m):
+ variants = {
+     "const_half": unlit("M_Diag_Const", const_wire),
+     "basecolor": unlit("M_Diag_BaseColor", sample_wire("BaseColor", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)),
+-    "mre": unlit("M_Diag_MRE", sample_wire("MRE", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)),
+-    "statemask": unlit("M_Diag_StateMask", sample_wire("StateMask", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)),
++    "mre": unlit("M_Diag_MRE", sample_wire("MRE", unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)),
++    "statemask": unlit("M_Diag_StateMask", sample_wire("StateMask", unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)),
+     "vertexcolor": unlit("M_Diag_VertexColor", vc_wire),
+     "uv0": unlit("M_Diag_UV0", uv_wire),
+ }
+ 
++art = unreal.EditorAssetLibrary.load_asset(f"{MAT_DIR}/M_EBS_KHA_UNT_002_Art")
++report["art_loaded"] = art is not None
++if art is not None:
++    for name, team, emis in (("art_full", None, None), ("art_noteam", unreal.LinearColor(0, 0, 0, 1), None),
++                             ("art_noemissive", None, 0.0), ("art_bare", unreal.LinearColor(0, 0, 0, 1), 0.0)):
++        path = f"{MAT_DIR}/MI_{name}"
++        if unreal.EditorAssetLibrary.does_asset_exist(path):
++            unreal.EditorAssetLibrary.delete_asset(path)
++        mic = tools.create_asset(f"MI_{name}", MAT_DIR, unreal.MaterialInstanceConstant, unreal.MaterialInstanceConstantFactoryNew())
++        lib.set_material_instance_parent(mic, art)
++        lib.set_material_instance_scalar_parameter_value(mic, "MoltProgress", 0.0)
++        if team is not None:
++            lib.set_material_instance_vector_parameter_value(mic, "TeamColor", team)
++        if emis is not None:
++            lib.set_material_instance_scalar_parameter_value(mic, "EmissiveStrength", emis)
++        unreal.EditorAssetLibrary.save_loaded_asset(mic)
++        variants[name] = mic
++for k, t in tex.items():
++    if t is not None:
++        t.set_editor_property("never_stream", True)
+ sub = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem); world = sub.get_editor_world()
+ reg = unreal.AssetRegistryHelpers.get_asset_registry()
+ mesh = [a for a in reg.get_assets_by_path("/Game/Echoes/VertexIDCheck/carapace_molt", recursive=True)
+@@ -66,8 +86,13 @@ cc.set_editor_property("texture_target", rt); cc.set_editor_property("capture_so
+ cc.set_editor_property("fov_angle", 50.0)
+ pp = cc.get_editor_property("post_process_settings")
+ pp.set_editor_property("override_auto_exposure_method", True); pp.set_editor_property("auto_exposure_method", unreal.AutoExposureMethod.AEM_MANUAL)
+-pp.set_editor_property("override_auto_exposure_bias", True); pp.set_editor_property("auto_exposure_bias", 12.0)
++pp.set_editor_property("override_auto_exposure_bias", True); pp.set_editor_property("auto_exposure_bias", 11.0)
+ cc.set_editor_property("post_process_settings", pp); cc.set_editor_property("post_process_blend_weight", 1.0)
++light = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.DirectionalLight, unreal.Vector(0, 0, 900))
++light.set_actor_rotation(unreal.MathLibrary.find_look_at_rotation(unreal.Vector(-600, -500, 900), unreal.Vector(0, 0, 100)), False)
++light.light_component.set_intensity(3.0); light.light_component.set_light_color(unreal.LinearColor(1.0, 0.82, 0.62, 1.0))
++sky = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.SkyLight, unreal.Vector(0, 0, 700))
++sky.light_component.set_intensity(0.6); sky.light_component.set_light_color(unreal.LinearColor(0.48, 0.60, 0.88, 1.0))
+ arm, pitch, yaw = 520.0, -18.0, 55.0
+ rp, ry = math.radians(pitch), math.radians(yaw)
+ f = (math.cos(rp) * math.cos(ry), math.cos(rp) * math.sin(ry), math.sin(rp))
+@@ -89,5 +114,6 @@ for name, m in variants.items():
+     unreal.RenderingLibrary.export_render_target(world, rt, OUT, f"diag_{name}.png")
+     report["variants"][name] = {"creature_mean": creature_mean(), "ground": ground_mean(),
+                                 "material": comp_m.get_material(0).get_name()}
++    time.sleep(0.2)
+ json.dump(report, open(os.path.join(OUT, "diag-report.json"), "w"), indent=1)
+ print("[EBS_DIAG] " + json.dumps(report["variants"]))

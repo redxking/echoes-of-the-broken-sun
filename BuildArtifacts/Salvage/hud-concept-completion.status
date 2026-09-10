@@ -1,0 +1,132 @@
+ M Config/DefaultInput.ini
+ M Content/Art/Generated/Materials/MI_M01Evacuation_0.uasset
+ M Content/Art/Generated/Materials/MI_M01Evacuation_1.uasset
+ M Content/Art/Generated/Materials/MI_M01Evacuation_2.uasset
+ M Content/Art/Generated/Materials/MI_M01Evacuation_3.uasset
+ M Content/Art/Generated/Materials/M_EchoesPresentationVFX.uasset
+ M Content/UI/Fonts/IBMPlexMono/OFL.txt
+ M Content/UI/Fonts/SpaceGrotesk/OFL.txt
+ M Docs/Archive/AssetRegister.md
+ M Docs/Archive/SetupAndBuild.md
+ M Docs/CampaignAndTutorialJourneyPlan.md
+ M Docs/DeliveryPlan.md
+ M Docs/OpeningAndTutorialScript.md
+ M Docs/README.md
+ M Docs/Requirements.md
+ M Docs/RequirementsState.md
+ M Docs/VisualTargetSpecification.md
+ M Docs/WorldMapWorkLog.md
+ M Scripts/check_agent_docs.py
+ M Scripts/echoes_cliff_material.py
+ M Scripts/echoes_evacuation_props.py
+ M Scripts/generate_art_assets.py
+ M Scripts/generate_art_assets.sh
+ M Scripts/run_unreal_tests.sh
+ M Scripts/test_content.sh
+ M Source/EchoesOfTheBrokenSun/EchoesOfTheBrokenSun.Build.cs
+ M Source/EchoesOfTheBrokenSun/Private/EchoesBuildPlacementPreview.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesCliffMesh.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesCommandDeckModel.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesContentSubsystem.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesContextCursorWidget.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesFieldHudView.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesFieldHudWidget.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesFogView.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesNetworkSession.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerController.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerFieldHud.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerReplay.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerResults.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerShell.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesPlayerTutorial.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesRTSCameraPawn.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesShellWidget.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesSimulationSubsystem.cpp
+ M Source/EchoesOfTheBrokenSun/Private/EchoesTacticalInput.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesAssemblyOfTheMissingMissionTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesAsyncCheckpointTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesBrokenSunMissionTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesBuildPlacementPreviewTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesBulwarkDeploymentTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesCommandDeckModelTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesContentCatalogTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesFactionSelectionTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesFieldHudRoutesTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesFieldHudViewTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesFieldHudWidgetTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesFutureThatWonMissionTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesGameUserSettingsTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesNetworkProtocolTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesNoNeutralLedgerMissionTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesOrthographicCameraTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesPlayerInputCollisionTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesPlayerShellTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesPointerSurfaceCoverageTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesProductionFogTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesQuickSaveLoadTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesResearchTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesSeveralVoicesOneCommandMissionTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesShellWidgetTest.cpp
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesSnapshotMigrationTestHelpers.h
+ M Source/EchoesOfTheBrokenSun/Private/Tests/EchoesTutorialAnchorSelectionTest.cpp
+ M Source/EchoesOfTheBrokenSun/Public/EchoesBuildPlacementPreview.h
+ M Source/EchoesOfTheBrokenSun/Public/EchoesCommandDeckModel.h
+ M Source/EchoesOfTheBrokenSun/Public/EchoesContentSubsystem.h
+ M Source/EchoesOfTheBrokenSun/Public/EchoesFieldHudView.h
+ M Source/EchoesOfTheBrokenSun/Public/EchoesFieldHudWidget.h
+ M Source/EchoesOfTheBrokenSun/Public/EchoesHudLayout.h
+ M Source/EchoesOfTheBrokenSun/Public/EchoesNetworkSession.h
+ M Source/EchoesOfTheBrokenSun/Public/EchoesPlayerController.h
+ M Source/EchoesOfTheBrokenSun/Public/EchoesPlayerFlow.h
+ M Source/EchoesOfTheBrokenSun/Public/EchoesRTSCameraPawn.h
+ M Source/EchoesOfTheBrokenSun/Public/EchoesShellWidget.h
+ M Source/EchoesOfTheBrokenSun/Public/EchoesSimulationSubsystem.h
+ M Source/EchoesSimCore/Private/NetworkProtocol.cpp
+ M Source/EchoesSimCore/Private/Simulation.cpp
+ M Source/EchoesSimCore/Public/EchoesSimCore/NetworkProtocol.h
+ M Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h
+?? ArtSource/
+?? Content/Art/UI/
+?? Docs/SC2GameplayGapAudit.md
+?? Scripts/check_gameplay_audit_traceability.py
+?? Scripts/import_hud_art.py
+?? Source/EchoesOfTheBrokenSun/Private/EchoesCheckpointFeedback.h
+?? Source/EchoesOfTheBrokenSun/Private/EchoesFeedbackHistoryModel.cpp
+?? Source/EchoesOfTheBrokenSun/Private/EchoesGameplayFeedbackPacket.cpp
+?? Source/EchoesOfTheBrokenSun/Private/EchoesHudGlyph.cpp
+?? Source/EchoesOfTheBrokenSun/Private/EchoesInputBindingModel.cpp
+?? Source/EchoesOfTheBrokenSun/Private/EchoesInputPrompt.cpp
+?? Source/EchoesOfTheBrokenSun/Private/EchoesPlayerControls.cpp
+?? Source/EchoesOfTheBrokenSun/Private/EchoesPlayerFeedbackHistory.cpp
+?? Source/EchoesOfTheBrokenSun/Private/EchoesPlayerGameplayFeedback.cpp
+?? Source/EchoesOfTheBrokenSun/Private/EchoesPlayerMaintenance.cpp
+?? Source/EchoesOfTheBrokenSun/Private/EchoesPlayerResourceMonitor.cpp
+?? Source/EchoesOfTheBrokenSun/Private/EchoesPowerNetworkView.cpp
+?? Source/EchoesOfTheBrokenSun/Private/EchoesResourceMonitorModel.cpp
+?? Source/EchoesOfTheBrokenSun/Private/EchoesSimulationFeedback.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesBattlefieldMenuTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesControlsPersistenceTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesControlsShellTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesFeedbackHistoryModelTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesFeedbackHistoryShellTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesGameplayFeedbackTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesInputBindingModelTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesInputPromptTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesNetworkActionDispatchTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesOnlineLocalMenuRouteTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesResourceMonitorModelTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesResourceMonitorShellTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesSelectionGuidanceTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesTabContextDispatchTest.cpp
+?? Source/EchoesOfTheBrokenSun/Private/Tests/EchoesWorkerMaintenanceTest.cpp
+?? Source/EchoesOfTheBrokenSun/Public/EchoesFeedbackHistoryModel.h
+?? Source/EchoesOfTheBrokenSun/Public/EchoesGameplayFeedback.h
+?? Source/EchoesOfTheBrokenSun/Public/EchoesGameplayFeedbackPacket.h
+?? Source/EchoesOfTheBrokenSun/Public/EchoesHudGlyph.h
+?? Source/EchoesOfTheBrokenSun/Public/EchoesInputBindingModel.h
+?? Source/EchoesOfTheBrokenSun/Public/EchoesInputPrompt.h
+?? Source/EchoesOfTheBrokenSun/Public/EchoesNetworkActionDispatch.h
+?? Source/EchoesOfTheBrokenSun/Public/EchoesNetworkSnapshotFlow.h
+?? Source/EchoesOfTheBrokenSun/Public/EchoesPlacementDiagnostics.h
+?? Source/EchoesOfTheBrokenSun/Public/EchoesPowerNetworkView.h
+?? Source/EchoesOfTheBrokenSun/Public/EchoesResourceMonitorModel.h

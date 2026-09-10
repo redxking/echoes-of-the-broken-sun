@@ -1,0 +1,630 @@
+diff --git a/Source/EchoesOfTheBrokenSun/Private/EchoesCheckpointWorker.cpp b/Source/EchoesOfTheBrokenSun/Private/EchoesCheckpointWorker.cpp
+index 216aa49..9136a9d 100644
+--- a/Source/EchoesOfTheBrokenSun/Private/EchoesCheckpointWorker.cpp
++++ b/Source/EchoesOfTheBrokenSun/Private/EchoesCheckpointWorker.cpp
+@@ -249,7 +249,11 @@ FEchoesCheckpointWriteResult FEchoesCheckpointCoordinator::Execute(
+         }
+     }
+ 
+-    if (!AtomicReplaceFile(Request.SavePath, TemporaryPath))
++    bool bForceCommitFailure = false;
++#if WITH_DEV_AUTOMATION_TESTS
++    bForceCommitFailure = Request.bForcePrimaryCommitFailure;
++#endif
++    if (bForceCommitFailure || !AtomicReplaceFile(Request.SavePath, TemporaryPath))
+     {
+         Files.Delete(*TemporaryPath, false, true, true);
+         Result.Feedback = bPriorPrimaryValid
+diff --git a/Source/EchoesOfTheBrokenSun/Private/EchoesCheckpointWorker.h b/Source/EchoesOfTheBrokenSun/Private/EchoesCheckpointWorker.h
+index 88362f2..c702ac0 100644
+--- a/Source/EchoesOfTheBrokenSun/Private/EchoesCheckpointWorker.h
++++ b/Source/EchoesOfTheBrokenSun/Private/EchoesCheckpointWorker.h
+@@ -41,6 +41,8 @@ struct FEchoesCheckpointWriteRequest final
+ #if WITH_DEV_AUTOMATION_TESTS
+     bool bForceBackupRotationFailure = false;
+     bool bForceWriteFailure = false;
++    // Exercise the commit boundary only after both staged files reopen.
++    bool bForcePrimaryCommitFailure = false;
+ #endif
+ };
+ 
+diff --git a/Source/EchoesOfTheBrokenSun/Private/Tests/EchoesCheckpointWorkerTest.cpp b/Source/EchoesOfTheBrokenSun/Private/Tests/EchoesCheckpointWorkerTest.cpp
+index 84afca4..844648c 100644
+--- a/Source/EchoesOfTheBrokenSun/Private/Tests/EchoesCheckpointWorkerTest.cpp
++++ b/Source/EchoesOfTheBrokenSun/Private/Tests/EchoesCheckpointWorkerTest.cpp
+@@ -151,14 +151,55 @@ bool FEchoesCheckpointWorkerTest::RunTest(const FString& Parameters)
+ 
+     TArray<uint8> Primary;
+     TArray<uint8> Backup;
+-    TestTrue(
++    if (!TestTrue(
+         TEXT("Newest generation is the primary"),
+         FFileHelper::LoadFileToArray(Primary, *SavePath) &&
+-            Primary == TArray<uint8>({'E', 'C', 'H', 'O', 2}));
+-    TestTrue(
++            Primary == TArray<uint8>({'E', 'C', 'H', 'O', 2})))
++    {
++        return false;
++    }
++    if (!TestTrue(
+         TEXT("Prior generation rotated to backup"),
++        FFileHelper::LoadFileToArray(Backup, *(SavePath + TEXT(".bak"))) &&
++            Backup == TArray<uint8>({'E', 'C', 'H', 'O', 1})))
++    {
++        return false;
++    }
++
++    // Fail at the actual commit boundary, after the new bytes and recovery
++    // generation have been written and verified. Pre-write injection cannot
++    // establish preservation of the two existing generations at this boundary.
++    FEchoesCheckpointWriteRequest CommitFailure =
++        MakeWorkerRequest(20, SavePath, 9, WorkerThreadId);
++    CommitFailure.bForcePrimaryCommitFailure = true;
++    if (!TestTrue(TEXT("Post-staging failure request is accepted"),
++        Coordinator.Enqueue(MoveTemp(CommitFailure), Failure)))
++    {
++        return false;
++    }
++    Results.Reset();
++    Coordinator.WaitForAll(Results);
++    if (!TestEqual(TEXT("Post-staging failure completes once"), Results.Num(), 1))
++    {
++        return false;
++    }
++    TestFalse(TEXT("Failed replacement cannot report saved"), Results[0].bSucceeded);
++    TestEqual(TEXT("Failed replacement reports no committed bytes"),
++        Results[0].PersistedBytes, 0);
++    TestTrue(TEXT("Failed replacement identifies the commit boundary"),
++        Results[0].Feedback.Contains(TEXT("SAVE_COMMIT_FAILED")));
++    TestTrue(TEXT("Failed replacement preserves the prior primary byte-for-byte"),
++        FFileHelper::LoadFileToArray(Primary, *SavePath) &&
++            Primary == TArray<uint8>({'E', 'C', 'H', 'O', 2}));
++    TestTrue(TEXT("Failed replacement preserves the prior backup byte-for-byte"),
+         FFileHelper::LoadFileToArray(Backup, *(SavePath + TEXT(".bak"))) &&
+             Backup == TArray<uint8>({'E', 'C', 'H', 'O', 1}));
++    TArray<uint8> Staged;
++    TestTrue(TEXT("Failed replacement retains the verified primary recovery copy"),
++        FFileHelper::LoadFileToArray(Staged, *(SavePath + TEXT(".bak.tmp"))) &&
++            Staged == TArray<uint8>({'E', 'C', 'H', 'O', 2}));
++    TestFalse(TEXT("Failed new generation is removed from the staging path"),
++        IFileManager::Get().FileExists(*(SavePath + TEXT(".tmp"))));
+ 
+     FEchoesCheckpointWriteRequest Deferred =
+         MakeWorkerRequest(3, SavePath, 3, WorkerThreadId);
+diff --git a/Source/EchoesSimCore/Private/NetworkProtocol.cpp b/Source/EchoesSimCore/Private/NetworkProtocol.cpp
+index 22a42ef..a1d90f0 100644
+--- a/Source/EchoesSimCore/Private/NetworkProtocol.cpp
++++ b/Source/EchoesSimCore/Private/NetworkProtocol.cpp
+@@ -23,7 +23,7 @@ constexpr std::size_t kCommandIntentBytes =
+ constexpr std::size_t kCommandBatchMinimumBytes =
+     kHeaderBytes + sizeof(std::uint64_t) + 2 * sizeof(std::uint16_t) +
+     kIntegrityBytes;
+-constexpr std::size_t kScopedEntityBytes = 52;
++constexpr std::size_t kScopedEntityBytes = 69;
+ constexpr std::size_t kScopedKeyframeMinimumBytes = 90;
+ constexpr std::size_t kScopedTileChangeBytes = 5;
+ constexpr std::size_t kScopedDeltaMinimumBytes = 102;
+@@ -326,6 +326,23 @@ void WriteCommandIntent(Writer& writer, const CommandIntent& intent) {
+     return IsValidScopedPlayer(player) || player == kNeutralPlayer;
+ }
+ 
++[[nodiscard]] bool IsValidScopedBulwarkState(const ScopedEntityState& entity, Tick tick) {
++    const auto x = entity.deploymentFacing.x.Raw();
++    const auto y = entity.deploymentFacing.y.Raw();
++    if (!((x == 0 && (y == kFixedScale || y == -kFixedScale)) ||
++          (y == 0 && (x == kFixedScale || x == -kFixedScale)))) return false;
++    if (entity.deploymentPhase == BulwarkDeploymentPhase::None)
++        return entity.deploymentTransitionUntilTick == 0;
++    if (entity.deploymentPhase != BulwarkDeploymentPhase::Deploying &&
++        entity.deploymentPhase != BulwarkDeploymentPhase::Packing) return false;
++    const auto duration = entity.deploymentPhase == BulwarkDeploymentPhase::Deploying
++        ? kBulwarkDeployTicks : kBulwarkPackTicks;
++    return entity.faction == Faction::MeridianCompact && entity.type == EntityType::HeavyUnit &&
++        entity.completed && entity.deploymentTransitionUntilTick > tick &&
++        entity.deploymentTransitionUntilTick - tick <= duration &&
++        entity.deployed == (entity.deploymentPhase == BulwarkDeploymentPhase::Packing);
++}
++
+ [[nodiscard]] bool IsValidScopedChoirState(const ScopedEntityState& entity,
+                                            Tick simulationTick) {
+     const bool identityUnit = entity.faction == Faction::HollowChoir &&
+@@ -797,7 +814,10 @@ bool BuildScopedViewKeyframe(const PlayerView& view,
+              entity.choirIdentityState,
+              entity.choirIdentityResolveAtTick,
+              entity.choirIdentityNextAvailableTick,
+-             entity.choirCoherenceNextChargeTick});
++             entity.choirCoherenceNextChargeTick,
++             entity.deploymentFacing,
++             entity.deploymentPhase,
++             entity.deploymentTransitionUntilTick});
+     }
+     std::sort(
+         built.entities.begin(), built.entities.end(),
+@@ -888,7 +908,8 @@ std::vector<std::uint8_t> EncodeScopedViewKeyframe(
+                 static_cast<std::uint8_t>(entity.waystoneMode)) ||
+             !IsValidWarformAdaptationEncoding(
+                 static_cast<std::uint8_t>(entity.warformAdaptation)) ||
+-            !IsValidScopedChoirState(entity, keyframe.simulationTick)) {
++            !IsValidScopedChoirState(entity, keyframe.simulationTick) ||
++            !IsValidScopedBulwarkState(entity, keyframe.simulationTick)) {
+             return {};
+         }
+         priorEntity = entity.id;
+@@ -910,6 +931,10 @@ std::vector<std::uint8_t> EncodeScopedViewKeyframe(
+         writer.U64(entity.choirIdentityResolveAtTick);
+         writer.U64(entity.choirIdentityNextAvailableTick);
+         writer.U64(entity.choirCoherenceNextChargeTick);
++        writer.I32(entity.deploymentFacing.x.Raw());
++        writer.I32(entity.deploymentFacing.y.Raw());
++        writer.U8(static_cast<std::uint8_t>(entity.deploymentPhase));
++        writer.U64(entity.deploymentTransitionUntilTick);
+     }
+     Vec2 priorSignature = Vec2::FromRaw(-1, -1);
+     for (const VibrationSignature& signature :
+@@ -1026,6 +1051,8 @@ DecodeStatus DecodeScopedViewKeyframe(std::span<const std::uint8_t> bytes,
+         std::uint8_t waystoneMode = 0;
+         std::uint8_t adaptation = 0;
+         std::uint8_t choirIdentity = 0;
++        std::uint8_t deploymentPhase = 0;
++        std::int32_t facingX = 0, facingY = 0;
+         std::int32_t positionX = 0;
+         std::int32_t positionY = 0;
+         if (!reader.U32(entity.id) || !reader.U8(entity.owner) ||
+@@ -1037,7 +1064,9 @@ DecodeStatus DecodeScopedViewKeyframe(std::span<const std::uint8_t> bytes,
+             !reader.U8(adaptation) || !reader.U8(choirIdentity) ||
+             !reader.U64(entity.choirIdentityResolveAtTick) ||
+             !reader.U64(entity.choirIdentityNextAvailableTick) ||
+-            !reader.U64(entity.choirCoherenceNextChargeTick) || entity.id == 0 ||
++            !reader.U64(entity.choirCoherenceNextChargeTick) ||
++            !reader.I32(facingX) || !reader.I32(facingY) ||
++            !reader.U8(deploymentPhase) || !reader.U64(entity.deploymentTransitionUntilTick) || entity.id == 0 ||
+             entity.id <= priorEntity || !IsValidScopedOwner(entity.owner) ||
+             !IsValidFactionEncoding(factionValue) ||
+             !IsValidEntityTypeEncoding(type) || (flags & 0xf8U) != 0 ||
+@@ -1055,6 +1084,8 @@ DecodeStatus DecodeScopedViewKeyframe(std::span<const std::uint8_t> bytes,
+         entity.position = Vec2::FromRaw(positionX, positionY);
+         entity.completed = (flags & 0x01U) != 0;
+         entity.deployed = (flags & 0x02U) != 0;
++        entity.deploymentFacing = Vec2::FromRaw(facingX, facingY);
++        entity.deploymentPhase = static_cast<BulwarkDeploymentPhase>(deploymentPhase);
+         entity.aegisPowered = (flags & 0x04U) != 0;
+         entity.wellChoice = static_cast<FutureWellChoice>(wellChoice);
+         entity.waystoneMode = static_cast<WaystoneMode>(waystoneMode);
+@@ -1062,7 +1093,8 @@ DecodeStatus DecodeScopedViewKeyframe(std::span<const std::uint8_t> bytes,
+             static_cast<WarformAdaptation>(adaptation);
+         entity.choirIdentityState =
+             static_cast<ChoirIdentityState>(choirIdentity);
+-        if (!IsValidScopedChoirState(entity, decoded.simulationTick)) {
++        if (!IsValidScopedChoirState(entity, decoded.simulationTick) ||
++            !IsValidScopedBulwarkState(entity, decoded.simulationTick)) {
+             return DecodeStatus::InvalidEncoding;
+         }
+         decoded.entities.push_back(entity);
+@@ -1267,7 +1299,8 @@ std::vector<std::uint8_t> EncodeScopedViewDelta(
+                 static_cast<std::uint8_t>(entity.waystoneMode)) ||
+             !IsValidWarformAdaptationEncoding(
+                 static_cast<std::uint8_t>(entity.warformAdaptation)) ||
+-            !IsValidScopedChoirState(entity, delta.simulationTick)) {
++            !IsValidScopedChoirState(entity, delta.simulationTick) ||
++            !IsValidScopedBulwarkState(entity, delta.simulationTick)) {
+             return {};
+         }
+         priorEntity = entity.id;
+@@ -1289,6 +1322,10 @@ std::vector<std::uint8_t> EncodeScopedViewDelta(
+         writer.U64(entity.choirIdentityResolveAtTick);
+         writer.U64(entity.choirIdentityNextAvailableTick);
+         writer.U64(entity.choirCoherenceNextChargeTick);
++        writer.I32(entity.deploymentFacing.x.Raw());
++        writer.I32(entity.deploymentFacing.y.Raw());
++        writer.U8(static_cast<std::uint8_t>(entity.deploymentPhase));
++        writer.U64(entity.deploymentTransitionUntilTick);
+     }
+ 
+     EntityId priorRemoved = 0;
+@@ -1446,6 +1483,8 @@ DecodeStatus DecodeScopedViewDelta(std::span<const std::uint8_t> bytes,
+         std::uint8_t waystoneMode = 0;
+         std::uint8_t adaptation = 0;
+         std::uint8_t choirIdentity = 0;
++        std::uint8_t deploymentPhase = 0;
++        std::int32_t facingX = 0, facingY = 0;
+         std::int32_t positionX = 0;
+         std::int32_t positionY = 0;
+         if (!reader.U32(entity.id) || !reader.U8(entity.owner) ||
+@@ -1457,7 +1496,9 @@ DecodeStatus DecodeScopedViewDelta(std::span<const std::uint8_t> bytes,
+             !reader.U8(adaptation) || !reader.U8(choirIdentity) ||
+             !reader.U64(entity.choirIdentityResolveAtTick) ||
+             !reader.U64(entity.choirIdentityNextAvailableTick) ||
+-            !reader.U64(entity.choirCoherenceNextChargeTick) || entity.id == 0 ||
++            !reader.U64(entity.choirCoherenceNextChargeTick) ||
++            !reader.I32(facingX) || !reader.I32(facingY) ||
++            !reader.U8(deploymentPhase) || !reader.U64(entity.deploymentTransitionUntilTick) || entity.id == 0 ||
+             entity.id <= priorEntity || !IsValidScopedOwner(entity.owner) ||
+             !IsValidFactionEncoding(factionValue) ||
+             !IsValidEntityTypeEncoding(type) || (flags & 0xf8U) != 0 ||
+@@ -1475,6 +1516,8 @@ DecodeStatus DecodeScopedViewDelta(std::span<const std::uint8_t> bytes,
+         entity.position = Vec2::FromRaw(positionX, positionY);
+         entity.completed = (flags & 0x01U) != 0;
+         entity.deployed = (flags & 0x02U) != 0;
++        entity.deploymentFacing = Vec2::FromRaw(facingX, facingY);
++        entity.deploymentPhase = static_cast<BulwarkDeploymentPhase>(deploymentPhase);
+         entity.aegisPowered = (flags & 0x04U) != 0;
+         entity.wellChoice = static_cast<FutureWellChoice>(wellChoice);
+         entity.waystoneMode = static_cast<WaystoneMode>(waystoneMode);
+@@ -1482,7 +1525,8 @@ DecodeStatus DecodeScopedViewDelta(std::span<const std::uint8_t> bytes,
+             static_cast<WarformAdaptation>(adaptation);
+         entity.choirIdentityState =
+             static_cast<ChoirIdentityState>(choirIdentity);
+-        if (!IsValidScopedChoirState(entity, decoded.simulationTick)) {
++        if (!IsValidScopedChoirState(entity, decoded.simulationTick) ||
++            !IsValidScopedBulwarkState(entity, decoded.simulationTick)) {
+             return DecodeStatus::InvalidEncoding;
+         }
+         decoded.entityUpserts.push_back(entity);
+diff --git a/Source/EchoesSimCore/Private/Simulation.cpp b/Source/EchoesSimCore/Private/Simulation.cpp
+index f0816c5..e5aab90 100644
+--- a/Source/EchoesSimCore/Private/Simulation.cpp
++++ b/Source/EchoesSimCore/Private/Simulation.cpp
+@@ -42,6 +42,7 @@ constexpr std::uint32_t kFutureWellLifecycleSnapshotVersion = 27;
+ constexpr std::uint32_t kHostilitySnapshotVersion = 28;
+ constexpr std::uint32_t kProductionPipelineSnapshotVersion = 29;
+ constexpr std::uint32_t kLinkMechanicsSnapshotVersion = 30;
++constexpr std::uint32_t kBulwarkCommitmentSnapshotVersion = 31;
+ constexpr std::size_t kSerializedRememberedObjectBytes = 24;
+ constexpr std::size_t kLegacyFactionCount = 2;
+ constexpr std::size_t kLegacyResearchTypeCount = 5;
+@@ -3479,16 +3480,17 @@ EntityId Simulation::FindSmartCastCaster(
+             }
+             case CommandType::ToggleDeploy: {
+                 if (entity.faction != Faction::MeridianCompact ||
+-                    entity.type != EntityType::HeavyUnit || entity.deployed) {
++                    entity.type != EntityType::HeavyUnit ||
++                    entity.deploymentPhase != BulwarkDeploymentPhase::None) {
+                     return;
+                 }
+                 break;
+             }
+             case CommandType::ActivateRelaySupply: {
+-                if (entity.faction != Faction::MeridianCompact ||
+-                    entity.type != EntityType::Dropoff ||
+-                    entity.relaySupplyActive ||
+-                    entity.relaySupplyCooldownUntilTick > currentTick_) {
++                // Choose only a caster the authoritative command can admit,
++                // including connection and cooldown, rather than a lookalike
++                // infrastructure type or an unreachable nearer Skiff.
++                if (ValidateRelaySupply(player, entity.id) != RelaySupplyResult::Valid) {
+                     return;
+                 }
+                 break;
+@@ -3567,6 +3569,17 @@ std::int32_t Simulation::DamageAfterDirectionalCover(
+             targetLateral > rules.coverHalfWidthRaw) {
+             continue;
+         }
++        if (!legacyBulwarkReplaySemantics_) {
++            const auto lateral = static_cast<std::uint64_t>(Abs64(
++                bulwark.deploymentFacing.x.Raw() != 0 ? attackerDeltaY : attackerDeltaX));
++            const auto forward = static_cast<std::uint64_t>(attackerForward);
++            // Half-angle 60 degrees: lateral^2 <= 3 * forward^2.
++            // Divide instead of tripling to avoid overflow even at int32 extrema.
++            const auto lateralSquared = lateral * lateral;
++            const auto minimumForwardSquared = lateralSquared / 3U +
++                (lateralSquared % 3U != 0 ? 1U : 0U);
++            if (forward * forward < minimumForwardSquared) continue;
++        }
+         return std::max(
+             1,
+             static_cast<std::int32_t>(
+@@ -4671,8 +4684,18 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
+                 actor->type != EntityType::HeavyUnit) {
+                 return;
+             }
++            if (actor->deploymentPhase != BulwarkDeploymentPhase::None) {
++                return;
++            }
++            if (!legacyBulwarkReplaySemantics_ && currentTick_ > kMaximumSupportedTick -
++                    (actor->deployed ? kBulwarkPackTicks : kBulwarkDeployTicks)) return;
+             if (actor->deployed) {
+-                actor->deployed = false;
++                if (legacyBulwarkReplaySemantics_) {
++                    actor->deployed = false;
++                } else {
++                    actor->deploymentPhase = BulwarkDeploymentPhase::Packing;
++                    actor->deploymentTransitionUntilTick = currentTick_ + kBulwarkPackTicks;
++                }
+                 outcome = CommandResolutionOutcome::Applied;
+                 return;
+             }
+@@ -4694,7 +4717,12 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
+                     0,
+                     deltaY >= 0 ? kFixedScale : -kFixedScale);
+             }
+-            actor->deployed = true;
++            if (legacyBulwarkReplaySemantics_) {
++                actor->deployed = true;
++            } else {
++                actor->deploymentPhase = BulwarkDeploymentPhase::Deploying;
++                actor->deploymentTransitionUntilTick = currentTick_ + kBulwarkDeployTicks;
++            }
+             outcome = CommandResolutionOutcome::Applied;
+             return;
+         }
+@@ -6313,6 +6341,17 @@ void Simulation::ResolveExpiredRelaySupply() {
+     }
+ }
+ 
++void Simulation::ResolveBulwarkTransitions() {
++    for (Entity& entity : entities_) {
++        if (entity.deploymentPhase != BulwarkDeploymentPhase::None &&
++            currentTick_ >= entity.deploymentTransitionUntilTick) {
++            entity.deployed = entity.deploymentPhase == BulwarkDeploymentPhase::Deploying;
++            entity.deploymentPhase = BulwarkDeploymentPhase::None;
++            entity.deploymentTransitionUntilTick = 0;
++        }
++    }
++}
++
+ void Simulation::ResolveWaystoneTransitions() {
+     for (Entity& entity : entities_) {
+         if (entity.waystoneMode == WaystoneMode::Uprooting &&
+@@ -6642,6 +6681,7 @@ void Simulation::Step(
+     for (auto& receipts : productionTransitionReceipts_) receipts.clear();
+     ResolveExpiredRelaySupply();
+     ResolveWaystoneTransitions();
++    ResolveBulwarkTransitions();
+     ResolveWarformMolts();
+     ResolveMineralCovers();
+     ResolveChoirIdentities();
+@@ -6661,6 +6701,7 @@ void Simulation::Step(
+     PruneCommandResolutionReceipts();
+     ResolveExpiredRelaySupply();
+     ResolveWaystoneTransitions();
++    ResolveBulwarkTransitions();
+     ResolveWarformMolts();
+     ResolveMineralCovers();
+     ResolveChoirIdentities();
+@@ -6956,6 +6997,7 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
+     view.config_ = config_;
+     view.config_.randomSeed = 0;
+     view.currentTick_ = currentTick_;
++    view.usesBulwarkCommitmentRules_ = !legacyBulwarkReplaySemantics_;
+     view.player_ = *playerState;
+     view.decisionSeed_ = config_.randomSeed;
+     view.populationUsed_ = PopulationUsed(player);
+@@ -6966,6 +7008,11 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
+     view.productionTransitions_ = productionTransitionReceipts_[player];
+     view.publicFutureWellTelegraphs_ = PublicFutureWellTelegraphs();
+     for (const Entity& entity : entities_) {
++        if (entity.owner == player && entity.completed && entity.hitPoints > 0 &&
++            entity.faction == Faction::MeridianCompact &&
++            entity.type == EntityType::ScoutUnit && IsRelayConnected(entity)) {
++            view.connectedRelayUnits_.push_back(entity.id);
++        }
+         if (const std::optional<ProducerQueueState> producerState =
+                 ProducerQueueStateFor(player, entity.id);
+             producerState.has_value()) {
+@@ -8226,6 +8273,14 @@ void Simulation::WriteSnapshotPayload(Writer& writer, std::uint32_t version) con
+             writer.U8(entity.networkOperational ? 1 : 0);
+         }
+     }
++    if (version >= kBulwarkCommitmentSnapshotVersion) {
++        writer.U32(static_cast<std::uint32_t>(entities_.size()));
++        for (const Entity& entity : entities_) {
++            writer.U32(entity.id);
++            writer.U8(static_cast<std::uint8_t>(entity.deploymentPhase));
++            writer.U64(entity.deploymentTransitionUntilTick);
++        }
++    }
+ }
+ 
+ std::vector<std::uint8_t> Simulation::SaveSnapshot(
+@@ -8326,6 +8381,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
+         return std::nullopt;
+     }
+     if (version != kSnapshotVersion &&
++        version != kLinkMechanicsSnapshotVersion &&
+         version != kProductionPipelineSnapshotVersion &&
+         version != kHostilitySnapshotVersion &&
+         version != kFutureWellLifecycleSnapshotVersion &&
+@@ -9859,6 +9915,39 @@ std::optional<Simulation> Simulation::LoadSnapshot(
+         simulation.legacyLinkReplaySemantics_ = false;
+         simulation.ResolveAegisPower();
+     }
++    if (version >= kBulwarkCommitmentSnapshotVersion) {
++        std::uint32_t count = 0;
++        if (!reader.U32(count) || count != simulation.entities_.size()) {
++            SetError(error, "snapshot Bulwark transition count is invalid");
++            return std::nullopt;
++        }
++        for (Entity& entity : simulation.entities_) {
++            EntityId id = 0;
++            std::uint8_t phase = 0;
++            Tick until = 0;
++            if (!reader.U32(id) || !reader.U8(phase) || !reader.U64(until) ||
++                id != entity.id || phase > static_cast<std::uint8_t>(BulwarkDeploymentPhase::Packing)) {
++                SetError(error, "snapshot Bulwark transition record is invalid");
++                return std::nullopt;
++            }
++            const auto decoded = static_cast<BulwarkDeploymentPhase>(phase);
++            const Tick duration = decoded == BulwarkDeploymentPhase::Deploying
++                ? kBulwarkDeployTicks : kBulwarkPackTicks;
++            if ((decoded == BulwarkDeploymentPhase::None && until != 0) ||
++                (decoded != BulwarkDeploymentPhase::None &&
++                 (entity.faction != Faction::MeridianCompact ||
++                  entity.type != EntityType::HeavyUnit || !entity.completed ||
++                  until <= simulation.currentTick_ ||
++                  until - simulation.currentTick_ > duration ||
++                  until > kMaximumSupportedTick ||
++                  entity.deployed != (decoded == BulwarkDeploymentPhase::Packing)))) {
++                SetError(error, "snapshot Bulwark transition state is inconsistent");
++                return std::nullopt;
++            }
++            entity.deploymentPhase = decoded;
++            entity.deploymentTransitionUntilTick = until;
++        }
++    }
+     if (!reader.AtEnd()) {
+         SetError(error, "snapshot contains trailing payload data");
+         return std::nullopt;
+@@ -9896,6 +9985,7 @@ void Simulation::CaptureReplayBaseline() {
+     replayChecksumSnapshotVersion_ = kSnapshotVersion;
+     legacyProductionReplaySemantics_ = false;
+     legacyLinkReplaySemantics_ = false;
++    legacyBulwarkReplaySemantics_ = false;
+     replayForfeitingPlayer_ = kNeutralPlayer;
+ }
+ 
+@@ -9930,6 +10020,8 @@ bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
+         prefix.version < kProductionReplayVersion;
+     restored.legacyLinkReplaySemantics_ =
+         prefix.version < kLinkMechanicsReplayVersion;
++    restored.legacyBulwarkReplaySemantics_ =
++        prefix.version < kBulwarkCommitmentReplayVersion;
+     restored.ResolveAegisPower();
+     if (replayed->StateChecksum() != restored.StateChecksum()) {
+         SetError(error, "replay prefix state does not match restored state");
+@@ -9977,6 +10069,7 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
+     if (replay.version != kLegacyReplayVersion &&
+         replay.version != kForfeitReplayVersion &&
+         replay.version != kProductionReplayVersion &&
++        replay.version != kLinkMechanicsReplayVersion &&
+         replay.version != kReplayVersion) {
+         SetError(error, "replay version is unsupported");
+         return std::nullopt;
+@@ -10001,6 +10094,8 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
+         replay.version < kProductionReplayVersion;
+     simulation->legacyLinkReplaySemantics_ =
+         replay.version < kLinkMechanicsReplayVersion;
++    simulation->legacyBulwarkReplaySemantics_ =
++        replay.version < kBulwarkCommitmentReplayVersion;
+     // Loading a save applies current network rules. Playback must restore the
+     // original rules before its first checksum, including zero-tick records.
+     simulation->ResolveAegisPower();
+@@ -10022,6 +10117,7 @@ std::optional<Simulation> Simulation::ReplayToEnd(const ReplayRecord& replay,
+     if (replay.version != kLegacyReplayVersion &&
+         replay.version != kForfeitReplayVersion &&
+         replay.version != kProductionReplayVersion &&
++        replay.version != kLinkMechanicsReplayVersion &&
+         replay.version != kReplayVersion) {
+         SetError(error, "replay version is unsupported");
+         return std::nullopt;
+@@ -10153,6 +10249,7 @@ std::optional<MatchReport> Simulation::BuildMatchReport(
+     if (replay.version != kLegacyReplayVersion &&
+         replay.version != kForfeitReplayVersion &&
+         replay.version != kProductionReplayVersion &&
++        replay.version != kLinkMechanicsReplayVersion &&
+         replay.version != kReplayVersion) {
+         SetError(error, "replay version is unsupported");
+         return std::nullopt;
+diff --git a/Source/EchoesSimCore/Public/EchoesSimCore/NetworkProtocol.h b/Source/EchoesSimCore/Public/EchoesSimCore/NetworkProtocol.h
+index bcb5297..370c3b5 100644
+--- a/Source/EchoesSimCore/Public/EchoesSimCore/NetworkProtocol.h
++++ b/Source/EchoesSimCore/Public/EchoesSimCore/NetworkProtocol.h
+@@ -11,8 +11,8 @@
+ namespace echoes::sim::net {
+ 
+ inline constexpr std::uint16_t kEnvelopeVersion = 1;
+-inline constexpr std::uint32_t kProtocolVersion = 4;
+-inline constexpr std::uint32_t kPlayerViewSchemaVersion = 2;
++inline constexpr std::uint32_t kProtocolVersion = 5;
++inline constexpr std::uint32_t kPlayerViewSchemaVersion = 3;
+ inline constexpr std::size_t kDigestBytes = 32;
+ inline constexpr std::size_t kMaximumPacketBytes = 512;
+ inline constexpr std::size_t kMaximumCommandBatchBytes = 16 * 1024;
+@@ -196,6 +196,9 @@ struct ScopedEntityState final {
+     Tick choirIdentityResolveAtTick = 0;
+     Tick choirIdentityNextAvailableTick = 0;
+     Tick choirCoherenceNextChargeTick = 0;
++    Vec2 deploymentFacing = Vec2::FromRaw(kFixedScale, 0);
++    BulwarkDeploymentPhase deploymentPhase = BulwarkDeploymentPhase::None;
++    Tick deploymentTransitionUntilTick = 0;
+ 
+     friend bool operator==(const ScopedEntityState&,
+                            const ScopedEntityState&) = default;
+diff --git a/Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h b/Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h
+index 09a67ad..25b0c84 100644
+--- a/Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h
++++ b/Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h
+@@ -40,12 +40,17 @@ inline constexpr Tick kCommandResolutionReceiptRetentionTicks = 1200;
+ // Schema 30 appends Link repair/network authority and stable production item
+ // identities. Replay v26 remains the fixed production-queue cutoff; replay
+ // v27 selects Link mechanics and identity-checked cancellation.
+-inline constexpr std::uint32_t kSnapshotVersion = 30;
++inline constexpr std::uint32_t kSnapshotVersion = 31;
+ inline constexpr std::uint32_t kLegacyReplayVersion = 24;
+ inline constexpr std::uint32_t kForfeitReplayVersion = 25;
+ inline constexpr std::uint32_t kProductionReplayVersion = 26;
+ inline constexpr std::uint32_t kLinkMechanicsReplayVersion = 27;
+-inline constexpr std::uint32_t kReplayVersion = kLinkMechanicsReplayVersion;
++inline constexpr std::uint32_t kBulwarkCommitmentReplayVersion = 28;
++inline constexpr std::uint32_t kReplayVersion = kBulwarkCommitmentReplayVersion;
++// SPEC-UNIT-003/REL-FAC-005 fixed-step commitments, independent of render rate.
++inline constexpr Tick kBulwarkDeployTicks = 20;
++inline constexpr Tick kBulwarkPackTicks = 15;
++enum class BulwarkDeploymentPhase : std::uint8_t { None, Deploying, Packing };
+ 
+ // Remembered permanent objects are bounded so a long match cannot grow an
+ // unserializable ledger. When the bound is reached the oldest observation is
+@@ -704,6 +709,9 @@ struct Entity final {
+     static constexpr std::size_t kMaxRallyOrders = kMaxQueuedOrders;
+     std::vector<Order> rallyRoute{};
+     bool deployed = false;
++    // Stable endpoint remains authoritative until the requested transition ends.
++    BulwarkDeploymentPhase deploymentPhase = BulwarkDeploymentPhase::None;
++    Tick deploymentTransitionUntilTick = 0;
+     Vec2 deploymentFacing = Vec2::FromRaw(kFixedScale, 0);
+     bool relaySupplyActive = false;
+     Tick relaySupplyUntilTick = 0;
+@@ -956,6 +964,11 @@ class ECHOESSIMCORE_API PlayerView final {
+ public:
+     [[nodiscard]] const SimulationConfig& Config() const { return config_; }
+     [[nodiscard]] Tick CurrentTick() const { return currentTick_; }
++    // Presentation policy for the resumed simulation, not a save-version guess.
++    // Transient only: this observation never enters snapshots or checksums.
++    [[nodiscard]] bool UsesBulwarkCommitmentRules() const {
++        return usesBulwarkCommitmentRules_;
++    }
+     [[nodiscard]] const PlayerState& Player() const { return player_; }
+     [[nodiscard]] std::uint64_t DecisionSeed() const { return decisionSeed_; }
+     [[nodiscard]] std::int32_t PopulationUsed() const { return populationUsed_; }
+@@ -963,6 +976,11 @@ public:
+         return populationCapacity_;
+     }
+     [[nodiscard]] const std::vector<Entity>& Entities() const { return entities_; }
++    // Owner-only, transient presentation state evaluated by simulation rules,
++    // including historical replay compatibility. Never serialized or hashed.
++    [[nodiscard]] const std::vector<EntityId>& ConnectedRelayUnits() const {
++        return connectedRelayUnits_;
++    }
+     [[nodiscard]] const std::vector<FutureWellTelegraph>& PublicFutureWellTelegraphs() const {
+         return publicFutureWellTelegraphs_;
+     }
+@@ -1001,12 +1019,14 @@ private:
+ 
+     SimulationConfig config_{};
+     Tick currentTick_ = 0;
++    bool usesBulwarkCommitmentRules_ = true;
+     PlayerState player_{};
+     std::uint64_t decisionSeed_ = 0;
+     std::int32_t populationUsed_ = 0;
+     std::int32_t populationCapacity_ = 0;
+     std::vector<PlayerViewTile> tiles_{};
+     std::vector<Entity> entities_{};
++    std::vector<EntityId> connectedRelayUnits_{};
+     std::vector<VibrationSignature> vibrationSignatures_{};
+     std::vector<MaterialDeliveryReceipt> materialDeliveries_{};
+     std::vector<ProducerQueueState> producerQueues_{};
+@@ -1475,6 +1495,7 @@ private:
+     void ResolveExpiredReshapes();
+     void ResolveExpiredRelaySupply();
+     void ResolveWaystoneTransitions();
++    void ResolveBulwarkTransitions();
+     void ResolveWarformMolts();
+     void ResolveMineralCovers();
+     void ResolveAegisPower();
+@@ -1582,6 +1603,7 @@ private:
+     EntityId nextProjectileId_ = 1;
+     bool legacyProductionReplaySemantics_ = false;
+     bool legacyLinkReplaySemantics_ = false;
++    bool legacyBulwarkReplaySemantics_ = false;
+     void UpdateProjectiles();
+     void SpawnBallisticProjectile(const Entity& attacker, const Entity& target, std::int32_t damage);
+ };
