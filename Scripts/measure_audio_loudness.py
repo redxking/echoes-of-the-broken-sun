@@ -14,12 +14,12 @@ Author and owner: Angelis Pseftis
 from __future__ import annotations
 
 import argparse
+import array
 import json
 import math
 import os
 import struct
 import sys
-import wave
 
 
 def biquad_coefficients(sample_rate: float) -> tuple[tuple, tuple]:
@@ -70,17 +70,76 @@ def apply_biquad(samples: list[float], b: tuple, a: tuple) -> list[float]:
 
 
 def read_wav(path: str) -> tuple[list[list[float]], int]:
-    with wave.open(path, "rb") as reader:
-        channels = reader.getnchannels()
-        rate = reader.getframerate()
-        width = reader.getsampwidth()
-        frames = reader.readframes(reader.getnframes())
-    if width != 2:
-        raise RuntimeError(f"Expected 16-bit PCM: {path}")
-    count = len(frames) // 2
+    """De-interleaved samples in [-1, 1] and the sample rate.
+
+    Parses the RIFF chunks directly rather than through `wave`, because the
+    registered voice sources are 24-bit and the stdlib `wave` reader refuses
+    IEEE-float files outright, so the loudness gate previously failed closed
+    on every voice asset. Supports PCM 16/24/32-bit and IEEE float 32/64-bit,
+    including WAVE_FORMAT_EXTENSIBLE. Still no third-party dependency.
+    """
+    with open(path, "rb") as handle:
+        data = handle.read()
+    if data[0:4] != b"RIFF" or data[8:12] != b"WAVE":
+        raise RuntimeError(f"Not a RIFF/WAVE file: {path}")
+
+    audio_format = channels = rate = bits = None
+    payload = b""
+    offset = 12
+    while offset + 8 <= len(data):
+        chunk_id = data[offset:offset + 4]
+        size = struct.unpack_from("<I", data, offset + 4)[0]
+        body = offset + 8
+        if chunk_id == b"fmt " and size >= 16:
+            audio_format, channels, rate, _, _, bits = struct.unpack_from(
+                "<HHIIHH", data, body)
+            if audio_format == 0xFFFE and size >= 40:
+                # Extensible: the real format is the first field of the GUID.
+                audio_format = struct.unpack_from("<H", data, body + 24)[0]
+        elif chunk_id == b"data":
+            payload = data[body:body + size]
+        offset = body + size + (size & 1)
+
+    if audio_format is None or not payload:
+        raise RuntimeError(f"Missing fmt or data chunk: {path}")
+    if channels < 1:
+        raise RuntimeError(f"Invalid channel count in {path}: {channels}")
+
+    if audio_format == 1 and bits == 16:
+        flat = array.array("h")
+        flat.frombytes(payload[:len(payload) // 2 * 2])
+        scale = 32768.0
+        values = [sample / scale for sample in flat]
+    elif audio_format == 1 and bits == 24:
+        scale = 8388608.0
+        count = len(payload) // 3
+        values = []
+        for index in range(count):
+            chunk = payload[index * 3:index * 3 + 3]
+            sample = chunk[0] | (chunk[1] << 8) | (chunk[2] << 16)
+            if sample & 0x800000:
+                sample -= 0x1000000
+            values.append(sample / scale)
+    elif audio_format == 1 and bits == 32:
+        flat = array.array("i")
+        flat.frombytes(payload[:len(payload) // 4 * 4])
+        scale = 2147483648.0
+        values = [sample / scale for sample in flat]
+    elif audio_format == 3 and bits == 32:
+        flat = array.array("f")
+        flat.frombytes(payload[:len(payload) // 4 * 4])
+        values = list(flat)
+    elif audio_format == 3 and bits == 64:
+        flat = array.array("d")
+        flat.frombytes(payload[:len(payload) // 8 * 8])
+        values = list(flat)
+    else:
+        raise RuntimeError(
+            f"Unsupported WAV encoding in {path}: format={audio_format} "
+            f"bits={bits}")
+
     per_channel: list[list[float]] = [[] for _ in range(channels)]
-    for index in range(count):
-        value = struct.unpack_from("<h", frames, index * 2)[0] / 32768.0
+    for index, value in enumerate(values):
         per_channel[index % channels].append(value)
     return per_channel, rate
 
