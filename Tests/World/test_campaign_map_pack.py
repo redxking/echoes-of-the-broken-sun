@@ -408,10 +408,10 @@ class TerrainMutationStrandsNoGroundTest(unittest.TestCase):
     """
 
     GRID = 64
-    MUTATED = {
-        "m01_glass-scar-evacuation-margin_v1.json": (32, 32),
-        "m15_broken-sun-accord-dais_v1.json": (32, 53),
-    }
+    # Every campaign map, not only the two this lane reshaped: the guard is
+    # worth as much to the next lane that edits terrain as it was to this one.
+    # All fifteen pass today, so the assertion starts from a clean baseline.
+    SOURCE_DIR = Path(__file__).resolve().parents[2] / "Content/World/Source/Campaign"
 
     def masks(self, source: dict) -> dict:
         variants = source.get("founding_doctrine_variants") or [
@@ -433,10 +433,19 @@ class TerrainMutationStrandsNoGroundTest(unittest.TestCase):
     def test_no_doctrine_strands_a_pocket(self) -> None:
         from collections import deque
 
-        root = Path(__file__).resolve().parents[2] / "Content/World/Source/Campaign"
-        for filename, anchor in self.MUTATED.items():
-            source = json.loads((root / filename).read_text())
+        import glob
+
+        sources = sorted(glob.glob(str(self.SOURCE_DIR / "m*_*.json")))
+        checked = 0
+        for path in sources:
+            source = json.loads(Path(path).read_text())
+            if "terrain_region_ops" not in source or not source.get("required_passable"):
+                continue
+            filename = Path(path).name
+            first = source["required_passable"][0]
+            anchor = (first["x"], first["y"])
             for doctrine, blocked in self.masks(source).items():
+                checked += 1
                 with self.subTest(map=filename, doctrine=doctrine):
                     self.assertNotIn(anchor, blocked, "anchor must stand on open ground")
                     passable = {
@@ -460,5 +469,7 @@ class TerrainMutationStrandsNoGroundTest(unittest.TestCase):
                     stranded = sorted(passable - seen)
                     self.assertEqual(
                         stranded, [],
-                        f"{len(stranded)} passable cells are sealed off under {doctrine}",
+                        f"{filename}: {len(stranded)} passable cells are sealed off "
+                        f"under {doctrine}",
                     )
+        self.assertGreaterEqual(checked, 15, "every campaign map must be covered")
