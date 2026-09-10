@@ -4,5 +4,5 @@
   "ratchet": "unbacked_ids may fall, never rise. Re-baseline only after real per-ID entries land, never to make a failure go away.",
   "boundary": "Document self-consistency only. A per-ID entry that contradicts the source passes here; that is caught by reading source. This grants no acceptance.",
   "claimed_verified_ids": 393,
-  "unbacked_ids": 373
+  "unbacked_ids": 368
 }

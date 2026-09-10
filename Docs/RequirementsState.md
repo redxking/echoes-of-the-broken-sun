@@ -127,6 +127,49 @@ before acting on any of them.
 | **Developer ID certificate and `notarytool` credentials** | Angelis ruled on 2026-09-10 not to provision these until he is ready to publish, reported through the deciding session, whose delegation the owner has since confirmed to this session. The three code layers that refuse non-ad-hoc signature strings stay exactly as they are. Owner ruling #31 remains the standing record of the credentials being unprovisioned. |
 | **M01 listening pass over 28 bound lines** | Outstanding. All 28 carry `candidate_status: unqualified_pending_listening` and the runtime logs `listeningVerified=false`. **Only Angelis can pass a listening gate**; no agent may record it as passed, and D5 explicitly does not. |
 
+## Outcome-path work handed to other lanes — 2026-09-10
+
+Recorded so these do not evaporate with a session. Each is a defect I found and could not fix,
+because the file belongs to another lane and was dirty. None is closed and none is claimed.
+
+**`Simulation.cpp` — a conceded match is marked as a Command Core loss.** Two sites emit
+`ReplayTimelineEventType::CommandCoreLoss`. The second sets `outcomeCause = PlayerForfeit` and then
+pushes a Corefall mark on the very next statement. `REL-QOL-014` names four event *types* the timeline
+serialises; it does not promise all four occur in a match, so a conceded match should carry no Corefall
+mark and marking one falsifies the timeline. **This corrects my own earlier reasoning**, recorded in the
+concession entry, that removing the mark would weaken `REL-QOL-014` — it does the opposite.
+The trap for whoever takes it: deleting the obvious site is not sufficient. The other site is the general
+reconstruction path, which emits a Corefall mark whenever a `CommandCore` disappears between snapshots —
+and `ForfeitPlayer` zeroes the conceding Core and calls `RemoveDestroyedEntities()`, so the Core genuinely
+vanishes and that path fires on its own. Suppress it for the forfeiting seat in both, or the false mark
+returns from the other one and a test that only covers the first will pass against a wrong timeline.
+Ruled: remove, do not relabel, no new enum value, no serialized format change. A concession mark of its
+own would be new scope under a new identifier and an owner decision.
+
+**`EchoesPlayerController.cpp` — a surrendering host's result banner expires.**
+`NotifyNetworkHostSurrender` overwrites the result with a 12.0-second message where every other result
+banner persists 3600 seconds, and drops the navigation clause, so the host is left with an expired
+result and no route onward.
+
+**`EchoesSimCore` / network contract — a client still reads the Corefall wording on a concession.**
+A client's simulation mirror never runs `ForfeitPlayer`, and the network result RPC carries only the
+outcome, so the cause never crosses the wire. Recorded as a stated residual of the concession repair.
+
+**`SPEC-OUT-007` — split, and only half is agent-completable.** The 45-minute prolonged-match warning is
+wall-clock in skirmish, forces no result, and needs no ruling. The other clause — *"An AI with no
+recoverable production/economy/Core-defense path concedes"* — has no numeric predicate, and `a289ff5`
+made it harder rather than easier: an opponent with a working economy recovers from states that were
+terminal when its income was structurally zero. Raised as an owner question with three candidate shapes;
+no agent may choose one. Until then `SPEC-OUT-007` is not implemented and must not be recorded as such —
+the family row that called it `AGENT VERIFIED` is exactly the defect
+[the audit](#family-rows-were-asserting-verification-nothing-supported--2026-09-10) documents.
+
+**`EchoesJourneySlots.cpp` / `EchoesPlayerShell.cpp` — campaign has no concede path.**
+`ConcedeOfflineMatch` gates on `SelectedOperation == Skirmish` while `SPEC-OUT-007` says the player may
+concede at any time. The subsystem gate is reachable, but the Pause menu offers the button only in
+Skirmish and the campaign result routing lives in another lane's file, so opening the gate alone changes
+nothing a player can reach. Left untouched rather than making a change that only resembles progress.
+
 ## Family rows were asserting verification nothing supported — 2026-09-10
 
 **This withdraws unsupported agent claims. It assigns no new status, closes nothing, and is not owner
