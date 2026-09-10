@@ -16,6 +16,8 @@
 #include "EngineGlobals.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Misc/App.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "UnrealClient.h"
 
 namespace
@@ -138,6 +140,19 @@ FEchoesFieldHudView AEchoesPlayerController::BuildFieldHudView() const
         return Failure;
     }
     LastFieldHudError.Reset();
+#if !UE_BUILD_SHIPPING
+    // -EchoesReviewHudScale=<0.8..1.5> drives one capture in the accessibility
+    // matrix without writing the player's saved setting. Persisting it is a
+    // real trap: a review run that set high contrast once left it enabled for
+    // the next session's suite. This touches only the view being returned.
+    float ReviewHudScale = 0.0f;
+    if (FParse::Value(FCommandLine::Get(),
+            TEXT("EchoesReviewHudScale="), ReviewHudScale) &&
+        ReviewHudScale >= 0.8f && ReviewHudScale <= 1.5f)
+    {
+        View.HudScale = ReviewHudScale;
+    }
+#endif
     return View;
 }
 

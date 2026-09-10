@@ -1236,6 +1236,25 @@ void AEchoesGameMode::BeginPlay()
     // launches or a missing controller. Only developer builds auto-start.
     Bridge->SetScenarioPaused(true);
 #endif
+#if !UE_BUILD_SHIPPING
+    // -EchoesReviewStartPaused holds the auto-started scenario paused so a
+    // rendered review reaches the battlefield HUD at all.
+    //
+    // Without it the shell's boot-time journey-slot selection is refused -
+    // SelectJourneySlot rejects while the scenario is ready and unpaused - and
+    // the shell pushes its Error screen over the battlefield. Every console
+    // section is collapsed on a non-battlefield surface, so a capture taken
+    // that way shows terrain and a modal and no HUD whatsoever. Nine such
+    // frames were captured before this was understood.
+    if (FParse::Param(FCommandLine::Get(), TEXT("EchoesReviewStartPaused")))
+    {
+        Bridge->SetScenarioPaused(true);
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_REVIEW_START_PAUSED] scenario paused for rendered review; editorOnly=true"));
+    }
+#endif
     if (GetNetMode() == NM_ListenServer)
     {
         const FEchoesSkirmishSetup OnlineSetup =

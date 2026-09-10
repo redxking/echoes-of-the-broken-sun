@@ -77,14 +77,27 @@ struct FEchoesHudLayout final
         // readable without stacking a large ledger over the minimap.
         const float ResourceRight = FMath::Max(ResourceLeftLimit,
             Width - Gap - FMath::Max(220.0f, Width * 0.17f));
-        const float ResourceWidth = FMath::Min(FMath::Min(540.0f * Scale, Width * 0.58f),
+        // 540 left the logistics value touching the clip edge at 2560x1440,
+        // where this cap is the binding constraint; the other two terms still
+        // bound the panel on narrow surfaces.
+        // At 1280 wide and 1.5 scale this fraction, not the cap above, is the
+        // binding term, and 0.58 left the logistics readout overflowing its
+        // panel by about three units. The panel still starts well clear of the
+        // reserved menu bounds at the widened fraction.
+        const float ResourceWidth = FMath::Min(FMath::Min(600.0f * Scale, Width * 0.62f),
             ResourceRight - ResourceLeftLimit);
         // Leave the existing upper-right tutorial skip control unobstructed.
         // Three readable source-backed lines require more than the original
         // 64-dip proposal: one resource row plus faction and match/research
         // context. This stays clear of the upper-right tutorial affordance.
+        //
+        // The ledger clips to its own bounds, so a height equal to the sum of
+        // its rows cuts the glyph tips off the first and last of them. An
+        // 18-point value row over two 14-point context rows measures about 84
+        // units with no padding at all; 104 keeps the border off the text at
+        // every scale in the accessibility range.
         Layout.ResourcePanel = FBox2D(FVector2D(ResourceRight - ResourceWidth, Gap),
-            FVector2D(ResourceRight, Gap + 84.0f * Scale));
+            FVector2D(ResourceRight, Gap + 104.0f * Scale));
         Layout.MinimapPanel = FBox2D(FVector2D(Gap, InnerBottom - MapSize),
             FVector2D(Gap + MapSize, InnerBottom));
         Layout.ObjectivePanel = FBox2D(FVector2D(CenterLeft, InnerTop),
@@ -94,7 +107,10 @@ struct FEchoesHudLayout final
         Layout.MainPanel = Layout.SelectionPanel;
         Layout.CommandDeckPanel = FBox2D(FVector2D(Width - Gap - DeckWidth, InnerTop),
             FVector2D(Width - Gap, InnerBottom));
-        Layout.StatusPanel = FBox2D(FVector2D(Edge, Top - 62.0f * Scale),
+        // A full status sentence wraps to two lines once the accessibility
+        // scale grows the text on a 1280-wide surface, and 62 units held only
+        // one of them: the second line was cut by the panel's own lower edge.
+        Layout.StatusPanel = FBox2D(FVector2D(Edge, Top - 92.0f * Scale),
             FVector2D(Width - Edge, Top - 8.0f));
         Layout.bBottomBarVisible = Height >= 360;
         Layout.bMenuVisible = Layout.bBottomBarVisible &&
@@ -144,6 +160,23 @@ struct FEchoesHudLayout final
                 bVisible = false;
                 return;
             }
+            // Slide an overhanging panel back into view before clamping.
+            // Clamping alone shrinks it against the edge it overhangs, which
+            // is what cut the top row off the resource ledger at 1.5 scale:
+            // the panel kept its position and lost its first line instead of
+            // moving down. Translation preserves the authored size, so a panel
+            // is only ever trimmed when it genuinely cannot fit.
+            const FVector2D Size = Rect.GetSize();
+            FVector2D Origin = Rect.Min;
+            // A panel landed flush on the viewport edge loses the outer half
+            // of its own border stroke, which reads as a clipped panel even
+            // though the rect is inside. Land it just inside instead.
+            constexpr double EdgeInset = 2.0;
+            const double InsetX = Size.X + 2.0 * EdgeInset <= Width ? EdgeInset : 0.0;
+            const double InsetY = Size.Y + 2.0 * EdgeInset <= Height ? EdgeInset : 0.0;
+            Origin.X = Size.X <= Width ? FMath::Clamp(Origin.X, InsetX, Width - Size.X - InsetX) : 0.0;
+            Origin.Y = Size.Y <= Height ? FMath::Clamp(Origin.Y, InsetY, Height - Size.Y - InsetY) : 0.0;
+            Rect = FBox2D(Origin, Origin + Size);
             Rect.Min.X = FMath::Clamp(Rect.Min.X, 0.0, Width);
             Rect.Min.Y = FMath::Clamp(Rect.Min.Y, 0.0, Height);
             Rect.Max.X = FMath::Clamp(Rect.Max.X, 0.0, Width);

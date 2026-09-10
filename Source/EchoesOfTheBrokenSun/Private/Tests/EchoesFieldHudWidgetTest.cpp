@@ -519,6 +519,25 @@ bool FEchoesFieldHudWidgetTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("A 2560x1440 console confined to a 1280x720 surface leaves nothing off screen"),
         Mismatched.IsFullyOnScreen());
 
+    // Confinement must move an overhanging panel, not shave it. Clamping the
+    // corners independently kept a panel where it was and shortened it against
+    // the edge it overhung, which cut the top row off the rendered resource
+    // ledger at 1.5 scale while every containment assertion still passed.
+    {
+        FEchoesHudLayout Overhang = FEchoesHudLayout::Build(FVector2D(1920, 1080), 1.0f, true);
+        const FVector2D AuthoredSize = Overhang.ResourcePanel.GetSize();
+        const FVector2D Shift(0.0, -0.5 * AuthoredSize.Y);
+        Overhang.ResourcePanel = FBox2D(Overhang.ResourcePanel.Min + Shift,
+            Overhang.ResourcePanel.Max + Shift);
+        Overhang.ConfineToView();
+        TestTrue(TEXT("A panel pushed off the top edge is returned at its authored size"),
+            Overhang.ResourcePanel.GetSize().Equals(AuthoredSize, 0.01));
+        TestTrue(TEXT("A panel returned from off the top edge is fully on screen"),
+            Overhang.IsFullyOnScreen());
+        TestTrue(TEXT("A returned panel clears the view edge so its border is not half cut"),
+            Overhang.ResourcePanel.Min.Y > 0.0);
+    }
+
     const FVector2D MenuCenter = Console.MenuPanel.GetCenter();
     TestTrue(TEXT("Menu hit coverage is supplied by the shared HUD layout"),
         Console.bMenuVisible && Console.IsPointerOnChrome(MenuCenter));

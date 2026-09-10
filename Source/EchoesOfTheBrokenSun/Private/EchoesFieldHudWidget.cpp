@@ -33,6 +33,17 @@
 
 namespace
 {
+/** Section text scale, after the caller has divided the accessibility scale by
+ * the viewport DPI. The accessibility range is 0.8 to 1.5 and the engine DPI
+ * curve spans roughly 0.4 to 3, so the quotient legitimately falls outside the
+ * accessibility range. Clamping it back to 0.8 was what re-tied text size to
+ * the accessibility scale and reintroduced the overflow this conversion is
+ * meant to remove. The wider bound still rejects a nonsense value. */
+float EchoesHudSectionScale(float RawScale)
+{
+    return FMath::Clamp(RawScale, 0.25f, 4.0f);
+}
+
 FLinearColor PanelColor(bool bHighContrast)
 {
     return bHighContrast
@@ -555,7 +566,7 @@ void UEchoesFieldHudSectionWidget::SetContent(
     const FText& Endpoint)
 {
     const bool bRefresh = bHighContrast == bInHighContrast &&
-        FMath::IsNearlyEqual(Scale, FMath::Clamp(InScale, .8f, 1.5f)) && CanRefreshInPlace(
+        FMath::IsNearlyEqual(Scale, EchoesHudSectionScale(InScale)) && CanRefreshInPlace(
         InLines,
         InControls,
         bShowEndpoint);
@@ -563,7 +574,7 @@ void UEchoesFieldHudSectionWidget::SetContent(
     Lines = InLines;
     Controls = InControls;
     bHighContrast = bInHighContrast;
-    Scale = FMath::Clamp(InScale, 0.8f, 1.5f);
+    Scale = EchoesHudSectionScale(InScale);
     bHasEndpoint = bShowEndpoint;
     EndpointText = Endpoint;
     if (!bRefresh)
@@ -1281,7 +1292,7 @@ void UEchoesFieldHudCampaignMapWidget::SetView(
 {
     View = InView;
     bHighContrast = bInHighContrast;
-    Scale = FMath::Clamp(InScale, 0.8f, 1.5f);
+    Scale = EchoesHudSectionScale(InScale);
     RebuildNodes();
     InvalidateLayoutAndVolatility();
 }
@@ -1542,7 +1553,7 @@ void UEchoesFieldHudContactWidget::SetContact(
 {
     Contact = InContact;
     bHighContrast = bInHighContrast;
-    Scale = FMath::Clamp(InScale, 0.8f, 1.5f);
+    Scale = EchoesHudSectionScale(InScale);
     if (RootBorder == nullptr)
     {
         RebuildContent();
@@ -2026,7 +2037,16 @@ void UEchoesFieldHudWidget::ApplyView()
     if (TutorialSkipHitTarget)
         TutorialSkipHitTarget->SetVisibility(View.bTutorialActive && !View.TutorialSkipModal.bVisible
             ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
-    const float Scale = FMath::Clamp(View.HudScale, 0.8f, 1.5f);
+    // Panels are laid out in physical pixels and converted to UMG local units
+    // by dividing by the viewport DPI scale. Text was not given the same
+    // conversion, so its pixel size stayed tied to the accessibility scale
+    // alone while the panel around it shrank in local units. On a 2560x1440
+    // surface the DPI curve is about 1.33 and the resource ledger lost the end
+    // of "KHARUUN ASSEMBLIES" and the "/18" of its logistics count to its own
+    // ClipToBounds. Dividing here keeps the rendered pixel size of the text in
+    // fixed proportion to the panel that has to hold it, at every resolution.
+    const float SectionDpi = FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this));
+    const float Scale = EchoesHudSectionScale(View.HudScale / SectionDpi);
     const bool bBattlefield =
         View.Surface == EEchoesFieldHudSurface::Battlefield ||
         View.Surface == EEchoesFieldHudSurface::Replay;
