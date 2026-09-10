@@ -6487,6 +6487,44 @@ AiCompositionOutcome RunAiCompositionMatch(AiPersonality doctrine, Tick ticks) {
     return outcome;
 }
 
+// REL-QOL-014 (coordinator ruling D10): a conceded match carries no Command
+// Core loss bookmark. ForfeitPlayer retires the conceding seat's Core so the
+// match ends deterministically, but nobody destroyed it, and the replay
+// timeline was marking a Corefall that never happened. The four timeline marks
+// are event types, not a promise that all four occur in every match.
+void TestConcededMatchCarriesNoCorefallBookmark() {
+    Simulation conceded(SimulationConfig{24, 24, 20, 0x434f4e4345444544ULL});
+    REQUIRE(conceded.AddPlayer(0, Faction::MeridianCompact,
+                               ResourcePool{1000, 1000}));
+    REQUIRE(conceded.AddPlayer(1, Faction::KharuunAssemblies,
+                               ResourcePool{1000, 1000}));
+    REQUIRE(conceded.SpawnEntity(0, Faction::MeridianCompact,
+                                 EntityType::CommandCore,
+                                 Vec2::FromTiles(2, 2)) != 0);
+    REQUIRE(conceded.SpawnEntity(1, Faction::KharuunAssemblies,
+                                 EntityType::CommandCore,
+                                 Vec2::FromTiles(20, 20)) != 0);
+    conceded.CaptureReplayBaseline();
+    conceded.Step(9);
+    REQUIRE(conceded.ForfeitPlayer(0));
+
+    std::string error;
+    const ReplayRecord concession = conceded.ExportReplay(&error);
+    REQUIRE(error.empty());
+    const auto report = Simulation::BuildMatchReport(concession, &error);
+    REQUIRE(report.has_value());
+
+    // The cause is carried, and carried once.
+    REQUIRE(report->outcome == MatchOutcome::Player1Victory);
+    REQUIRE(report->outcomeCause == MatchOutcomeCause::PlayerForfeit);
+    REQUIRE(report->forfeitingPlayer == 0);
+    REQUIRE(std::none_of(
+        report->events.begin(), report->events.end(),
+        [](const ReplayTimelineEvent& event) {
+            return event.type == ReplayTimelineEventType::CommandCoreLoss;
+        }));
+}
+
 void TestOpponentFieldsMoreThanSoldiers() {
     const AiCompositionOutcome balanced =
         RunAiCompositionMatch(AiPersonality::Balanced, 6000);
@@ -10329,6 +10367,8 @@ int main(int argc, char** argv) {
         {"legacy Relay scoped connectivity", TestLegacyRelayScopedConnectivity},
         {"hostile body holds a choke, allied body does not",
          TestHostileBodyHoldsAChokeAndAlliedBodyDoesNot},
+        {"conceded match carries no Corefall bookmark",
+         TestConcededMatchCarriesNoCorefallBookmark},
         {"opponent fields more than Soldiers",
          TestOpponentFieldsMoreThanSoldiers},
         {"Logistics ceiling is bounded", TestLogisticsCeilingIsBounded},

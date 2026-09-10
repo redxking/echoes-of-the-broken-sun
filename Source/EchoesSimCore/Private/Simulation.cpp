@@ -11269,26 +11269,18 @@ std::optional<MatchReport> Simulation::BuildMatchReport(
         return std::nullopt;
     }
     if (replay.forfeitingPlayer != kNeutralPlayer) {
-        EntityId forfeitedCore = 0;
-        for (const Entity& entity : simulation->Entities()) {
-            if (entity.owner == replay.forfeitingPlayer &&
-                entity.type == EntityType::CommandCore &&
-                entity.hitPoints > 0) {
-                forfeitedCore = entity.id;
-                break;
-            }
-        }
         if (!simulation->ForfeitPlayer(replay.forfeitingPlayer)) {
             SetError(error, "replay forfeit marker could not be applied");
             return std::nullopt;
         }
         report.forfeitingPlayer = replay.forfeitingPlayer;
         report.outcomeCause = MatchOutcomeCause::PlayerForfeit;
-        report.events.push_back({
-            replay.finalTick,
-            ReplayTimelineEventType::CommandCoreLoss,
-            replay.forfeitingPlayer,
-            forfeitedCore});
+        // No timeline mark. ForfeitPlayer retires the conceding seat's Core to
+        // end the match deterministically, but nobody destroyed it, and the
+        // timeline was marking a Command Core loss that never happened. The
+        // four marks in REL-QOL-014 are event types, not a guarantee that all
+        // four occur in every match: a conceded match simply has no Core loss
+        // to bookmark. The cause is already carried by outcomeCause.
     }
 
     // Commands scheduled after the recording stopped remain admitted replay
