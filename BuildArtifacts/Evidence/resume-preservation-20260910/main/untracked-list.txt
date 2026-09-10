@@ -1,0 +1,2 @@
+Source/EchoesOfTheBrokenSun/Private/Tests/EchoesOrderQueueTest.cpp
+Tests/Tools/test_build_slot.py

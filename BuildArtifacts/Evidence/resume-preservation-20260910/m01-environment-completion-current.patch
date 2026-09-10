@@ -1,0 +1,543 @@
+diff --git a/Docs/Archive/AssetRegister.md b/Docs/Archive/AssetRegister.md
+index c92ed6b..e4d2dc6 100644
+--- a/Docs/Archive/AssetRegister.md
++++ b/Docs/Archive/AssetRegister.md
+@@ -1043,3 +1043,38 @@ Before shipping, reconcile their production provenance with AudioDirection secti
+ master requirements; preservation alone does not establish a general production-policy exception.
+ No listening quality, loop suitability, cue completeness, Unreal import, runtime binding, or mix
+ acceptance is claimed by this intake.
++
++### M01 cliff-material reuse validation — 2026-09-09
++
++**Author and owner:** Angelis Pseftis. The existing original basalt family and
++`cliff-surface-3d-basalt-v4` asset recipe are retained. Validation now checks the actual required
++graph outputs, registered Metallic/Roughness parameter identity and finite defaults, and absence
++of an emissive output before reusing a material with the current revision tag. The rebuilt path
++uses the same checks and verifies its newly created output-node bindings. A matching tag no longer
++bypasses those output/scalar checks; full graph identity remains unchecked. Valid reuse performs
++no save, rewrite or recompile.
++
++Five source-level reuse/refusal tests pass, including missing output, connected emissive,
++incorrect parameter/value, non-finite roughness and rebuilt-node mismatch. These use a read-only
++test double; actual Unreal graph readback and rendered scene inspection remain pending. No material
++output or recipe revision has changed. Evidence:
++`/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/m01-environment-completion-20260909/cliff-validator-source.json`.
++
++### M01 service-material roughness candidate — 2026-09-09
++
++**Author and owner:** Angelis Pseftis. The registered original ServiceCeramic family is retained.
++The coordinated read-only Unreal check found all four `MI_M01Evacuation_*` instances at material
++revision v4, with roughness `.93`, metallic/emissive zero, and the expected non-sRGB mask texture.
++The cliff output/scalar checks also passed on the loaded v4 basalt master. These are editor asset
++observations; no scene-quality acceptance is assigned.
++
++Source candidate `m01-evacuation-material-v5` changes only the service roughness multiplier to `.72`.
++With the registered MRE source green range 190–213 and the shared surface formula, effective roughness
++is .89647–.96141 instead of values above 1.0 that saturate the variation. The source guard checks the
++matte floor, unclipped maximum and nonconstant texture response. Existing colors, emissive/metallic
++values, source textures, geometry and `m01-evacuation-props-v13` mesh revision are retained. Shared
++civic-service uses, including M03, inherit these material instances and require the same visual check.
++
++The source candidate is not generated, integrated or rendered yet. The live baseline is retained as
++`material-readback-headless.json` in the environment evidence root above; its current game module hash
++is recorded there separately from the preceding candidate39 startup attempt.
+diff --git a/Docs/WorldMapWorkLog.md b/Docs/WorldMapWorkLog.md
+index a3f0ae9..2dc58eb 100644
+--- a/Docs/WorldMapWorkLog.md
++++ b/Docs/WorldMapWorkLog.md
+@@ -1,7 +1,7 @@
+ # World and presentation work — continuation record
+ 
+ **Author and owner:** Angelis Pseftis\
+-**Updated:** 2026-09-04\
++**Updated:** 2026-09-09\
+ **Status:** Partially complete; operational handoff, not requirements or acceptance authority.
+ 
+ The owner directs autonomous implementation and quality decisions across maps, graphics,
+@@ -9,7 +9,24 @@ images, effects and audio. Do not stop for intermediate owner review. Deliver th
+ experience for review only after internal qualification; never label internal QA human acceptance.
+ Preserve this objective across context windows and update this file in place.
+ 
+-## Current resumption point — 2026-09-04
++## Current resumption point — 2026-09-09
++
++Continue the isolated M01 environment slice described in the September 9 continuation below.
++Current source already contains the V042 v2 exterior banks and evacuation props v13; do not resume
++the older v8 geometry instruction in the historical checkpoint. The five prepared source/test/generator/geometry
++patches have passed a combined application check against main but are not integrated or generated.
++Current material readback establishes the v4 baseline. A protected September 9 15:20–15:28 UTC
++normal campaign launch reached M01 and sampled adjoining exterior/interior banks. The exterior
++mass is connected, but the broad smooth bank foot and straight material boundary remain visible;
++V042 is still open. These partial views do not qualify all corners or the service-material candidate.
++
++The shared main checkout and engine are reserved by the unit/building-action task for its connected
++qualification. The confirmed queue is its remaining network/restart checks, the save/recovery task's
++brief native fixture, this environment integration/render window, then the next HUD pass. Reconfirm
++the live handoff before launch or main mutation; this paragraph is not a resource lease. Preserve
++`BuildArtifacts/Evidence/m01-environment-completion-20260909` under the containing Echoes workspace.
++
++## Historical checkpoint — 2026-09-04
+ 
+ **Active production checkpoint:** M01 has 306 blocked cells in all three doctrines and 30
+ landmark records (including the shared archive apron and loading face); all three canyon crossings and required sites remain. World kits v9,
+@@ -968,3 +985,148 @@ other actor/action states, pointer interaction V039, Well capability dependencie
+ mission review. Gameplay layout acceptance, package qualification and Angelis-only acceptance remain
+ open. The concurrent harvesting-guidance append was preserved; no economy rules or later maps changed.
+ The editor is retained in the paused M01 review state, and the original build configuration is restored.
++
++### 2026-09-09 — M01 environment completion resumed in isolation
++
++**Author and owner:** Angelis Pseftis. The owner authorized this task to continue M01 environment
++production through integration and rendered verification. Existing P3/B1/B2 sequencing remains in force.
++The isolated checkout is `Worktrees/m01-environment-completion`, detached at
++`6b559889a4e7b0ed7fd86aee37b64728bd516017`. Main remains under the save/recovery integration owner;
++HUD/menu and unit/building-action work have separate owners. No main writes or heavy launches are
++authorized by a historical session pointer. Shared resources will transfer through live coordination.
++
++The source baseline and path hashes are retained at
++`/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/BuildArtifacts/Evidence/m01-environment-completion-20260909/baseline.json`.
++The inspected environment paths match main. The current source already contains the V042 v2 connected
++exterior-bank correction; its last retained 12:41 UTC movie on September 5 predates that correction.
++The next gate is a current-source matched camera sweep, not another unobserved geometry revision.
++
++Scope is the existing M01 environmental composition, surface materials, landmarks, atmosphere and
++readability. Preserve campaign geometry, anchors, resources, objectives and gameplay; scenery retains
++its existing inert collision/navigation/input/fog roles. Units, buildings, HUD and narrative/audio
++remain with their current owners. B1/B2 environmental observations will be recorded separately from
++integrated package, physical-input, performance and Angelis-only acceptance evidence.
++
++Source baseline: campaign, landmark and Glass Scar dressing compilers report current outputs;
++evacuation and world-kit recipe tests pass. The initial World suite passed 97/98. Its one failure
++compared the evolving `test_glass_scar_map_pack.py` with the sealed v1 test source, despite the
++later documented MAP-001 parser/fairness coverage. The separate test-contract repair keeps the
++three accepted v1 content files byte-identical, checks the original test-source hash through its
++immutable Git object, and preserves the current live test. The rerun passes 99/99 in 4.307 seconds.
++The failed result, scoped patch, unchanged-content checks and passing log are retained beside
++`baseline.json`; this repair is isolated and has not yet been integrated into main.
++
++The existing editor hook and M01 movie/camera commands are prepared for the reserved review window.
++The current camera is orthographic, so each settled view will also check its actual width against
++the current arm/FOV conversion and record the readback. Old perspective-camera captures provide
++historical defect evidence, not a pixel-matched current-camera reference. No new movie or visual
++pass is claimed by this preparation.
++
++The isolated cliff material generator now checks its required graph outputs, registered matte scalar
++parameters and absent emissive connection before reusing an asset with a matching revision tag. Five
++source-level refusal/reuse tests pass; a fake read-only Unreal surface establishes the Python branch
++behavior, not an editor result. Material recipe, revision and generated assets are unchanged. The scoped
++patch and source-only receipt are retained as `cliff-validator.patch` and `cliff-validator-source.json`
++in the evidence root above. Actual asset readback remains queued with the environment baseline.
++Independent source review confirmed the local UE 5.8 API contract and identified the missing standard
++test registration. `Scripts/test_content.sh` now includes this test; the full source content gate passes
++158 tests in 14 suites and validates the content compiler output. The ready log preserves its wrapper
++fields while explicitly limiting validation to outputs/scalars/no-emissive and leaving graph identity
++unchecked. `content-gate.json` binds the passing log. The 99-test World run is a separate overlapping
++suite, so these totals are not presented as 257 distinct tests.
++
++Source inspection also found that the existing ServiceCeramic MRE green values (190–213) combined with
++the evacuation material's `.93` roughness scalar calculate to 1.15794–1.24182 before renderer clamping.
++The `.72` candidate calculates to .89647–.96141, preserving the matte floor and texture variation.
++These calculations and the input hash are retained in `service-roughness-source.json`. No material
++appearance change is made on this calculation alone: current asset parameter/texture readback and
++scene inspection are still required, including the shared civic-service uses outside M01.
++
++The integration owner released a bounded read-only environment window on frozen recovery candidate39.
++Prelaunch and post-close checks matched all 530 candidate identity entries and five additional
++environment material assets. The protected full editor launch reached its 540-second limit before
++editor/Python/M01 readiness. A one-second process sample found the main thread waiting for global shader
++map compilation with active compiler workers. The timeout requested Mac graceful termination at
++13:59:14 UTC; the editor and workers were confirmed absent afterward. The OS synthetic-denial probe
++passed, scoped saves remained empty, and scoped cleanup succeeded. Persistent AutomationDDC was retained.
++
++`candidate39-baseline-result.json`, `baseline-launch.json`, the startup log and process sample preserve
++this failed attempt. No material readback, movie, physical-input result or visual pass was produced.
++The heavy slot transferred explicitly to Art at 14:00 UTC for its queued HUD integration/build. A
++read-only NullRHI command-editor material check is prepared separately to avoid coupling asset graph
++inspection to GPU startup; it remains unexecuted and cannot replace the rendered environment gate.
++
++Art subsequently ran the frozen read-only helper sequentially inside its protected HUD NullRHI import
++process, without another engine launch. The 14:05:36 UTC readback passed the cliff output/scalar/no-emissive
++checks and recorded four v4 service instances at roughness .93 with the expected non-sRGB mask texture.
++Its module hashes identify Art's newly built candidate, rather than the preceding candidate39 attempt.
++The helper is released after that successful run; the HUD owner retains main and heavy resources.
++
++The isolated service-material v5 source now uses the .72 matte multiplier, with a source-image bound
++check added to the existing evacuation prop tests. Four focused tests pass. Generated assets and main
++are unchanged; ordinary rendered appearance still needs comparison. The next bounded terrain view can
++use the already established protected Development-game launch and visible camera controls; static frames
++will be reported separately from continuous motion, package, performance and owner evidence.
++
++After adding the material source guard, the complete content gate passes 159 tests in 14 suites and
++validates the authoritative content output (`content-final-source.json`). The negative control with
++the old .93 scalar fails the new roughness-bound check as expected. The separate v5 patch passes a
++read-only application check against main; it remains unintegrated.
++
++The earlier recovery Development-game route used the home/Zen cache rather than the protected
++wrapper's project-only AutomationDDC. Its quick startup therefore cannot establish that changing to
++`-game` alone resolves the cold-cache delay. Art now owns a protected Development-game launch that is
++actively compiling into AutomationDDC. A regular-file-only, non-overwriting cache seed was prepared
++and checked with synthetic files, but no real cache copy has run. Any seed requires an exclusive
++storage window with no engine cache writers; player-save and whole-home launch protection stays intact.
++
++The canonical evacuation-only generation shell branch now calls the existing protected launcher and
++checks its full isolation receipt, including cleanup, before accepting the unchanged asset-ready marker.
++The three behavioral routing tests pass without an Unreal launch. The broader Tools suite passes 18/20;
++two existing checks refuse this isolated checkout's overlong ephemeral DDC path (126 versus the engine's
++119-character limit). The guard is unchanged; the actual integration path is the shorter main checkout,
++whose Tools qualification remains pending. `art-generation-isolation-source.json` preserves this limit.
++Canonical synthesis also reproduces all three existing ServiceCeramic PNGs byte-for-byte. The prepared
++post-generation readback covers four v5 instances and their six M01/four M03 shared mesh bindings;
++it records invalid instances/slots as failures before writing its result, and is not yet executed.
++
++Art's first protected rendered HUD window closed at 14:40 UTC after title/options/tutorial inspection.
++It reported normal editor exit, successful protection/cleanup, and scoped profile/tutorial writes;
++the wrapper's exit 8 is therefore retained rather than described as an empty-save automation pass.
++No M01 environment frames came from that route. Main/heavy ownership transferred explicitly to the
++unit/building-action task for its queued native and common-engine checks; environment integration is next.
++
++### September 9 protected M01 baseline continuation
++
++The gameplay owner granted a ten-minute read-only engine window, returned at 15:28:41 UTC.
++The protected main candidate launched through the normal campaign/tutorial-skip/briefing path,
++then used keyboard camera movement to inspect a portion of the M01 boundary. No source, assets
++or binaries were changed: all 43 tracked candidate files matched before and after. The editor
++closed normally with exit 0; the wrapper returned 8 because the normal route created scoped
++profile/save data. Its synthetic denial probe and cleanup passed. See the workspace evidence
++root's `baseline-game-identity.json`, `baseline-game-result.json` and `baseline-game.log`.
++
++Fresh screenshots retained in the task show a broad smooth foot below the connected exterior
++bank, a straight material contact, and a purple polygon/scene element whose component is not yet
++attributed. No material compilation failure or M01 bank degradation marker was found in the log.
++The source walk-surface recipe emits material slot 0, so a magenta palette entry at slot 3 alone
++does not establish the purple element's cause. Two UI refresh refusals occurred and the view was
++re-read before continuing; this is agent GUI observation, not owner acceptance or sole-input
++attribution. Only partial boundary views were obtained. The archive/Well, all corners, generated
++v5 material, motion, package and performance gates remain unqualified. Main/heavy ownership
++returned to the gameplay task for its networking repair; environment changes remain isolated.
++
++The first isolated bank-foot candidate (v3) was rejected before integration. Although its
++contact rims and source tests passed, a 6,240-vertex Python approximation using the installed
++engine's Perlin permutation showed 107–205 cm mean lowering within 600 cm of the rim on every
++side. Delaying relief could therefore widen the perceived bare strip. Its patch and analytical
++results remain retained as rejected preparation, not a rendered failure or completed repair.
++
++The current v4 candidate retains XY samples, triangulation, annulus extent and materials. It
++uses a 350–850 cm foot, a bounded regional shoulder in low-Crest saddles and nonnegative
++small relief. The same approximation raises mean near-foot height 78–99 cm, retains both
++exact contact rims and does not go below Z=-2; the largest sampled local rise is 323 cm.
++That increase requires explicit rendered occlusion inspection. `bank-perimeter-analysis-v4.json`
++is analytical evidence only. The fifth current patch is `bank-foot-v4.patch`; the ready manifest
++excludes v3. Native build, geometry invariants and normal-camera edge/corner views remain
++required after the explicit shared-resource handoff. No V042 closure is claimed.
+diff --git a/Scripts/echoes_cliff_material.py b/Scripts/echoes_cliff_material.py
+index 4f4c24d..07daa18 100644
+--- a/Scripts/echoes_cliff_material.py
++++ b/Scripts/echoes_cliff_material.py
+@@ -9,6 +9,7 @@ normals and receive their illumination from the scene rig.
+ 
+ from __future__ import annotations
+ 
++import math
+ import unreal
+ 
+ 
+@@ -83,10 +84,45 @@ def _existing_or_new() -> unreal.Material:
+     return material
+ 
+ 
++def validate_cliff_material(material: unreal.Material, expected_outputs=None) -> None:
++    """Check the graph we actually reuse, not just its revision metadata.
++
++    This checks required outputs and the registered matte scalar parameters;
++    it does not claim byte identity or rendered material acceptance.
++    """
++    lib = unreal.MaterialEditingLibrary
++    required = (
++        unreal.MaterialProperty.MP_BASE_COLOR,
++        unreal.MaterialProperty.MP_METALLIC,
++        unreal.MaterialProperty.MP_ROUGHNESS,
++    )
++    for property_name in required:
++        node = lib.get_material_property_input_node(material, property_name)
++        if node is None or (expected_outputs is not None and node != expected_outputs[property_name]):
++            raise RuntimeError(f"{MATERIAL_NAME} lost required graph output {property_name}")
++    for property_name, parameter, value in (
++        (unreal.MaterialProperty.MP_METALLIC, "Metallic", .02),
++        (unreal.MaterialProperty.MP_ROUGHNESS, "Roughness", .90),
++    ):
++        node = lib.get_material_property_input_node(material, property_name)
++        if not isinstance(node, unreal.MaterialExpressionScalarParameter):
++            raise RuntimeError(f"{MATERIAL_NAME} has an invalid registered {parameter} parameter")
++        actual_value = float(node.get_editor_property("default_value"))
++        if str(node.get_editor_property("parameter_name")) != parameter or \
++                not math.isfinite(actual_value) or abs(actual_value - value) > 1.e-6:
++            raise RuntimeError(f"{MATERIAL_NAME} has an invalid registered {parameter} parameter")
++    if lib.get_material_property_input_node(material, unreal.MaterialProperty.MP_EMISSIVE_COLOR) is not None:
++        raise RuntimeError(f"{MATERIAL_NAME} must not contain an emissive path")
++
++
+ def create_cliff_material() -> unreal.Material:
+-    """Create or return the exact-revision, world-space exposed-cliff master."""
++    """Build the cliff master or validate outputs of the registered revision.
++
++    Reusing a matching tag checks the output/scalar contract, not graph identity.
++    """
+     material = _existing_or_new()
+     if unreal.EditorAssetLibrary.get_metadata_tag(material, "Echoes.AssetRevision") == REVISION:
++        validate_cliff_material(material)
+         return material
+ 
+     lib = unreal.MaterialEditingLibrary
+@@ -166,18 +202,11 @@ def create_cliff_material() -> unreal.Material:
+     errors = lib.recompile_material(material)
+     if errors:
+         raise RuntimeError(f"{MATERIAL_NAME} compilation failed: {errors}")
+-    expected_outputs = (
+-        (unreal.MaterialProperty.MP_BASE_COLOR, final_color),
+-        (unreal.MaterialProperty.MP_METALLIC, metallic),
+-        (unreal.MaterialProperty.MP_ROUGHNESS, roughness),
+-    )
+-    for property_name, expected_node in expected_outputs:
+-        if lib.get_material_property_input_node(material, property_name) != expected_node:
+-            raise RuntimeError(f"{MATERIAL_NAME} lost required graph output {property_name}")
+-    if lib.get_material_property_input_node(
+-        material, unreal.MaterialProperty.MP_EMISSIVE_COLOR
+-    ) is not None:
+-        raise RuntimeError(f"{MATERIAL_NAME} must not contain an emissive path")
++    validate_cliff_material(material, {
++        unreal.MaterialProperty.MP_BASE_COLOR: final_color,
++        unreal.MaterialProperty.MP_METALLIC: metallic,
++        unreal.MaterialProperty.MP_ROUGHNESS: roughness,
++    })
+ 
+     unreal.EditorAssetLibrary.set_metadata_tag(material, "Echoes.Creator", "Angelis Pseftis")
+     unreal.EditorAssetLibrary.set_metadata_tag(
+diff --git a/Scripts/echoes_evacuation_props.py b/Scripts/echoes_evacuation_props.py
+index d1b8446..30c4b72 100644
+--- a/Scripts/echoes_evacuation_props.py
++++ b/Scripts/echoes_evacuation_props.py
+@@ -8,6 +8,10 @@ from __future__ import annotations
+ import math
+ 
+ REVISION = "m01-evacuation-props-v13"
++MATERIAL_REVISION = "m01-evacuation-material-v5"
++# M_EchoesSurface multiplies this by (ServiceCeramic MRE.G + .5).
++# Keep the walkable service surfaces matte without saturating their roughness map.
++MATERIAL_ROUGHNESS = .72
+ KINDS = ("ArchiveCradle", "ArchiveFrame", "RoutePaving", "ServiceConduit", "ArchiveApron", "ArchiveLoadingFace")
+ 
+ 
+diff --git a/Scripts/generate_art_assets.py b/Scripts/generate_art_assets.py
+index 103357b..8e730fa 100644
+--- a/Scripts/generate_art_assets.py
++++ b/Scripts/generate_art_assets.py
+@@ -1883,11 +1883,11 @@ def create_evacuation_materials():
+         for suffix, parameter in (("BaseColor", "BaseColorMap"), ("MRE", "MREMap"), ("Normal", "NormalMap")):
+             unreal.MaterialEditingLibrary.set_material_instance_texture_parameter_value(
+                 instance, parameter, service_textures["T_EchoesServiceCeramic_" + suffix])
+-        for key, value in (("Metallic", .0), ("Roughness", .93), ("EmissiveStrength", .0), ("MaskedEmissiveStrength", .0), ("UVScale", 1.0)):
++        for key, value in (("Metallic", .0), ("Roughness", evacuation_props.MATERIAL_ROUGHNESS), ("EmissiveStrength", .0), ("MaskedEmissiveStrength", .0), ("UVScale", 1.0)):
+             unreal.MaterialEditingLibrary.set_material_instance_scalar_parameter_value(instance, key, value)
+         unreal.EditorAssetLibrary.set_metadata_tag(instance, "Echoes.Creator", "Angelis Pseftis")
+         unreal.MaterialEditingLibrary.update_material_instance(instance)
+-        unreal.EditorAssetLibrary.set_metadata_tag(instance, "Echoes.AssetRevision", "m01-evacuation-material-v4")
++        unreal.EditorAssetLibrary.set_metadata_tag(instance, "Echoes.AssetRevision", evacuation_props.MATERIAL_REVISION)
+         unreal.EditorAssetLibrary.set_metadata_tag(instance, "Echoes.Provenance", "Original M01 ceramic and service material; no external source")
+         if not unreal.EditorAssetLibrary.save_loaded_asset(instance, False):
+             raise RuntimeError("Could not save evacuation material: " + path)
+@@ -3719,7 +3719,7 @@ def main() -> None:
+         return
+     if os.environ.get("ECHOES_CLIFF_MATERIAL_ONLY") == "1":
+         cliff_material.create_cliff_material()
+-        unreal.log(f"[ECHOES_CLIFF_MATERIAL_READY] revision={cliff_material.REVISION} assets=1 emissive=false")
++        unreal.log(f"[ECHOES_CLIFF_MATERIAL_READY] revision={cliff_material.REVISION} assets=1 emissive=false validation=outputs-scalars-no-emissive revision_source=metadata graph_identity=unchecked")
+         return
+     if os.environ.get("ECHOES_MERIDIAN_FACING_ONLY") == "1":
+         material = unreal.EditorAssetLibrary.load_asset(MATERIAL_PATH)
+diff --git a/Scripts/generate_art_assets.sh b/Scripts/generate_art_assets.sh
+index a405b05..e0fc84a 100755
+--- a/Scripts/generate_art_assets.sh
++++ b/Scripts/generate_art_assets.sh
+@@ -15,6 +15,45 @@ fi
+ 
+ mkdir -p "$project_root/Saved/Logs"
+ 
++# Retain the existing generator and asset checks while isolating the engine's
++# save, user and cache routes. Author: Angelis Pseftis.
++run_isolated_art_pass() {
++  local pass_name="$1"
++  local pass_script="$2"
++  local pass_log="$3"
++  local report_dir="$project_root/BuildArtifacts/Evidence/art-generation-$(date -u +%Y%m%dT%H%M%SZ)-$$/$pass_name"
++  local editor_status=0
++  /usr/bin/python3 "$project_root/Scripts/echoes_test_sandbox.py" \
++    --editor "$editor" --project "$project" --report-dir "$report_dir" \
++    --reuse-local-ddc -- \
++    -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
++    -ExecutePythonScript="$pass_script" -abslog="$pass_log" || editor_status=$?
++
++  local isolation_report="$report_dir/SaveIsolation/launcher-result.json"
++  if [[ ! -f "$isolation_report" ]]; then
++    print -u2 "Art generation has no isolation result: $isolation_report"
++    return 9
++  fi
++  if ! /usr/bin/python3 - "$isolation_report" <<'PY'
++import json
++import sys
++with open(sys.argv[1], encoding="utf-8") as source:
++    report = json.load(source)
++for field in ("synthetic_denial_probe", "protected_policy_clauses_verified",
++              "scoped_save_directory_empty_after_run", "cleanup_succeeded"):
++    if report.get(field) is not True:
++        raise SystemExit("Art isolation check failed: " + field)
++if report.get("prelaunch_failure") is not False:
++    raise SystemExit("Art isolation launch did not complete")
++PY
++  then
++    print -u2 "Art generation isolation failed; inspect $isolation_report"
++    return 8
++  fi
++  print "Art generation isolation evidence: $report_dir"
++  return "$editor_status"
++}
++
+ if [[ "${ECHOES_M01_BULWARK_PARTS_ONLY:-0}" == "1" ]]; then
+   "$editor" "$project" -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+     -ExecutePythonScript="$generator" -abslog="$log"
+@@ -66,8 +105,7 @@ if [[ "${ECHOES_MERIDIAN_FACING_ONLY:-0}" == "1" ]]; then
+ fi
+ 
+ if [[ "${ECHOES_EVACUATION_PROPS_ONLY:-0}" == "1" ]]; then
+-  "$editor" "$project" -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+-    -ExecutePythonScript="$generator" -abslog="$log"
++  run_isolated_art_pass evacuation-props "$generator" "$log"
+   rg -q '\[ECHOES_EVACUATION_PROPS_READY\].*assets=6 lods=2 collision=0' "$log"
+   if rg -q 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|Failed to compile Material' "$log"; then
+     exit 13
+diff --git a/Scripts/test_content.sh b/Scripts/test_content.sh
+index c9f0ed4..119a794 100755
+--- a/Scripts/test_content.sh
++++ b/Scripts/test_content.sh
+@@ -5,6 +5,7 @@ project_root="${0:A:h:h}"
+ 
+ /usr/bin/python3 "$project_root/Tests/Content/test_world_kits.py"
+ /usr/bin/python3 "$project_root/Tests/Content/test_evacuation_props.py"
++/usr/bin/python3 "$project_root/Tests/Content/test_cliff_material_validation.py"
+ /usr/bin/python3 "$project_root/Tests/Content/test_meridian_facing.py"
+ /usr/bin/python3 "$project_root/Content/World/Tools/compile_mission_landmarks.py" --root "$project_root" --check
+ /usr/bin/python3 "$project_root/Tests/World/test_mission_landmarks.py"
+diff --git a/Source/EchoesOfTheBrokenSun/Private/EchoesCliffMesh.cpp b/Source/EchoesOfTheBrokenSun/Private/EchoesCliffMesh.cpp
+index bc23265..2dfd24f 100644
+--- a/Source/EchoesOfTheBrokenSun/Private/EchoesCliffMesh.cpp
++++ b/Source/EchoesOfTheBrokenSun/Private/EchoesCliffMesh.cpp
+@@ -382,18 +382,25 @@ EchoesCliffMesh::FGeometry EchoesCliffMesh::BuildExteriorBank(
+         const float Distance = FMath::Max(0.0f, FMath::Max(
+             FMath::Max(MinX - static_cast<float>(X), static_cast<float>(X) - MaxX),
+             FMath::Max(MinY - static_cast<float>(Y), static_cast<float>(Y) - MaxY)));
+-        // World-space masses and saddles, not a repeated height for each ring.
+-        // Two scales break the shoulder into broad cleaved crests. The low foot
+-        // varies in width; both contact rims return smoothly to the substrate.
+-        const float Mass = Noise(X,Y,2400.0f,FVector2D(17.3,31.7)) +
+-                           .28f * Noise(X,Y,1100.0f,FVector2D(43.1,9.6));
+-        const float Crest = FMath::SmoothStep(-.28f,.38f,Mass);
+-        const float RegionalHeight = 960.0f + 420.0f * Noise(X,Y,5700.0f,FVector2D(8.2,53.4));
+-        const float FootWidth = 800.0f + 450.0f * Noise(X,Y,2300.0f,FVector2D(21.8,4.6));
+-        const float Contact = FMath::SmoothStep(0.0f,FootWidth,Distance) *
+-                              (1.0f - FMath::SmoothStep(8000.0f,10000.0f,Distance));
+-        return -2.0f + Contact * (120.0f + RegionalHeight * Crest +
+-            65.0f * Noise(X,Y,1200.0f,FVector2D(61.4,12.7)));
++        // Independent near and rear masses break up the continuous rock apron.
++        // World-space fields remain continuous at side joins. Low saddles are
++        // buried under the existing ground backing instead of forming a toe sheet.
++        const float Rim = FMath::SmoothStep(0.0f,420.0f,Distance) *
++                          (1.0f - FMath::SmoothStep(9000.0f,10000.0f,Distance));
++        const float NearBand = FMath::SmoothStep(120.0f,850.0f,Distance) *
++                               (1.0f - FMath::SmoothStep(3100.0f,4750.0f,Distance));
++        const float RearBand = FMath::SmoothStep(3300.0f,5100.0f,Distance) *
++                               (1.0f - FMath::SmoothStep(7900.0f,9200.0f,Distance));
++        const float NearField = Noise(X,Y,2400.0f,FVector2D(17.3,31.7)) +
++                                .18f * Noise(X,Y,1100.0f,FVector2D(43.1,9.6));
++        const float RearField = Noise(X,Y,4200.0f,FVector2D(8.2,53.4)) +
++                                .18f * Noise(X,Y,1600.0f,FVector2D(61.4,12.7));
++        const float NearMass = FMath::SmoothStep(-.20f,.45f,NearField);
++        const float RearMass = FMath::SmoothStep(-.12f,.46f,RearField);
++        const float RawRelief = 1100.0f * NearBand * NearMass + 1400.0f * RearBand * RearMass;
++        const float AboveBacking = FMath::Max(0.0f, RawRelief - 35.0f);
++        const float Relief = AboveBacking * FMath::SmoothStep(35.0f,135.0f,RawRelief);
++        return -2.0f + Rim * Relief;
+     };
+     const auto Point = [&](const int32 BankSide, const int32 Sample, const int32 Ring)
+     {
+diff --git a/Tests/Content/test_evacuation_props.py b/Tests/Content/test_evacuation_props.py
+index 085f98d..1657372 100644
+--- a/Tests/Content/test_evacuation_props.py
++++ b/Tests/Content/test_evacuation_props.py
+@@ -1,4 +1,4 @@
+-"""Pure-Python geometry contract for the M01 evacuation prop source recipes."""
++"""Geometry and matte-surface source contracts. Author: Angelis Pseftis."""
+ import importlib.util
+ import math
+ from pathlib import Path
+@@ -80,6 +80,25 @@ class EvacuationPropsContract(unittest.TestCase):
+         mesh = Mesh(); props.build(mesh, True, "ArchiveLoadingFace")
+         self.assertEqual({material for _, material in mesh.buffers}, {0, 1, 2, 3})
+ 
++    def test_service_roughness_retains_matte_texture_variation(self):
++        root = Path(__file__).parents[2]
++        reader_spec = importlib.util.spec_from_file_location(
++            "exposure_png_reader", root / "Scripts/measure_capture_exposure.py")
++        reader = importlib.util.module_from_spec(reader_spec)
++        reader_spec.loader.exec_module(reader)
++        width, height, pixels, channels = reader.read_png_rgb(str(
++            root / "Content/Art/Source/Textures/T_EchoesServiceCeramic_MRE.png"))
++        self.assertGreater(width * height, 0)
++        green = pixels[1::channels]
++        self.assertTrue(math.isfinite(props.MATERIAL_ROUGHNESS))
++        # Registered M_EchoesSurface shader contract: scalar * (MRE.G + .5).
++        # REL-ART-030 requires matte walkable surfaces; clipping destroys variation.
++        lower = props.MATERIAL_ROUGHNESS * (min(green) / 255. + .5)
++        upper = props.MATERIAL_ROUGHNESS * (max(green) / 255. + .5)
++        self.assertGreaterEqual(lower, .85)
++        self.assertLess(upper, 1.)
++        self.assertGreater(upper, lower)
++
+ 
+ 
+ if __name__ == "__main__": unittest.main()
+diff --git a/Tests/World/test_glass_scar_compiled_map.py b/Tests/World/test_glass_scar_compiled_map.py
+index cd41944..57fdccb 100644
+--- a/Tests/World/test_glass_scar_compiled_map.py
++++ b/Tests/World/test_glass_scar_compiled_map.py
+@@ -46,11 +46,13 @@ V1_HASHES = {
+     "Content/World/Source/GlassScar/glass_scar_map_pack_v1.sha256": (
+         "41f5b6393730666316aaa774fa999fb695f4d99e2ed62faeecd9c3a1d4b7fc10"
+     ),
+-    "Tests/World/test_glass_scar_map_pack.py": (
+-        "6210fac13aae02560cf9afe66fed029e60232955780886715aadec98d3fafd6b"
+-    ),
+ }
+ 
++# The accepted content remains immutable. Its original test source is retained
++# in Git, while the live test continues to verify later authored map changes.
++V1_TEST_SOURCE = "Tests/World/test_glass_scar_map_pack.py"
++V1_TEST_SOURCE_SHA256 = "6210fac13aae02560cf9afe66fed029e60232955780886715aadec98d3fafd6b"
++
+ 
+ def reverse_object_keys(value):
+     if isinstance(value, dict):
+@@ -117,6 +119,15 @@ class GlassScarCompiledMapTests(unittest.TestCase):
+                 self.assertEqual(current, baseline)
+                 self.assertEqual(hashlib.sha256(current).hexdigest(), expected_digest)
+ 
++    def test_original_v1_test_source_remains_recoverable(self):
++        baseline = subprocess.run(
++            ["git", "show", f"{BASE_COMMIT}:{V1_TEST_SOURCE}"],
++            cwd=ROOT,
++            check=True,
++            capture_output=True,
++        ).stdout
++        self.assertEqual(hashlib.sha256(baseline).hexdigest(), V1_TEST_SOURCE_SHA256)
++
+     def test_fixture_is_reproducible_idempotent_and_digest_pinned(self):
+         fixture_bytes = FIXTURE_PATH.read_bytes()
+         self.assertEqual(fixture_bytes, COMPILER.canonical_bytes(self.fixture))
