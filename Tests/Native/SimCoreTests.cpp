@@ -6362,6 +6362,73 @@ AiMacroOutcome RunAiMacroMatch(AiPersonality doctrine, Tick maxTicks) {
     return outcome;
 }
 
+// SPEC-MOV-003: a hostile body is solid ground for routing purposes, an allied
+// one is not. Holding a choke is the whole point of a frontline unit, so the
+// distinction is asserted directly rather than inferred from a formation test.
+int RunChokeCorridor(Simulation& sim, EntityId mover, Tick budget) {
+    Command order = MakeCommand(0, 0, 1, CommandType::Move, mover);
+    order.position = Vec2::FromTiles(26, 10);
+    REQUIRE(sim.QueueCommand(order));
+    for (Tick tick = 0; tick < budget; ++tick) {
+        sim.Step();
+        const Entity* unit = sim.FindEntity(mover);
+        REQUIRE(unit != nullptr);
+        if (unit->position.x.FloorToInt() > 16) {
+            return static_cast<int>(tick);
+        }
+    }
+    return -1;
+}
+
+EntityId BuildChokeCorridor(Simulation& sim) {
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    REQUIRE(sim.AddPlayer(1, Faction::KharuunAssemblies, ResourcePool{0, 0}));
+    // A wall with one gate at y = 10.
+    for (std::int32_t tileY = 0; tileY < 24; ++tileY) {
+        if (tileY != 10) {
+            REQUIRE(sim.SetTerrainTile(16, tileY, Terrain::Blocked));
+        }
+    }
+    return 0;
+}
+
+void TestHostileBodyHoldsAChokeAndAlliedBodyDoesNot() {
+    const Vec2 gate = Vec2::FromRaw(16 * kFixedScale + kFixedScale / 2,
+                                    10 * kFixedScale + kFixedScale / 2);
+
+    Simulation open({32, 24, 20, 0xC0DE0001ULL});
+    BuildChokeCorridor(open);
+    const EntityId throughOpen = open.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(8, 10));
+    REQUIRE(throughOpen != 0);
+    const int openTicks = RunChokeCorridor(open, throughOpen, 600);
+    REQUIRE(openTicks >= 0);
+
+    // An allied body is pushed past, not collided with (SPEC-MOV-008).
+    Simulation allied({32, 24, 20, 0xC0DE0001ULL});
+    BuildChokeCorridor(allied);
+    REQUIRE(allied.SpawnEntity(0, Faction::MeridianCompact,
+                               EntityType::Soldier, gate) != 0);
+    const EntityId throughAllied = allied.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(8, 10));
+    REQUIRE(throughAllied != 0);
+    const int alliedTicks = RunChokeCorridor(allied, throughAllied, 600);
+    REQUIRE(alliedTicks >= 0);
+
+    // A hostile body holds the gate for the whole budget.
+    Simulation hostile({32, 24, 20, 0xC0DE0001ULL});
+    BuildChokeCorridor(hostile);
+    REQUIRE(hostile.SpawnEntity(1, Faction::KharuunAssemblies,
+                                EntityType::Soldier, gate) != 0);
+    const EntityId blocked = hostile.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(8, 10));
+    REQUIRE(blocked != 0);
+    REQUIRE(RunChokeCorridor(hostile, blocked, 600) == -1);
+    const Entity* held = hostile.FindEntity(blocked);
+    REQUIRE(held != nullptr);
+    REQUIRE(held->position.x.FloorToInt() < 16);
+}
+
 void TestLogisticsCeilingIsBounded() {
     // SPEC-BUD-006: the authored 200 Logistics ceiling holds however much
     // supply a player builds.
@@ -10179,6 +10246,8 @@ int main(int argc, char** argv) {
         {"Bulwark front arc boundary", TestBulwarkFrontArcBoundary},
         {"authentic schema30 Bulwark replay", TestAuthenticSchema30BulwarkReplay},
         {"legacy Relay scoped connectivity", TestLegacyRelayScopedConnectivity},
+        {"hostile body holds a choke, allied body does not",
+         TestHostileBodyHoldsAChokeAndAlliedBodyDoesNot},
         {"Logistics ceiling is bounded", TestLogisticsCeilingIsBounded},
         {"opponent runs an economy and industry",
          TestOpponentRunsAnEconomyAndIndustry},
