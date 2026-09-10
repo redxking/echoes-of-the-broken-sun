@@ -20,9 +20,339 @@ namespace echoes::balance {
 
 using namespace echoes::sim;
 
+// WI-6/SPEC-BAL-001/003/007: the harness has to measure the ruleset the game
+// actually builds. DefaultSimulationRules is not that ruleset -- it gives the
+// Meridian Lancer 120 health and a 12-tick attack period, where
+// Content/Data/Source/units.json authors 145 health and 30 ticks, so every
+// balance number taken from the defaults described a game nobody can play.
+// These rules are loaded from the same authored source the shipped catalog
+// compiles, using the same conversions as the runtime adapter, and the loader
+// fails closed: a missing or malformed field aborts the run rather than
+// silently falling back to the defaults this exists to replace.
+struct ContentRuleLoad final {
+    SimulationRules rules{};
+    std::string source = "content-data";
+    std::uint64_t archetypeChecksum = 0;
+    std::int32_t lancerMaxHealth = 0;
+    Tick lancerCooldownTicks = 0;
+};
+
+[[noreturn]] void ContentRuleFailure(const std::string& detail) {
+    std::cerr << "AiBalanceHarness: authored content rules unusable: " << detail
+              << "\n";
+    std::exit(3);
+}
+
+std::string ReadSourceFile(const std::string& relative) {
+    std::string here = __FILE__;
+    const std::size_t cut = here.find_last_of("/\\");
+    const std::string root =
+        (cut == std::string::npos ? std::string(".") : here.substr(0, cut)) +
+        "/../..";
+    const std::string path = root + "/" + relative;
+    std::ifstream in(path, std::ios::binary);
+    if (!in.is_open()) {
+        ContentRuleFailure("cannot open " + path);
+    }
+    std::ostringstream buffer;
+    buffer << in.rdbuf();
+    return buffer.str();
+}
+
+// Records in these authored files are one flat JSON object per line, so a
+// bounded scan over a record is enough; anything unexpected is fatal.
+std::vector<std::string> SplitRecords(const std::string& text,
+                                      const std::string& arrayKey) {
+    const std::size_t start = text.find("\"" + arrayKey + "\"");
+    if (start == std::string::npos) {
+        ContentRuleFailure("array " + arrayKey + " missing");
+    }
+    std::vector<std::string> records;
+    std::size_t cursor = start;
+    while (true) {
+        const std::size_t open = text.find('{', cursor);
+        if (open == std::string::npos) {
+            break;
+        }
+        // Depth-aware: a record carries nested objects (cost, attack), so the
+        // first closing brace is not the end of the record.
+        std::size_t depth = 0;
+        std::size_t close = std::string::npos;
+        for (std::size_t scan = open; scan < text.size(); ++scan) {
+            if (text[scan] == '{') {
+                ++depth;
+            } else if (text[scan] == '}') {
+                --depth;
+                if (depth == 0) {
+                    close = scan;
+                    break;
+                }
+            }
+        }
+        if (close == std::string::npos) {
+            ContentRuleFailure("unterminated record in " + arrayKey);
+        }
+        std::string record = text.substr(open, close - open + 1);
+        if (record.find("\"id\"") != std::string::npos) {
+            records.push_back(record);
+        }
+        cursor = close + 1;
+    }
+    if (records.empty()) {
+        ContentRuleFailure("no records in " + arrayKey);
+    }
+    return records;
+}
+
+std::string RecordId(const std::string& record) {
+    const std::size_t key = record.find("\"id\"");
+    if (key == std::string::npos) {
+        ContentRuleFailure("record without id");
+    }
+    const std::size_t first = record.find('"', record.find(':', key) + 1);
+    const std::size_t last = record.find('"', first + 1);
+    if (first == std::string::npos || last == std::string::npos) {
+        ContentRuleFailure("unreadable id");
+    }
+    return record.substr(first + 1, last - first - 1);
+}
+
+std::int64_t RequireInt(const std::string& record,
+                        const std::string& key,
+                        const std::string& scope) {
+    const std::size_t at = record.find("\"" + key + "\"");
+    if (at == std::string::npos) {
+        ContentRuleFailure(scope + " is missing " + key);
+    }
+    std::size_t cursor = record.find(':', at);
+    if (cursor == std::string::npos) {
+        ContentRuleFailure(scope + " has no value for " + key);
+    }
+    ++cursor;
+    // Tolerate a leading array bracket: footprint_cells is authored as [w, h]
+    // and its first element is the span this loader needs.
+    while (cursor < record.size() &&
+           (record[cursor] == ' ' || record[cursor] == '[')) {
+        ++cursor;
+    }
+    bool negative = false;
+    if (cursor < record.size() && record[cursor] == '-') {
+        negative = true;
+        ++cursor;
+    }
+    if (cursor >= record.size() || record[cursor] < '0' || record[cursor] > '9') {
+        ContentRuleFailure(scope + " value for " + key + " is not an integer");
+    }
+    std::int64_t value = 0;
+    while (cursor < record.size() && record[cursor] >= '0' &&
+           record[cursor] <= '9') {
+        value = value * 10 + (record[cursor] - '0');
+        ++cursor;
+    }
+    return negative ? -value : value;
+}
+
+bool HasKey(const std::string& record, const std::string& key) {
+    return record.find("\"" + key + "\"") != std::string::npos;
+}
+
+ContentRuleLoad LoadAuthoredRules(std::uint32_t ticksPerSecond) {
+    ContentRuleLoad load{};
+    load.rules = DefaultSimulationRules();
+
+    struct Binding final {
+        const char* id;
+        Faction faction;
+        EntityType type;
+    };
+    // The same twelve unit and twelve building bindings the runtime catalog uses.
+    static const std::array<Binding, 12> unitBindings{{
+        {"mc_surveyor", Faction::MeridianCompact, EntityType::Worker},
+        {"mc_lancer", Faction::MeridianCompact, EntityType::Soldier},
+        {"mc_bulwark_team", Faction::MeridianCompact, EntityType::HeavyUnit},
+        {"mc_relay_skiff", Faction::MeridianCompact, EntityType::ScoutUnit},
+        {"ka_tender", Faction::KharuunAssemblies, EntityType::Worker},
+        {"ka_riftstalker", Faction::KharuunAssemblies, EntityType::Soldier},
+        {"ka_cairnback", Faction::KharuunAssemblies, EntityType::HeavyUnit},
+        {"ka_resonant", Faction::KharuunAssemblies, EntityType::ScoutUnit},
+        {"hc_threadkeeper", Faction::HollowChoir, EntityType::Worker},
+        {"hc_intervalist", Faction::HollowChoir, EntityType::Soldier},
+        {"hc_lacuna_warden", Faction::HollowChoir, EntityType::HeavyUnit},
+        {"hc_afterimage", Faction::HollowChoir, EntityType::ScoutUnit},
+    }};
+
+    const std::string unitText = ReadSourceFile("Content/Data/Source/units.json");
+    std::int32_t bound = 0;
+    for (const std::string& record : SplitRecords(unitText, "units")) {
+        const std::string id = RecordId(record);
+        const Binding* binding = nullptr;
+        for (const Binding& candidate : unitBindings) {
+            if (id == candidate.id) {
+                binding = &candidate;
+                break;
+            }
+        }
+        if (binding == nullptr) {
+            continue;
+        }
+        EntityArchetypeRules& archetype =
+            load.rules.archetypes[static_cast<std::size_t>(binding->faction)]
+                                 [static_cast<std::size_t>(binding->type)];
+        archetype.cost = {
+            static_cast<std::int32_t>(RequireInt(record, "matter", id)),
+            static_cast<std::int32_t>(RequireInt(record, "dawn", id))};
+        archetype.maxHitPoints =
+            static_cast<std::int32_t>(RequireInt(record, "max_health", id));
+        const std::int64_t speed = RequireInt(record, "move_speed_cm_s", id);
+        archetype.movementPerTickRaw = static_cast<std::int32_t>(
+            speed * kFixedScale / (static_cast<std::int64_t>(ticksPerSecond) * 100));
+        if (archetype.movementPerTickRaw <= 0) {
+            ContentRuleFailure(id + " has no usable movement");
+        }
+        const std::int64_t sight = RequireInt(record, "sight_cm", id);
+        archetype.visionTiles = static_cast<std::int32_t>((sight + 99) / 100);
+        archetype.populationCost =
+            static_cast<std::int32_t>(RequireInt(record, "population_cost", id));
+        archetype.productionTicks =
+            static_cast<std::int32_t>(RequireInt(record, "production_ticks", id));
+        archetype.workRate = HasKey(record, "work_rate")
+            ? static_cast<std::int32_t>(RequireInt(record, "work_rate", id))
+            : 0;
+        archetype.cargoCapacity = HasKey(record, "cargo_capacity")
+            ? static_cast<std::int32_t>(RequireInt(record, "cargo_capacity", id))
+            : 0;
+        if (HasKey(record, "attack")) {
+            archetype.attackDamage =
+                static_cast<std::int32_t>(RequireInt(record, "damage", id));
+            archetype.attackRangeRaw = static_cast<std::int32_t>(
+                RequireInt(record, "range_cm", id) * kFixedScale / 100);
+            archetype.attackPeriodTicks = static_cast<Tick>(
+                RequireInt(record, "cooldown_ticks", id));
+        } else {
+            archetype.attackDamage = 0;
+            archetype.attackRangeRaw = 0;
+            archetype.attackPeriodTicks = 0;
+        }
+        archetype.footprintHalfExtentRaw = kFixedScale / 8;
+        if (id == "mc_lancer") {
+            load.lancerMaxHealth = archetype.maxHitPoints;
+            load.lancerCooldownTicks = archetype.attackPeriodTicks;
+        }
+        ++bound;
+    }
+    if (bound != static_cast<std::int32_t>(unitBindings.size())) {
+        ContentRuleFailure("bound " + std::to_string(bound) +
+                           " authored units, expected 12");
+    }
+
+    static const std::array<Binding, 12> buildingBindings{{
+        {"mc_anchor", Faction::MeridianCompact, EntityType::CommandCore},
+        {"mc_power_link", Faction::MeridianCompact, EntityType::Dropoff},
+        {"mc_array_foundry", Faction::MeridianCompact, EntityType::Barracks},
+        {"mc_aegis_post", Faction::MeridianCompact, EntityType::UtilityStructure},
+        {"ka_memory_hearth", Faction::KharuunAssemblies, EntityType::CommandCore},
+        {"ka_waystone", Faction::KharuunAssemblies, EntityType::Dropoff},
+        {"ka_growth_basin", Faction::KharuunAssemblies, EntityType::Barracks},
+        {"ka_listening_spine", Faction::KharuunAssemblies, EntityType::UtilityStructure},
+        {"hc_concordance", Faction::HollowChoir, EntityType::CommandCore},
+        {"hc_interval_loom", Faction::HollowChoir, EntityType::Dropoff},
+        {"hc_chorus_loom", Faction::HollowChoir, EntityType::Barracks},
+        {"hc_phase_anchor", Faction::HollowChoir, EntityType::UtilityStructure},
+    }};
+    const std::string buildingText =
+        ReadSourceFile("Content/Data/Source/buildings.json");
+    std::int32_t boundBuildings = 0;
+    for (const std::string& record : SplitRecords(buildingText, "buildings")) {
+        const std::string id = RecordId(record);
+        const Binding* binding = nullptr;
+        for (const Binding& candidate : buildingBindings) {
+            if (id == candidate.id) {
+                binding = &candidate;
+                break;
+            }
+        }
+        if (binding == nullptr) {
+            continue;
+        }
+        EntityArchetypeRules& archetype =
+            load.rules.archetypes[static_cast<std::size_t>(binding->faction)]
+                                 [static_cast<std::size_t>(binding->type)];
+        archetype.cost = {
+            static_cast<std::int32_t>(RequireInt(record, "matter", id)),
+            static_cast<std::int32_t>(RequireInt(record, "dawn", id))};
+        archetype.maxHitPoints =
+            static_cast<std::int32_t>(RequireInt(record, "max_health", id));
+        archetype.visionTiles = static_cast<std::int32_t>(
+            (RequireInt(record, "sight_cm", id) + 99) / 100);
+        archetype.constructionRequired = static_cast<std::int32_t>(
+            RequireInt(record, "construction_ticks", id));
+        if (HasKey(record, "logistics_capacity")) {
+            archetype.populationCapacity = static_cast<std::int32_t>(
+                RequireInt(record, "logistics_capacity", id));
+        }
+        // footprint_cells is the full span; the simulation stores a half extent.
+        const std::int64_t cells = RequireInt(record, "footprint_cells", id);
+        archetype.footprintHalfExtentRaw =
+            static_cast<std::int32_t>(cells * kFixedScale / 2);
+        ++boundBuildings;
+    }
+    if (boundBuildings != static_cast<std::int32_t>(buildingBindings.size())) {
+        ContentRuleFailure("bound " + std::to_string(boundBuildings) +
+                           " authored buildings, expected 12");
+    }
+
+    // Order-stable digest of every archetype field that reached the simulation,
+    // so a retained result names the exact ruleset it measured.
+    std::uint64_t digest = 0xcbf29ce484222325ULL;
+    const auto mix = [&digest](std::int64_t value) {
+        digest ^= static_cast<std::uint64_t>(value);
+        digest *= 0x100000001b3ULL;
+    };
+    for (std::size_t faction = 0; faction < load.rules.archetypes.size();
+         ++faction) {
+        for (std::size_t type = 0;
+             type < load.rules.archetypes[faction].size(); ++type) {
+            const EntityArchetypeRules& a =
+                load.rules.archetypes[faction][type];
+            mix(static_cast<std::int64_t>(faction));
+            mix(static_cast<std::int64_t>(type));
+            mix(a.cost.material);
+            mix(a.cost.dawnshards);
+            mix(a.maxHitPoints);
+            mix(a.movementPerTickRaw);
+            mix(a.visionTiles);
+            mix(a.attackRangeRaw);
+            mix(a.attackDamage);
+            mix(static_cast<std::int64_t>(a.attackPeriodTicks));
+            mix(a.workRate);
+            mix(a.cargoCapacity);
+            mix(a.constructionRequired);
+            mix(a.populationCost);
+            mix(a.populationCapacity);
+            mix(a.productionTicks);
+            mix(a.footprintHalfExtentRaw);
+        }
+    }
+    load.archetypeChecksum = digest;
+
+    if (load.lancerMaxHealth != 145 || load.lancerCooldownTicks != 30) {
+        ContentRuleFailure(
+            "authored Meridian Lancer reads " +
+            std::to_string(load.lancerMaxHealth) + " health / " +
+            std::to_string(static_cast<std::uint64_t>(load.lancerCooldownTicks)) +
+            " tick cooldown; the shipped catalog authors 145 / 30");
+    }
+    return load;
+}
+
+const ContentRuleLoad& AuthoredRules() {
+    static const ContentRuleLoad loaded = LoadAuthoredRules(20);
+    return loaded;
+}
+
 struct MatchRecord {
     std::uint64_t seed = 0;
-    std::string mapId = "TournamentSymmetric48";
+    std::string mapId = "TournamentSymmetric64";
     std::string faction0;
     std::string faction1;
     std::int32_t slot0 = 0;
@@ -168,29 +498,30 @@ void SetupTournamentMap(Simulation& sim, Faction f0, Faction f1) {
     sim.AddPlayer(0, f0, ResourcePool{800, 350});
     sim.AddPlayer(1, f1, ResourcePool{800, 350});
 
-    // Player 0 base at (10, 10)
+    // Openings are mirrored across the 64x64 diagonal. Workers stand clear of
+    // the headquarters footprint: an authored HQ is five cells across, so the
+    // old spawn ring sat inside the building's own ground.
     sim.SpawnEntity(0, f0, EntityType::CommandCore, Vec2::FromTiles(10, 10));
-    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(12, 10));
-    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(10, 12));
-    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(11, 9));
-    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(9, 11));
-    sim.SpawnResourceNode(Vec2::FromTiles(6, 10), 10000);
-    sim.SpawnFutureWell(Vec2::FromTiles(10, 6));
+    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(14, 10));
+    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(10, 14));
+    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(14, 14));
+    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(6, 14));
+    sim.SpawnResourceNode(Vec2::FromTiles(5, 10), 10000);
+    sim.SpawnFutureWell(Vec2::FromTiles(10, 5));
 
-    // Player 1 base at (38, 38)
-    sim.SpawnEntity(1, f1, EntityType::CommandCore, Vec2::FromTiles(38, 38));
-    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(36, 38));
-    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(38, 36));
-    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(37, 39));
-    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(39, 37));
-    sim.SpawnResourceNode(Vec2::FromTiles(42, 38), 10000);
-    sim.SpawnFutureWell(Vec2::FromTiles(38, 42));
+    sim.SpawnEntity(1, f1, EntityType::CommandCore, Vec2::FromTiles(54, 54));
+    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(50, 54));
+    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(54, 50));
+    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(50, 50));
+    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(58, 50));
+    sim.SpawnResourceNode(Vec2::FromTiles(59, 54), 10000);
+    sim.SpawnFutureWell(Vec2::FromTiles(54, 59));
 
-    // Contested neutral center — resources only, no well (wells are per-base)
-    sim.SpawnResourceNode(Vec2::FromTiles(20, 24), 8000);
-    sim.SpawnResourceNode(Vec2::FromTiles(28, 24), 8000);
-    sim.SpawnResourceNode(Vec2::FromTiles(24, 20), 6000);
-    sim.SpawnResourceNode(Vec2::FromTiles(24, 28), 6000);
+    // Contested neutral centre — resources only, no well (wells are per-base)
+    sim.SpawnResourceNode(Vec2::FromTiles(28, 32), 8000);
+    sim.SpawnResourceNode(Vec2::FromTiles(36, 32), 8000);
+    sim.SpawnResourceNode(Vec2::FromTiles(32, 28), 6000);
+    sim.SpawnResourceNode(Vec2::FromTiles(32, 36), 6000);
 }
 
 MatchRecord RunMatch(std::uint64_t seed,
@@ -199,7 +530,10 @@ MatchRecord RunMatch(std::uint64_t seed,
                      AiPersonality p0,
                      AiPersonality p1,
                      Tick maxTicks = 12000) {
-    Simulation sim(SimulationConfig{48, 48, 20, seed});
+    // 64x64 matches every shipped preset; the synthetic 48x48 matched none.
+    SimulationConfig config{64, 64, 20, seed};
+    config.rules = AuthoredRules().rules;
+    Simulation sim(config);
     SetupTournamentMap(sim, f0, f1);
 
     MatchRecord record{};
@@ -568,6 +902,17 @@ int main(int argc, char* argv[]) {
     std::ofstream out(outputPath);
     if (out.is_open()) {
         out << "{\n";
+        out << "  \"rules_source\": \"" << AuthoredRules().source << "\",\n";
+        out << "  \"rules_archetype_checksum\": \""
+            << std::hex << std::setw(16) << std::setfill('0')
+            << AuthoredRules().archetypeChecksum << std::dec
+            << std::setfill(' ') << "\",\n";
+        out << "  \"rules_probe\": {\"meridian_lancer_max_health\": "
+            << AuthoredRules().lancerMaxHealth
+            << ", \"meridian_lancer_cooldown_ticks\": "
+            << static_cast<std::uint64_t>(AuthoredRules().lancerCooldownTicks)
+            << "},\n";
+        out << "  \"map_grid_tiles\": 64,\n";
         out << "  \"total_matches\": " << totalMatches << ",\n";
         out << "  \"authoritative_terminal_matches\": "
             << (totalMatches - unresolved) << ",\n";
