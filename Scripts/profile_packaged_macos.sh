@@ -15,6 +15,20 @@ sample_interval="${ECHOES_PROFILE_RSS_INTERVAL_SECONDS:-0.25}"
 anti_aliasing_method="${ECHOES_PROFILE_AA_METHOD:-2}"
 resolution_quality="${ECHOES_PROFILE_RESOLUTION_QUALITY:-100}"
 stress400="${ECHOES_PROFILE_STRESS400:-0}"
+# Scalability preset. Every retained run pinned each sg.* group to 1 (Medium), so the
+# Low tier SPEC-BUD-001 names -- 30 fps at 1280x720 Low -- could not be selected at all
+# and has never been measured. UE levels: 0 Low, 1 Medium, 2 High, 3 Epic.
+preset="${ECHOES_PROFILE_PRESET:-medium}"
+case "${preset:l}" in
+  low)    scalability_level=0 ;;
+  medium) scalability_level=1 ;;
+  high)   scalability_level=2 ;;
+  epic)   scalability_level=3 ;;
+  *)
+    print -u2 "Unsupported ECHOES_PROFILE_PRESET: $preset (expected low, medium, high or epic)."
+    exit 2
+    ;;
+esac
 
 if [[ "$app" != /* ]]; then
   app="$project_root/$app"
@@ -88,7 +102,7 @@ mkdir -p "$evidence_dir"
 : > "$raw_log"
 print 'elapsed_seconds,rss_mib' > "$rss_samples"
 
-exec_commands="r.SetRes ${resolution_x}x${resolution_y}f,r.VSync 0,rhi.SyncInterval 0,t.MaxFPS 0,sg.ResolutionQuality $resolution_quality,sg.ViewDistanceQuality 1,sg.AntiAliasingQuality 1,sg.ShadowQuality 1,sg.GlobalIlluminationQuality 1,sg.ReflectionQuality 1,sg.PostProcessQuality 1,sg.TextureQuality 1,sg.EffectsQuality 1,sg.FoliageQuality 1,sg.ShadingQuality 1,sg.LandscapeQuality 1,r.AntiAliasingMethod $anti_aliasing_method,csv.TrackMemoryUse 1,csvprofile exitoncompletion,csvprofile frames=$frames"
+exec_commands="r.SetRes ${resolution_x}x${resolution_y}f,r.VSync 0,rhi.SyncInterval 0,t.MaxFPS 0,sg.ResolutionQuality $resolution_quality,sg.ViewDistanceQuality $scalability_level,sg.AntiAliasingQuality $scalability_level,sg.ShadowQuality $scalability_level,sg.GlobalIlluminationQuality $scalability_level,sg.ReflectionQuality $scalability_level,sg.PostProcessQuality $scalability_level,sg.TextureQuality $scalability_level,sg.EffectsQuality $scalability_level,sg.FoliageQuality $scalability_level,sg.ShadingQuality $scalability_level,sg.LandscapeQuality $scalability_level,r.AntiAliasingMethod $anti_aliasing_method,csv.TrackMemoryUse 1,csvprofile exitoncompletion,csvprofile frames=$frames"
 stress_arguments=()
 if [[ "$stress400" == "1" ]]; then
   stress_arguments=(-EchoesStress400)
@@ -176,7 +190,7 @@ macos_version="$(/usr/bin/sw_vers -productVersion)"
   "$frames" "$warmup_frames" "$resolution_x" "$resolution_y" \
   "$anti_aliasing_method" "$resolution_quality" \
   "$package_version" "$source_commit" "$host_model" "$cpu_brand" "$macos_version" \
-  "$stress400" <<'PY'
+  "$stress400" "$scalability_level" "$preset" <<'PY'
 import csv
 import json
 import math
@@ -199,6 +213,8 @@ import sys
     cpu_brand,
     macos_version,
     stress400,
+    scalability_level,
+    preset_name,
 ) = sys.argv[1:]
 
 expected_frames = int(expected_frames)
@@ -208,6 +224,7 @@ expected_y = int(expected_y)
 anti_aliasing_method = int(anti_aliasing_method)
 resolution_quality = int(resolution_quality)
 stress400 = stress400 == "1"
+scalability_level = int(scalability_level)
 
 with open(csv_path, newline="", encoding="utf-8-sig") as handle:
     rows = list(csv.reader(handle))
@@ -314,7 +331,8 @@ result = {
     "display_mode": "fullscreen",
     "scenario": "four-team-scale-400" if stress400 else "standard-startup-32",
     "quality_preset": {
-        "scalability_group_level": 1,
+        "preset": preset_name,
+        "scalability_group_level": scalability_level,
         "resolution_quality_percent": resolution_quality,
         "anti_aliasing_method": {
             0: "None",
