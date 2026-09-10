@@ -5,8 +5,8 @@
   "metadata": {
     "author": "Angelis Pseftis",
     "status": "partially_runtime_bound",
-    "source_document": "Docs/OpeningAndTutorialScript.md",
-    "source_document_sha256": "9a8598e6d049264f453072bc16171fb779a192d6cea33c836d64e37dcaaa55b6"
+    "content_authority": "contract_is_copy_authority",
+    "supersedes_document": "Docs/OpeningAndTutorialScript.md"
   },
   "runtime_binding": {
     "surface": "tutorial",

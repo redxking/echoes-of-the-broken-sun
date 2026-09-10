@@ -2875,47 +2875,95 @@ def validate_demo_contract(
     _expect_exact(top["namespace"], "echoes.narrative.demo", "demo.namespace")
     _expect_exact(top["content_id"], entry["content_id"], "demo.content_id")
 
-    metadata = _exact_keys(
-        top["metadata"],
-        {"author", "status", "source_document", "source_document_sha256"},
-        "demo.metadata",
-    )
-    _expect_exact(metadata["author"], "Angelis Pseftis", "demo.metadata.author")
-    _expect_exact(metadata["status"], entry["metadata_status"], "demo.metadata.status")
-    source_document = _expect_string(
-        metadata["source_document"], "demo.metadata.source_document"
-    )
-    _expect_exact(source_document, entry["source_document"], "demo.metadata.source_document")
-    claimed_source_digest = _expect_string(
-        metadata["source_document_sha256"], "demo.metadata.source_document_sha256"
-    )
-    if re.fullmatch(r"[0-9a-f]{64}", claimed_source_digest) is None:
-        raise NarrativeValidationError(
-            "demo.metadata.source_document_sha256: expected a lowercase sha256 digest"
+    # Owner ruling 2026-09-09. A demo contract either transcribes an
+    # authoritative document -- in which case its hash is pinned AND its copy
+    # must actually still be present in that document -- or it IS the copy
+    # authority, in which case it records the document it superseded instead of
+    # pinning a hash that no longer stands for anything. Docs/OpeningAndTutorial
+    # Script.md was rewritten by 83a8582 and retains none of the tutorial copy.
+    raw_metadata = top["metadata"]
+    if not isinstance(raw_metadata, dict):
+        raise NarrativeValidationError("demo.metadata: object required")
+    authority = raw_metadata.get("content_authority")
+    if authority == "contract_is_copy_authority":
+        metadata = _exact_keys(
+            raw_metadata,
+            {"author", "status", "content_authority", "supersedes_document"},
+            "demo.metadata",
         )
-    if source_root is None:
-        raise NarrativeValidationError(
-            "demo.metadata.source_document: source root is required for authoritative digest validation"
+        _expect_exact(metadata["author"], "Angelis Pseftis", "demo.metadata.author")
+        _expect_exact(metadata["status"], entry["metadata_status"], "demo.metadata.status")
+        _expect_exact(
+            _expect_string(metadata["supersedes_document"], "demo.metadata.supersedes_document"),
+            entry["source_document"],
+            "demo.metadata.supersedes_document",
         )
-    resolved_root = source_root.resolve()
-    resolved_source = (resolved_root / source_document).resolve()
-    try:
-        resolved_source.relative_to(resolved_root)
-    except ValueError as exc:
-        raise NarrativeValidationError(
-            "demo.metadata.source_document: path escapes the authoritative source root"
-        ) from exc
-    if not resolved_source.is_file():
-        raise NarrativeValidationError(
-            f"demo.metadata.source_document: authoritative file is absent: {source_document!r}"
+        source_document = None
+    elif authority == "transcribed_from_source_document":
+        metadata = _exact_keys(
+            raw_metadata,
+            {"author", "status", "content_authority", "source_document",
+             "source_document_sha256"},
+            "demo.metadata",
         )
-    actual_source_digest = hashlib.sha256(resolved_source.read_bytes()).hexdigest()
-    _expect_exact(
-        claimed_source_digest,
-        actual_source_digest,
-        "demo.metadata.source_document_sha256",
-    )
+        _expect_exact(metadata["author"], "Angelis Pseftis", "demo.metadata.author")
+        _expect_exact(metadata["status"], entry["metadata_status"], "demo.metadata.status")
+        source_document = _expect_string(
+            metadata["source_document"], "demo.metadata.source_document"
+        )
+    else:
+        raise NarrativeValidationError(
+            "demo.metadata.content_authority: expected transcribed_from_source_document "
+            "or contract_is_copy_authority"
+        )
+    if source_document is not None:
+        _expect_exact(source_document, entry["source_document"], "demo.metadata.source_document")
+        claimed_source_digest = _expect_string(
+            metadata["source_document_sha256"], "demo.metadata.source_document_sha256"
+        )
+        if re.fullmatch(r"[0-9a-f]{64}", claimed_source_digest) is None:
+            raise NarrativeValidationError(
+                "demo.metadata.source_document_sha256: expected a lowercase sha256 digest"
+            )
+        if source_root is None:
+            raise NarrativeValidationError(
+                "demo.metadata.source_document: source root is required for authoritative digest validation"
+            )
+        resolved_root = source_root.resolve()
+        resolved_source = (resolved_root / source_document).resolve()
+        try:
+            resolved_source.relative_to(resolved_root)
+        except ValueError as exc:
+            raise NarrativeValidationError(
+                "demo.metadata.source_document: path escapes the authoritative source root"
+            ) from exc
+        if not resolved_source.is_file():
+            raise NarrativeValidationError(
+                f"demo.metadata.source_document: authoritative file is absent: {source_document!r}"
+            )
+        actual_source_digest = hashlib.sha256(resolved_source.read_bytes()).hexdigest()
+        _expect_exact(
+            claimed_source_digest,
+            actual_source_digest,
+            "demo.metadata.source_document_sha256",
+        )
 
+
+        # A pin only means something if the copy is still there. This is the
+        # check whose absence let 83a8582 hollow a contract without failing.
+        document_text = resolved_source.read_text(encoding="utf-8")
+        normalised = re.sub(r"[\[{][a-z_ ]+[\]}]", "TOKEN", document_text)
+        missing = [
+            line["id"]
+            for line in _expect_list(top["lines"], "demo.lines")
+            if re.sub(r"[\[{][a-z_ ]+[\]}]", "TOKEN", line["source_text"]) not in normalised
+        ]
+        if missing:
+            raise NarrativeValidationError(
+                "demo.lines: %d line(s) are not present in the document this contract "
+                "claims to transcribe (%s); first missing %r" % (
+                    len(missing), source_document, missing[0])
+            )
     binding = _exact_keys(
         top["runtime_binding"],
         {"surface", "scope", "opens_after_signal", "binding_status"},
