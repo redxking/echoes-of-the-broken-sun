@@ -24,6 +24,8 @@ constexpr std::int32_t kMaximumBallisticProjectileSpeedRaw = kFixedScale;
 constexpr std::uint32_t kMaximumSerializedCommands =
     static_cast<std::uint32_t>(kMaximumCommandLogEntries);
 constexpr std::size_t kMaximumCachedPathFields = 128;
+// SPEC-BUD-006 authored Logistics ceiling for one player.
+constexpr std::int32_t kMaximumPopulationCapacity = 200;
 constexpr std::int32_t kGuardLeashRaw = 6 * kFixedScale;
 constexpr std::int32_t kGuardFollowRaw = 2 * kFixedScale;
 constexpr std::int32_t kPatrolLeashRaw = 6 * kFixedScale;
@@ -1874,7 +1876,11 @@ std::int32_t Simulation::PopulationCapacity(PlayerId player) const {
                 config_.rules.relaySupply.capacityBonus);
         }
     }
-    return capacity;
+    // SPEC-BUD-006: the authored 200 Logistics ceiling. Supply structures are
+    // additive and unbounded, so without this a player who spends on nothing but
+    // depots raises the army ceiling past the load the 400-unit performance
+    // budget is qualified against.
+    return std::min(capacity, kMaximumPopulationCapacity);
 }
 
 bool Simulation::IsOperationalDropoff(const Entity& entity) const {

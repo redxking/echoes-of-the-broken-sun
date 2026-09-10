@@ -6362,6 +6362,31 @@ AiMacroOutcome RunAiMacroMatch(AiPersonality doctrine, Tick maxTicks) {
     return outcome;
 }
 
+void TestLogisticsCeilingIsBounded() {
+    // SPEC-BUD-006: the authored 200 Logistics ceiling holds however much
+    // supply a player builds.
+    Simulation sim({64, 64, 20, 0x4c4f4750ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::KharuunAssemblies, ResourcePool{0, 0}));
+    REQUIRE(sim.SpawnEntity(0, Faction::KharuunAssemblies,
+                            EntityType::CommandCore,
+                            Vec2::FromTiles(6, 6)) != 0);
+    const std::int32_t coreOnly = sim.PopulationCapacity(0);
+    REQUIRE(coreOnly > 0);
+    std::int32_t built = 0;
+    for (std::int32_t index = 0; index < 40; ++index) {
+        const Vec2 site = Vec2::FromTiles(12 + (index % 8) * 6,
+                                          12 + (index / 8) * 6);
+        if (sim.SpawnEntity(0, Faction::KharuunAssemblies,
+                            EntityType::Dropoff, site) != 0) {
+            ++built;
+        }
+        REQUIRE(sim.PopulationCapacity(0) <= 200);
+    }
+    REQUIRE(built >= 20);
+    // Enough supply was raised that the unclamped sum would have passed it.
+    REQUIRE(sim.PopulationCapacity(0) == 200);
+}
+
 void TestOpponentRunsAnEconomyAndIndustry() {
     const AiMacroOutcome steward =
         RunAiMacroMatch(AiPersonality::Economic, 4000);
@@ -10154,6 +10179,7 @@ int main(int argc, char** argv) {
         {"Bulwark front arc boundary", TestBulwarkFrontArcBoundary},
         {"authentic schema30 Bulwark replay", TestAuthenticSchema30BulwarkReplay},
         {"legacy Relay scoped connectivity", TestLegacyRelayScopedConnectivity},
+        {"Logistics ceiling is bounded", TestLogisticsCeilingIsBounded},
         {"opponent runs an economy and industry",
          TestOpponentRunsAnEconomyAndIndustry},
         {"structure footprints block movement and pathing",
