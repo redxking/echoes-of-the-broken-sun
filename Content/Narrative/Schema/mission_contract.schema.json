@@ -343,6 +343,16 @@
         },
         "binding_status": {
           "const": "authored_unbound"
+        },
+        "epilogue_line_ids": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "pattern": "^nar_m(0[1-9]|1[0-5])_line_[a-z0-9_]+$"
+          },
+          "description": "Optional per-ending closing lines fired on the mission completion trigger; present only for missions whose registry entry declares ending_epilogues_trigger_id."
         }
       }
     },
@@ -1097,10 +1107,11 @@
     "lines": {
       "type": "array",
       "minItems": 15,
-      "maxItems": 28,
+      "maxItems": 36,
       "items": {
         "$ref": "#/$defs/line"
-      }
+      },
+      "$comment": "Upper bound accommodates M15's four two-line ending epilogues on top of its 27 mission lines."
     },
     "dialogue_sequences": {
       "type": "array",

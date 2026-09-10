@@ -350,7 +350,7 @@
   }
  },
  "demo_line_count": 55,
- "line_count": 308,
+ "line_count": 316,
  "operations": {
   "CampaignAssemblyOfTheMissing": {
    "briefing": "The missing have an assembly, and the assembly has no record. Establish paired readback at both public-record interfaces, raise a Listening Spine within reach of the Crownfall index, and complete one public observation receipt from separate witness sites.",
@@ -3467,6 +3467,54 @@
      "signal": "phase_entered:Failed",
      "speaker": "Neme",
      "text": "The operation has failed. No ending was committed; the campaign record stands where it stood."
+    },
+    {
+     "id": "nar_m15_line_epilogue_restoration_a",
+     "signal": "phase_entered:Complete",
+     "speaker": "Neme",
+     "text": "Restoration holds. The Wells are giving back on their own schedule rather than ours, and the ground is slow to trust what it is handed."
+    },
+    {
+     "id": "nar_m15_line_epilogue_restoration_b",
+     "signal": "phase_entered:Complete",
+     "speaker": "Talar Venn",
+     "text": "I am recording what returned and what did not return. That second list is longer than anyone standing here tonight wants it to be."
+    },
+    {
+     "id": "nar_m15_line_epilogue_controlledstabilization_a",
+     "signal": "phase_entered:Complete",
+     "speaker": "Neme",
+     "text": "Controlled Stabilization holds. The sky is predictable now, and the cost of that predictability is written into every future we closed to buy it."
+    },
+    {
+     "id": "nar_m15_line_epilogue_controlledstabilization_b",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "It will keep. That is the most honest sentence available to me, and I would rather say it than a warmer one."
+    },
+    {
+     "id": "nar_m15_line_epilogue_extinguishment_a",
+     "signal": "phase_entered:Complete",
+     "speaker": "Neme",
+     "text": "Extinguishment holds. The Crownfall is quiet, and nothing that was waiting inside it will wake again on any timetable."
+    },
+    {
+     "id": "nar_m15_line_epilogue_extinguishment_b",
+     "signal": "phase_entered:Complete",
+     "speaker": "Oruun-of-Seven-Stones",
+     "text": "Seven accounts disagreed about this place. Not one of them survives it. I will carry the silence as another thing we chose."
+    },
+    {
+     "id": "nar_m15_line_epilogue_openevolution_a",
+     "signal": "phase_entered:Complete",
+     "speaker": "Neme",
+     "text": "Open Evolution holds. Nothing is settled, and the Wells will keep offering futures to whoever is standing here after we are not."
+    },
+    {
+     "id": "nar_m15_line_epilogue_openevolution_b",
+     "signal": "phase_entered:Complete",
+     "speaker": "Mara Vey",
+     "text": "We have handed the next argument to people who had no vote in this one. I do not know yet whether that is generosity."
     }
    ],
    "mission_id": "TheBrokenSun",

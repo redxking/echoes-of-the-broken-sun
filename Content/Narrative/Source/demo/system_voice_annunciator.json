@@ -6,7 +6,7 @@
     "author": "Angelis Pseftis",
     "status": "authored_unbound",
     "source_document": "Docs/OpeningAndTutorialScript.md",
-    "source_document_sha256": "4980eb013a8b61369b81349f90b88329ef8a81d2aba545a7de9797e7e8b67be4"
+    "source_document_sha256": "9a8598e6d049264f453072bc16171fb779a192d6cea33c836d64e37dcaaa55b6"
   },
   "runtime_binding": {
     "surface": "system_voice",

@@ -2184,14 +2184,15 @@ MISSION_REGISTRY: dict[str, dict[str, Any]] = {'m02_seven_accounts_of_rain': {'a
                                         'ControlledStabilization',
                                         'Extinguishment',
                                         'OpenEvolution'],
-                        'branches_projection_sha256': '28f6da0a22742db3fb5b7b5152fd291f2d51212cf7bedf99ae3171c1ccffc34e',
+                        'branches_projection_sha256': '0486e4ff480600d9ea6499065321dbec8c9b58c1b9a8f123354361db0bb7e18c',
                         'campaign_state_effect': 'A failed Mission 15 attempt appends no campaign '
                                                  'decision record.',
                         'canon_prose_sha256': '0add271beb5b60f04e837e0c5f7558aaf4fb35519295420ad6a49cc504d83a3d',
                         'command_speaker_ids': ['spk_neme'],
                         'content_id': 'nar_m15_the_broken_sun',
-                        'counts': {'lines': 27, 'objectives': 5, 'sequences': 5, 'shots': 4},
+                        'counts': {'lines': 35, 'objectives': 5, 'sequences': 5, 'shots': 4},
                         'decision_kind': 'final_resolution',
+                        'ending_epilogues_trigger_id': 'nar_m15_evt_resolution_held',
                         'decision_trigger_id': 'nar_m15_evt_resolution_selected',
                         'failed_trigger_id': 'nar_m15_evt_mission_failed',
                         'failure_reason_codes': ['local_core_lost',
@@ -2201,7 +2202,7 @@ MISSION_REGISTRY: dict[str, dict[str, Any]] = {'m02_seven_accounts_of_rain': {'a
                                                  'terminal_match_outcome',
                                                  'generic'],
                         'file': 'm15_the_broken_sun.json',
-                        'lines_projection_sha256': 'a3e3d5f85a049641664d627aba9ae8032b35c7a95d8da3b3e4830f3b95061928',
+                        'lines_projection_sha256': '247fb8f6a858285b069b62713725f0e17135363a87c1606fbf0a0de318a82a32',
                         'mission_id': 'TheBrokenSun',
                         'mission_index': 14,
                         'operation_mode': 'CampaignTheBrokenSun',
@@ -2445,6 +2446,7 @@ def validate_registered_mission_contract(
     line_ids: set[str] = set()
     voice_hook_ids: set[str] = set()
     line_triggers: dict[str, str] = {}
+    line_texts: dict[str, str] = {}
     line_projection: list[list[str]] = []
     for index, raw_line in enumerate(lines):
         path = f"mission.lines[{index}]"
@@ -2469,6 +2471,7 @@ def validate_registered_mission_contract(
         if trigger_id not in trigger_ids:
             raise NarrativeValidationError(f"{path}.trigger_id: unresolved trigger reference")
         line_triggers[line_id] = trigger_id
+        line_texts[line_id] = line["source_text"]
         _expect_exact(line["delivery_channel"], speaker_channels[speaker_id], f"{path}.delivery_channel")
         source_text = _validate_source_text(line["source_text"], f"{path}.source_text")
         line_projection.append([line_id, speaker_id, source_text])
@@ -2519,12 +2522,17 @@ def validate_registered_mission_contract(
         _expect_exact(sequence["binding_status"], "authored_unbound", f"{path}.binding_status")
 
     branch_keys: list[str] = entry["branch_keys"]
+    branch_epilogue_texts: list[str] = []
     branches = _exact_keys(top["branch_variants"], branch_keys, "mission.branch_variants")
     for choice in branch_keys:
         path = f"mission.branch_variants.{choice}"
+        expected_branch_fields = {"choice", "current_runtime_behavior", "design_target_tradeoff", "runtime_alignment", "trigger_id", "dialogue_line_ids", "design_target_choice_ui", "binding_status"}
+        epilogue_trigger_id = entry.get("ending_epilogues_trigger_id")
+        if epilogue_trigger_id is not None:
+            expected_branch_fields = expected_branch_fields | {"epilogue_line_ids"}
         branch = _exact_keys(
             branches[choice],
-            {"choice", "current_runtime_behavior", "design_target_tradeoff", "runtime_alignment", "trigger_id", "dialogue_line_ids", "design_target_choice_ui", "binding_status"},
+            expected_branch_fields,
             path,
         )
         _expect_exact(branch["choice"], choice, f"{path}.choice")
@@ -2544,8 +2552,31 @@ def validate_registered_mission_contract(
         if used_line_ids.intersection(refs):
             raise NarrativeValidationError(f"{path}.dialogue_line_ids: branch lines must be singly assigned")
         used_line_ids.update(refs)
+        if epilogue_trigger_id is not None:
+            epilogue_refs = _expect_unique_strings(
+                branch["epilogue_line_ids"], f"{path}.epilogue_line_ids", minimum=2
+            )
+            if len(epilogue_refs) != 2 or not set(epilogue_refs).issubset(line_ids):
+                raise NarrativeValidationError(
+                    f"{path}.epilogue_line_ids: expected exactly two resolved epilogue lines"
+                )
+            if any(line_triggers[ref] != epilogue_trigger_id for ref in epilogue_refs):
+                raise NarrativeValidationError(
+                    f"{path}.epilogue_line_ids: epilogue lines must fire on {epilogue_trigger_id}"
+                )
+            if used_line_ids.intersection(epilogue_refs):
+                raise NarrativeValidationError(
+                    f"{path}.epilogue_line_ids: epilogue lines must be singly assigned"
+                )
+            used_line_ids.update(epilogue_refs)
+            branch_epilogue_texts.extend(line_texts[ref] for ref in epilogue_refs)
         _validate_localized_text(branch["design_target_choice_ui"], f"{path}.design_target_choice_ui", content_ids, loc_keys)
         _expect_exact(branch["binding_status"], "authored_unbound", f"{path}.binding_status")
+    if branch_epilogue_texts and len(set(branch_epilogue_texts)) != len(branch_epilogue_texts):
+        raise NarrativeValidationError(
+            "mission.branch_variants.epilogue_line_ids: each ending requires distinct closing copy; "
+            "duplicate epilogue text would make two endings read identically"
+        )
     if branch_keys:
         branch_serialized = json.dumps(branches, sort_keys=True).casefold()
         if entry["decision_kind"] == "well_choice" and "dormant" in branch_serialized:
