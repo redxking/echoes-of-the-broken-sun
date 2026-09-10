@@ -4265,3 +4265,51 @@ Evidence for every line above: `Scripts/test_sim.sh` 131/131 in all three config
 debug, ASan+UBSan) at `01ca3ad`. Retained replays still reproduce their exact checksums because ground
 occupancy is gated on `kGroundOccupancyReplayVersion`; occupancy state is derived and is not part of
 `StateChecksum` or any snapshot payload.
+
+2026-09-09 L1-SIM per-ID evidence, second entry (source and native-suite evidence at commit
+`529ceab`; not owner acceptance, not a played match, not a rendered or packaged result):
+
+* `SPEC-MOV-003` — PARTIAL, and the remaining half is NOT the one previously assumed. Both halves of
+  the blocking clause are now live and measured: a completed structure of any owner blocks, and a
+  hostile mobile body blocks. A gated-corridor probe from a fixed seed shows the gate crossed on tick
+  83 with the gate clear, still on tick 83 with an ALLIED body in it (pushed past, SPEC-MOV-008), and
+  never in 600 ticks with a HOSTILE body in it, held at tile 15 (`01ca3ad`). What remains unmet is
+  the literal word "neutral": a neutral public structure blocks, but a neutral ResourceNode and a
+  neutral Future Well are both traversable, verified directly. That is deliberate — a hauler has to
+  reach a deposit and a worker has to reach a Well to interact with it — but it is a divergence from
+  the clause as written and is recorded as such rather than papered over. The clause's second
+  sentence, "a lower-priority unit shall automatically step aside to let a higher-priority unit pass
+  chokepoints cleanly", is served only by the existing moving-yields-to-resting rule and is not
+  claimed. This ID must not be read as complete.
+* `SPEC-AI-001` — REPAIRED, source-verified only. The AI's threat census was named
+  `visibleHeavyThreats`/`visibleMobileThreats` while counting every hostile entity on the map, alive
+  or dead, seen or unseen; it now requires `hitPoints > 0` and `IsEntityVisibleTo`. Those counts
+  steer Kharuun warform adaptation, mineral cover, Hollow Choir identity resolution and — since
+  `529ceab` — the Adaptive army composition, so an unseen force could shape what the opponent built.
+  Evidence class is source inspection plus an unchanged 132/132 suite. NO behavioural regression test
+  accompanies this: four attempts to build one failed to discriminate, because every consumer of
+  those counts sits behind further gates (faction, personality, molt site, Dawn, army size) that a
+  bounded probe did not reach, and the Adaptive weighting is too coarse to change a decision at the
+  army sizes currently reached. A test that passes identically before and after the fix was written
+  and then deleted rather than left implying coverage that does not exist.
+* `SPEC-AI-002` — PARTIAL. The opponent pays authored costs and obeys Logistics, and `d5ab052` holds
+  its population to the same 200 ceiling a player has. It receives no hidden income. Untested here:
+  that it obeys identical pathing, range, cooldown and formation rules under contest.
+* `SPEC-AI-004` — PARTIAL. It now expands to known resources, raises supply against its own cap,
+  scales producers, fields heavy and scout units against a doctrine shape, and fortifies where its
+  doctrine calls for it (`a289ff5`, `529ceab`). It does not scout (`SPEC-AIST-002` below), and
+  "protects workers" is not implemented as a behaviour.
+* `SPEC-AI-005` — NOT IMPLEMENTED, and materially reframed by `a289ff5`. The requirement asks the AI
+  to diagnose a stalled economy. Its economy was stalled at exactly zero Matter income for entire
+  matches and nothing in the AI noticed: the planning pass re-issued Gather to workers already
+  gathering, clearing the extraction timer every window. The cause is repaired; the diagnosis
+  capability the requirement actually describes does not exist.
+* `SPEC-AI-003`, `SPEC-AIST-001..010` — NOT IMPLEMENTED as specified. These describe a layered
+  strategic controller that selects named states with explicit exit conditions. No such controller
+  exists: the generator remains a flat per-actor planner run every fourth tick with no state
+  selection, no exit conditions and no budgets. `a289ff5` and `529ceab` improve behaviours that
+  ESTABLISH ECONOMY (001), EXPAND (003), DEFEND (004), ASSEMBLE (005) and CONTEST WELL (008)
+  describe — including taking the Preserve protocol REL-AI-009 names for the Warden — but improving
+  a behaviour a state would perform is not implementing the state machine, and the family must not
+  be read as verified on the strength of it. SCOUT (002) and RECOVER (010) have no implementation at
+  all; RAID (007) exists only as a Raider composition weighting.

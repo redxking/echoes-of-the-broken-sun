@@ -7796,7 +7796,13 @@ std::vector<Command> Simulation::GenerateAiCommands(
     std::int32_t visibleMobileThreats = 0;
     std::int32_t committedPopulation = PopulationUsed(player);
     for (const Entity& entity : entities_) {
-        if (config_.IsHostile(player, entity.owner)) {
+        // SPEC-AI-001: these counts steer warform adaptation, mineral cover,
+        // Choir identity and the Adaptive army composition, and they were named
+        // "visible" while counting every hostile entity on the map, alive or
+        // dead, seen or unseen. The opponent was reading hidden units to decide
+        // what to build. It now sees what a player in its seat would see.
+        if (config_.IsHostile(player, entity.owner) && entity.hitPoints > 0 &&
+            IsEntityVisibleTo(player, entity.id)) {
             if (entity.type == EntityType::HeavyUnit ||
                 IsBuildingType(entity.type)) {
                 ++visibleHeavyThreats;
