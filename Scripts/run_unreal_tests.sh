@@ -217,7 +217,15 @@ expected_tests=(
 )
 
 num_expected="${#expected_tests[@]}"
-test_max_index=$(( num_expected - 1 ))
+# Scan bound comes from the REPORT, not from the expected array. Deriving it from
+# num_expected made every added test invisible to the per-test scan below, so an
+# expected test sitting past the old bound was reported absent (exit 6).
+report_test_count="$(/usr/bin/plutil -extract tests raw "$report" 2>/dev/null)"
+if [[ -z "$report_test_count" || "$report_test_count" != <-> ]]; then
+  print -u2 "Could not read the automation report test count: $report"
+  exit 4
+fi
+test_max_index=$(( report_test_count - 1 ))
 typeset -A expected_inventory
 for expected_test in "${expected_tests[@]}"; do
   if [[ -n "${expected_inventory[$expected_test]-}" ]]; then
@@ -226,16 +234,6 @@ for expected_test in "${expected_tests[@]}"; do
   fi
   expected_inventory[$expected_test]=1
 done
-
-if [[ "$(read_report_value succeeded)" != "$num_expected" ||
-      "$(read_report_value succeededWithWarnings)" != "0" ||
-      "$(read_report_value failed)" != "0" ||
-      "$(read_report_value notRun)" != "0" ||
-      "$(read_report_value inProcess)" != "0" ]]; then
-  print -u2 "Unreal automation totals did not match the expected ${num_expected}/${num_expected} clean result."
-  print -u2 "Inspect: $report"
-  exit 4
-fi
 
 for expected_test in "${expected_tests[@]}"; do
   match_count=0
@@ -263,6 +261,24 @@ for expected_test in "${expected_tests[@]}"; do
   fi
 done
 
-print "Unreal automation passed: ${num_expected}/${num_expected} Echoes tests, 0 warnings, 0 errors."
+# Every expected test must be present and clean, and nothing may be unclean — but a
+# lane adding its own test must not break every other lane's gate. So: no exact-count
+# equality against the shared array; succeeded may exceed it.
+succeeded_count="$(read_report_value succeeded)"
+if [[ "$(read_report_value succeededWithWarnings)" != "0" ||
+      "$(read_report_value failed)" != "0" ||
+      "$(read_report_value notRun)" != "0" ||
+      "$(read_report_value inProcess)" != "0" ]]; then
+  print -u2 "Unreal automation reported a non-clean result (failed/warnings/notRun/inProcess must all be 0)."
+  print -u2 "Inspect: $report"
+  exit 4
+fi
+if (( succeeded_count < num_expected )); then
+  print -u2 "Unreal automation succeeded ${succeeded_count}, fewer than the ${num_expected} expected tests."
+  print -u2 "Inspect: $report"
+  exit 4
+fi
+
+print "Unreal automation passed: ${succeeded_count} Echoes tests (${num_expected} expected present), 0 warnings, 0 errors."
 print "Save isolation boundary passed: exact deny clauses and synthetic protected-data denial passed; scoped storage was empty."
 print "Evidence report: $report"
