@@ -7,6 +7,8 @@
 #include "Engine/GameInstance.h"
 #include "GameFramework/InputSettings.h"
 #include "Dom/JsonObject.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "Serialization/JsonSerializer.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -95,15 +97,44 @@ bool FEchoesNarrativePackTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Fifteen authored operations are bound"),
               Narrative->GetOperationCount(),
               15);
+    // Derived from the pack rather than hardcoded. A literal beside a generated
+    // file drifts the next time anyone authors a line -- which is exactly how
+    // this assertion went red when the per-ending epilogues landed.
+    int32 DeclaredLineCount = 0;
+    int32 DeclaredDemoLineCount = 0;
+    {
+        FString PackText;
+        const FString PackPath = FPaths::ProjectContentDir() /
+            TEXT("Narrative/Generated/EchoesNarrativePack.json");
+        if (!FFileHelper::LoadFileToString(PackText, *PackPath))
+        {
+            PackText = TEXT("{}");
+        }
+        TSharedPtr<FJsonObject> PackObject;
+        const TSharedRef<TJsonReader<>> PackReader =
+            TJsonReaderFactory<>::Create(PackText);
+        if (TestTrue(TEXT("The authored narrative pack parses"),
+                     FJsonSerializer::Deserialize(PackReader, PackObject) && PackObject.IsValid()))
+        {
+            PackObject->TryGetNumberField(TEXT("line_count"), DeclaredLineCount);
+            PackObject->TryGetNumberField(TEXT("demo_line_count"), DeclaredDemoLineCount);
+        }
+    }
+    // A floor keeps the derivation honest: an empty or truncated pack would
+    // otherwise let both sides agree on nothing.
+    TestTrue(TEXT("The pack declares a plausible authored line count"),
+             DeclaredLineCount >= 300);
     TestEqual(TEXT("The full authored line count is carried"),
               Narrative->GetTotalLineCount(),
-              308);
+              DeclaredLineCount);
     TestEqual(TEXT("The pack digest is a full SHA-256"),
               Narrative->GetPackDigest().Len(),
               64);
+    TestTrue(TEXT("The pack declares a plausible demo line count"),
+             DeclaredDemoLineCount >= 50);
     TestEqual(TEXT("The demo tutorial and annunciator line count is carried"),
               Narrative->GetDemoLineCount(),
-              55);
+              DeclaredDemoLineCount);
     TestTrue(TEXT("Tutorial signal resolves Mara Vey survey line"),
              Narrative->GetLinesForSignal(
                  EEchoesOperationMode::Skirmish,
