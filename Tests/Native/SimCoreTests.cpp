@@ -6498,6 +6498,52 @@ AiCompositionOutcome RunAiCompositionMatch(AiPersonality doctrine, Tick ticks) {
 // tile that touches unexplored ground reaches 94%. The threshold below sits
 // between those two so the case fails if frontier selection is removed, rather
 // than passing on the wandering the AI did anyway.
+// An order aimed at a building is legal and means "walk up to it". Ground
+// occupancy briefly conflated two questions -- may a unit STAND here, and may a
+// destination NAME here -- and refusing the second broke every authored
+// campaign route aimed at a site a structure clips, with
+// [INVALID_DESTINATION] from the order gate that asks IsPositionPassable.
+void TestOrderAimedAtAStructureIsAcceptedAndHaltsAtItsEdge() {
+    Simulation sim({32, 32, 20, 0xDE57ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    const EntityId site = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(20, 16));
+    REQUIRE(site != 0);
+    const EntityId unit = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(6, 16));
+    REQUIRE(unit != 0);
+    const Vec2 centre = sim.FindEntity(site)->position;
+
+    // The order gate asks whether the ground is open; standing room is a
+    // separate question and still says no.
+    REQUIRE(sim.IsPositionPassable(centre));
+    REQUIRE(!sim.IsPositionPassableFor(0, centre));
+
+    Command order = MakeCommand(0, 0, 1, CommandType::Move, unit);
+    order.position = centre;
+    REQUIRE(sim.QueueCommand(order));
+    sim.Step();
+    const std::optional<CommandResolutionReceipt> receipt =
+        sim.FindCommandResolutionReceipt(0, 1);
+    REQUIRE(receipt.has_value());
+    REQUIRE(receipt->outcome == CommandResolutionOutcome::Applied);
+
+    sim.Step(400);
+    const Entity* arrived = sim.FindEntity(unit);
+    REQUIRE(arrived != nullptr);
+    const std::int32_t halfExtent = sim.FootprintHalfExtentRaw(
+        Faction::MeridianCompact, EntityType::CommandCore);
+    const std::int64_t deltaX =
+        static_cast<std::int64_t>(arrived->position.x.Raw()) - centre.x.Raw();
+    const std::int64_t deltaY =
+        static_cast<std::int64_t>(arrived->position.y.Raw()) - centre.y.Raw();
+    // It closed on the building...
+    REQUIRE(arrived->position.x.Raw() > Vec2::FromTiles(14, 16).x.Raw());
+    // ...and stopped outside it rather than standing in it.
+    REQUIRE(std::abs(deltaX) >= halfExtent || std::abs(deltaY) >= halfExtent);
+}
+
 void TestOpponentScoutsTheFogFrontier() {
     Simulation sim(SimulationConfig{64, 64, 20, 0x5343ULL});
     REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{800, 350}));
@@ -10415,6 +10461,8 @@ int main(int argc, char** argv) {
         {"legacy Relay scoped connectivity", TestLegacyRelayScopedConnectivity},
         {"hostile body holds a choke, allied body does not",
          TestHostileBodyHoldsAChokeAndAlliedBodyDoesNot},
+        {"order aimed at a structure is accepted and halts at its edge",
+         TestOrderAimedAtAStructureIsAcceptedAndHaltsAtItsEdge},
         {"opponent scouts the fog frontier",
          TestOpponentScoutsTheFogFrontier},
         {"conceded match carries no Corefall bookmark",

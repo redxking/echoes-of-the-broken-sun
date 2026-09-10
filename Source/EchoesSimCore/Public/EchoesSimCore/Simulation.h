@@ -1651,6 +1651,9 @@ private:
     // Both grids are derived state: rebuilt from entities_, never serialised,
     // never an input to a checksum, and never an authority of their own.
     [[nodiscard]] bool IsGroundOpen(Vec2 position) const;
+    [[nodiscard]] bool IsTileKnownGroundOpenTo(PlayerId player,
+                                               std::int32_t tileX,
+                                               std::int32_t tileY) const;
     [[nodiscard]] bool HasTraversableLineOfSight(PlayerId mover,
                                                  Vec2 start,
                                                  Vec2 end,

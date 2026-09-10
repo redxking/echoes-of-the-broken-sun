@@ -1630,15 +1630,14 @@ bool Simulation::IsPositionPassable(Vec2 position) const {
     }
     const std::int32_t tileX = position.x.FloorToInt();
     const std::int32_t tileY = position.y.FloorToInt();
-    if (TerrainAt(tileX, tileY) == Terrain::Blocked &&
-        !IsReshapedOpen(tileX, tileY)) {
-        return false;
-    }
-    // SPEC-MOV-006: a completed structure occupies its ground absolutely.
-    if (legacyOpenGroundReplaySemantics_) {
-        return true;
-    }
-    return !IsStructureBlockedAt(position);
+    // Terrain only, deliberately. A completed structure occupies ground for
+    // the purpose of MOVING THROUGH it -- see IsPositionPassableFor -- but not
+    // for the purpose of naming a destination. Folding occupancy in here
+    // refused every authored order aimed at a building or the ground it clips,
+    // because the order gates ask this question, and a right-click on a
+    // building has always meant "walk up to it", never "that is illegal".
+    return TerrainAt(tileX, tileY) != Terrain::Blocked ||
+           IsReshapedOpen(tileX, tileY);
 }
 
 bool Simulation::IsGroundOpen(Vec2 position) const {
@@ -1792,6 +1791,11 @@ bool Simulation::IsPositionPassableFor(PlayerId mover, Vec2 position) const {
     }
     if (legacyOpenGroundReplaySemantics_) {
         return true;
+    }
+    // SPEC-MOV-006: a completed structure occupies its ground absolutely for
+    // anything trying to stand on it.
+    if (IsStructureBlockedAt(position)) {
+        return false;
     }
     const std::uint8_t occupants = MobileOwnerMaskAt(position.x.FloorToInt(),
                                                      position.y.FloorToInt());
@@ -3021,12 +3025,38 @@ bool Simulation::IsTileKnownPassableTo(PlayerId player,
         // Judged at the same tile granularity the route grid uses, so a
         // movement receipt agrees with the route the unit would actually be
         // given: a tile a structure sits on is not a tile to route through.
+        // Naming such a tile as a DESTINATION is a separate question, answered
+        // by IsTileKnownGroundOpenTo below.
         return IsGroundOpen(position) &&
                (legacyOpenGroundReplaySemantics_ ||
                 !IsStructureOccupiedTile(tileX, tileY));
     }
     // Movement admission consumes the same last-observed ground as the
     // player view. Live terrain changes behind fog cannot alter a receipt.
+    return rememberedTerrain_[player][static_cast<std::size_t>(
+        tileY * config_.mapWidthTiles + tileX)] != Terrain::Blocked;
+}
+
+bool Simulation::IsTileKnownGroundOpenTo(PlayerId player,
+                                         std::int32_t tileX,
+                                         std::int32_t tileY) const {
+    // Destination legality asks only whether the ground is open, never whether
+    // a building stands on it. Ordering a unit to a building means "walk up to
+    // it"; the unit halts at the footprint edge because the step gate stops it,
+    // and refusing the order outright instead broke every authored campaign
+    // route aimed at a site that a structure clips.
+    if (tileX < 0 || tileY < 0 || tileX >= config_.mapWidthTiles ||
+        tileY >= config_.mapHeightTiles) {
+        return false;
+    }
+    const Vec2 position = Vec2::FromTiles(tileX, tileY);
+    const Visibility visibility = VisibilityAt(player, position);
+    if (visibility == Visibility::Unexplored) {
+        return true;
+    }
+    if (visibility == Visibility::Visible) {
+        return IsGroundOpen(position);
+    }
     return rememberedTerrain_[player][static_cast<std::size_t>(
         tileY * config_.mapWidthTiles + tileX)] != Terrain::Blocked;
 }
@@ -3048,6 +3078,59 @@ bool Simulation::IsTileReachableInPlayerKnowledge(
                static_cast<std::size_t>(tileX);
     };
     const std::size_t goal = tileIndex(goalTileX, goalTileY);
+
+    // A building is a destination even though it is never a route. Its centre
+    // tile can sit several tiles inside its own footprint, so no route tile is
+    // ever orthogonally adjacent to it and a plain flood declares it
+    // unreachable -- which refused every authored order aimed at a structure.
+    // Reaching the ground at the footprint's edge is reaching the building.
+    std::int32_t haloMinX = goalTileX;
+    std::int32_t haloMaxX = goalTileX;
+    std::int32_t haloMinY = goalTileY;
+    std::int32_t haloMaxY = goalTileY;
+    bool goalCarriesStructure = false;
+    if (!legacyOpenGroundReplaySemantics_ &&
+        IsStructureOccupiedTile(goalTileX, goalTileY)) {
+        for (const Entity& occupant : entities_) {
+            if (occupant.hitPoints <= 0 || !occupant.completed ||
+                !IsBuildingType(occupant.type) ||
+                occupant.waystoneMode == WaystoneMode::Mobile) {
+                continue;
+            }
+            const std::int32_t extent =
+                FootprintHalfExtentRaw(occupant.faction, occupant.type);
+            const std::int32_t minX =
+                (occupant.position.x.Raw() - extent) / kFixedScale;
+            const std::int32_t maxX =
+                (occupant.position.x.Raw() + extent - 1) / kFixedScale;
+            const std::int32_t minY =
+                (occupant.position.y.Raw() - extent) / kFixedScale;
+            const std::int32_t maxY =
+                (occupant.position.y.Raw() + extent - 1) / kFixedScale;
+            if (goalTileX < minX || goalTileX > maxX || goalTileY < minY ||
+                goalTileY > maxY) {
+                continue;
+            }
+            haloMinX = minX - 1;
+            haloMaxX = maxX + 1;
+            haloMinY = minY - 1;
+            haloMaxY = maxY + 1;
+            goalCarriesStructure = true;
+            break;
+        }
+    }
+    const auto ReachesGoal = [&](std::size_t tile, std::int32_t tileX,
+                                 std::int32_t tileY) {
+        if (tile == goal) {
+            return true;
+        }
+        return goalCarriesStructure && tileX >= haloMinX && tileX <= haloMaxX &&
+               tileY >= haloMinY && tileY <= haloMaxY;
+    };
+    if (ReachesGoal(tileIndex(startTileX, startTileY), startTileX,
+                    startTileY)) {
+        return true;
+    }
 
     // Deterministic breadth-first flood in the same N/E/S/W order the
     // authoritative path field expands, over player-known passability only.
@@ -3075,11 +3158,13 @@ bool Simulation::IsTileReachableInPlayerKnowledge(
                 continue;
             }
             const std::size_t next = tileIndex(nextX, nextY);
-            if (reached[next] != 0 ||
-                !IsTileKnownPassableTo(player, nextX, nextY)) {
+            if (reached[next] != 0) {
                 continue;
             }
-            if (next == goal) {
+            if (!IsTileKnownPassableTo(player, nextX, nextY)) {
+                continue;
+            }
+            if (ReachesGoal(next, nextX, nextY)) {
                 return true;
             }
             reached[next] = 1;
@@ -3114,7 +3199,7 @@ CommandResolutionOutcome Simulation::ValidateMoveOrder(PlayerId player,
     if (startX == goalX && startY == goalY) {
         return CommandResolutionOutcome::Applied;
     }
-    if (!IsTileKnownPassableTo(player, goalX, goalY)) {
+    if (!IsTileKnownGroundOpenTo(player, goalX, goalY)) {
         return CommandResolutionOutcome::DestinationOccupied;
     }
     // A unit whose own tile has no known-open neighbour cannot start any route.
