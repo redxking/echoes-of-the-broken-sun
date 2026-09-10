@@ -11,7 +11,12 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 
-namespace
+// A uniquely named namespace, not an anonymous one. Unreal batches several
+// .cpp files into one unity translation unit, and every anonymous namespace in
+// that unit is the SAME namespace: two file-local helpers sharing a signature
+// become a redefinition, and a sibling's parameter shadows a constant here.
+// Each file still compiles alone, so nothing catches it until the batch.
+namespace EchoesTutorialProgressPersistenceDetail
 {
 void RefreshChecksum(TArray<uint8>& Bytes)
 {
@@ -55,7 +60,7 @@ FEchoesPlayerProfile SkippedThenEarnedProfile()
         FEchoesPlayerProfile::AllTutorialLessonsMask & ~uint16(1));
     return Profile;
 }
-}
+}  // namespace EchoesTutorialProgressPersistenceDetail
 
 /**
  * Skipped lessons and lessons genuinely earned after a skip were controller
@@ -78,7 +83,7 @@ bool FEchoesTutorialProgressPersistenceTest::RunTest(const FString& Parameters)
     if (!SaveEnvironment.IsReady()) return false;
     FString Feedback;
 
-    const FEchoesPlayerProfile Earned = SkippedThenEarnedProfile();
+    const FEchoesPlayerProfile Earned = EchoesTutorialProgressPersistenceDetail::SkippedThenEarnedProfile();
     TestEqual(
         TEXT("Skip plus later completions report the whole curriculum as reached"),
         Earned.GetTutorialProgressMask(),
@@ -149,7 +154,7 @@ bool FEchoesTutorialProgressPersistenceTest::RunTest(const FString& Parameters)
     {
         return false;
     }
-    MakeSchemaTwoRecord(LegacyBytes);
+    EchoesTutorialProgressPersistenceDetail::MakeSchemaTwoRecord(LegacyBytes);
     TestTrue(
         TEXT("A checksum-valid schema-two fixture is written"),
         FFileHelper::SaveArrayToFile(LegacyBytes, *LegacyPath));

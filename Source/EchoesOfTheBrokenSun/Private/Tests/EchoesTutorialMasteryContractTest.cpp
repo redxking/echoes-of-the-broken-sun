@@ -16,7 +16,12 @@
 #include "Misc/Paths.h"
 #include "Tests/AutomationCommon.h"
 
-namespace
+// A uniquely named namespace, not an anonymous one. Unreal batches several
+// .cpp files into one unity translation unit, and every anonymous namespace in
+// that unit is the SAME namespace: two file-local helpers sharing a signature
+// become a redefinition, and a sibling's parameter shadows a constant here.
+// Each file still compiles alone, so nothing catches it until the batch.
+namespace EchoesTutorialMasteryContractDetail
 {
 // Profile.sav layout: 8-byte magic, u16 schema, u16 payload size, then the
 // payload (slot u8, flags u8, lesson mask u16, ...) and a trailing u32 CRC.
@@ -57,7 +62,7 @@ FEchoesPlayerProfile MasteredProfile()
     Profile.bReadinessOperationVerified = true;
     return Profile;
 }
-}
+}  // namespace EchoesTutorialMasteryContractDetail
 
 /**
  * The completion contract. `AllTutorialLessonsMask` (the contract) and
@@ -92,7 +97,7 @@ bool FEchoesTutorialMasteryContractTest::RunTest(const FString& Parameters)
         FEchoesTutorialPracticeState::ImplementedLessonMask);
 
     // --- Mastery is reachable ----------------------------------------------
-    const FEchoesPlayerProfile Mastered = MasteredProfile();
+    const FEchoesPlayerProfile Mastered = EchoesTutorialMasteryContractDetail::MasteredProfile();
     TestTrue(
         TEXT("Verifying every implemented lesson plus readiness completes mastery"),
         Mastered.IsTutorialMasteryComplete());
@@ -169,10 +174,10 @@ bool FEchoesTutorialMasteryContractTest::RunTest(const FString& Parameters)
         TArray<uint8> Narrow = Bytes;
         const uint16 NarrowMask = static_cast<uint16>(
             FEchoesPlayerProfile::AllTutorialLessonsMask >> 1);
-        WriteMask(Narrow, NarrowMask);
-        WriteContractWidth(
+        EchoesTutorialMasteryContractDetail::WriteMask(Narrow, NarrowMask);
+        EchoesTutorialMasteryContractDetail::WriteContractWidth(
             Narrow, static_cast<uint8>(EchoesTutorialLessonCount - 1));
-        RefreshChecksum(Narrow);
+        EchoesTutorialMasteryContractDetail::RefreshChecksum(Narrow);
         const FString NarrowPath = FPaths::Combine(
             SaveEnvironment.Directory, TEXT("ProfileNarrowContract.sav"));
         TestTrue(
@@ -198,10 +203,10 @@ bool FEchoesTutorialMasteryContractTest::RunTest(const FString& Parameters)
     // verified at least everything the contract now asks for.
     {
         TArray<uint8> Wide = Bytes;
-        WriteMask(Wide, 0x03FF);
-        WriteContractWidth(
+        EchoesTutorialMasteryContractDetail::WriteMask(Wide, 0x03FF);
+        EchoesTutorialMasteryContractDetail::WriteContractWidth(
             Wide, static_cast<uint8>(EchoesTutorialAuthoredLessonKeys));
-        RefreshChecksum(Wide);
+        EchoesTutorialMasteryContractDetail::RefreshChecksum(Wide);
         const FString WidePath = FPaths::Combine(
             SaveEnvironment.Directory, TEXT("ProfileWideContract.sav"));
         TestTrue(
@@ -224,11 +229,11 @@ bool FEchoesTutorialMasteryContractTest::RunTest(const FString& Parameters)
     // Same width, incomplete mask: that is a forged claim, and it stays refused.
     {
         TArray<uint8> Forged = Bytes;
-        WriteMask(
+        EchoesTutorialMasteryContractDetail::WriteMask(
             Forged,
             static_cast<uint16>(
                 FEchoesPlayerProfile::AllTutorialLessonsMask >> 1));
-        RefreshChecksum(Forged);
+        EchoesTutorialMasteryContractDetail::RefreshChecksum(Forged);
         const FString ForgedPath = FPaths::Combine(
             SaveEnvironment.Directory, TEXT("ProfileForgedReadiness.sav"));
         TestTrue(

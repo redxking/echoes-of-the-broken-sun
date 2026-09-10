@@ -2,9 +2,18 @@
 
 #include "EchoesFieldHudView.h"
 
-namespace
-{
+// A uniquely named namespace, not an anonymous one. Unreal batches several
+// .cpp files into one unity translation unit, and every anonymous namespace in
+// that unit is the SAME namespace: two file-local helpers sharing a signature
+// become a redefinition, and a sibling's parameter shadows a constant here.
+// Each file still compiles alone, so nothing catches it until the batch.
+// Aliasing the same namespace in each batched file is a redeclaration,
+// not a conflict, so this is safe at file scope where the bodies below
+// can see it.
 namespace sim = echoes::sim;
+
+namespace EchoesTutorialConstructionDetail
+{
 
 /**
  * The Power Link is the Dropoff archetype (`SPEC-BLD-015.MC.LINK`). It is the
@@ -62,7 +71,7 @@ bool IsBuildingSite(
         Entity->hitPoints > 0 && Entity->order.type == sim::OrderType::Build &&
         Entity->order.target == Site;
 }
-}
+}  // namespace EchoesTutorialConstructionDetail
 
 void FEchoesTutorialConstructionObservation::Reset()
 {
@@ -105,8 +114,8 @@ bool FEchoesTutorialConstructionObservation::Begin(
     if (Session == 0 || AuthorityGeneration == 0 || !FirstSequence.has_value() ||
         Setup.FirstInputSequence == 0 || Setup.Builder == 0 ||
         Setup.Assistant == 0 || Setup.Builder == Setup.Assistant ||
-        !IsLivingOwnedWorker(Simulation, Setup.LocalPlayer, Setup.Builder) ||
-        !IsLivingOwnedWorker(Simulation, Setup.LocalPlayer, Setup.Assistant))
+        !EchoesTutorialConstructionDetail::IsLivingOwnedWorker(Simulation, Setup.LocalPlayer, Setup.Builder) ||
+        !EchoesTutorialConstructionDetail::IsLivingOwnedWorker(Simulation, Setup.LocalPlayer, Setup.Assistant))
     {
         return false;
     }
@@ -120,7 +129,7 @@ bool FEchoesTutorialConstructionObservation::Begin(
     for (const sim::Entity& Entity : Simulation.Entities())
     {
         if (Entity.owner != Setup.LocalPlayer ||
-            Entity.type != PowerLinkType || !Entity.completed ||
+            Entity.type != EchoesTutorialConstructionDetail::PowerLinkType || !Entity.completed ||
             Entity.hitPoints <= 0 || Entity.hitPoints >= Entity.maxHitPoints)
         {
             continue;
@@ -163,7 +172,7 @@ bool FEchoesTutorialConstructionObservation::ObserveRejectedPlacement(
     // The refusal has to be the simulation's, not the tutorial's opinion. A
     // site the simulation would accept teaches the player the wrong rule.
     if (Simulation.ValidatePlacement(
-            BoundSetup.LocalPlayer, PowerLinkType, AttemptedSite) ==
+            BoundSetup.LocalPlayer, EchoesTutorialConstructionDetail::PowerLinkType, AttemptedSite) ==
         sim::PlacementResult::Valid)
     {
         return false;
@@ -202,10 +211,10 @@ bool FEchoesTutorialConstructionObservation::ObserveAcceptedCommand(
     {
         return false;
     }
-    const sim::Command* Command = FindCommand(
+    const sim::Command* Command = EchoesTutorialConstructionDetail::FindCommand(
         Simulation, BoundSetup.LocalPlayer, Input.CommandSequence);
     if (Command == nullptr ||
-        !WasApplied(
+        !EchoesTutorialConstructionDetail::WasApplied(
             Simulation, BoundSetup.LocalPlayer, Input.CommandSequence))
     {
         return false;
@@ -214,7 +223,7 @@ bool FEchoesTutorialConstructionObservation::ObserveAcceptedCommand(
     // A placement: an untargeted Build of a Power Link by the bound builder.
     if (Command->type == sim::CommandType::Build && Command->target == 0 &&
         Command->actor == BoundSetup.Builder &&
-        Command->buildType == PowerLinkType && BuildSequence == 0)
+        Command->buildType == EchoesTutorialConstructionDetail::PowerLinkType && BuildSequence == 0)
     {
         LastInputSequence = Input.InputSequence;
         BuildSequence = Input.CommandSequence;
@@ -234,7 +243,7 @@ bool FEchoesTutorialConstructionObservation::ObserveAcceptedCommand(
     // A repair of the authored damaged Link by an owned worker.
     if (Command->type == sim::CommandType::Repair &&
         Command->target == DamagedLink && DamagedLink != 0 &&
-        IsLivingOwnedWorker(
+        EchoesTutorialConstructionDetail::IsLivingOwnedWorker(
             Simulation, BoundSetup.LocalPlayer, Command->actor))
     {
         LastInputSequence = Input.InputSequence;
@@ -269,14 +278,14 @@ void FEchoesTutorialConstructionObservation::ObserveState(
     // incomplete Link at that position is the structure the player placed.
     if (BuildSequence != 0 && Site == 0)
     {
-        const sim::Command* Placement = FindCommand(
+        const sim::Command* Placement = EchoesTutorialConstructionDetail::FindCommand(
             Simulation, BoundSetup.LocalPlayer, BuildSequence);
         if (Placement != nullptr)
         {
             for (const sim::Entity& Entity : Simulation.Entities())
             {
                 if (Entity.owner == BoundSetup.LocalPlayer &&
-                    Entity.type == PowerLinkType && !Entity.completed &&
+                    Entity.type == EchoesTutorialConstructionDetail::PowerLinkType && !Entity.completed &&
                     Entity.hitPoints > 0 &&
                     Entity.position == Placement->position)
                 {
@@ -309,10 +318,10 @@ void FEchoesTutorialConstructionObservation::ObserveState(
             // Simultaneous is the point of the lesson: both workers building
             // the same unfinished site on the same authoritative tick.
             if (!SiteEntity->completed && AssistSequence != 0 &&
-                IsBuildingSite(
+                EchoesTutorialConstructionDetail::IsBuildingSite(
                     Simulation, BoundSetup.LocalPlayer,
                     BoundSetup.Builder, Site) &&
-                IsBuildingSite(
+                EchoesTutorialConstructionDetail::IsBuildingSite(
                     Simulation, BoundSetup.LocalPlayer,
                     BoundSetup.Assistant, Site))
             {
