@@ -8008,6 +8008,89 @@ std::vector<Command> Simulation::GenerateAiCommands(
             break;
     }
 
+    // REL-AI-031 and SPEC-AIST-002: send one unit to the edge of what this seat
+    // knows. The only non-combat movement the opponent had was a seeded random
+    // tile, and with no reconnaissance its march target collapsed to the mirror
+    // of its own Core -- a blind rush across a map it had never looked at. That
+    // mattered more once the threat census stopped counting unseen units: an
+    // opponent that plans only from what it can see has to go and see something.
+    //
+    // Everything below reads the player view, never the world: an unexplored
+    // tile is unexplored because THIS seat has not looked at it.
+    EntityId scoutActor = 0;
+    Vec2 scoutTarget{};
+    bool haveScoutTarget = false;
+    {
+        const Entity* preferred = nullptr;
+        const Entity* idleSoldier = nullptr;
+        for (const Entity& candidate : view.Entities()) {
+            if (candidate.owner != player || !candidate.completed ||
+                candidate.hitPoints <= 0 || candidate.movementPerTickRaw <= 0) {
+                continue;
+            }
+            if (candidate.type == EntityType::ScoutUnit) {
+                if (preferred == nullptr || candidate.id < preferred->id) {
+                    preferred = &candidate;
+                }
+            } else if (candidate.type == EntityType::Soldier &&
+                       candidate.order.type == OrderType::None) {
+                // Only an idle Soldier stands in for a missing scout, so
+                // reconnaissance never pulls a unit out of a fight.
+                if (idleSoldier == nullptr || candidate.id < idleSoldier->id) {
+                    idleSoldier = &candidate;
+                }
+            }
+        }
+        const Entity* chosen = preferred != nullptr ? preferred : idleSoldier;
+        if (chosen != nullptr) {
+            scoutActor = chosen->id;
+            // The destination is a tile this seat already knows to be standable
+            // and which touches ground it has never seen. Walking to the near
+            // side of the unknown reveals it; walking into it may not even be
+            // possible, because unexplored ground can be solid.
+            std::uint64_t bestDistance =
+                std::numeric_limits<std::uint64_t>::max();
+            constexpr std::array<std::array<std::int32_t, 2>, 4> directions{{
+                {{0, -1}}, {{1, 0}}, {{0, 1}}, {{-1, 0}},
+            }};
+            for (std::int32_t tileY = 0; tileY < config_.mapHeightTiles; ++tileY) {
+                for (std::int32_t tileX = 0; tileX < config_.mapWidthTiles;
+                     ++tileX) {
+                    const Vec2 tile = Vec2::FromTiles(tileX, tileY);
+                    if (view.VisibilityAt(tile) == Visibility::Unexplored ||
+                        view.TerrainAt(tileX, tileY) == Terrain::Blocked) {
+                        continue;
+                    }
+                    bool touchesUnknown = false;
+                    for (const auto& direction : directions) {
+                        const std::int32_t nextX = tileX + direction[0];
+                        const std::int32_t nextY = tileY + direction[1];
+                        if (nextX < 0 || nextY < 0 ||
+                            nextX >= config_.mapWidthTiles ||
+                            nextY >= config_.mapHeightTiles) {
+                            continue;
+                        }
+                        if (view.VisibilityAt(Vec2::FromTiles(nextX, nextY)) ==
+                            Visibility::Unexplored) {
+                            touchesUnknown = true;
+                            break;
+                        }
+                    }
+                    if (!touchesUnknown) {
+                        continue;
+                    }
+                    const std::uint64_t distance =
+                        DistanceSquaredRaw(chosen->position, tile);
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        scoutTarget = tile;
+                        haveScoutTarget = true;
+                    }
+                }
+            }
+        }
+    }
+
     for (const Entity& actor : entities_) {
         if (actor.owner != player || !actor.completed) {
             continue;
@@ -8526,9 +8609,36 @@ std::vector<Command> Simulation::GenerateAiCommands(
             actor.order.type != OrderType::Hold) {
             continue;
         }
+        if (actor.id == scoutActor && haveScoutTarget) {
+            // Reconnaissance outranks the blind march: a unit that has somewhere
+            // unseen to look goes and looks instead of walking at the mirror of
+            // its own base.
+            command.type = CommandType::Move;
+            command.position = scoutTarget;
+            commands.push_back(command);
+            continue;
+        }
         if (IsBarracksUnitType(actor.type)) {
             Vec2 marchTarget{};
+            // A structure this seat can see right now is the best march target
+            // it has. The march consulted remembered objects only, and a
+            // structure stays out of memory for as long as it stays in sight,
+            // so an opponent that had just scouted the enemy base still walked
+            // at the mirror of its own Core instead of at what it had found.
+            for (const Entity& seen : view.Entities()) {
+                if (config_.IsHostile(player, seen.owner) &&
+                    seen.hitPoints > 0 &&
+                    (seen.type == EntityType::CommandCore ||
+                     seen.type == EntityType::Barracks ||
+                     seen.type == EntityType::Dropoff)) {
+                    marchTarget = seen.position;
+                    break;
+                }
+            }
             for (const RememberedObject& obj : view.RememberedObjects()) {
+                if (marchTarget != Vec2{}) {
+                    break;
+                }
                 if (config_.IsHostile(player, obj.owner) &&
                     (obj.type == EntityType::CommandCore ||
                      obj.type == EntityType::Barracks ||

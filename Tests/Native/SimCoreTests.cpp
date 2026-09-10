@@ -6492,6 +6492,54 @@ AiCompositionOutcome RunAiCompositionMatch(AiPersonality doctrine, Tick ticks) {
 // match ends deterministically, but nobody destroyed it, and the replay
 // timeline was marking a Corefall that never happened. The four timeline marks
 // are event types, not a promise that all four occur in every match.
+// REL-AI-031 and SPEC-AIST-002: the opponent looks at the edge of what it
+// knows. Its only non-combat movement was a seeded random tile, which wandered
+// into roughly 60% of a 64x64 map in 3,000 ticks; walking to the nearest known
+// tile that touches unexplored ground reaches 94%. The threshold below sits
+// between those two so the case fails if frontier selection is removed, rather
+// than passing on the wandering the AI did anyway.
+void TestOpponentScoutsTheFogFrontier() {
+    Simulation sim(SimulationConfig{64, 64, 20, 0x5343ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{800, 350}));
+    REQUIRE(sim.AddPlayer(1, Faction::KharuunAssemblies, ResourcePool{800, 350}));
+    REQUIRE(sim.SpawnEntity(0, Faction::MeridianCompact,
+                            EntityType::CommandCore,
+                            Vec2::FromTiles(10, 10)) != 0);
+    for (const Vec2 start : {Vec2::FromTiles(14, 10), Vec2::FromTiles(10, 14),
+                             Vec2::FromTiles(14, 14), Vec2::FromTiles(6, 14)}) {
+        REQUIRE(sim.SpawnEntity(0, Faction::MeridianCompact,
+                                EntityType::Worker, start) != 0);
+    }
+    REQUIRE(sim.SpawnResourceNode(Vec2::FromTiles(5, 10), 10000) != 0);
+    REQUIRE(sim.SpawnFutureWell(Vec2::FromTiles(10, 5)) != 0);
+    REQUIRE(sim.SpawnEntity(1, Faction::KharuunAssemblies,
+                            EntityType::CommandCore,
+                            Vec2::FromTiles(52, 18)) != 0);
+
+    for (Tick tick = 0; tick < 3000; ++tick) {
+        if (tick % 4 == 0) {
+            for (const Command& command :
+                 sim.GenerateAiCommands(0, AiPersonality::Balanced)) {
+                (void)sim.QueueCommand(command);
+            }
+        }
+        sim.Step();
+    }
+
+    const std::optional<PlayerView> view = sim.CreatePlayerView(0);
+    REQUIRE(view.has_value());
+    std::int32_t explored = 0;
+    for (std::int32_t tileY = 0; tileY < 64; ++tileY) {
+        for (std::int32_t tileX = 0; tileX < 64; ++tileX) {
+            if (view->VisibilityAt(Vec2::FromTiles(tileX, tileY)) !=
+                Visibility::Unexplored) {
+                ++explored;
+            }
+        }
+    }
+    REQUIRE(explored * 100 / (64 * 64) >= 80);
+}
+
 void TestConcededMatchCarriesNoCorefallBookmark() {
     Simulation conceded(SimulationConfig{24, 24, 20, 0x434f4e4345444544ULL});
     REQUIRE(conceded.AddPlayer(0, Faction::MeridianCompact,
@@ -10367,6 +10415,8 @@ int main(int argc, char** argv) {
         {"legacy Relay scoped connectivity", TestLegacyRelayScopedConnectivity},
         {"hostile body holds a choke, allied body does not",
          TestHostileBodyHoldsAChokeAndAlliedBodyDoesNot},
+        {"opponent scouts the fog frontier",
+         TestOpponentScoutsTheFogFrontier},
         {"conceded match carries no Corefall bookmark",
          TestConcededMatchCarriesNoCorefallBookmark},
         {"opponent fields more than Soldiers",
