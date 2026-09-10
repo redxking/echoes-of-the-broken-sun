@@ -137,7 +137,19 @@ if [[ "$artifact_root" != /* ]]; then
 fi
 artifact_root="${artifact_root:A}"
 source_short="${source_commit[1,8]}"
-archive_dir="${1:-$artifact_root/Packages/Mac-Development-$timestamp-$source_short}"
+# Build configuration. Development remains the default so every existing caller and
+# every retained package keeps its exact behaviour; Shipping is opt-in through the
+# environment. Signing is unaffected: both configurations are ad-hoc signed with no
+# Team ID, which is the owner's standing ruling, not a temporary gap.
+package_configuration="${ECHOES_PACKAGE_CONFIGURATION:-Development}"
+case "$package_configuration" in
+  Development|Shipping) ;;
+  *)
+    print -u2 "Unsupported ECHOES_PACKAGE_CONFIGURATION: $package_configuration (expected Development or Shipping)."
+    exit 2
+    ;;
+esac
+archive_dir="${1:-$artifact_root/Packages/Mac-$package_configuration-$timestamp-$source_short}"
 
 if [[ "$git_dir" == "$git_common_dir" ]]; then
   print -u2 "Packaging requires a dedicated linked Git worktree, not the primary checkout."
@@ -395,7 +407,7 @@ build_command=(
   -noP4
   -platform=Mac
   -target=EchoesOfTheBrokenSun
-  -clientconfig=Development
+  -clientconfig=$package_configuration
   "-ubtargs=-MaxParallelActions=$max_parallel_actions"
   -build -cook -stage -pak -package -archive
   "-archivedirectory=$archive_dir"
@@ -463,7 +475,7 @@ signature_evidence="$archive_dir/EchoesOfTheBrokenSun.signature-assessment.txt"
 signature_class="$(/usr/bin/awk -F= '$1 == "Signature" { print $2; exit }' "$signature_evidence")"
 signature_team_identifier="$(/usr/bin/awk -F= '$1 == "TeamIdentifier" { print $2; exit }' "$signature_evidence")"
 if [[ "$signature_class" != adhoc || "$signature_team_identifier" != "not set" ]]; then
-  print -u2 "The local Development package did not retain the required ad-hoc/no-Team-ID signature boundary."
+  print -u2 "The local $package_configuration package did not retain the required ad-hoc/no-Team-ID signature boundary."
   exit 8
 fi
 signature_team_identifier=none
@@ -676,7 +688,7 @@ application_executable_sha256="$(/usr/bin/shasum -a 256 "$binary" | /usr/bin/awk
   print "git_lfs_tracked_file_count=$git_lfs_tracked_file_count"
   print "git_lfs_hydration_evidence=${git_lfs_hydration_evidence:t}"
   print "git_lfs_hydration_sha256=$git_lfs_hydration_evidence_sha256"
-  print "configuration=Development"
+  print "configuration=$package_configuration"
   print "platform=Mac-arm64"
   print "architecture=$host_arch"
   print "archive_path=$archive_dir"
@@ -795,7 +807,7 @@ print "$provenance_hash  ${provenance:t}" > "$provenance_digest"
 (cd "$archive_dir" && /usr/bin/shasum -a 256 -c "${manifest_digest:t}" >/dev/null)
 (cd "$archive_dir" && /usr/bin/shasum -a 256 -c "${provenance_digest:t}" >/dev/null)
 
-print "Fresh-linked-worktree Mac Development package passed structural, semantic-evidence, live-context, signature, startup, and exact-manifest checks."
+print "Fresh-linked-worktree Mac $package_configuration package passed structural, semantic-evidence, live-context, signature, startup, and exact-manifest checks."
 print "Application: $app"
 print "Content manifest: $manifest"
 print "Manifest SHA-256: $manifest_hash"

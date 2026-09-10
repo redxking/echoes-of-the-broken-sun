@@ -28,6 +28,14 @@ EXPECTED_GIT_VERSION = "git version 2.55.0"
 EXPECTED_GIT_RESOLVED_PATH = "/opt/homebrew/Cellar/git/2.55.0/bin/git"
 EXPECTED_GIT_SHA256 = "9048038886ac36210fbb616b49b0707465f63683cb04e33a2013baf95f746938"
 EXPECTED_GIT_LFS_PATH = "/opt/homebrew/bin/git-lfs"
+# Build configurations this verifier will accept. The configuration is NOT pinned to a
+# single value any more, but it is not free either: it must be one of these AND must
+# match the configuration segment of the archive directory name, so a manifest that
+# claims Shipping inside a Mac-Development-* archive is rejected.
+SUPPORTED_CONFIGURATIONS = ("Development", "Shipping")
+# Mac-<configuration>-<UTC stamp>-<short sha>, the packager's archive naming.
+PACKAGER_ARCHIVE_NAME = re.compile(r"^Mac-[A-Za-z]+-\d{8}T\d{6}Z-[0-9a-f]{8}$")
+
 EXPECTED_GIT_LFS_VERSION = "git-lfs/3.8.0 (GitHub; darwin arm64; go 1.27.0)"
 EXPECTED_GIT_LFS_RESOLVED_PATH = "/opt/homebrew/Cellar/git-lfs/3.8.0/bin/git-lfs"
 EXPECTED_GIT_LFS_SHA256 = (
@@ -83,7 +91,6 @@ SCHEMA_2_EXACT_METADATA = {
     "build_cook_run_outcome": "passed",
     "normal_startup_smoke_outcome": "passed",
     "legacy_stress_startup_smoke_outcome": "passed",
-    "configuration": "Development",
     "platform": "Mac-arm64",
     "architecture": "arm64",
     "archive_outside_checkout": "true",
@@ -1188,7 +1195,6 @@ def verify_package(
         "artifact": "EchoesOfTheBrokenSun.app",
         "source_tree": "clean",
         "source_binding": "clean-pushed-main",
-        "configuration": "Development",
         "platform": "Mac-arm64",
         "normal_startup_smoke": "EchoesOfTheBrokenSun.normal-startup-smoke.log",
         "legacy_stress_startup_smoke": "EchoesOfTheBrokenSun.legacy-stress-startup-smoke.log",
@@ -1196,6 +1202,29 @@ def verify_package(
     for key, expected in required_metadata.items():
         if metadata.get(key) != expected:
             raise VerificationError(f"manifest metadata {key} is missing or invalid")
+
+    # Configuration is allowlisted rather than pinned, and cross-checked against the
+    # archive directory name so a mislabelled manifest cannot pass. The directory name
+    # is written by the packager as Mac-<configuration>-<stamp>-<short sha>, which is an
+    # identifier the manifest text cannot alter after the fact.
+    configuration = metadata.get("configuration")
+    if configuration not in SUPPORTED_CONFIGURATIONS:
+        raise VerificationError(
+            f"manifest configuration is missing or unsupported: {configuration!r} "
+            f"(expected one of {', '.join(SUPPORTED_CONFIGURATIONS)})"
+        )
+    # Only cross-check when the archive still carries the packager's own naming
+    # convention. A renamed or relocated archive, and the synthetic archives the test
+    # suite builds in temp directories, are still verifiable — the name is corroborating
+    # evidence where it exists, not a precondition for verifying integrity.
+    archive_name = app.parent.name
+    if PACKAGER_ARCHIVE_NAME.match(archive_name) and not archive_name.startswith(
+        f"Mac-{configuration}-"
+    ):
+        raise VerificationError(
+            f"manifest configuration {configuration!r} does not match the archive "
+            f"directory name {archive_name!r}"
+        )
     for key in ("source_commit", "origin_main", "remote_main"):
         _require_sha(metadata, key, SHA40)
     for key in ("normal_startup_smoke_sha256", "legacy_stress_startup_smoke_sha256"):
