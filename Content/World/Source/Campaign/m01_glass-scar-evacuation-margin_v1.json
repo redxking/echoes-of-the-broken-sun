@@ -165,8 +165,17 @@
   "founding_doctrine_variants": [
     {
       "doctrine": "Harvest",
-      "terrain_region_ops": [],
-      "expected_blocked_cell_count": 306
+      "terrain_region_ops": [
+        {
+          "id": "harvest-well-approach-east-collapse",
+          "op": "open",
+          "x0": 36,
+          "x1": 38,
+          "y0": 26,
+          "y1": 29
+        }
+      ],
+      "expected_blocked_cell_count": 294
     },
     {
       "doctrine": "Preserve",
@@ -175,8 +184,25 @@
     },
     {
       "doctrine": "Reshape",
-      "terrain_region_ops": [],
-      "expected_blocked_cell_count": 306
+      "terrain_region_ops": [
+        {
+          "id": "reshape-scar-reknit-south-lip",
+          "op": "block",
+          "x0": 29,
+          "x1": 35,
+          "y0": 33,
+          "y1": 34
+        },
+        {
+          "id": "reshape-east-span-cavern-mouth",
+          "op": "open",
+          "x0": 41,
+          "x1": 41,
+          "y0": 30,
+          "y1": 32
+        }
+      ],
+      "expected_blocked_cell_count": 317
     }
   ],
   "required_clearance": [

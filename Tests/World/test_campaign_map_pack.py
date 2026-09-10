@@ -241,3 +241,116 @@ class CampaignMapPackTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MissionOneDoctrineDivergenceTest(unittest.TestCase):
+    """M01's founding choice must change the ground, not just the wording.
+
+    Before 2026-09-09 all three M01 doctrine masks were byte-identical, so the
+    campaign's central irreversible decision altered no route whatsoever. These
+    assertions are the machine-checked version of that requirement: the masks
+    must differ pairwise, and the difference must be reachability, established
+    by breadth-first search rather than by eye.
+    """
+
+    GRID = 64
+    ARCHIVE = (22, 18)
+    WELL = (32, 32)
+    DOCTRINES = ("Harvest", "Preserve", "Reshape")
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        root = Path(__file__).resolve().parents[2]
+        cls.source = json.loads(
+            (root / "Content/World/Source/Campaign"
+                    "/m01_glass-scar-evacuation-margin_v1.json").read_text()
+        )
+        cls.variants = {v["doctrine"]: v for v in cls.source["founding_doctrine_variants"]}
+
+    def blocked(self, doctrine: str) -> set[tuple[int, int]]:
+        cells: set[tuple[int, int]] = set()
+        ops = list(self.source["terrain_region_ops"])
+        ops += list(self.variants[doctrine]["terrain_region_ops"])
+        for op in ops:
+            for y in range(op["y0"], op["y1"] + 1):
+                for x in range(op["x0"], op["x1"] + 1):
+                    if op["op"] == "block":
+                        cells.add((x, y))
+                    else:
+                        cells.discard((x, y))
+        return cells
+
+    def reachable(self, blocked: set, start: tuple[int, int]) -> set:
+        from collections import deque
+
+        seen = {start}
+        queue = deque([start])
+        while queue:
+            x, y = queue.popleft()
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nxt = (x + dx, y + dy)
+                if not (0 <= nxt[0] < self.GRID and 0 <= nxt[1] < self.GRID):
+                    continue
+                if nxt in blocked or nxt in seen:
+                    continue
+                seen.add(nxt)
+                queue.append(nxt)
+        return seen
+
+    def test_declared_blocked_counts_match_the_authored_ops(self) -> None:
+        for doctrine in self.DOCTRINES:
+            with self.subTest(doctrine=doctrine):
+                self.assertEqual(
+                    len(self.blocked(doctrine)),
+                    self.variants[doctrine]["expected_blocked_cell_count"],
+                )
+
+    def test_the_three_doctrine_masks_differ_pairwise(self) -> None:
+        digests = {}
+        for doctrine in self.DOCTRINES:
+            cells = self.blocked(doctrine)
+            bits = bytes(
+                1 if (x, y) in cells else 0
+                for y in range(self.GRID)
+                for x in range(self.GRID)
+            )
+            digests[doctrine] = hashlib.sha256(bits).hexdigest()
+        self.assertEqual(
+            len(set(digests.values())), 3,
+            f"M01 doctrine masks must differ; got {digests}",
+        )
+
+    def test_reshape_opens_ground_the_other_doctrines_never_reach(self) -> None:
+        reach = {d: self.reachable(self.blocked(d), self.ARCHIVE) for d in self.DOCTRINES}
+        only_reshape = reach["Reshape"] - reach["Harvest"] - reach["Preserve"]
+        self.assertTrue(
+            only_reshape,
+            "Reshape must make ground reachable that Harvest and Preserve cannot reach",
+        )
+        self.assertEqual(sorted(only_reshape), [(41, 30), (41, 31), (41, 32)])
+
+    def test_reshape_closes_the_scar_crossing_beneath_the_well(self) -> None:
+        south_of_well = (32, 36)
+        for doctrine in ("Harvest", "Preserve"):
+            with self.subTest(doctrine=doctrine):
+                blocked = self.blocked(doctrine)
+                corridor = {
+                    cell for cell in self.reachable(blocked, self.WELL)
+                    if 29 <= cell[0] <= 35 and 30 <= cell[1] <= 34
+                }
+                self.assertIn((32, 34), corridor)
+        reshaped = self.blocked("Reshape")
+        self.assertIn((32, 33), reshaped)
+        self.assertIn((32, 34), reshaped)
+        self.assertNotIn(self.WELL, reshaped)
+        self.assertIn(south_of_well, self.reachable(reshaped, self.WELL))
+
+    def test_every_required_site_stays_reachable_under_every_doctrine(self) -> None:
+        sites = {s["id"]: (s["x"], s["y"]) for s in self.source["required_passable"]}
+        for doctrine in self.DOCTRINES:
+            blocked = self.blocked(doctrine)
+            reach = self.reachable(blocked, self.ARCHIVE)
+            for name, cell in sites.items():
+                with self.subTest(doctrine=doctrine, site=name):
+                    self.assertNotIn(cell, blocked)
+                    self.assertIn(cell, reach)

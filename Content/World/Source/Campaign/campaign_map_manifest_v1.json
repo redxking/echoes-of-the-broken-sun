@@ -8,7 +8,7 @@
       "map_id": "glass-scar-evacuation-margin",
       "operation_mode": "CampaignPrologue",
       "source_path": "Content/World/Source/Campaign/m01_glass-scar-evacuation-margin_v1.json",
-      "source_sha256": "8ae50fa5adf740f0f7f0508c151e82c4e86b7f3a1e70cf323717ee536418669b"
+      "source_sha256": "7b66cf21c7ba5a37f373f9b42f341e6bec8955c18e4716f5ab3ad1a042f2e7ee"
     },
     {
       "mission_code": "M02",
