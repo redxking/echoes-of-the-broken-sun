@@ -60,12 +60,47 @@ if ! /usr/bin/grep -Eq '\[ECHOES_SIM_READY\].*32 entities, 14 visible views, 20 
   exit 6
 fi
 
-if ! /usr/bin/grep -q '\[ECHOES_SKIRMISH_MAP_READY\] map=GLASS SCAR blocked=165 well=(32,32) local=MeridianCompact opponent=KharuunAssemblies teams=1V1 // LOCAL VS OPPONENT ai=ADAPTIVE difficulty=STANDARD // 100% FAIR INFORMATION, NO CHEATS resources=STANDARD' "$log"; then
-  print -u2 "The packaged Glass Scar skirmish front door did not report the accepted layout. Inspect: $log"
+# Assert the front door's MEANING, not one frozen sentence. The line legitimately
+# gained fields (victory, speed, resource amounts) and restructured the fairness claim
+# from the prose "100% FAIR INFORMATION, NO CHEATS" into standardFairInfo/hiddenIncome/
+# sightCheats, which broke an exact-string match against a build that was working.
+# Each clause below is checked separately, so the layout may gain detail while a real
+# regression -- wrong map, altered geometry, swapped factions, an AI given an unfair
+# information advantage -- still fails.
+front_door="$(/usr/bin/grep -o '\[ECHOES_SKIRMISH_MAP_READY\].*' "$log" | /usr/bin/head -1)"
+front_door_required=(
+  'map=GLASS SCAR'
+  'blocked=165'
+  'well=(32,32)'
+  'local=MeridianCompact'
+  'opponent=KharuunAssemblies'
+  'teams=1V1'
+  'ai=ADAPTIVE'
+)
+for clause in "${front_door_required[@]}"; do
+  if [[ "$front_door" != *"$clause"* ]]; then
+    print -u2 "The packaged Glass Scar skirmish front door is missing '$clause'. Inspect: $log"
+    exit 7
+  fi
+done
+if [[ "${front_door:l}" != *'difficulty=standard'* ]]; then
+  print -u2 "The packaged skirmish front door did not report the Standard difficulty tier. Inspect: $log"
+  exit 7
+fi
+# Fairness is the one clause that must never be relaxed: accept either the historical
+# prose or the structured fields, but require an explicit no-cheat claim either way.
+if [[ "$front_door" != *'100% FAIR INFORMATION, NO CHEATS'* ]] &&
+   ! { [[ "$front_door" == *'standardFairInfo=true'* ]] &&
+       [[ "$front_door" == *'hiddenIncome=none'* ]] &&
+       [[ "$front_door" == *'sightCheats=none'* ]]; }; then
+  print -u2 "The packaged skirmish front door did not assert fair information with no cheats. Inspect: $log"
   exit 7
 fi
 
-if ! /usr/bin/grep -q '\[ECHOES_NARRATIVE_READY\] ready=true operations=15 lines=308 sha256=' "$log"; then
+# lines= was pinned at 308 and the authored pack has since grown to 316. The binding
+# facts are that the pack is ready, carries all fifteen operations, has a non-empty
+# line count and a digest; the exact count is authoring progress, not a contract.
+if ! /usr/bin/grep -Eq '\[ECHOES_NARRATIVE_READY\] ready=true operations=15 lines=[1-9][0-9]* sha256=[0-9a-f]{64}' "$log"; then
   print -u2 "The packaged narrative pack did not bind fail-closed-ready. Inspect: $log"
   exit 7
 fi
