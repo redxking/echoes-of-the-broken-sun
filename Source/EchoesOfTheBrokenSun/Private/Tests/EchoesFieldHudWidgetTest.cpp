@@ -477,6 +477,48 @@ bool FEchoesFieldHudWidgetTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Global resource hit bounds do not cover the central tactical target"),
         !Console.ResourcePanel.IsInsideOrOn(FEchoesHudLayout::KeyboardTargetPoint(FVector2D(1280,720),1.5f,FVector2D::ZeroVector)));
 
+    // WI-1: the console must never place a panel outside the pixel space its
+    // rects are expressed in. The recorded defect drew panels sized for one
+    // surface onto another and truncated the ledger, objectives, selection,
+    // command card and results actions all at once
+    // (BuildArtifacts/Evidence/connected-input-20260909T204502Z, defect 2),
+    // while a -nullrhi suite stayed green because nothing compares pixels.
+    for (const FVector2D& Resolution : {FVector2D(1280, 720),
+                                        FVector2D(1920, 1080),
+                                        FVector2D(2560, 1440)})
+    {
+        for (const float ConfineScale : {0.8f, 1.0f, 1.5f})
+        {
+            const FEchoesHudLayout Confined =
+                FEchoesHudLayout::Build(Resolution, ConfineScale, true);
+            TestTrue(*FString::Printf(
+                    TEXT("Console stays on screen at %.0fx%.0f scale %.1f"),
+                    Resolution.X, Resolution.Y, ConfineScale),
+                Confined.IsFullyOnScreen());
+            TestTrue(*FString::Printf(
+                    TEXT("Console records the space it was built for at %.0fx%.0f"),
+                    Resolution.X, Resolution.Y),
+                Confined.ViewSize.Equals(Resolution, 1.0));
+            // Every visible panel must also be non-degenerate, or a "visible"
+            // command card can be a sliver that swallows clicks and shows nothing.
+            for (const TPair<FBox2D, bool>& Panel : Confined.VisiblePanels())
+            {
+                if (!Panel.Value) continue;
+                TestTrue(*FString::Printf(
+                        TEXT("Visible panel is readable at %.0fx%.0f scale %.1f"),
+                        Resolution.X, Resolution.Y, ConfineScale),
+                    Panel.Key.GetSize().X >= 24.0 && Panel.Key.GetSize().Y >= 24.0);
+            }
+        }
+    }
+    // The mismatch itself: rects built for a larger surface, confined to the
+    // smaller one actually being drawn. Nothing may survive outside it.
+    FEchoesHudLayout Mismatched = FEchoesHudLayout::Build(FVector2D(2560, 1440), 1.0f, true);
+    Mismatched.ViewSize = FVector2D(1280, 720);
+    Mismatched.ConfineToView();
+    TestTrue(TEXT("A 2560x1440 console confined to a 1280x720 surface leaves nothing off screen"),
+        Mismatched.IsFullyOnScreen());
+
     const FVector2D MenuCenter = Console.MenuPanel.GetCenter();
     TestTrue(TEXT("Menu hit coverage is supplied by the shared HUD layout"),
         Console.bMenuVisible && Console.IsPointerOnChrome(MenuCenter));

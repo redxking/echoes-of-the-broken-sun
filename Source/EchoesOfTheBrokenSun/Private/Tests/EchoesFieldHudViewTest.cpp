@@ -93,6 +93,142 @@ bool FEchoesFieldHudViewTest::RunTest(const FString& Parameters)
         FEchoesFieldHudModel::BuildPlayerScoped(*Player, Selected, false);
     TestEqual(TEXT("Live view declares player-view authority"),
         Live.Authority, EEchoesFieldHudAuthority::LivePlayerView);
+
+    // WI-2: the HUD match state must be read from the seat that is looking at
+    // it. A joining network client is always bound to seat 1, so the previous
+    // seat-blind mapping showed DEFEAT to a client who had just won, while the
+    // result screen and result audio said victory about the same match.
+    TestEqual(TEXT("Seat 1 winning reads VICTORY to seat 1"),
+        FEchoesFieldHudModel::MatchStateText(MatchOutcome::Player1Victory, 1)
+            .ToString(), FString(TEXT("VICTORY")));
+    TestEqual(TEXT("Seat 0 winning reads DEFEAT to seat 1"),
+        FEchoesFieldHudModel::MatchStateText(MatchOutcome::Player0Victory, 1)
+            .ToString(), FString(TEXT("DEFEAT")));
+    TestEqual(TEXT("Seat 0 winning still reads VICTORY to seat 0"),
+        FEchoesFieldHudModel::MatchStateText(MatchOutcome::Player0Victory, 0)
+            .ToString(), FString(TEXT("VICTORY")));
+    TestEqual(TEXT("Seat 1 winning reads DEFEAT to seat 0"),
+        FEchoesFieldHudModel::MatchStateText(MatchOutcome::Player1Victory, 0)
+            .ToString(), FString(TEXT("DEFEAT")));
+    TestEqual(TEXT("A draw reads the same to either seat"),
+        FEchoesFieldHudModel::MatchStateText(MatchOutcome::Draw, 1).ToString(),
+        FEchoesFieldHudModel::MatchStateText(MatchOutcome::Draw, 0).ToString());
+    TestEqual(TEXT("An unfinished match reads ACTIVE"),
+        FEchoesFieldHudModel::MatchStateText(MatchOutcome::Ongoing, 1)
+            .ToString(), FString(TEXT("ACTIVE")));
+
+    // WI-5: hovering must say what is under the pointer, and must say nothing
+    // about anything the scoped view does not carry. HiddenEnemy is outside
+    // this player's vision, so it must resolve to no identity at all.
+    const FEchoesFieldHudModel::FHoverIdentity OwnIdentity =
+        FEchoesFieldHudModel::HoverIdentity(*Player, LocalProducer);
+    TestTrue(TEXT("Hovering an owned producer resolves an identity"),
+        OwnIdentity.IsKnown());
+    TestEqual(TEXT("Hovered producer reports its type"),
+        OwnIdentity.TypeLabel.ToString(), FString(TEXT("Production Structure")));
+    const FEchoesFieldHudModel::FHoverIdentity FoggedIdentity =
+        FEchoesFieldHudModel::HoverIdentity(*Player, HiddenEnemy);
+    TestFalse(TEXT("Hovering a fogged entity resolves no identity"),
+        FoggedIdentity.IsKnown());
+    TestTrue(TEXT("A fogged hover leaks neither name nor type"),
+        FoggedIdentity.Name.IsEmpty() && FoggedIdentity.TypeLabel.IsEmpty());
+    const FEchoesFieldHudModel::FHoverIdentity NoEntity =
+        FEchoesFieldHudModel::HoverIdentity(*Player, 0);
+    TestFalse(TEXT("Hovering empty ground resolves no identity"),
+        NoEntity.IsKnown());
+
+    // WI-3: a queued plan must be drawable, not merely counted. Before this a
+    // three-leg route was presented as the words "RALLY 3 WAYPOINTS" and
+    // nothing appeared on the ground.
+    if (Entity* Marching = SimulationValue.MutableEntityForTesting(LocalSurveyor))
+    {
+        Marching->order.type = OrderType::Move;
+        Marching->order.destination = Vec2::FromTiles(16, 16);
+        Marching->orderQueue.clear();
+        Order SecondLeg;
+        SecondLeg.type = OrderType::Move;
+        SecondLeg.destination = Vec2::FromTiles(20, 18);
+        Order ThirdLeg;
+        ThirdLeg.type = OrderType::Move;
+        ThirdLeg.destination = Vec2::FromTiles(24, 22);
+        Marching->orderQueue.push_back(SecondLeg);
+        Marching->orderQueue.push_back(ThirdLeg);
+    }
+    const std::optional<PlayerView> RouteView = SimulationValue.CreatePlayerView(0);
+    if (TestTrue(TEXT("Route scoped view materializes"), RouteView.has_value()))
+    {
+        const TArray<uint32> MarchSelection{LocalSurveyor};
+        const FEchoesFieldHudView Routed =
+            FEchoesFieldHudModel::BuildPlayerScoped(*RouteView, MarchSelection, false);
+        TestEqual(TEXT("A three-leg queued march draws three legs"),
+            Routed.OrderRoutes.Num(), 3);
+        if (Routed.OrderRoutes.Num() == 3)
+        {
+            TestEqual(TEXT("Legs are numbered in the order they were given"),
+                Routed.OrderRoutes[0].Ordinal, 1);
+            TestEqual(TEXT("Second leg carries ordinal two"),
+                Routed.OrderRoutes[1].Ordinal, 2);
+            TestEqual(TEXT("Third leg carries ordinal three"),
+                Routed.OrderRoutes[2].Ordinal, 3);
+            // Legs must join end to end, or the drawn route is a starburst
+            // from the unit rather than a path.
+            TestTrue(TEXT("Each leg starts where the previous one ended"),
+                Routed.OrderRoutes[1].From.Equals(Routed.OrderRoutes[0].To, 0.1) &&
+                Routed.OrderRoutes[2].From.Equals(Routed.OrderRoutes[1].To, 0.1));
+            TestFalse(TEXT("A unit march is not marked as a rally route"),
+                Routed.OrderRoutes[0].bRally);
+        }
+        // An unselected owner contributes nothing, so routes vanish with the
+        // selection rather than accumulating on screen.
+        const FEchoesFieldHudView Unselected = FEchoesFieldHudModel::BuildPlayerScoped(
+            *RouteView, TArray<uint32>{}, false);
+        TestEqual(TEXT("Deselecting clears the drawn route"),
+            Unselected.OrderRoutes.Num(), 0);
+    }
+    if (Entity* Marching = SimulationValue.MutableEntityForTesting(LocalSurveyor))
+    {
+        // Completing the plan must clear the breadcrumbs.
+        Marching->order = Order{};
+        Marching->orderQueue.clear();
+    }
+    const std::optional<PlayerView> ClearedView = SimulationValue.CreatePlayerView(0);
+    if (ClearedView.has_value())
+    {
+        const TArray<uint32> MarchSelection{LocalSurveyor};
+        const FEchoesFieldHudView Cleared = FEchoesFieldHudModel::BuildPlayerScoped(
+            *ClearedView, MarchSelection, false);
+        TestEqual(TEXT("An emptied order queue leaves no route drawn"),
+            Cleared.OrderRoutes.Num(), 0);
+    }
+    if (Entity* Producer = SimulationValue.MutableEntityForTesting(LocalProducer))
+    {
+        Producer->rallyRoute.clear();
+        for (const Vec2& Waypoint : {Vec2::FromTiles(11, 12),
+                                     Vec2::FromTiles(14, 15),
+                                     Vec2::FromTiles(17, 19)})
+        {
+            Order Leg;
+            Leg.type = OrderType::Move;
+            Leg.destination = Waypoint;
+            Producer->rallyRoute.push_back(Leg);
+        }
+    }
+    const std::optional<PlayerView> RallyView = SimulationValue.CreatePlayerView(0);
+    if (RallyView.has_value())
+    {
+        const TArray<uint32> RallySelection{LocalProducer};
+        const FEchoesFieldHudView Rallied = FEchoesFieldHudModel::BuildPlayerScoped(
+            *RallyView, RallySelection, false);
+        TestEqual(TEXT("A three-waypoint rally route draws end to end"),
+            Rallied.OrderRoutes.Num(), 3);
+        if (Rallied.OrderRoutes.Num() == 3)
+        {
+            TestTrue(TEXT("Rally legs are marked as a rally route"),
+                Rallied.OrderRoutes[0].bRally && Rallied.OrderRoutes[2].bRally);
+            TestTrue(TEXT("Rally legs join end to end"),
+                Rallied.OrderRoutes[1].From.Equals(Rallied.OrderRoutes[0].To, 0.1));
+        }
+    }
     TestTrue(TEXT("Live ledger comes from scoped player resources"),
         Live.Resources.bVisible && Live.Resources.Matter == 900 &&
             Live.Resources.Dawn == 120);

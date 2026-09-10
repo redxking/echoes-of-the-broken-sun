@@ -333,6 +333,70 @@ void BuildNetworkMinimap(
 }
 
 // The live scoped view supplies operational flags. Do not infer a modern network
+/** Draw the plan: one leg per queued order for every selected entity.
+ *
+ * Only the scoped view is read, so a route is shown exactly when its owner is
+ * visible to this player. A producer contributes its rally route instead of a
+ * march, which is what the "RALLY n WAYPOINTS" counter used to stand in for. */
+void AddOrderRoutes(const PlayerView& Scoped, const TArray<uint32>& Selected,
+                    FEchoesFieldHudView& Out)
+{
+    const auto WorldFromTiles = [&Scoped](const Vec2& Position)
+    {
+        return FVector(
+            (double(Position.x.Raw()) / kFixedScale -
+             Scoped.Config().mapWidthTiles * 0.5) *
+                UEchoesSimulationSubsystem::TileWorldSize,
+            (double(Position.y.Raw()) / kFixedScale -
+             Scoped.Config().mapHeightTiles * 0.5) *
+                UEchoesSimulationSubsystem::TileWorldSize,
+            20.0);
+    };
+    // An order with no destination - Stop, or a target-only attack - has no
+    // point on the ground to draw, so it contributes no leg rather than a leg
+    // to the map origin.
+    const auto HasDestination = [](const Order& OrderValue)
+    {
+        return OrderValue.type != OrderType::None &&
+               (OrderValue.destination.x.Raw() != 0 ||
+                OrderValue.destination.y.Raw() != 0);
+    };
+    for (const Entity& E : Scoped.Entities())
+    {
+        if (!Selected.Contains(E.id) || E.owner != Scoped.Player().id ||
+            E.hitPoints <= 0)
+        {
+            continue;
+        }
+        const bool bRally = !E.rallyRoute.empty();
+        FVector Cursor = WorldFromTiles(E.position);
+        int32 Ordinal = 0;
+        const auto AddLeg = [&](const Order& OrderValue)
+        {
+            if (!HasDestination(OrderValue))
+            {
+                return;
+            }
+            const FVector Destination = WorldFromTiles(OrderValue.destination);
+            Out.OrderRoutes.Add({Cursor, Destination, ++Ordinal, bRally});
+            Cursor = Destination;
+        };
+        if (bRally)
+        {
+            for (const Order& Leg : E.rallyRoute)
+            {
+                AddLeg(Leg);
+            }
+            continue;
+        }
+        AddLeg(E.order);
+        for (const Order& Queued : E.orderQueue)
+        {
+            AddLeg(Queued);
+        }
+    }
+}
+
 // in legacy playback or a network keyframe that does not carry those flags.
 void AddNetworkFeedback(const PlayerView& Scoped, const TArray<uint32>& Selected,
                         FEchoesFieldHudView& Out)
@@ -768,16 +832,36 @@ const echoes::sim::net::ScopedEntityState* FindScopedEntity(
     return nullptr;
 }
 
-FText OutcomeText(MatchOutcome Outcome)
+/** The match state as the seat reading the HUD experiences it.
+ *
+ * This used to map Player0Victory to VICTORY and every other seat's win to
+ * DEFEAT with no seat parameter. A joining network client is always bound to
+ * seat 1, so a client who won was shown DEFEAT on the HUD while the result
+ * screen and the result audio correctly said victory - the two surfaces
+ * disagreed about who won the same match. The seat is now required. */
+FText OutcomeTextImpl(MatchOutcome Outcome, PlayerId ViewerSeat)
 {
-    switch (Outcome)
+    const auto SeatFor = [](MatchOutcome Value) -> int32
     {
-        case MatchOutcome::Player0Victory: return LOCTEXT("OutcomeVictory", "VICTORY");
-        case MatchOutcome::Player1Victory:
-        case MatchOutcome::Player2Victory:
-        case MatchOutcome::Player3Victory: return LOCTEXT("OutcomeDefeat", "DEFEAT");
-        case MatchOutcome::Draw: return LOCTEXT("OutcomeDraw", "DRAW");
-        case MatchOutcome::Ongoing: break;
+        switch (Value)
+        {
+            case MatchOutcome::Player0Victory: return 0;
+            case MatchOutcome::Player1Victory: return 1;
+            case MatchOutcome::Player2Victory: return 2;
+            case MatchOutcome::Player3Victory: return 3;
+            default: return INDEX_NONE;
+        }
+    };
+    const int32 WinningSeat = SeatFor(Outcome);
+    if (WinningSeat != INDEX_NONE)
+    {
+        return WinningSeat == static_cast<int32>(ViewerSeat)
+            ? LOCTEXT("OutcomeVictory", "VICTORY")
+            : LOCTEXT("OutcomeDefeat", "DEFEAT");
+    }
+    if (Outcome == MatchOutcome::Draw)
+    {
+        return LOCTEXT("OutcomeDraw", "DRAW");
     }
     return LOCTEXT("OutcomeActive", "ACTIVE");
 }
@@ -1454,6 +1538,38 @@ void BuildMissionMarkers(
 }
 }
 
+FEchoesFieldHudModel::FHoverIdentity FEchoesFieldHudModel::HoverIdentity(
+    const PlayerView& PlayerViewValue,
+    uint32 EntityId,
+    const FEchoesContentCatalog* Catalog)
+{
+    FHoverIdentity Identity;
+    if (EntityId == 0)
+    {
+        return Identity;
+    }
+    // Scan the scoped view, never the world. The scoped view is already the
+    // fog boundary; an entity absent from it is one the player cannot see.
+    for (const Entity& Candidate : PlayerViewValue.Entities())
+    {
+        if (Candidate.id != EntityId)
+        {
+            continue;
+        }
+        Identity.Name = NamedEntity(Candidate.faction, Candidate.type, Catalog);
+        Identity.TypeLabel = EntityName(Candidate.type);
+        break;
+    }
+    return Identity;
+}
+
+FText FEchoesFieldHudModel::MatchStateText(
+    MatchOutcome Outcome,
+    PlayerId ViewerSeat)
+{
+    return OutcomeTextImpl(Outcome, ViewerSeat);
+}
+
 FEchoesFieldHudView FEchoesFieldHudModel::BuildPlayerScoped(
     const echoes::sim::PlayerView& PlayerView,
     const TArray<uint32>& SelectedEntityIds,
@@ -1489,6 +1605,7 @@ FEchoesFieldHudView FEchoesFieldHudModel::BuildPlayerScoped(
     }
     View.Selection.bVisible = !View.Selection.Entries.IsEmpty();
     AddNetworkFeedback(PlayerView, SelectedEntityIds, View);
+    AddOrderRoutes(PlayerView, SelectedEntityIds, View);
     AddRelayFeedback(PlayerView, SelectedEntityIds, View);
     AddBulwarkFeedback(PlayerView.Player().id, PlayerView.CurrentTick(), PlayerView.Config().ticksPerSecond,
         PlayerView.UsesBulwarkCommitmentRules(), SelectedEntityIds,
@@ -1913,7 +2030,11 @@ bool FEchoesFieldHudModel::Build(
             AddNetworkFeedback(*Player, NetworkIds, OutView);
         }
         OutView.Resources.OpponentFaction = Text(Controller.GetOpponentFactionLabel());
-        OutView.Resources.MatchState = OutcomeText(SimulationValue->Outcome());
+        // The scoped view is built for one seat; that same seat decides whether
+        // the recorded outcome reads as a win or a loss.
+        OutView.Resources.MatchState =
+            FEchoesFieldHudModel::MatchStateText(
+                SimulationValue->Outcome(), Player->Player().id);
     }
     ApplySettings(Context.Settings, OutView);
     OutView.Status = Text(Controller.IsBuildPlacementActive()

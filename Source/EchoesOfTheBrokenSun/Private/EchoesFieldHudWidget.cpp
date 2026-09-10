@@ -4,6 +4,8 @@
 #include "EchoesPlayerController.h"
 #include "EchoesHudLayout.h"
 #include "EchoesHudGlyph.h"
+#include "EchoesTypeface.h"
+#include "Engine/Font.h"
 #include "Components/ProgressBar.h"
 #include "Components/SizeBox.h"
 #include "Brushes/SlateColorBrush.h"
@@ -86,12 +88,29 @@ FLinearColor ToneColor(EEchoesFieldHudTone Tone, bool bHighContrast)
     }
 }
 
+/** The project's vendored faces, or the engine default if one is missing.
+ *
+ * Space Grotesk carries interface chrome and IBM Plex Mono carries numeric
+ * readouts, per the resolved typeface decision. The accessors already fall back
+ * to an engine font and log when a vendored file cannot be found, so a missing
+ * file degrades to readable stock text rather than to no text at all. */
+[[nodiscard]] FSlateFontInfo BrandedFont(bool bReadout, int32 Size)
+{
+    UFont* Face = bReadout ? EchoesTypeface::Readout() : EchoesTypeface::Chrome();
+    if (Face == nullptr)
+    {
+        return FCoreStyle::GetDefaultFontStyle(bReadout ? "Mono" : "Regular", Size);
+    }
+    return FSlateFontInfo(Face, Size, TEXT("Regular"));
+}
+
 void ConfigureText(
     UTextBlock* Text,
     const FText& Value,
     int32 BaseSize,
     float Scale,
-    const FLinearColor& Color)
+    const FLinearColor& Color,
+    bool bReadout = false)
 {
     if (Text == nullptr)
     {
@@ -101,9 +120,11 @@ void ConfigureText(
     Text->SetColorAndOpacity(Color);
     Text->SetAutoWrapText(true);
     Text->SetVisibility(ESlateVisibility::HitTestInvisible);
-    FSlateFontInfo Font = Text->GetFont();
-    Font.Size = FMath::Clamp(FMath::RoundToInt(BaseSize * Scale), 10, 36);
-    Text->SetFont(Font);
+    // The face is set here rather than inherited: every console text block is
+    // created from the widget default, so inheriting left the whole HUD in
+    // stock Roboto while five vendored faces shipped unused.
+    Text->SetFont(BrandedFont(
+        bReadout, FMath::Clamp(FMath::RoundToInt(BaseSize * Scale), 10, 36)));
 }
 
 FText JoinedLine(const FEchoesFieldHudLine& Line)
@@ -738,7 +759,7 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
             Column->AddChildToHorizontalBox(Label)->SetPadding(FMargin(0, 0, 3 * Scale, 0));
             ResourceLabels.Add(Label);
             UTextBlock* Value = WidgetTree->ConstructWidget<UTextBlock>();
-            ConfigureText(Value, FText::GetEmpty(), 18, Scale, TextColor(bHighContrast));
+            ConfigureText(Value, FText::GetEmpty(), 18, Scale, TextColor(bHighContrast), true);
             Column->AddChildToHorizontalBox(Value);
             ResourceValues.Add(Value);
         }
@@ -1592,8 +1613,7 @@ bool UEchoesFieldHudWidget::IsPointerOverChrome(
     const float ViewportScale = UWidgetLayoutLibrary::GetViewportScale(this);
     if (View.Surface == EEchoesFieldHudSurface::Battlefield || View.Surface == EEchoesFieldHudSurface::Replay)
     {
-        const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
-            RootGeometry.GetLocalSize() * ViewportScale, View.HudScale, !View.Status.IsEmpty());
+        const FEchoesHudLayout Layout = ResolveConsoleLayout();
         if ((Layout.bBottomBarVisible &&
              Layout.BottomBar.IsInsideOrOn(ScreenPosition)) ||
             (Layout.bMenuVisible && Layout.MenuPanel.IsInsideOrOn(ScreenPosition)))
@@ -2521,6 +2541,32 @@ FReply UEchoesFieldHudWidget::NativeOnKeyUp(
     return Super::NativeOnKeyUp(InGeometry, InKeyEvent);
 }
 
+FVector2D UEchoesFieldHudWidget::ResolveConsolePixels() const
+{
+    const FGeometry Geometry = GetCachedGeometry();
+    const FVector2D Local = Geometry.GetLocalSize();
+    const float Dpi = FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this));
+    // Before the first paint a Slate host reports no geometry. Falling back to
+    // the engine viewport there is safe because nothing has been drawn yet; the
+    // next tick replaces it with the surface actually on screen.
+    if (Local.X < 1.0 || Local.Y < 1.0)
+    {
+        FVector2D Viewport = FVector2D::ZeroVector;
+        if (const UWorld* World = GetWorld())
+        {
+            Viewport = UWidgetLayoutLibrary::GetViewportSize(const_cast<UWorld*>(World));
+        }
+        return Viewport.X >= 1.0 && Viewport.Y >= 1.0 ? Viewport : FVector2D(1280.0, 720.0);
+    }
+    return Local * Dpi;
+}
+
+FEchoesHudLayout UEchoesFieldHudWidget::ResolveConsoleLayout() const
+{
+    return FEchoesHudLayout::Build(
+        ResolveConsolePixels(), View.HudScale, !View.Status.IsEmpty());
+}
+
 void UEchoesFieldHudWidget::ApplyConsoleLayout(const FVector2D& ViewportPixels)
 {
     // Arrange from this frame's viewport size, not last frame's child geometry.
@@ -2567,8 +2613,7 @@ void UEchoesFieldHudWidget::NativeTick(
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
 
-    ApplyConsoleLayout(MyGeometry.GetLocalSize() *
-        FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this)));
+    ApplyConsoleLayout(ResolveConsolePixels());
 
     if (View.bTutorialActive && !View.TutorialSkipModal.bVisible)
     {
@@ -2614,7 +2659,8 @@ int32 UEchoesFieldHudWidget::NativePaint(
 
     // Project live, player-scoped geometry each paint so camera movement cannot
     // leave stale ranges on screen. Clip it above the console; it owns no input.
-    if (APlayerController* Player = GetOwningPlayer(); Player && !View.NetworkCoverage.IsEmpty())
+    if (APlayerController* Player = GetOwningPlayer();
+        Player && (!View.NetworkCoverage.IsEmpty() || !View.OrderRoutes.IsEmpty()))
     {
         const FVector2D Size = AllottedGeometry.GetLocalSize();
         const float Scale = FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this));
@@ -2647,6 +2693,48 @@ int32 UEchoesFieldHudWidget::NativePaint(
                 Line(Coverage.Center + FVector(FMath::Cos(A), FMath::Sin(A), 0) * Coverage.Radius,
                      Coverage.Center + FVector(FMath::Cos(B), FMath::Sin(B), 0) * Coverage.Radius,
                      Coverage.bOperational ? FLinearColor(0.1f, 0.85f, 1.0f, 0.95f) : FLinearColor(1, 1, 1, 0.8f));
+            }
+        }
+        // The plan the player already gave: a segment per queued leg with its
+        // number at the far end. Without this a multi-leg route existed only as
+        // a waypoint count in text, so a three-leg march showed the digit 3 and
+        // nothing on the ground. Drawn only while its owner is selected.
+        if (!View.OrderRoutes.IsEmpty())
+        {
+            // Reduced flashing removes the emphasis contrast rather than the
+            // route; the plan itself is information, not decoration.
+            const FLinearColor MarchColor = View.bHighContrast
+                ? FLinearColor(1.0f, 0.95f, 0.2f, 0.98f)
+                : FLinearColor(0.35f, 0.95f, 0.7f, 0.92f);
+            const FLinearColor RallyColor = View.bHighContrast
+                ? FLinearColor(1.0f, 0.6f, 0.1f, 0.98f)
+                : FLinearColor(0.98f, 0.7f, 0.2f, 0.92f);
+            const FSlateFontInfo OrdinalFont = BrandedFont(true, 11);
+            for (const FEchoesFieldHudRouteLeg& Leg : View.OrderRoutes)
+            {
+                const FLinearColor LegColor = Leg.bRally ? RallyColor : MarchColor;
+                Line(Leg.From, Leg.To, LegColor);
+                FVector2D Pip;
+                if (!Player->ProjectWorldLocationToScreen(Leg.To, Pip, true))
+                {
+                    continue;
+                }
+                const FVector2D PipLocal = Pip / Scale;
+                constexpr float PipSize = 10.0f;
+                DrawBox(OutDrawElements, MaxLayer + 2, AllottedGeometry,
+                    PipLocal - FVector2D(PipSize * 0.5f, PipSize * 0.5f),
+                    FVector2D(PipSize, PipSize), LegColor);
+                FSlateDrawElement::MakeText(
+                    OutDrawElements,
+                    MaxLayer + 3,
+                    AllottedGeometry.ToPaintGeometry(
+                        FVector2D(24.0f, 16.0f),
+                        FSlateLayoutTransform(
+                            PipLocal + FVector2D(PipSize * 0.6f, -PipSize))),
+                    FString::FromInt(Leg.Ordinal),
+                    OrdinalFont,
+                    ESlateDrawEffect::None,
+                    LegColor);
             }
         }
         OutDrawElements.PopClip();
@@ -2715,7 +2803,7 @@ int32 UEchoesFieldHudWidget::NativePaint(
         // Target name label
         if (!View.TutorialSpotlight.TargetName.IsEmpty())
         {
-            const FSlateFontInfo NameFont = FCoreStyle::GetDefaultFontStyle("Bold", 12);
+            const FSlateFontInfo NameFont = BrandedFont(false, 12);
             const FVector2D LabelPos(MinX, FMath::Max(4.0f, MinY - 22.0f));
             FSlateDrawElement::MakeText(
                 OutDrawElements,
@@ -2732,7 +2820,7 @@ int32 UEchoesFieldHudWidget::NativePaint(
         // Action prompt badge directly beneath spotlight (SPEC-TUT-005)
         if (!View.TutorialSpotlight.ActionPrompt.IsEmpty())
         {
-            const FSlateFontInfo ActionFont = FCoreStyle::GetDefaultFontStyle("Bold", 10);
+            const FSlateFontInfo ActionFont = BrandedFont(false, 10);
             const FString ActionText = View.TutorialSpotlight.ActionPrompt.ToString();
             const float BadgeWidth = FMath::Clamp(static_cast<float>(ActionText.Len()) * 7.5f + 20.0f, 160.0f, 340.0f);
             const float BadgeHeight = 24.0f;
@@ -2816,7 +2904,7 @@ int32 UEchoesFieldHudWidget::NativePaint(
             BorderCol, 1.2f, true);
 
         // Text
-        const FSlateFontInfo SkipFont = FCoreStyle::GetDefaultFontStyle("Regular", 12);
+        const FSlateFontInfo SkipFont = BrandedFont(false, 12);
         const FLinearColor TextCol = View.bHighContrast
             ? FLinearColor::White
             : FLinearColor(0.72f, 0.78f, 0.82f, 0.90f);
@@ -2898,7 +2986,7 @@ int32 UEchoesFieldHudWidget::NativePaint(
             BannerBorder, 1.5f, true);
 
         // Header: Lesson title
-        const FSlateFontInfo HeaderFont = FCoreStyle::GetDefaultFontStyle("Bold", 10);
+        const FSlateFontInfo HeaderFont = BrandedFont(false, 10);
         FSlateDrawElement::MakeText(
             OutDrawElements,
             MaxLayer + 5,
@@ -2911,7 +2999,7 @@ int32 UEchoesFieldHudWidget::NativePaint(
             BannerBorder);
 
         // Body: Active instruction
-        const FSlateFontInfo BodyFont = FCoreStyle::GetDefaultFontStyle("Bold", 11);
+        const FSlateFontInfo BodyFont = BrandedFont(false, 11);
         const FLinearColor BodyColor = View.bHighContrast
             ? FLinearColor::White
             : FLinearColor(0.95f, 0.97f, 1.0f, 1.0f);

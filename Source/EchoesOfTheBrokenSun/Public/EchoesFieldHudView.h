@@ -379,6 +379,26 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesTutorialSkipModalView final
  * arrays and contains no simulation, controller, actor, or UObject pointer.
  */
 /** Presentation-only, owned network geometry; never grants gameplay connectivity. */
+/** One drawn leg of a plan the player has already given.
+ *
+ * Before this, an accepted order produced a single 2.4s destination pip and a
+ * multi-leg route existed only as the words "RALLY n WAYPOINTS" - a player who
+ * set a three-leg route saw the number three and nothing on the map. A leg is
+ * emitted per queued order so the whole plan is visible while its owner is
+ * selected, and disappears with the selection. Presentation only. */
+struct FEchoesFieldHudRouteLeg final
+{
+    FVector From = FVector::ZeroVector;
+    FVector To = FVector::ZeroVector;
+    /** 1-based position in its own route, drawn at To. */
+    int32 Ordinal = 0;
+    /** A producer's rally route rather than a selected unit's march. */
+    bool bRally = false;
+
+    friend bool operator==(const FEchoesFieldHudRouteLeg&,
+                           const FEchoesFieldHudRouteLeg&) = default;
+};
+
 struct FEchoesNetworkCoverageView final
 {
     FVector Center = FVector::ZeroVector;
@@ -409,6 +429,8 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudView final
     FEchoesFieldHudResourceView Resources;
     FEchoesFieldHudSelectionView Selection;
     TArray<FEchoesNetworkCoverageView> NetworkCoverage;
+    /** Queued-order breadcrumbs and rally routes for the current selection. */
+    TArray<FEchoesFieldHudRouteLeg> OrderRoutes;
     TArray<FEchoesNetworkConnectionView> NetworkConnections;
     FEchoesFieldHudProductionView Production;
     FEchoesFieldHudCommandView Commands;
@@ -445,6 +467,33 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudModel final
         const FEchoesFieldHudBuildContext& Context,
         FEchoesFieldHudView& OutView,
         FString& OutError);
+
+    /** Name and type of the entity under the pointer, for the hover readout.
+     *
+     * Resolved from the player-scoped view only. An entity the scoped view does
+     * not carry - anything under fog - resolves to empty rather than to a name,
+     * so hovering can never report knowledge the player has not earned. The
+     * pointer path already resolves ownership and legality from this same view
+     * but carried no identity, so hovering never said WHAT was under it. */
+    struct FHoverIdentity final
+    {
+        FText Name;
+        FText TypeLabel;
+        [[nodiscard]] bool IsKnown() const { return !Name.IsEmpty(); }
+    };
+    [[nodiscard]] static FHoverIdentity HoverIdentity(
+        const echoes::sim::PlayerView& PlayerView,
+        uint32 EntityId,
+        const FEchoesContentCatalog* Catalog = nullptr);
+
+    /** The match state as one seat experiences it.
+     *
+     * Exposed because the mapping was seat-blind: a network client is always
+     * bound to seat 1, so a client who won read DEFEAT on the HUD while the
+     * result screen said victory. Asserting it needs the seat in hand. */
+    [[nodiscard]] static FText MatchStateText(
+        echoes::sim::MatchOutcome Outcome,
+        echoes::sim::PlayerId ViewerSeat);
 
     /** Testable fair-information boundaries used by Build. */
     [[nodiscard]] static FEchoesFieldHudView BuildPlayerScoped(

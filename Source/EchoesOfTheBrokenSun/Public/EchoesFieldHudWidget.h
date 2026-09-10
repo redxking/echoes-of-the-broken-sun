@@ -346,6 +346,14 @@ class ECHOESOFTHEBROKENSUN_API UEchoesFieldHudWidget final
 public:
     /** Shared pixel-space layout; also usable before first paint in isolated Slate hosts. */
     void ApplyConsoleLayout(const FVector2D& ViewportPixels);
+    /** The one pixel space this widget draws, places and hit-tests in.
+     *
+     * Every console consumer must resolve through here. Mixing this with an
+     * engine-reported viewport size is the recorded mismatch that clipped the
+     * console away while the window was borderless at a different resolution. */
+    [[nodiscard]] FVector2D ResolveConsolePixels() const;
+    /** The confined layout for this frame, in the space above. */
+    [[nodiscard]] struct FEchoesHudLayout ResolveConsoleLayout() const;
     UEchoesFieldHudWidget(const FObjectInitializer& ObjectInitializer);
     void Configure(AEchoesPlayerController* InController);
     void SetView(const FEchoesFieldHudView& InView);

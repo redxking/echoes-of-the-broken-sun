@@ -24,6 +24,10 @@ struct FEchoesHudLayout final
     bool bSelectionVisible = false;
     bool bCommandDeckVisible = false;
     bool bStatusVisible = false;
+    // The pixel space every rect above is expressed in. A consumer that draws
+    // or hit-tests in a different space is the resolution-mismatch defect that
+    // clipped the whole console away, so the space travels with the rects.
+    FVector2D ViewSize = FVector2D::ZeroVector;
 
     [[nodiscard]] static FEchoesHudLayout Build(
         const FVector2D& ViewportSize,
@@ -103,7 +107,96 @@ struct FEchoesHudLayout final
         Layout.bObjectiveVisible = Layout.bSelectionVisible;
         Layout.bCommandDeckVisible = Layout.bSelectionVisible;
         Layout.bStatusVisible = bHasStatusMessage && Layout.StatusPanel.Min.Y >= Edge;
+        Layout.ViewSize = FVector2D(Width, Height);
+        Layout.ConfineToView();
         return Layout;
+    }
+
+    /** Intersect every panel with the view and drop whatever no longer fits.
+     *
+     * Build sizes panels from whatever the caller passed. When that size
+     * disagreed with the surface actually being drawn - a borderless 2560x1440
+     * window while the engine reported 1280x720 - the resource ledger,
+     * objectives, selection panel, command card and results actions were all
+     * truncated off screen and pointer input reached nothing
+     * (BuildArtifacts/Evidence/connected-input-20260909T204502Z, defect 2).
+     * Clamping here makes that unrepresentable for every consumer at once: a
+     * panel is either wholly inside the space its rects are expressed in, or it
+     * is not visible. A panel clamped below its readable minimum is hidden
+     * rather than drawn as a sliver, because a truncated command card that
+     * still hit-tests is worse than an absent one. */
+    void ConfineToView()
+    {
+        const double Width = FMath::Max(1.0, ViewSize.X);
+        const double Height = FMath::Max(1.0, ViewSize.Y);
+        // A panel narrower or shorter than this cannot carry its own label, so
+        // it is withdrawn instead of clipped to an unreadable strip.
+        constexpr double MinReadable = 24.0;
+        const auto Confine = [Width, Height](FBox2D& Rect, bool& bVisible)
+        {
+            if (!bVisible)
+            {
+                return;
+            }
+            if (Rect.Min.ContainsNaN() || Rect.Max.ContainsNaN() ||
+                Rect.Max.X <= Rect.Min.X || Rect.Max.Y <= Rect.Min.Y)
+            {
+                bVisible = false;
+                return;
+            }
+            Rect.Min.X = FMath::Clamp(Rect.Min.X, 0.0, Width);
+            Rect.Min.Y = FMath::Clamp(Rect.Min.Y, 0.0, Height);
+            Rect.Max.X = FMath::Clamp(Rect.Max.X, 0.0, Width);
+            Rect.Max.Y = FMath::Clamp(Rect.Max.Y, 0.0, Height);
+            if (Rect.GetSize().X < MinReadable || Rect.GetSize().Y < MinReadable)
+            {
+                bVisible = false;
+            }
+        };
+        Confine(BottomBar, bBottomBarVisible);
+        Confine(MenuPanel, bMenuVisible);
+        Confine(ResourcePanel, bResourceVisible);
+        Confine(MinimapPanel, bMinimapVisible);
+        Confine(ObjectivePanel, bObjectiveVisible);
+        Confine(SelectionPanel, bSelectionVisible);
+        Confine(CommandDeckPanel, bCommandDeckVisible);
+        Confine(StatusPanel, bStatusVisible);
+        MainPanel = SelectionPanel;
+    }
+
+    /** Every rect a consumer may draw or hit-test, paired with its flag. Used
+     * by automation to assert containment without restating the panel list. */
+    [[nodiscard]] TArray<TPair<FBox2D, bool>> VisiblePanels() const
+    {
+        return {
+            {BottomBar, bBottomBarVisible},
+            {MenuPanel, bMenuVisible},
+            {ResourcePanel, bResourceVisible},
+            {MinimapPanel, bMinimapVisible},
+            {ObjectivePanel, bObjectiveVisible},
+            {SelectionPanel, bSelectionVisible},
+            {CommandDeckPanel, bCommandDeckVisible},
+            {StatusPanel, bStatusVisible}};
+    }
+
+    /** True when no visible panel leaves the space its rects are built in. */
+    [[nodiscard]] bool IsFullyOnScreen() const
+    {
+        for (const TPair<FBox2D, bool>& Panel : VisiblePanels())
+        {
+            if (!Panel.Value)
+            {
+                continue;
+            }
+            if (Panel.Key.Min.X < -KINDA_SMALL_NUMBER ||
+                Panel.Key.Min.Y < -KINDA_SMALL_NUMBER ||
+                Panel.Key.Max.X > ViewSize.X + KINDA_SMALL_NUMBER ||
+                Panel.Key.Max.Y > ViewSize.Y + KINDA_SMALL_NUMBER)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** A stable keyboard target in the unobstructed battlefield. Reserve the
