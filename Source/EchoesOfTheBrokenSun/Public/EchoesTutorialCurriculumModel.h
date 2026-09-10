@@ -23,6 +23,12 @@
  * checksums.
  */
 
+/**
+ * Authored lesson keys. This names every key the demo narrative contract
+ * encodes, including keys whose predicates are not written yet;
+ * `EchoesTutorialLessonCount` states how many of them actually exist as
+ * verifiable lessons and therefore form the completion contract.
+ */
 enum class EEchoesTutorialLesson : uint8
 {
     Survey = 0,
@@ -37,7 +43,44 @@ enum class EEchoesTutorialLesson : uint8
     Well,
 };
 
-inline constexpr int32 EchoesTutorialLessonCount = 10;
+/** Every authored key in `EEchoesTutorialLesson`, implemented or not. */
+inline constexpr int32 EchoesTutorialAuthoredLessonKeys = 10;
+
+/**
+ * THE single source of truth for the curriculum's size: the number of lessons
+ * whose predicates are implemented and provable from authoritative state.
+ *
+ * It defines the curriculum these reducers evaluate, the profile completion
+ * contract (`FEchoesPlayerProfile::AllTutorialLessonsMask`) and the practice
+ * gate (`FEchoesTutorialPracticeState::ImplementedLessonMask`); both are
+ * derived from it rather than written independently.
+ *
+ * Those two were separate literals -- 0x03FF against 0x001F -- so completion
+ * demanded ten verified lessons while only five could ever be awarded. The
+ * only mask writer commits bits 1/2/4/8/16, so the mask could never reach the
+ * contract, `IsTutorialMasteryComplete()` was a constant false, and no input
+ * sequence could finish the tutorial: a player who completed every available
+ * lesson and won the readiness drill was told their proof was not recorded.
+ * Deriving both from one constant makes that divergence unrepresentable.
+ *
+ * Raise this only together with the lesson's predicate. A lesson with no
+ * predicate cannot be earned, so requiring one reinstates the same soft-lock.
+ */
+inline constexpr int32 EchoesTutorialLessonCount = 5;
+
+/** The implemented curriculum as a contiguous profile mask. */
+inline constexpr uint16 EchoesTutorialLessonMask =
+    static_cast<uint16>((1u << EchoesTutorialLessonCount) - 1u);
+
+static_assert(
+    EchoesTutorialLessonCount > 0,
+    "an empty curriculum would make mastery vacuously complete");
+static_assert(
+    EchoesTutorialLessonCount <= EchoesTutorialAuthoredLessonKeys,
+    "every implemented lesson needs an authored key in EEchoesTutorialLesson");
+static_assert(
+    EchoesTutorialAuthoredLessonKeys <= 16,
+    "the persisted lesson mask is a uint16");
 
 enum class EEchoesTutorialLessonState : uint8
 {

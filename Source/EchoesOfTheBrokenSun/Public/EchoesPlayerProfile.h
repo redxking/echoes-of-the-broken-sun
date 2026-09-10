@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "EchoesTutorialCurriculumModel.h"
 #include "GenericPlatform/GenericWindow.h"
 
 class UEchoesGameUserSettings;
@@ -14,12 +15,17 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesPlayerProfile final
 {
     static constexpr uint16 MinimumSupportedSchemaVersion = 1;
     static constexpr uint16 SchemaVersion = 2;
-    static constexpr uint16 AllTutorialLessonsMask = 0x03FF;
+    /**
+     * The completion contract, derived from the implemented curriculum so the
+     * contract and the earnable set cannot disagree. See
+     * `EchoesTutorialLessonCount` for what a divergence here used to cost.
+     */
+    static constexpr uint16 AllTutorialLessonsMask = EchoesTutorialLessonMask;
 
     uint8 ActiveJourneySlot = 1;
     bool bOnboardingOffered = false;
     bool bTutorialOptOut = false;
-    /** Contiguous low bits for the ten curriculum lessons, in authored order. */
+    /** Contiguous low bits for the implemented curriculum, in authored order. */
     uint16 TutorialVerifiedMask = 0;
     /** Authoritative proof that the independent readiness operation ended in Corefall. */
     bool bReadinessOperationVerified = false;
@@ -49,7 +55,7 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesPlayerProfile final
         UEchoesGameUserSettings& Settings,
         FString& OutError) const;
 
-    /** Requires all curriculum lessons plus the independent readiness operation. */
+    /** Requires every implemented lesson plus the independent readiness operation. */
     [[nodiscard]] bool IsTutorialMasteryComplete() const;
 
     friend bool operator==(

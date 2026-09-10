@@ -139,15 +139,19 @@ bool FEchoesTutorialCurriculumTest::RunTest(const FString& Parameters)
                      EEchoesTutorialLessonState::Locked &&
                  !Skipped.bMasteryComplete && Skipped.ActiveLessonIndex == 0);
 
-    // Lessons 0-4 verified so lesson 5's prerequisite is met; lesson 5 is
-    // opened rather than verified, so faulting it is a coherent history.
-    TArray<FEchoesTutorialLessonFacts> WithLoss = CurriculumVerifiedThrough(5);
-    WithLoss[5].bUnrecoverableFault = true;
+    // Index relative to the curriculum's size so this stays a reachable
+    // lesson as lessons land: everything before it is verified, so its
+    // prerequisite is met, and it is opened rather than verified.
+    constexpr int32 FaultedLesson = 2;
+    static_assert(FaultedLesson < EchoesTutorialLessonCount);
+    TArray<FEchoesTutorialLessonFacts> WithLoss =
+        CurriculumVerifiedThrough(FaultedLesson);
+    WithLoss[FaultedLesson].bUnrecoverableFault = true;
     const FEchoesTutorialCurriculumState Failed =
         FModel::DetermineCurriculumState(WithLoss);
     TestTrue(TEXT("An unrecoverable fault fails the curriculum and withholds mastery"),
              Failed.bFailed && !Failed.bMasteryComplete &&
-                 Failed.ActiveLessonIndex == 5);
+                 Failed.ActiveLessonIndex == FaultedLesson);
 
     const FEchoesTutorialCurriculumState Malformed =
         FModel::DetermineCurriculumState(
@@ -194,7 +198,7 @@ bool FEchoesTutorialCurriculumTest::RunTest(const FString& Parameters)
 
     TArray<FEchoesTutorialLessonFacts> Shuffled =
         CurriculumVerifiedThrough(EchoesTutorialLessonCount);
-    Shuffled[4].LessonOrdinal = 7;
+    Shuffled[EchoesTutorialLessonCount - 1].LessonOrdinal = 7;
     const FEchoesTutorialCurriculumState Misaligned =
         FModel::DetermineCurriculumState(Shuffled);
     TestTrue(TEXT("An ordinal disagreeing with its position withholds mastery without failing"),
@@ -255,12 +259,15 @@ bool FEchoesTutorialCurriculumTest::RunTest(const FString& Parameters)
     // --- Data/code correspondence ---------------------------------------
     // These keys are the shipped demo contract's lesson keys in its trigger
     // prerequisite order (Content/Narrative/Source/demo/tutorial_readiness_check.json).
-    const TCHAR* const ExpectedKeys[EchoesTutorialLessonCount] = {
+    // Every authored key is checked, not just the implemented prefix: the keys
+    // are the contract's, and they must keep agreeing with it while the
+    // implemented curriculum grows to meet them.
+    const TCHAR* const ExpectedKeys[EchoesTutorialAuthoredLessonKeys] = {
         TEXT("survey"), TEXT("roster"), TEXT("muster"), TEXT("route"),
         TEXT("reserve"), TEXT("link"), TEXT("foundry"), TEXT("probe"),
         TEXT("board"), TEXT("well")};
     bool bKeysMatch = true;
-    for (int32 Index = 0; Index < EchoesTutorialLessonCount; ++Index)
+    for (int32 Index = 0; Index < EchoesTutorialAuthoredLessonKeys; ++Index)
     {
         bKeysMatch = bKeysMatch &&
             FString(FModel::StableName(

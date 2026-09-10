@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 
+#include "EchoesTutorialCurriculumModel.h"
+
 /** Local presentation navigation only; gameplay and storage retain their own authorities. */
 enum class EEchoesShellScreen : uint8
 {
@@ -33,7 +35,12 @@ enum class EEchoesShellAction : uint8
 /** Transient per-lesson practice state. It never owns durable profile facts. */
 struct FEchoesTutorialPracticeState final
 {
-    static constexpr uint16 ImplementedLessonMask = 0x001f;
+    /**
+     * The practice gate, derived from the same constant as the completion
+     * contract. Practising a lesson whose predicate does not exist can never
+     * be verified, and a gate wider than the contract soft-locks completion.
+     */
+    static constexpr uint16 ImplementedLessonMask = EchoesTutorialLessonMask;
 
     [[nodiscard]] bool Begin(uint16 LessonBit)
     {

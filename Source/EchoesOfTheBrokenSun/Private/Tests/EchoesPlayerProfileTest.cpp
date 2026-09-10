@@ -116,12 +116,19 @@ bool FEchoesPlayerProfileTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("An absent profile does not replace caller state"),
              MissingSentinel == MissingBefore);
 
-    const FEchoesPlayerProfile First = MakeProfile(2, 0x001F);
+    // One lesson short of the contract, expressed against the contract itself
+    // so it stays genuinely partial as the implemented curriculum grows.
+    static constexpr uint16 PartialCurriculumMask = static_cast<uint16>(
+        FEchoesPlayerProfile::AllTutorialLessonsMask >> 1);
+    static_assert(
+        PartialCurriculumMask != FEchoesPlayerProfile::AllTutorialLessonsMask,
+        "the partial fixture must not satisfy the completion contract");
+    const FEchoesPlayerProfile First = MakeProfile(2, PartialCurriculumMask);
     TestFalse(TEXT("Partial verified curriculum does not grant mastery"),
               First.IsTutorialMasteryComplete());
     FEchoesPlayerProfile LessonsOnly =
         MakeProfile(2, FEchoesPlayerProfile::AllTutorialLessonsMask);
-    TestFalse(TEXT("Ten verified lessons do not grant readiness mastery"),
+    TestFalse(TEXT("Every verified lesson still does not grant readiness mastery"),
               LessonsOnly.IsTutorialMasteryComplete());
     FEchoesPlayerProfile Mastered = LessonsOnly;
     Mastered.bReadinessOperationVerified = true;

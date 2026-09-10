@@ -165,14 +165,14 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
     }
     if (!IsOrderedTutorialMask(Profile.TutorialVerifiedMask))
     {
-        OutError = TEXT("[PROFILE_TUTORIAL_MASK_INVALID] Verified tutorial lessons must be the contiguous authored prefix of the ten-lesson curriculum.");
+        OutError = TEXT("[PROFILE_TUTORIAL_MASK_INVALID] Verified tutorial lessons must be the contiguous authored prefix of the implemented curriculum.");
         return false;
     }
     if (Profile.bReadinessOperationVerified &&
         Profile.TutorialVerifiedMask !=
             FEchoesPlayerProfile::AllTutorialLessonsMask)
     {
-        OutError = TEXT("[PROFILE_READINESS_STATE_INVALID] Readiness-operation proof requires all ten verified curriculum lessons.");
+        OutError = TEXT("[PROFILE_READINESS_STATE_INVALID] Readiness-operation proof requires every implemented curriculum lesson verified.");
         return false;
     }
     if (Profile.bTutorialOptOut && !Profile.bOnboardingOffered)
