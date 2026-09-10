@@ -310,6 +310,10 @@ def build_manifest(
                 "speed": speed,
                 "wav_path": wav_relative.as_posix(),
                 "wav_sha256": wav_sha256,
+                # Filled by write_prepared_sources once the placed copy is
+                # loudness-mastered. wav_sha256 stays the candidate digest so
+                # the provenance chain back to the reviewed candidate holds.
+                "mastered_sha256": "",
                 "duration_seconds": wav_info["duration_seconds"],
                 "sample_rate_hz": wav_info["sample_rate_hz"],
                 "channels": wav_info["channels"],
@@ -355,7 +359,7 @@ MANIFEST_KEYS = {
 }
 LINE_KEYS = {
     "ordinal", "line_id", "speaker_id", "speaker", "text", "text_sha256", "runtime_signal",
-    "voice_hook", "voice_id", "speed", "wav_path", "wav_sha256", "duration_seconds",
+    "voice_hook", "voice_id", "speed", "wav_path", "wav_sha256", "mastered_sha256", "duration_seconds",
     "sample_rate_hz", "channels", "subtype", "asset_path", "candidate_source_path", "candidate_status",
 }
 
@@ -480,8 +484,10 @@ def validate_prepared_manifest(
         if verify_prepared_wavs:
             wav_path = _safe_child(project_root, line["wav_path"], f"manifest.lines[{index}].wav_path")
             wav_info = inspect_wav(wav_path)
-            if line["wav_sha256"] != sha256_file(wav_path):
-                raise VoiceBindingError(f"manifest.lines[{index}].wav_sha256: mismatch")
+            expected = line["mastered_sha256"] or line["wav_sha256"]
+            if expected != sha256_file(wav_path):
+                raise VoiceBindingError(
+                    f"manifest.lines[{index}].mastered_sha256: mismatch")
             for field in ("sample_rate_hz", "channels", "subtype"):
                 if line[field] != wav_info[field]:
                     raise VoiceBindingError(f"manifest.lines[{index}].{field}: WAV mismatch")
@@ -521,7 +527,8 @@ def write_prepared_sources(manifest: dict[str, Any], project_root: Path, candida
         source = _safe_child(candidate_root, line["candidate_source_path"], f"{line['line_id']}.candidate")
         destination = _safe_child(project_root, line["wav_path"], f"{line['line_id']}.wav_path")
         destination.parent.mkdir(parents=True, exist_ok=True)
-        if destination.is_file() and sha256_file(destination) == line["wav_sha256"]:
+        if destination.is_file() and line.get("mastered_sha256") and \
+                sha256_file(destination) == line["mastered_sha256"]:
             continue
         descriptor, temporary_name = tempfile.mkstemp(
             prefix=f".{destination.name}.", dir=destination.parent
@@ -538,6 +545,19 @@ def write_prepared_sources(manifest: dict[str, Any], project_root: Path, candida
             except FileNotFoundError:
                 pass
             raise
+
+        # The candidate is peak-protected, not loudness-normalized, so the
+        # placed copy is mastered to its bus target here. Doing it inside the
+        # prepare step is what keeps the recorded digest and the bytes on disk
+        # from drifting apart: "prepared" means mastered and hashed.
+        import master_voice_audio as mastering
+
+        report = mastering.master_one(destination, write=True)
+        if not (report.get("within_target") and report.get("within_ceiling")):
+            raise VoiceBindingError(
+                f"{line['line_id']}: mastering missed its bus target "
+                f"({report.get('after')})")
+        line["mastered_sha256"] = sha256_file(destination)
 
     manifest_path = project_root / OUTPUT_RELATIVE
     payload = canonical_manifest_bytes(manifest)

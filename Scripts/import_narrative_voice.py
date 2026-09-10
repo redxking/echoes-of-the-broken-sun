@@ -75,7 +75,9 @@ def _expected_tags(line: dict[str, Any], manifest: dict[str, Any], manifest_sha2
         "Echoes.NarrativeSourceSha256": manifest["source_sha256"],
         "Echoes.BindingManifestSha256": manifest_sha256,
         "Echoes.CandidateSource": line["candidate_source_path"],
-        "Echoes.AssetRevision": f"m01-voice-{line['wav_sha256']}",
+        # Keyed to the mastered bytes: a re-master must produce a new
+        # revision, or the importer reuses the stale asset silently.
+        "Echoes.AssetRevision": f"m01-voice-{line.get('mastered_sha256') or line['wav_sha256']}",
     }
 
 
@@ -176,7 +178,8 @@ def import_line(
         )
 
     source_path = (PROJECT_ROOT / line["wav_path"]).resolve()
-    if bindings.sha256_file(source_path) != line["wav_sha256"]:
+    expected_wav_sha256 = line.get("mastered_sha256") or line["wav_sha256"]
+    if bindings.sha256_file(source_path) != expected_wav_sha256:
         raise RuntimeError(f"{line['line_id']}: WAV changed after manifest validation")
     asset_name = line["voice_hook"]
     task = unreal.AssetImportTask()
