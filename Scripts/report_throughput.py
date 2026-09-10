@@ -24,10 +24,16 @@ def git(*args):
                           env=UTC_ENV).stdout
 
 def commits_between(start, end_exclusive):
-    out = git("log", "--pretty=%H %ad", "--date=short",
+    """Commits in [start, end) as (sha, unix_seconds), newest first."""
+    out = git("log", "--pretty=%H %at",
               f"--since={start}T00:00:00+0000",
               f"--until={end_exclusive}T00:00:00+0000")
-    return [l for l in out.splitlines() if l.strip()]
+    rows = []
+    for line in out.splitlines():
+        if line.strip():
+            sha, at = line.split()
+            rows.append((sha, int(at)))
+    return rows
 
 def evidence_dirs():
     """Evidence directories by mtime date — the per-gate ceremony cost."""
@@ -42,16 +48,42 @@ def evidence_dirs():
     return by_day
 
 def period(label, start, end_exclusive, ev):
+    """Report a window.
+
+    Rate is computed over the ELAPSED time actually spanned by the commits, not the
+    calendar span of the window. Dividing a 66-minute sample by a 2-day window reported
+    11/day for a window running at roughly 11/hour, and printed it as a regression.
+    Short windows report commits and elapsed time and are not projected to a daily rate.
+    """
     rows = commits_between(start, end_exclusive)
-    days = (datetime.date.fromisoformat(end_exclusive)
-            - datetime.date.fromisoformat(start)).days
     n = len(rows)
     ev_n = sum(c for day, c in ev.items() if start <= day < end_exclusive)
-    rate = n / days if days else 0.0
     per_commit = (ev_n / n) if n else 0.0
+    calendar_days = (datetime.date.fromisoformat(end_exclusive)
+                     - datetime.date.fromisoformat(start)).days
+
+    if n >= 2:
+        times = [t for _, t in rows]
+        elapsed_s = max(times) - min(times)
+    else:
+        elapsed_s = 0
+    elapsed_h = elapsed_s / 3600.0
+
+    # Only extrapolate to a daily rate once the sample actually spans about a day.
+    if elapsed_h >= 24.0:
+        rate = n / (elapsed_h / 24.0)
+        rate_text = f"per_day={rate:<6.1f}"
+    else:
+        rate = None
+        hours = f"{elapsed_h:.1f}h" if n >= 2 else "n/a"
+        rate_text = f"elapsed={hours:<6} (short sample: not projected)"
+
     print(f"{label:<26} {start}..{end_exclusive}  "
-          f"commits={n:<5} days={days:<3} per_day={rate:<6.1f} "
+          f"commits={n:<5} {rate_text} "
           f"evidence_dirs={ev_n:<4} dirs_per_commit={per_commit:.2f}")
+    if rate is None and n:
+        print(f"{'':<26}   {n} commits over {elapsed_h:.2f}h "
+              f"({calendar_days}-day window); divide yourself if you need a rate")
     return n, rate
 
 def main():
@@ -65,8 +97,12 @@ def main():
     if before[1] and after[1]:
         delta = (after[1] - before[1]) / before[1] * 100.0
         print(f"\nchange in landed commits per day: {delta:+.1f}%")
+    else:
+        print("\nno rate comparison: at least one window is too short to project.")
     print("\nThis measures rate and evidence volume only. It does not measure "
-          "change size, quality, or whether the evidence was warranted.")
+          "change size, quality, or whether the evidence was warranted.\n"
+          "An early sprint lands its cheap wins first, so a first-hour rate is not a "
+          "sustainable rate and must not be projected forward.")
 
 if __name__ == "__main__":
     sys.exit(main())
