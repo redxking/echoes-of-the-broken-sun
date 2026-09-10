@@ -45,6 +45,27 @@ void RefreshProfileChecksum(TArray<uint8>& Bytes)
         FCrc::MemCrc32(Bytes.GetData(), ChecksumOffset));
 }
 
+/**
+ * Rewrite current-schema bytes as a genuine schema-one record: schema one
+ * predates the skipped/after-skip masks and the recorded contract width, so it
+ * is five payload bytes shorter and declares that shorter length. Relabelling
+ * the version alone would produce a file no released version ever wrote, and
+ * would exercise the length check instead of the migration under test.
+ */
+void MakeSchemaOneRecord(TArray<uint8>& Bytes)
+{
+    constexpr int32 SchemaOnePayloadSize = 49;
+    constexpr int32 ChecksumSize = 4;
+    constexpr int32 AppendedSinceSchemaOne = 5;
+    Bytes.RemoveAt(
+        Bytes.Num() - ChecksumSize - AppendedSinceSchemaOne,
+        AppendedSinceSchemaOne);
+    WriteProfileU16(
+        Bytes, 8, FEchoesPlayerProfile::MinimumSupportedSchemaVersion);
+    WriteProfileU16(Bytes, 10, static_cast<uint16>(SchemaOnePayloadSize));
+    RefreshProfileChecksum(Bytes);
+}
+
 FEchoesPlayerProfile MakeProfile(uint8 Slot, uint16 TutorialMask)
 {
     FEchoesPlayerProfile Profile;
@@ -97,9 +118,9 @@ bool FEchoesPlayerProfileTest::RunTest(const FString& Parameters)
               FString(TEXT("Profile.sav")));
     TestTrue(TEXT("Profile storage is independent of campaign storage"),
              ProfilePath != FEchoesCampaignProgressStore::GetDefaultPath());
-    TestEqual(TEXT("Readiness proof uses player-profile schema two"),
+    TestEqual(TEXT("Skipped and after-skip lesson records use player-profile schema three"),
               FEchoesPlayerProfile::SchemaVersion,
-              static_cast<uint16>(2));
+              static_cast<uint16>(3));
     TestEqual(TEXT("Player-profile schema one remains readable"),
               FEchoesPlayerProfile::MinimumSupportedSchemaVersion,
               static_cast<uint16>(1));
@@ -117,7 +138,7 @@ bool FEchoesPlayerProfileTest::RunTest(const FString& Parameters)
              MissingSentinel == MissingBefore);
 
     // One lesson short of the contract, expressed against the contract itself
-    // so it stays genuinely partial as the implemented curriculum grows.
+    // so it stays genuinely partial as lessons land.
     static constexpr uint16 PartialCurriculumMask = static_cast<uint16>(
         FEchoesPlayerProfile::AllTutorialLessonsMask >> 1);
     static_assert(
@@ -148,6 +169,7 @@ bool FEchoesPlayerProfileTest::RunTest(const FString& Parameters)
               IFileManager::Get().FileExists(*ImpossibleReadinessPath));
     FEchoesPlayerProfile NonContiguous = First;
     NonContiguous.TutorialVerifiedMask = 0x0005;
+    // 0x0005 is bits 0 and 2 with bit 1 absent: a hole, not a prefix.
     TestFalse(TEXT("A noncontiguous lesson mask cannot derive mastery"),
               NonContiguous.IsTutorialMasteryComplete());
 
@@ -187,11 +209,7 @@ bool FEchoesPlayerProfileTest::RunTest(const FString& Parameters)
     TArray<uint8> LegacyBytes;
     TestTrue(TEXT("The legacy-source profile bytes can be inspected"),
              FFileHelper::LoadFileToArray(LegacyBytes, *LegacyPath));
-    WriteProfileU16(
-        LegacyBytes,
-        8,
-        FEchoesPlayerProfile::MinimumSupportedSchemaVersion);
-    RefreshProfileChecksum(LegacyBytes);
+    MakeSchemaOneRecord(LegacyBytes);
     TestTrue(TEXT("A checksum-valid schema one fixture is written"),
              FFileHelper::SaveArrayToFile(LegacyBytes, *LegacyPath));
     FEchoesPlayerProfile MigratedLegacy;
@@ -291,10 +309,7 @@ bool FEchoesPlayerProfileTest::RunTest(const FString& Parameters)
                         TEXT("PROFILE_READINESS_STATE_INVALID"));
 
     TArray<uint8> ForgedLegacyReadiness = FirstBytes;
-    WriteProfileU16(
-        ForgedLegacyReadiness,
-        8,
-        FEchoesPlayerProfile::MinimumSupportedSchemaVersion);
+    MakeSchemaOneRecord(ForgedLegacyReadiness);
     ForgedLegacyReadiness[13] |= 1u << 7;
     RefreshProfileChecksum(ForgedLegacyReadiness);
     VerifyRejectedBytes(TEXT("Schema one readiness flag"),

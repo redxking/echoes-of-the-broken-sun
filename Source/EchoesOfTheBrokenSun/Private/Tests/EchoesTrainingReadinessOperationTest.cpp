@@ -6,6 +6,7 @@
 
 #include "EchoesCampaignTerrainBinding.h"
 #include "EchoesPlayerController.h"
+#include "EchoesPlayerProfile.h"
 #include "EchoesMatchReplay.h"
 #include "EchoesNetworkSession.h"
 #include "EchoesSimulationSubsystem.h"
@@ -623,6 +624,24 @@ bool FEchoesTrainingReadinessOperationTest::RunTest(const FString& Parameters)
     TutorialController->ResetTutorialObservation();
     TestEqual(TEXT("Observer reset preserves current-session guidance progress"),
         TutorialController->GetTutorialProgressMask(), uint16(7));
+    // The skip and the completions earned behind it must outlive the process.
+    // They were controller members nothing serialized, so quitting here used
+    // to discard every one of them and restart the player at lesson one.
+    FEchoesPlayerProfile PersistedProgress;
+    bool bPersistedExists = false;
+    FString PersistedFeedback;
+    TestTrue(TEXT("The tutorial progress record reloads from disk"),
+        FEchoesPlayerProfileStore::LoadWithBackup(
+            FEchoesPlayerProfileStore::GetDefaultPath(), PersistedProgress,
+            bPersistedExists, PersistedFeedback) && bPersistedExists);
+    TestEqual(TEXT("A skipped lesson survives a cold restart"),
+        PersistedProgress.TutorialSkippedMask, uint16(1));
+    TestEqual(TEXT("Lessons earned after a skip survive a cold restart"),
+        PersistedProgress.TutorialSessionVerifiedMask, uint16(6));
+    TestEqual(TEXT("A cold restart still grants no durable mastery"),
+        PersistedProgress.TutorialVerifiedMask, uint16(0));
+    TestEqual(TEXT("Reloaded progress reaches the same lessons"),
+        PersistedProgress.GetTutorialProgressMask(), uint16(7));
     TutorialController->Destroy();
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);

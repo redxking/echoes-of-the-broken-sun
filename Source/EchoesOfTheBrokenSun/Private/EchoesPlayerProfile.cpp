@@ -14,8 +14,20 @@ namespace
 {
 constexpr uint8 ProfileMagic[] = {'E', 'C', 'H', 'O', 'P', 'R', 'F', '1'};
 constexpr int32 ProfileHeaderSize = 12;
-constexpr int32 ProfilePayloadSize = 49;
+/** Schemas 1 and 2: through AmbienceVolume. */
+constexpr int32 LegacyProfilePayloadSize = 49;
+/** Schema 3 appends both extra lesson masks and the contract width. */
+constexpr int32 ProfilePayloadSize = LegacyProfilePayloadSize + 5;
 constexpr int32 ProfileChecksumSize = 4;
+constexpr uint16 TutorialProgressProfileSchemaVersion = 3;
+
+/** Older generations are shorter; the schema in the header decides which. */
+[[nodiscard]] constexpr int32 ProfilePayloadSizeForVersion(uint16 Version)
+{
+    return Version >= TutorialProgressProfileSchemaVersion
+        ? ProfilePayloadSize
+        : LegacyProfilePayloadSize;
+}
 constexpr uint8 LegacyProfileAllowedFlags = 0x7F;
 constexpr uint16 ReadinessOperationProfileSchemaVersion = 2;
 constexpr uint8 ReadinessOperationProfileFlag = 1u << 7;
@@ -145,13 +157,19 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
     return true;
 }
 
+/** True when the set bits are exactly bits 0..n-1 for some n. */
+[[nodiscard]] bool IsContiguousPrefix(uint16 Mask)
+{
+    return (Mask & static_cast<uint16>(Mask + 1)) == 0;
+}
+
 [[nodiscard]] bool IsOrderedTutorialMask(uint16 Mask)
 {
     if ((Mask & ~FEchoesPlayerProfile::AllTutorialLessonsMask) != 0)
     {
         return false;
     }
-    return (Mask & static_cast<uint16>(Mask + 1)) == 0;
+    return IsContiguousPrefix(Mask);
 }
 
 [[nodiscard]] bool ValidateProfile(
@@ -173,6 +191,27 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
             FEchoesPlayerProfile::AllTutorialLessonsMask)
     {
         OutError = TEXT("[PROFILE_READINESS_STATE_INVALID] Readiness-operation proof requires every implemented curriculum lesson verified.");
+        return false;
+    }
+    if ((Profile.TutorialSkippedMask &
+            ~FEchoesPlayerProfile::AllTutorialLessonsMask) != 0 ||
+        (Profile.TutorialSessionVerifiedMask &
+            ~FEchoesPlayerProfile::AllTutorialLessonsMask) != 0)
+    {
+        OutError = TEXT("[PROFILE_TUTORIAL_PROGRESS_INVALID] Skipped and after-skip lesson records must lie inside the implemented curriculum.");
+        return false;
+    }
+    // A lesson only becomes reachable once every earlier one is earned or
+    // skipped, so however the player got here their combined progress is a
+    // contiguous prefix. A hole means a record that no play sequence produces.
+    if (!IsContiguousPrefix(Profile.GetTutorialProgressMask()))
+    {
+        OutError = TEXT("[PROFILE_TUTORIAL_PROGRESS_INVALID] Combined lesson progress must be the contiguous authored prefix of the implemented curriculum.");
+        return false;
+    }
+    if ((Profile.TutorialVerifiedMask & Profile.TutorialSessionVerifiedMask) != 0)
+    {
+        OutError = TEXT("[PROFILE_TUTORIAL_PROGRESS_INVALID] A lesson cannot be recorded as durable mastery and as an after-skip completion at once.");
         return false;
     }
     if (Profile.bTutorialOptOut && !Profile.bOnboardingOffered)
@@ -268,6 +307,9 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
     ProfileAppendFloat(OutBytes, Profile.DialogueVolume);
     ProfileAppendFloat(OutBytes, Profile.InterfaceVolume);
     ProfileAppendFloat(OutBytes, Profile.AmbienceVolume);
+    ProfileAppendU16(OutBytes, Profile.TutorialSkippedMask);
+    ProfileAppendU16(OutBytes, Profile.TutorialSessionVerifiedMask);
+    ProfileAppendU8(OutBytes, Profile.TutorialContractLessonCount);
     ProfileAppendU32(
         OutBytes,
         FCrc::MemCrc32(OutBytes.GetData(), OutBytes.Num()));
@@ -279,16 +321,14 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
     FEchoesPlayerProfile& OutProfile,
     FString& OutError)
 {
-    const int32 ExpectedSize =
-        ProfileHeaderSize + ProfilePayloadSize + ProfileChecksumSize;
-    if (Bytes.Num() < ExpectedSize)
+    // The header decides how long the payload should be, so it is read and
+    // range-checked before any length or integrity claim is made about the
+    // rest of the file. Older generations are shorter by design.
+    const int32 SmallestRecord =
+        ProfileHeaderSize + LegacyProfilePayloadSize + ProfileChecksumSize;
+    if (Bytes.Num() < SmallestRecord)
     {
         OutError = TEXT("[PROFILE_TRUNCATED] The player profile is incomplete.");
-        return false;
-    }
-    if (Bytes.Num() != ExpectedSize)
-    {
-        OutError = TEXT("[PROFILE_LENGTH_INVALID] The player profile length is not valid for its schema.");
         return false;
     }
     for (int32 Index = 0; Index < UE_ARRAY_COUNT(ProfileMagic); ++Index)
@@ -298,15 +338,6 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
             OutError = TEXT("[PROFILE_MAGIC_MISMATCH] The file is not an Echoes player profile.");
             return false;
         }
-    }
-    int32 ChecksumOffset = Bytes.Num() - ProfileChecksumSize;
-    uint32 StoredChecksum = 0;
-    if (!ProfileReadU32(Bytes, ChecksumOffset, StoredChecksum) ||
-        StoredChecksum !=
-            FCrc::MemCrc32(Bytes.GetData(), Bytes.Num() - ProfileChecksumSize))
-    {
-        OutError = TEXT("[PROFILE_CHECKSUM_MISMATCH] The player profile failed integrity validation.");
-        return false;
     }
 
     int32 Offset = UE_ARRAY_COUNT(ProfileMagic);
@@ -328,9 +359,33 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
             Version);
         return false;
     }
-    if (PayloadSize != ProfilePayloadSize)
+    const int32 ExpectedPayloadSize = ProfilePayloadSizeForVersion(Version);
+    if (PayloadSize != ExpectedPayloadSize)
     {
         OutError = TEXT("[PROFILE_LENGTH_INVALID] The declared player profile payload length is invalid.");
+        return false;
+    }
+    const int32 ExpectedSize =
+        ProfileHeaderSize + ExpectedPayloadSize + ProfileChecksumSize;
+    if (Bytes.Num() < ExpectedSize)
+    {
+        // Short for the schema it declares: the record was cut off, which is a
+        // different fault from one whose length disagrees with its own header.
+        OutError = TEXT("[PROFILE_TRUNCATED] The player profile is incomplete.");
+        return false;
+    }
+    if (Bytes.Num() != ExpectedSize)
+    {
+        OutError = TEXT("[PROFILE_LENGTH_INVALID] The player profile length is not valid for its schema.");
+        return false;
+    }
+    int32 ChecksumOffset = Bytes.Num() - ProfileChecksumSize;
+    uint32 StoredChecksum = 0;
+    if (!ProfileReadU32(Bytes, ChecksumOffset, StoredChecksum) ||
+        StoredChecksum !=
+            FCrc::MemCrc32(Bytes.GetData(), Bytes.Num() - ProfileChecksumSize))
+    {
+        OutError = TEXT("[PROFILE_CHECKSUM_MISMATCH] The player profile failed integrity validation.");
         return false;
     }
 
@@ -356,6 +411,34 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
         OutError = TEXT("[PROFILE_TRUNCATED] The player profile payload is incomplete.");
         return false;
     }
+    // Schemas below three never recorded skipped or after-skip progress. They
+    // load with none rather than inventing any, which loses nothing the older
+    // file ever held.
+    if (Version >= TutorialProgressProfileSchemaVersion &&
+        (!ProfileReadU16(Bytes, Offset, Candidate.TutorialSkippedMask) ||
+            !ProfileReadU16(
+                Bytes, Offset, Candidate.TutorialSessionVerifiedMask) ||
+            !ProfileReadU8(
+                Bytes, Offset, Candidate.TutorialContractLessonCount)))
+    {
+        OutError = TEXT("[PROFILE_TRUNCATED] The player profile payload is incomplete.");
+        return false;
+    }
+    if (Version < TutorialProgressProfileSchemaVersion)
+    {
+        // Schemas one and two never recorded a contract width, and no writer
+        // of either could set a lesson bit outside today's contract, so their
+        // records are judged against the contract as it stands.
+        Candidate.TutorialContractLessonCount =
+            static_cast<uint8>(EchoesTutorialLessonCount);
+    }
+    if (Candidate.TutorialContractLessonCount == 0 ||
+        Candidate.TutorialContractLessonCount >
+            static_cast<uint8>(EchoesTutorialAuthoredLessonKeys))
+    {
+        OutError = TEXT("[PROFILE_TUTORIAL_PROGRESS_INVALID] The recorded lesson-contract width is outside the authored curriculum.");
+        return false;
+    }
     if (Version == FEchoesPlayerProfile::MinimumSupportedSchemaVersion &&
         (Flags & ~LegacyProfileAllowedFlags) != 0)
     {
@@ -375,6 +458,42 @@ void ProfileAppendFloat(TArray<uint8>& Bytes, float Value)
         Version >= ReadinessOperationProfileSchemaVersion &&
         (Flags & ReadinessOperationProfileFlag) != 0;
     Candidate.WindowMode = static_cast<EWindowMode::Type>(EncodedWindowMode);
+    // The completion contract is derived from the implemented lesson set, so it
+    // changes as lessons land. A profile written under a different contract is
+    // not corrupt: it recorded what the player genuinely earned at the time.
+    // Keep the lessons that still exist and withdraw only the readiness claim,
+    // which asserts the whole contract. Rejecting instead would delete a real
+    // player's profile over a code change, and this never grants a lesson.
+    // Only a mask that is already a contiguous prefix is migrated, so a
+    // damaged mask still fails validation rather than being laundered into a
+    // valid one by the clamp.
+    // Migration applies only when the contract actually moved. When the widths
+    // agree, a readiness claim that does not cover the contract is a forgery or
+    // damage, and the store refuses it exactly as before.
+    if (Candidate.TutorialContractLessonCount !=
+            static_cast<uint8>(EchoesTutorialLessonCount) &&
+        IsContiguousPrefix(Candidate.TutorialVerifiedMask) &&
+        IsContiguousPrefix(Candidate.GetTutorialProgressMask()))
+    {
+        Candidate.TutorialVerifiedMask = static_cast<uint16>(
+            Candidate.TutorialVerifiedMask &
+            FEchoesPlayerProfile::AllTutorialLessonsMask);
+        Candidate.TutorialSkippedMask = static_cast<uint16>(
+            Candidate.TutorialSkippedMask &
+            FEchoesPlayerProfile::AllTutorialLessonsMask);
+        Candidate.TutorialSessionVerifiedMask = static_cast<uint16>(
+            Candidate.TutorialSessionVerifiedMask &
+            FEchoesPlayerProfile::AllTutorialLessonsMask);
+        if (Candidate.TutorialVerifiedMask !=
+            FEchoesPlayerProfile::AllTutorialLessonsMask)
+        {
+            Candidate.bReadinessOperationVerified = false;
+        }
+    }
+    // Whatever it was written under, this record now describes today's
+    // contract, so a rewrite of it stays self-consistent.
+    Candidate.TutorialContractLessonCount =
+        static_cast<uint8>(EchoesTutorialLessonCount);
     if (!ValidateProfile(Candidate, OutError))
     {
         return false;

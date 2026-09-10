@@ -46,6 +46,13 @@ void AEchoesPlayerController::ResetTutorialObservation()
     bTutorialProgressSaveFailed = false;
     TutorialCoreId = 0;
     TutorialWorkerId = 0;
+    // The saved profile is the durable record of what the player skipped and
+    // what they earned behind a skip; every write goes to it as it happens.
+    // Re-reading it here keeps the live masks correct on every route into a
+    // tutorial -- explicit start, quick load, scenario restart -- rather than
+    // relying on each of those routes to remember to restore them.
+    TutorialSkippedMask = PlayerProfile.TutorialSkippedMask;
+    TutorialSessionVerifiedMask = PlayerProfile.TutorialSessionVerifiedMask;
 }
 
 void AEchoesPlayerController::TraceTutorialObservation(const FString& State)
@@ -116,6 +123,19 @@ bool AEchoesPlayerController::CommitTutorialLesson(uint16 Bit, const TCHAR* Less
         // saved profile requires an ordered prefix, so it cannot contain this bit
         // across the earlier gap. All guidance consumers share the session union.
         TutorialSessionVerifiedMask |= Bit;
+        // It is durable all the same. Holding it only in memory meant a player
+        // who skipped one lesson and then earned the rest lost every one of
+        // them on quit and restarted at lesson one.
+        const auto PriorAfterSkip = PlayerProfile;
+        PlayerProfile.TutorialSessionVerifiedMask |= Bit;
+        if (!CommitPlayerProfile())
+        {
+            PlayerProfile = PriorAfterSkip;
+            TutorialSessionVerifiedMask &= static_cast<uint16>(~Bit);
+            bTutorialProgressSaveFailed = true;
+            TutorialInstruction = LOCTEXT("LessonSaveRetry", "Progress could not be saved. Return to the title menu and restart the readiness check to retry.");
+            return false;
+        }
         TutorialActiveLessonBit = 0;
         if (auto* Narrative = GetGameInstance() ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>() : nullptr)
         {
@@ -641,10 +661,26 @@ void AEchoesPlayerController::SkipTutorialCurrentStep()
         ? TutorialPresentedLessonBit
         : (TutorialActiveLessonBit != 0 ? TutorialActiveLessonBit : 1);
     TutorialSkippedMask |= CurrentBit;
+    // A skip is a durable fact about this player's onboarding, not a per-run
+    // one: without it a relaunch re-demands the step they deliberately passed.
+    const auto PriorSkipProfile = PlayerProfile;
+    PlayerProfile.TutorialSkippedMask |= CurrentBit;
+    const bool bSkipRecorded = CommitPlayerProfile();
+    if (!bSkipRecorded)
+    {
+        // The step is still skipped for this run; only the record failed. Say
+        // so rather than silently promising it will be remembered.
+        PlayerProfile = PriorSkipProfile;
+    }
     CloseTutorialSkipModal(false);
     TutorialActiveLessonBit = 0;
     TutorialPresentedLessonBit = 0;
-    SetStatusMessage(LOCTEXT("StepSkipped", "Step skipped. Progress recorded as skipped (no mastery awarded).").ToString(), 8.0f);
+    SetStatusMessage(
+        (bSkipRecorded
+            ? LOCTEXT("StepSkipped", "Step skipped. Progress recorded as skipped (no mastery awarded).")
+            : LOCTEXT("StepSkipNotRecorded", "Step skipped for this session. It could not be saved, so it will be offered again next time."))
+            .ToString(),
+        8.0f);
     RefreshFieldHud();
 }
 

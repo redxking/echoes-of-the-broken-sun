@@ -10,12 +10,43 @@
 #include "EchoesTutorialCurriculumModel.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/World.h"
+#include "HAL/FileManager.h"
+#include "Misc/Crc.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Tests/AutomationCommon.h"
 
 namespace
 {
+// Profile.sav layout: 8-byte magic, u16 schema, u16 payload size, then the
+// payload (slot u8, flags u8, lesson mask u16, ...) and a trailing u32 CRC.
+constexpr int32 ProfileLessonMaskOffset = 14;
+/** Last payload byte, immediately before the trailing checksum. */
+constexpr int32 ProfileContractWidthTrailingOffset = 5;
+
+void WriteMask(TArray<uint8>& Bytes, uint16 Value)
+{
+    Bytes[ProfileLessonMaskOffset] = static_cast<uint8>(Value);
+    Bytes[ProfileLessonMaskOffset + 1] = static_cast<uint8>(Value >> 8);
+}
+
+/** Restate the contract width this record was written under. */
+void WriteContractWidth(TArray<uint8>& Bytes, uint8 LessonCount)
+{
+    Bytes[Bytes.Num() - ProfileContractWidthTrailingOffset] = LessonCount;
+}
+
+void RefreshChecksum(TArray<uint8>& Bytes)
+{
+    const int32 ChecksumOffset = Bytes.Num() - 4;
+    const uint32 Checksum = FCrc::MemCrc32(Bytes.GetData(), ChecksumOffset);
+    for (int32 Index = 0; Index < 4; ++Index)
+    {
+        Bytes[ChecksumOffset + Index] =
+            static_cast<uint8>(Checksum >> (Index * 8));
+    }
+}
+
 /** A profile that has verified the whole implemented curriculum. */
 FEchoesPlayerProfile MasteredProfile()
 {
@@ -119,6 +150,99 @@ bool FEchoesTutorialMasteryContractTest::RunTest(const FString& Parameters)
             MasteredPath, Reloaded, bExists, Feedback) &&
             bExists && Reloaded == Mastered &&
             Reloaded.IsTutorialMasteryComplete());
+
+    // --- A profile written under a different contract migrates -------------
+    // The contract width the record carries is what separates a curriculum
+    // that grew from a proof that was forged. Without it the store would have
+    // to choose between deleting real players' profiles when lessons land and
+    // accepting a readiness claim that never covered the contract.
+    TArray<uint8> Bytes;
+    if (!TestTrue(
+            TEXT("The mastered profile bytes can be inspected"),
+            FFileHelper::LoadFileToArray(Bytes, *MasteredPath)))
+    {
+        return false;
+    }
+
+    // Narrower than today's contract: the lessons stand, the claim does not.
+    {
+        TArray<uint8> Narrow = Bytes;
+        const uint16 NarrowMask = static_cast<uint16>(
+            FEchoesPlayerProfile::AllTutorialLessonsMask >> 1);
+        WriteMask(Narrow, NarrowMask);
+        WriteContractWidth(
+            Narrow, static_cast<uint8>(EchoesTutorialLessonCount - 1));
+        RefreshChecksum(Narrow);
+        const FString NarrowPath = FPaths::Combine(
+            SaveEnvironment.Directory, TEXT("ProfileNarrowContract.sav"));
+        TestTrue(
+            TEXT("A narrower-contract fixture is written"),
+            FFileHelper::SaveArrayToFile(Narrow, *NarrowPath));
+        FEchoesPlayerProfile Migrated;
+        TestTrue(
+            TEXT("A profile from a narrower contract still loads"),
+            FEchoesPlayerProfileStore::LoadWithBackup(
+                NarrowPath, Migrated, bExists, Feedback) && bExists);
+        TestEqual(
+            TEXT("Migration keeps the lessons the player genuinely verified"),
+            Migrated.TutorialVerifiedMask, NarrowMask);
+        TestFalse(
+            TEXT("Migration withdraws a readiness claim it no longer covers"),
+            Migrated.bReadinessOperationVerified);
+        TestFalse(
+            TEXT("Migration never fabricates mastery"),
+            Migrated.IsTutorialMasteryComplete());
+    }
+
+    // Wider: the surplus bits go, and the claim stands because the player
+    // verified at least everything the contract now asks for.
+    {
+        TArray<uint8> Wide = Bytes;
+        WriteMask(Wide, 0x03FF);
+        WriteContractWidth(
+            Wide, static_cast<uint8>(EchoesTutorialAuthoredLessonKeys));
+        RefreshChecksum(Wide);
+        const FString WidePath = FPaths::Combine(
+            SaveEnvironment.Directory, TEXT("ProfileWideContract.sav"));
+        TestTrue(
+            TEXT("A wider-contract fixture is written"),
+            FFileHelper::SaveArrayToFile(Wide, *WidePath));
+        FEchoesPlayerProfile Migrated;
+        TestTrue(
+            TEXT("A profile from a wider contract still loads"),
+            FEchoesPlayerProfileStore::LoadWithBackup(
+                WidePath, Migrated, bExists, Feedback) && bExists);
+        TestEqual(
+            TEXT("Migration clamps a wider mask to the current contract"),
+            Migrated.TutorialVerifiedMask,
+            FEchoesPlayerProfile::AllTutorialLessonsMask);
+        TestTrue(
+            TEXT("A claim covering the whole current contract survives"),
+            Migrated.IsTutorialMasteryComplete());
+    }
+
+    // Same width, incomplete mask: that is a forged claim, and it stays refused.
+    {
+        TArray<uint8> Forged = Bytes;
+        WriteMask(
+            Forged,
+            static_cast<uint16>(
+                FEchoesPlayerProfile::AllTutorialLessonsMask >> 1));
+        RefreshChecksum(Forged);
+        const FString ForgedPath = FPaths::Combine(
+            SaveEnvironment.Directory, TEXT("ProfileForgedReadiness.sav"));
+        TestTrue(
+            TEXT("A forged-readiness fixture is written"),
+            FFileHelper::SaveArrayToFile(Forged, *ForgedPath));
+        FEchoesPlayerProfile Rejected;
+        TestFalse(
+            TEXT("Readiness under an unchanged contract is not migrated away"),
+            FEchoesPlayerProfileStore::LoadWithBackup(
+                ForgedPath, Rejected, bExists, Feedback));
+        TestTrue(
+            TEXT("The refusal names the readiness invariant"),
+            Feedback.Contains(TEXT("PROFILE_READINESS_STATE_INVALID")));
+    }
 
     // --- The title screen stops leading with the tutorial ------------------
     FTestWorldWrapper Wrapper;

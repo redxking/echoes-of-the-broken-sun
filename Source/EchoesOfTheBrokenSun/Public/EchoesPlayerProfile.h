@@ -14,7 +14,8 @@ class UEchoesGameUserSettings;
 struct ECHOESOFTHEBROKENSUN_API FEchoesPlayerProfile final
 {
     static constexpr uint16 MinimumSupportedSchemaVersion = 1;
-    static constexpr uint16 SchemaVersion = 2;
+    /** Schema 3 adds the skipped and after-skip verified lesson masks. */
+    static constexpr uint16 SchemaVersion = 3;
     /**
      * The completion contract, derived from the implemented curriculum so the
      * contract and the earnable set cannot disagree. See
@@ -29,6 +30,28 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesPlayerProfile final
     uint16 TutorialVerifiedMask = 0;
     /** Authoritative proof that the independent readiness operation ended in Corefall. */
     bool bReadinessOperationVerified = false;
+    /**
+     * Lessons the player chose to skip. Recorded so a skip stays a skip across
+     * restarts and can never be mistaken for earned mastery.
+     */
+    uint16 TutorialSkippedMask = 0;
+    /**
+     * Lessons genuinely verified after an earlier lesson was skipped. The
+     * durable `TutorialVerifiedMask` must stay a contiguous prefix, so a real
+     * completion sitting behind a skipped lesson has no place in it. Without
+     * this field those completions lived only in controller memory: skipping
+     * lesson one and then earning the rest lost every one of them on quit.
+     */
+    uint16 TutorialSessionVerifiedMask = 0;
+    /**
+     * How many lessons the completion contract held when this record was
+     * written. Without it, a readiness claim that no longer covers the
+     * contract is indistinguishable from a forged one, and the store would
+     * have to choose between refusing real players after the curriculum grows
+     * and accepting a forged proof. Recorded, the two are separable.
+     */
+    uint8 TutorialContractLessonCount =
+        static_cast<uint8>(EchoesTutorialLessonCount);
 
     FIntPoint Resolution = FIntPoint(1280, 720);
     EWindowMode::Type WindowMode = EWindowMode::Windowed;
@@ -57,6 +80,19 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesPlayerProfile final
 
     /** Requires every implemented lesson plus the independent readiness operation. */
     [[nodiscard]] bool IsTutorialMasteryComplete() const;
+
+    /**
+     * Everything the player has reached, however they reached it: earned,
+     * skipped, or earned after a skip. This drives guidance and lesson
+     * unlocking; it is never mastery, which only `TutorialVerifiedMask` plus
+     * the readiness proof can establish.
+     */
+    [[nodiscard]] uint16 GetTutorialProgressMask() const
+    {
+        return static_cast<uint16>(
+            TutorialVerifiedMask | TutorialSkippedMask |
+            TutorialSessionVerifiedMask);
+    }
 
     friend bool operator==(
         const FEchoesPlayerProfile&,
