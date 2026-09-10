@@ -86,10 +86,12 @@ candidate identity, commands, and the inconclusive field-HUD probe.
 ## Sprint sequencing decisions D1–D9 and voice decisions V1–V7 — 2026-09-10
 
 **Provenance, stated exactly.** These rulings were made by a peer agent session ("Game progress deep
-dive", `local_91ab78d6`) which reports that Angelis delegated them to it on 2026-09-10 ("Decide what
-the best decision is to do", and separately "You figure out the voice thing"). **I did not witness that
-delegation.** It is recorded here as the deciding session's own account, not as an owner instruction I
-verified. The full text is retained at
+dive", `local_91ab78d6`) which reported that Angelis delegated them to it on 2026-09-10 ("Decide what
+the best decision is to do", and separately "You figure out the voice thing"). That delegation was
+originally recorded here as the deciding session's own account, because this session did not witness
+it. **Angelis confirmed the delegation directly on 2026-09-10**, so it is now recorded as an owner
+instruction rather than a peer's report of one. The rulings themselves remain agent decisions made
+under that delegation; the delegation is the part the owner has affirmed. The full text is retained at
 [DECISIONS.md](../BuildArtifacts/Evidence/completion-deep-dive-20260909T232000Z/DECISIONS.md); this is
 a pointer and a summary, and that file governs its own wording.
 
@@ -122,7 +124,7 @@ before acting on any of them.
 
 | Item | State |
 |---|---|
-| **Developer ID certificate and `notarytool` credentials** | The deciding session reports Angelis ruled on 2026-09-10 not to provision these until he is ready to publish. Recorded as that session's account of an owner ruling. The three code layers that refuse non-ad-hoc signature strings stay exactly as they are. Owner ruling #31 remains the standing record of the credentials being unprovisioned. |
+| **Developer ID certificate and `notarytool` credentials** | Angelis ruled on 2026-09-10 not to provision these until he is ready to publish, reported through the deciding session, whose delegation the owner has since confirmed to this session. The three code layers that refuse non-ad-hoc signature strings stay exactly as they are. Owner ruling #31 remains the standing record of the credentials being unprovisioned. |
 | **M01 listening pass over 28 bound lines** | Outstanding. All 28 carry `candidate_status: unqualified_pending_listening` and the runtime logs `listeningVerified=false`. **Only Angelis can pass a listening gate**; no agent may record it as passed, and D5 explicitly does not. |
 
 ## Family rows were asserting verification nothing supported — 2026-09-10
