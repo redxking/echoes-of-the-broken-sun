@@ -22,6 +22,11 @@ fi
 #      busy for seven minutes with nothing building.
 #   2. It matches every clang++ whose response-file path contains /UnrealEditor/,
 #      which is most of a compile (86 KB of output in one case).
+#   2b. It matches OTHER sessions' shell wrappers: a `/bin/zsh -c ...` running a
+#      command that merely mentions RunUAT or UnrealBuildTool looks like a holder.
+#      A false "busy" is not harmless here -- it would stall every lane behind a
+#      phantom -- so command-interpreter wrappers are excluded and only the real
+#      tool processes count.
 #   3. It MISSES the case that actually blocks packaging: UnrealBuildTool holds a
 #      GLOBAL MUTEX, so a plain compile blocks a cook even with no editor running.
 #      That collision surfaces as UAT "Error_SDKNotFound" (exit 10), which sends you
@@ -62,7 +67,9 @@ while read -r pid cmd; do
         *clang*|*ld*|*libtool*) add "compile" "$pid" "" ;;
       esac ;;
   esac
-done < <(ps -Ao pid=,command= 2>/dev/null | grep -v "acquire_build_slot")
+done < <(ps -Ao pid=,command= 2>/dev/null \
+           | grep -v "acquire_build_slot" \
+           | grep -vE "^ *[0-9]+ +/bin/(zsh|bash|sh) -c ")
 
 checks_completed=1
 
