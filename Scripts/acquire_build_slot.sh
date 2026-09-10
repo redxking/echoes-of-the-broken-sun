@@ -59,6 +59,15 @@ done
 # 2/3/4. Command-line signals, excluding this checker and its shell.
 while read -r pid cmd; do
   [[ -z "${pid:-}" ]] && continue
+  # Skip search and inspection tools: their ARGUMENTS carry the tool names, so a
+  # grep/ugrep/rg looking for "UnrealBuildTool" is not a build. Same false-positive
+  # family as the shell wrappers above; this class has now bitten three times, and a
+  # false BUSY would stall every lane behind a holder that never exits.
+  tool_name="${${cmd%% *}##*/}"
+  case "$tool_name" in
+    grep|ugrep|rg|ag|ack|egrep|fgrep|find|ps|awk|sed|xargs|tail|head|cat|less|watch)
+      continue ;;
+  esac
   case "$cmd" in
     *UnrealBuildTool.dll*)  add "UnrealBuildTool(mutex holder)" "$pid" "" ;;
     *AutomationTool.dll*|*RunUAT*)  add "UAT/BuildCookRun" "$pid" "" ;;
