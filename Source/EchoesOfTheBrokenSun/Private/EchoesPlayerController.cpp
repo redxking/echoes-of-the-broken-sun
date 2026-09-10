@@ -1479,8 +1479,8 @@ void AEchoesPlayerController::NotifyNetworkHostSurrender(
     bReturnHostToOnlineAfterResultDelivery = true;
     NotifyMatchFinished(echoes::sim::MatchOutcome::Player1Victory);
     SetStatusMessage(
-        TEXT("MATCH SURRENDERED — delivering the final result before returning to the Online menu."),
-        12.0f);
+        TEXT("MATCH SURRENDERED — delivering the final result before returning to the Online menu. Enter leaves for the Online menu once delivery confirms."),
+        3600.0f);
     GetWorldTimerManager().SetTimer(
         NetworkResultAcknowledgementTimer,
         this,
