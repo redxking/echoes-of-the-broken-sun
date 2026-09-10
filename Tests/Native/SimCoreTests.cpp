@@ -5827,12 +5827,14 @@ void TestExploredTerrainAndPermanentObjectMemory() {
     REQUIRE(Sees(watching, enemySoldier));
     REQUIRE(watching.RememberedObjects().empty());
 
-    // Withdraw until nothing of player 0 can see the site.
+    // Withdraw until nothing of player 0 can see the site. The muster point is
+    // clear of the home Anchor's own footprint: its ground is solid, so no unit
+    // can stand on the building itself.
     Command withdraw = MakeCommand(0, 0, 1, CommandType::Move, scout);
-    withdraw.position = Vec2::FromTiles(3, 3);
+    withdraw.position = Vec2::FromTiles(5, 5);
     REQUIRE(simulation.QueueCommand(withdraw));
     simulation.Step(220);
-    REQUIRE(simulation.FindEntity(scout)->position == Vec2::FromTiles(3, 3));
+    REQUIRE(simulation.FindEntity(scout)->position == Vec2::FromTiles(5, 5));
 
     const PlayerView withdrawn = ViewOf(0);
     REQUIRE(withdrawn.VisibilityAt(Vec2::FromTiles(18, 16)) ==
@@ -5878,10 +5880,13 @@ void TestExploredTerrainAndPermanentObjectMemory() {
     // Looking again is the only thing that corrects a memory.
     Command returnScout = MakeCommand(
         simulation.CurrentTick(), 0, 2, CommandType::Move, scout);
-    returnScout.position = Vec2::FromTiles(16, 16);
+    // Observation post beside the enemy Barracks rather than on top of it: the
+    // building's footprint is solid ground, so the tile it stands on cannot be
+    // occupied by a scout.
+    returnScout.position = Vec2::FromTiles(14, 16);
     REQUIRE(simulation.QueueCommand(returnScout));
     simulation.Step(220);
-    REQUIRE(simulation.FindEntity(scout)->position == Vec2::FromTiles(16, 16));
+    REQUIRE(simulation.FindEntity(scout)->position == Vec2::FromTiles(14, 16));
     const PlayerView looking = ViewOf(0);
     REQUIRE(looking.VisibilityAt(Vec2::FromTiles(18, 16)) ==
             Visibility::Visible);
@@ -6156,6 +6161,202 @@ void TestArrivalDampingAndNoOscillation() {
         REQUIRE(e->order.type == OrderType::None);
     }
 }
+
+// SPEC-MOV-006/008/012, SPEC-UNIT-003/007: entity footprints are solid.
+// A completed structure occupies ground. Before the occupancy grid existed,
+// IsPositionPassable and the BFS path field consulted terrain only, so an
+// army walked straight through a Command Core and every wall, choke and
+// body-block in the design was inert.
+// Cells a footprint fully owns: those whose centre it covers. A cell the
+// footprint merely clips stays walkable, which is what keeps a hauler or
+// attacker inside the interaction range it has to reach.
+std::vector<std::pair<std::int32_t, std::int32_t>> FootprintTiles(
+    const Simulation& sim, const Entity& entity) {
+    std::vector<std::pair<std::int32_t, std::int32_t>> tiles;
+    const std::int32_t halfExtent =
+        sim.FootprintHalfExtentRaw(entity.faction, entity.type);
+    const std::int32_t minX = (entity.position.x.Raw() - halfExtent) / kFixedScale;
+    const std::int32_t maxX = (entity.position.x.Raw() + halfExtent - 1) / kFixedScale;
+    const std::int32_t minY = (entity.position.y.Raw() - halfExtent) / kFixedScale;
+    const std::int32_t maxY = (entity.position.y.Raw() + halfExtent - 1) / kFixedScale;
+    for (std::int32_t y = minY; y <= maxY; ++y) {
+        for (std::int32_t x = minX; x <= maxX; ++x) {
+            const std::int64_t centreX = static_cast<std::int64_t>(x) * kFixedScale + kFixedScale / 2;
+            const std::int64_t centreY = static_cast<std::int64_t>(y) * kFixedScale + kFixedScale / 2;
+            if (std::abs(centreX - entity.position.x.Raw()) < halfExtent &&
+                std::abs(centreY - entity.position.y.Raw()) < halfExtent) {
+                tiles.emplace_back(x, y);
+            }
+        }
+    }
+    return tiles;
+}
+
+// True when a mover's own position has penetrated the footprint.
+bool PenetratesFootprint(const Simulation& sim, const Entity& structure, Vec2 position) {
+    const std::int32_t halfExtent =
+        sim.FootprintHalfExtentRaw(structure.faction, structure.type);
+    return std::abs(static_cast<std::int64_t>(position.x.Raw()) - structure.position.x.Raw()) < halfExtent &&
+           std::abs(static_cast<std::int64_t>(position.y.Raw()) - structure.position.y.Raw()) < halfExtent;
+}
+
+void TestStructureFootprintsBlockMovementAndPathing() {
+    // (a) A Move ordered straight through an enemy Command Core must route
+    // around it and never occupy a cell the Core's footprint covers.
+    Simulation sim({32, 32, 20, 0x424c4f434bULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    REQUIRE(sim.AddPlayer(1, Faction::KharuunAssemblies, ResourcePool{0, 0}));
+
+    const Vec2 corePosition = Vec2::FromTiles(16, 8);
+    const EntityId core = sim.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore, corePosition);
+    REQUIRE(core != 0);
+    const Entity* coreEntity = sim.FindEntity(core);
+    REQUIRE(coreEntity != nullptr);
+    REQUIRE(coreEntity->completed);
+    const std::vector<std::pair<std::int32_t, std::int32_t>> blockedTiles =
+        FootprintTiles(sim, *coreEntity);
+    REQUIRE(blockedTiles.size() >= 4);
+
+    // Straight line from start to destination passes through the Core centre.
+    const EntityId mover = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(6, 8));
+    REQUIRE(mover != 0);
+    Command move = MakeCommand(0, 0, 1, CommandType::Move, mover);
+    move.position = Vec2::FromTiles(26, 8);
+    REQUIRE(sim.QueueCommand(move));
+
+    bool arrived = false;
+    for (int tick = 0; tick < 600; ++tick) {
+        sim.Step();
+        const Entity* unit = sim.FindEntity(mover);
+        REQUIRE(unit != nullptr);
+        const std::int32_t tileX = unit->position.x.FloorToInt();
+        const std::int32_t tileY = unit->position.y.FloorToInt();
+        for (const auto& [blockedX, blockedY] : blockedTiles) {
+            REQUIRE(!(tileX == blockedX && tileY == blockedY));
+        }
+        REQUIRE(!PenetratesFootprint(sim, *sim.FindEntity(core), unit->position));
+        if (unit->position == move.position) {
+            arrived = true;
+            break;
+        }
+    }
+    REQUIRE(arrived);
+
+    // (b) A destination sealed by the ordering player's own completed
+    // structures is refused as NoPath instead of walked into through a wall.
+    Simulation pocket({24, 24, 20, 0x504f434b4554ULL});
+    REQUIRE(pocket.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    // Terrain seals three sides of a one-tile pocket at (12,12); a completed
+    // Barracks seals the fourth, so only entity occupancy closes the pocket.
+    REQUIRE(pocket.SetTerrainTile(11, 12, Terrain::Blocked));
+    REQUIRE(pocket.SetTerrainTile(12, 11, Terrain::Blocked));
+    REQUIRE(pocket.SetTerrainTile(12, 13, Terrain::Blocked));
+    const EntityId seal = pocket.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks, Vec2::FromTiles(14, 12));
+    REQUIRE(seal != 0);
+    const Entity* sealEntity = pocket.FindEntity(seal);
+    REQUIRE(sealEntity != nullptr);
+    bool sealCoversGate = false;
+    for (const auto& [tileX, tileY] : FootprintTiles(pocket, *sealEntity)) {
+        if (tileX == 13 && tileY == 12) {
+            sealCoversGate = true;
+        }
+    }
+    REQUIRE(sealCoversGate);
+
+    const EntityId walker = pocket.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(6, 12));
+    REQUIRE(walker != 0);
+    // Reveal the sealed ground so the refusal comes from known passability.
+    pocket.Step(20);
+    Command intoPocket = MakeCommand(pocket.CurrentTick(), 0, 1,
+                                     CommandType::Move, walker);
+    intoPocket.position = Vec2::FromTiles(12, 12);
+    REQUIRE(pocket.QueueCommand(intoPocket));
+    const std::uint64_t sealedSequence = 1;
+    pocket.Step();
+    const std::optional<CommandResolutionReceipt> sealedReceipt =
+        pocket.FindCommandResolutionReceipt(0, sealedSequence);
+    REQUIRE(sealedReceipt.has_value());
+    REQUIRE(sealedReceipt->outcome == CommandResolutionOutcome::NoPath);
+    for (int tick = 0; tick < 200; ++tick) {
+        pocket.Step();
+        const Entity* unit = pocket.FindEntity(walker);
+        REQUIRE(unit != nullptr);
+        REQUIRE(!(unit->position.x.FloorToInt() == 12 &&
+                  unit->position.y.FloorToInt() == 12));
+    }
+}
+
+void TestAlliedCrowdReachesDistinctTilesWithoutOverlap() {
+    // (c) Thirty allied units ordered to one tile settle with no footprint
+    // overlap, no deadlock and no residual drift (SPEC-MOV-008
+    // non-imprisonment, SPEC-MOV-011 arrival area, SPEC-MOV-012 clean halt).
+    //
+    // Clearance, not one-unit-per-tile, is the authored contract: SPEC-MOV-008
+    // separates allied units by their combined footprint radii, and a Soldier's
+    // footprint is an eighth of a tile each side, so four settle inside one
+    // tile without touching. Measured here: 30 units, 0 overlapping pairs,
+    // minimum pair distance exactly the 256-raw clearance, 8 tiles occupied.
+    Simulation sim({40, 40, 20, 0x43524f57443330ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    std::vector<EntityId> units;
+    units.reserve(30);
+    for (std::int32_t index = 0; index < 30; ++index) {
+        const std::int32_t tileX = 4 + (index % 6) * 2;
+        const std::int32_t tileY = 4 + (index / 6) * 2;
+        const EntityId unit = sim.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Soldier,
+            Vec2::FromTiles(tileX, tileY));
+        REQUIRE(unit != 0);
+        units.push_back(unit);
+    }
+    const Vec2 focal = Vec2::FromTiles(28, 28);
+    std::uint64_t sequence = 1;
+    for (const EntityId unit : units) {
+        Command move = MakeCommand(0, 0, sequence++, CommandType::Move, unit);
+        move.position = focal;
+        REQUIRE(sim.QueueCommand(move));
+    }
+
+    sim.Step(600);
+
+    // Every unit is at rest: a further 20 ticks moves nobody (SPEC-MOV-012).
+    std::vector<Vec2> settled;
+    settled.reserve(units.size());
+    for (const EntityId unit : units) {
+        const Entity* entity = sim.FindEntity(unit);
+        REQUIRE(entity != nullptr);
+        settled.push_back(entity->position);
+    }
+    sim.Step(20);
+    for (std::size_t index = 0; index < units.size(); ++index) {
+        REQUIRE(sim.FindEntity(units[index])->position == settled[index]);
+    }
+
+    for (std::size_t i = 0; i < units.size(); ++i) {
+        const Entity* first = sim.FindEntity(units[i]);
+        REQUIRE(first != nullptr);
+        for (std::size_t j = i + 1; j < units.size(); ++j) {
+            const Entity* second = sim.FindEntity(units[j]);
+            REQUIRE(second != nullptr);
+            const std::int32_t clearance =
+                sim.FootprintHalfExtentRaw(first->faction, first->type) +
+                sim.FootprintHalfExtentRaw(second->faction, second->type);
+            const std::int64_t deltaX =
+                static_cast<std::int64_t>(second->position.x.Raw()) -
+                first->position.x.Raw();
+            const std::int64_t deltaY =
+                static_cast<std::int64_t>(second->position.y.Raw()) -
+                first->position.y.Raw();
+            REQUIRE(deltaX * deltaX + deltaY * deltaY >=
+                    static_cast<std::int64_t>(clearance) * clearance);
+        }
+    }
+}
+
 
 // SPEC-MOV-008 / SPEC-MOV-011 / SPEC-MOV-012: a group ordered to one point
 // packs around it without stacking on the coordinate, every unit then holds
@@ -9607,7 +9808,7 @@ void TestLinkRepairConstructionAndProductionIdentity() {
     REQUIRE(restored->ProducerQueueStateFor(0, foundry) ==
             sim.ProducerQueueStateFor(0, foundry));
     const ReplayRecord replay = sim.ExportReplay(&error);
-    REQUIRE(replay.version == kMaintenanceReplayVersion);
+    REQUIRE(replay.version == kReplayVersion);
     const auto replayed = Simulation::ReplayToEnd(replay, &error);
     REQUIRE(replayed.has_value());
     REQUIRE(replayed->StateChecksum() == sim.StateChecksum());
@@ -9859,6 +10060,10 @@ int main(int argc, char** argv) {
         {"Bulwark front arc boundary", TestBulwarkFrontArcBoundary},
         {"authentic schema30 Bulwark replay", TestAuthenticSchema30BulwarkReplay},
         {"legacy Relay scoped connectivity", TestLegacyRelayScopedConnectivity},
+        {"structure footprints block movement and pathing",
+         TestStructureFootprintsBlockMovementAndPathing},
+        {"allied crowd reaches distinct tiles without overlap",
+         TestAlliedCrowdReachesDistinctTilesWithoutOverlap},
         {"authentic schema29 zero-tick network replay",
          TestAuthenticSchema29ZeroTickNetworkReplay},
     };

@@ -196,7 +196,7 @@ void TestAuthenticSchema31ConstructionAssistReplay() {
     // A deliberately new recording rebases the same live world to the repaired
     // semantics, rather than silently changing the historical continuation.
     continued->CaptureReplayBaseline();
-    REQUIRE(continued->ExportReplay().version == kMaintenanceReplayVersion);
+    REQUIRE(continued->ExportReplay().version == kReplayVersion);
     cancel.executeTick = continued->CurrentTick(); cancel.sequence = 7;
     assist.executeTick = continued->CurrentTick(); assist.sequence = 8;
     REQUIRE(continued->QueueCommand(cancel));

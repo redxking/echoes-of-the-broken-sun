@@ -389,17 +389,27 @@ void TestHarvestReservationRegression() {
     const EntityId sealedDepot = reachableDepot.SpawnEntity(
         0, Faction::MeridianCompact, EntityType::CommandCore,
         Vec2::FromTiles(18, 12));
+    // Outside the sealed depot's delivery reach: its footprint face stands
+    // 2.5 tiles from its centre, so a node abutting the wall would already be
+    // in range of the building it is meant to be sealed away from.
     const EntityId reachableNode = reachableDepot.SpawnResourceNode(
-        Vec2::FromTiles(14, 12), 10);
+        Vec2::FromTiles(13, 12), 10);
     const EntityId reachableWorker = reachableDepot.SpawnEntity(
         0, Faction::MeridianCompact, EntityType::Worker,
-        Vec2::FromTiles(14, 12));
+        Vec2::FromTiles(13, 12));
     REQUIRE(farDepot != 0 && sealedDepot != 0 && reachableNode != 0 &&
             reachableWorker != 0);
-    for (const auto [x, y] : std::array<std::pair<int32_t, int32_t>, 8>{{
-             {17, 11}, {18, 11}, {19, 11}, {17, 12},
-             {19, 12}, {17, 13}, {18, 13}, {19, 13}}}) {
-        REQUIRE(reachableDepot.SetTerrainTile(x, y, Terrain::Blocked));
+    // The seal must enclose the depot's whole footprint, not one tile. An
+    // Anchor is five tiles across, so a ring drawn at one tile's remove leaves
+    // the building's own west and east faces standing outside its prison,
+    // within delivery reach of open ground.
+    for (int32_t x = 14; x <= 22; ++x) {
+        REQUIRE(reachableDepot.SetTerrainTile(x, 8, Terrain::Blocked));
+        REQUIRE(reachableDepot.SetTerrainTile(x, 16, Terrain::Blocked));
+    }
+    for (int32_t y = 8; y <= 16; ++y) {
+        REQUIRE(reachableDepot.SetTerrainTile(14, y, Terrain::Blocked));
+        REQUIRE(reachableDepot.SetTerrainTile(22, y, Terrain::Blocked));
     }
     Command reachableGather = MakeCommand(reachableDepot.CurrentTick(), 0, 1,
                                            CommandType::Gather, reachableWorker);

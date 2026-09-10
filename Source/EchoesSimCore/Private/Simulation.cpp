@@ -1403,6 +1403,7 @@ EntityId Simulation::SpawnEntity(PlayerId owner,
         return 0;
     }
     entities_.push_back(entity);
+    MarkStructureOccupancyDirty();
     ResolveAegisPower();
     UpdateVisibility();
     return entity.id;
@@ -1427,6 +1428,7 @@ EntityId Simulation::SpawnPublicInterface(Faction faction, Vec2 position) {
         return 0;
     }
     entities_.push_back(entity);
+    MarkStructureOccupancyDirty();
     ResolveAegisPower();
     UpdateVisibility();
     return entity.id;
@@ -1443,6 +1445,7 @@ EntityId Simulation::SpawnResourceNode(Vec2 position, std::int32_t amount) {
     }
     entity.resourceRemaining = amount;
     entities_.push_back(entity);
+    MarkStructureOccupancyDirty();
     UpdateVisibility();
     return entity.id;
 }
@@ -1457,6 +1460,7 @@ EntityId Simulation::SpawnFutureWell(Vec2 position) {
         return 0;
     }
     entities_.push_back(entity);
+    MarkStructureOccupancyDirty();
     UpdateVisibility();
     return entity.id;
 }
@@ -1543,8 +1547,183 @@ bool Simulation::IsPositionPassable(Vec2 position) const {
     }
     const std::int32_t tileX = position.x.FloorToInt();
     const std::int32_t tileY = position.y.FloorToInt();
+    if (TerrainAt(tileX, tileY) == Terrain::Blocked &&
+        !IsReshapedOpen(tileX, tileY)) {
+        return false;
+    }
+    // SPEC-MOV-006: a completed structure occupies its ground absolutely.
+    if (legacyOpenGroundReplaySemantics_) {
+        return true;
+    }
+    return !IsStructureBlockedAt(position);
+}
+
+bool Simulation::IsGroundOpen(Vec2 position) const {
+    if (!IsInsideMap(position)) {
+        return false;
+    }
+    const std::int32_t tileX = position.x.FloorToInt();
+    const std::int32_t tileY = position.y.FloorToInt();
     return TerrainAt(tileX, tileY) != Terrain::Blocked ||
            IsReshapedOpen(tileX, tileY);
+}
+
+void Simulation::MarkStructureOccupancyDirty() {
+    structureOccupancyDirty_ = true;
+    // The cached path field bakes structure passability, so it retires with it.
+    pathFieldCache_.clear();
+}
+
+void Simulation::EnsureStructureOccupancy() const {
+    const std::size_t tileCount =
+        static_cast<std::size_t>(config_.mapWidthTiles) *
+        static_cast<std::size_t>(config_.mapHeightTiles);
+    if (!structureOccupancyDirty_ && structureOccupancy_.size() == tileCount) {
+        return;
+    }
+    structureOccupancy_.assign(tileCount, 0);
+    for (const Entity& entity : entities_) {
+        if (entity.hitPoints <= 0 || !entity.completed ||
+            !IsBuildingType(entity.type)) {
+            continue;
+        }
+        // A Kharuun Waystone under way is a travelling body, not standing
+        // ground: it occupies tiles through the mobile grid instead, so it
+        // never blocks itself out of its own migration.
+        if (entity.waystoneMode == WaystoneMode::Mobile) {
+            continue;
+        }
+        const std::int32_t halfExtent =
+            FootprintHalfExtentRaw(entity.faction, entity.type);
+        const std::int32_t minimumTileX = std::max(
+            0, (entity.position.x.Raw() - halfExtent) / kFixedScale);
+        const std::int32_t maximumTileX = std::min(
+            config_.mapWidthTiles - 1,
+            (entity.position.x.Raw() + halfExtent - 1) / kFixedScale);
+        const std::int32_t minimumTileY = std::max(
+            0, (entity.position.y.Raw() - halfExtent) / kFixedScale);
+        const std::int32_t maximumTileY = std::min(
+            config_.mapHeightTiles - 1,
+            (entity.position.y.Raw() + halfExtent - 1) / kFixedScale);
+        for (std::int32_t tileY = minimumTileY; tileY <= maximumTileY; ++tileY) {
+            for (std::int32_t tileX = minimumTileX; tileX <= maximumTileX;
+                 ++tileX) {
+                structureOccupancy_[static_cast<std::size_t>(
+                    tileY * config_.mapWidthTiles + tileX)] = 1;
+            }
+        }
+    }
+    structureOccupancyDirty_ = false;
+}
+
+bool Simulation::IsStructureBlockedAt(Vec2 position) const {
+    // The tile grid is a broad phase: it marks every tile a footprint touches,
+    // so a free tile is conclusive. A touched tile is then measured exactly,
+    // because rounding a 2.5-tile footprint up to whole tiles would push a
+    // hauler or attacker out of the interaction range it must reach.
+    if (!IsStructureOccupiedTile(position.x.FloorToInt(),
+                                 position.y.FloorToInt())) {
+        return false;
+    }
+    for (const Entity& entity : entities_) {
+        if (entity.hitPoints <= 0 || !entity.completed ||
+            !IsBuildingType(entity.type) ||
+            entity.waystoneMode == WaystoneMode::Mobile) {
+            continue;
+        }
+        const std::int32_t halfExtent =
+            FootprintHalfExtentRaw(entity.faction, entity.type);
+        if (Abs64(static_cast<std::int64_t>(position.x.Raw()) -
+                  entity.position.x.Raw()) < halfExtent &&
+            Abs64(static_cast<std::int64_t>(position.y.Raw()) -
+                  entity.position.y.Raw()) < halfExtent) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Simulation::IsStructureOccupiedTile(std::int32_t tileX,
+                                         std::int32_t tileY) const {
+    if (tileX < 0 || tileY < 0 || tileX >= config_.mapWidthTiles ||
+        tileY >= config_.mapHeightTiles) {
+        return false;
+    }
+    EnsureStructureOccupancy();
+    return structureOccupancy_[static_cast<std::size_t>(
+               tileY * config_.mapWidthTiles + tileX)] != 0;
+}
+
+void Simulation::RebuildMobileOccupancy() {
+    const std::size_t tileCount =
+        static_cast<std::size_t>(config_.mapWidthTiles) *
+        static_cast<std::size_t>(config_.mapHeightTiles);
+    mobileOccupancy_.assign(tileCount, 0);
+    for (const Entity& entity : entities_) {
+        if (entity.hitPoints <= 0 || !entity.completed ||
+            entity.movementPerTickRaw <= 0 ||
+            static_cast<std::size_t>(entity.owner) >= kMaximumPlayers) {
+            continue;
+        }
+        const std::uint8_t seat =
+            static_cast<std::uint8_t>(1U << entity.owner);
+        const std::int32_t halfExtent =
+            FootprintHalfExtentRaw(entity.faction, entity.type);
+        const std::int32_t minimumTileX = std::max(
+            0, (entity.position.x.Raw() - halfExtent) / kFixedScale);
+        const std::int32_t maximumTileX = std::min(
+            config_.mapWidthTiles - 1,
+            (entity.position.x.Raw() + halfExtent - 1) / kFixedScale);
+        const std::int32_t minimumTileY = std::max(
+            0, (entity.position.y.Raw() - halfExtent) / kFixedScale);
+        const std::int32_t maximumTileY = std::min(
+            config_.mapHeightTiles - 1,
+            (entity.position.y.Raw() + halfExtent - 1) / kFixedScale);
+        for (std::int32_t tileY = minimumTileY; tileY <= maximumTileY; ++tileY) {
+            for (std::int32_t tileX = minimumTileX; tileX <= maximumTileX;
+                 ++tileX) {
+                mobileOccupancy_[static_cast<std::size_t>(
+                    tileY * config_.mapWidthTiles + tileX)] |= seat;
+            }
+        }
+    }
+}
+
+std::uint8_t Simulation::MobileOwnerMaskAt(std::int32_t tileX,
+                                           std::int32_t tileY) const {
+    if (tileX < 0 || tileY < 0 || tileX >= config_.mapWidthTiles ||
+        tileY >= config_.mapHeightTiles) {
+        return 0;
+    }
+    const std::size_t tile =
+        static_cast<std::size_t>(tileY * config_.mapWidthTiles + tileX);
+    if (tile >= mobileOccupancy_.size()) {
+        return 0;
+    }
+    return mobileOccupancy_[tile];
+}
+
+bool Simulation::IsPositionPassableFor(PlayerId mover, Vec2 position) const {
+    if (!IsPositionPassable(position)) {
+        return false;
+    }
+    if (legacyOpenGroundReplaySemantics_) {
+        return true;
+    }
+    const std::uint8_t occupants = MobileOwnerMaskAt(position.x.FloorToInt(),
+                                                     position.y.FloorToInt());
+    if (occupants == 0) {
+        return true;
+    }
+    if (static_cast<std::size_t>(mover) >= kMaximumPlayers) {
+        // A seatless query asks about static ground only: terrain and
+        // structures. Bodies belong to whoever is moving.
+        return true;
+    }
+    const std::uint8_t own = static_cast<std::uint8_t>(1U << mover);
+    // Only a foreign seat's unit blocks; an allied body is pushed past by
+    // ApplySoftSeparation so a friendly column never imprisons itself.
+    return (occupants & static_cast<std::uint8_t>(~own)) == 0;
 }
 
 bool Simulation::IsSpawnPositionAvailable(Faction faction,
@@ -2752,7 +2931,12 @@ bool Simulation::IsTileKnownPassableTo(PlayerId player,
         return true;
     }
     if (visibility == Visibility::Visible) {
-        return IsPositionPassable(position);
+        // Judged at the same tile granularity the route grid uses, so a
+        // movement receipt agrees with the route the unit would actually be
+        // given: a tile a structure sits on is not a tile to route through.
+        return IsGroundOpen(position) &&
+               (legacyOpenGroundReplaySemantics_ ||
+                !IsStructureOccupiedTile(tileX, tileY));
     }
     // Movement admission consumes the same last-observed ground as the
     // player view. Live terrain changes behind fog cannot alter a receipt.
@@ -2883,8 +3067,12 @@ std::optional<Vec2> Simulation::FindNextPathWaypoint(
     if (startX == goalX && startY == goalY) {
         return destination;
     }
-    const Vec2 goalTile = Vec2::FromTiles(goalX, goalY);
-    if (!IsPositionPassable(goalTile)) {
+    // Terrain still refuses outright; structure occupancy does not, because an
+    // approach to a building is an ordinary order (gather, deliver, build,
+    // repair). The final step is gated by passability, so the mover halts at
+    // the footprint edge instead of entering it.
+    if (TerrainAt(goalX, goalY) == Terrain::Blocked &&
+        !IsReshapedOpen(goalX, goalY)) {
         return std::nullopt;
     }
 
@@ -2909,6 +3097,61 @@ std::optional<Vec2> Simulation::FindNextPathWaypoint(
         std::vector<std::uint8_t> passable(tileCount, 0);
         for (std::size_t tile = 0; tile < tileCount; ++tile) {
             passable[tile] = terrain_[tile] != Terrain::Blocked ? 1 : 0;
+        }
+        // SPEC-MOV-006: route around completed structures instead of through
+        // them. The goal tile itself stays seedable even when a structure
+        // stands on it, so a worker ordered to a Dropoff still walks up to it
+        // and stops at its edge rather than refusing to approach at all.
+        if (!legacyOpenGroundReplaySemantics_) {
+            // The route grid is deliberately pessimistic: any tile a
+            // footprint touches is off-route, so a path never threads a sliver
+            // of open ground a unit cannot physically enter from the side it
+            // approaches. Standing room is judged exactly, by
+            // IsStructureBlockedAt, so a unit can still close right up to a
+            // wall when its order requires it.
+            EnsureStructureOccupancy();
+            for (std::size_t tile = 0; tile < tileCount; ++tile) {
+                if (structureOccupancy_[tile] != 0) {
+                    passable[tile] = 0;
+                }
+            }
+        }
+        // Re-open the whole footprint standing on the goal, not just the goal
+        // cell. A Command Core covers several tiles, so seeding one isolated
+        // cell would leave the field unreachable and an attacker, builder or
+        // hauler would refuse to approach the building at all.
+        passable[goal] = 1;
+        if (structureOccupancy_[goal] != 0) {
+            for (const Entity& occupant : entities_) {
+                if (occupant.hitPoints <= 0 || !occupant.completed ||
+                    !IsBuildingType(occupant.type) ||
+                    occupant.waystoneMode == WaystoneMode::Mobile) {
+                    continue;
+                }
+                const std::int32_t occupantExtent =
+                    FootprintHalfExtentRaw(occupant.faction, occupant.type);
+                const std::int32_t occupantMinX = std::max(
+                    0, (occupant.position.x.Raw() - occupantExtent) / kFixedScale);
+                const std::int32_t occupantMaxX = std::min(
+                    config_.mapWidthTiles - 1,
+                    (occupant.position.x.Raw() + occupantExtent - 1) / kFixedScale);
+                const std::int32_t occupantMinY = std::max(
+                    0, (occupant.position.y.Raw() - occupantExtent) / kFixedScale);
+                const std::int32_t occupantMaxY = std::min(
+                    config_.mapHeightTiles - 1,
+                    (occupant.position.y.Raw() + occupantExtent - 1) / kFixedScale);
+                if (goalX < occupantMinX || goalX > occupantMaxX ||
+                    goalY < occupantMinY || goalY > occupantMaxY) {
+                    continue;
+                }
+                for (std::int32_t tileY = occupantMinY; tileY <= occupantMaxY;
+                     ++tileY) {
+                    for (std::int32_t tileX = occupantMinX;
+                         tileX <= occupantMaxX; ++tileX) {
+                        passable[tileIndex(tileX, tileY)] = 1;
+                    }
+                }
+            }
         }
         for (const Entity& entity : entities_) {
             if (entity.type != EntityType::FutureWell ||
@@ -2983,10 +3226,33 @@ std::optional<Vec2> Simulation::FindNextPathWaypoint(
     } else {
         cached->second.lastUsedTick = currentTick_;
     }
-    const std::size_t startDistance =
-        cached->second.distanceToGoal[start];
+    std::size_t startDistance = cached->second.distanceToGoal[start];
     if (startDistance == kUnvisited) {
-        return std::nullopt;
+        // The mover is standing on solid ground of its own — a unit that has
+        // just emerged inside its producer's footprint, or one a finished
+        // building closed over. Leave by the cheapest open tile beside it
+        // instead of reporting no route at all (SPEC-MOV-008).
+        constexpr std::array<std::array<std::int32_t, 2>, 4> escapes{{
+            {{0, -1}}, {{1, 0}}, {{0, 1}}, {{-1, 0}},
+        }};
+        std::optional<Vec2> best{};
+        std::size_t bestDistance = kUnvisited;
+        for (const auto& escape : escapes) {
+            const std::int32_t nextX = startX + escape[0];
+            const std::int32_t nextY = startY + escape[1];
+            if (nextX < 0 || nextY < 0 || nextX >= config_.mapWidthTiles ||
+                nextY >= config_.mapHeightTiles) {
+                continue;
+            }
+            const std::size_t neighbour =
+                cached->second.distanceToGoal[tileIndex(nextX, nextY)];
+            if (neighbour != kUnvisited &&
+                (bestDistance == kUnvisited || neighbour < bestDistance)) {
+                bestDistance = neighbour;
+                best = Vec2::FromTiles(nextX, nextY);
+            }
+        }
+        return best;
     }
 
     constexpr std::array<std::array<std::int32_t, 2>, 4> directions{{
@@ -3027,15 +3293,49 @@ bool Simulation::HasLineOfSight(Vec2 start, Vec2 end, std::int32_t halfExtent) c
         const std::int64_t curY = start.y.Raw() + (deltaY * step) / numSteps;
         const Vec2 center = Vec2::FromRaw(static_cast<std::int32_t>(curX),
                                           static_cast<std::int32_t>(curY));
-        if (!IsPositionPassable(center)) {
+        if (!IsGroundOpen(center)) {
             return false;
         }
         if (halfExtent > 0) {
             const std::int32_t checkExtent = std::min(halfExtent, kFixedScale / 8);
-            if (!IsPositionPassable(Vec2::FromRaw(static_cast<std::int32_t>(curX - checkExtent), static_cast<std::int32_t>(curY))) ||
-                !IsPositionPassable(Vec2::FromRaw(static_cast<std::int32_t>(curX + checkExtent), static_cast<std::int32_t>(curY))) ||
-                !IsPositionPassable(Vec2::FromRaw(static_cast<std::int32_t>(curX), static_cast<std::int32_t>(curY - checkExtent))) ||
-                !IsPositionPassable(Vec2::FromRaw(static_cast<std::int32_t>(curX), static_cast<std::int32_t>(curY + checkExtent)))) {
+            if (!IsGroundOpen(Vec2::FromRaw(static_cast<std::int32_t>(curX - checkExtent), static_cast<std::int32_t>(curY))) ||
+                !IsGroundOpen(Vec2::FromRaw(static_cast<std::int32_t>(curX + checkExtent), static_cast<std::int32_t>(curY))) ||
+                !IsGroundOpen(Vec2::FromRaw(static_cast<std::int32_t>(curX), static_cast<std::int32_t>(curY - checkExtent))) ||
+                !IsGroundOpen(Vec2::FromRaw(static_cast<std::int32_t>(curX), static_cast<std::int32_t>(curY + checkExtent)))) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool Simulation::HasTraversableLineOfSight(PlayerId mover,
+                                           Vec2 start,
+                                           Vec2 end,
+                                           std::int32_t halfExtent) const {
+    const std::int64_t deltaX = static_cast<std::int64_t>(end.x.Raw()) - start.x.Raw();
+    const std::int64_t deltaY = static_cast<std::int64_t>(end.y.Raw()) - start.y.Raw();
+    const std::int64_t distSq = deltaX * deltaX + deltaY * deltaY;
+    if (distSq == 0) {
+        return true;
+    }
+    const std::int64_t dist = IntegerSqrt64(distSq);
+    constexpr std::int64_t kSampleStep = 256;
+    const std::int64_t numSteps = std::max<std::int64_t>(1, (dist + kSampleStep - 1) / kSampleStep);
+    for (std::int64_t step = 0; step <= numSteps; ++step) {
+        const std::int64_t curX = start.x.Raw() + (deltaX * step) / numSteps;
+        const std::int64_t curY = start.y.Raw() + (deltaY * step) / numSteps;
+        const Vec2 center = Vec2::FromRaw(static_cast<std::int32_t>(curX),
+                                          static_cast<std::int32_t>(curY));
+        if (!IsPositionPassableFor(mover, center)) {
+            return false;
+        }
+        if (halfExtent > 0) {
+            const std::int32_t checkExtent = std::min(halfExtent, kFixedScale / 8);
+            if (!IsPositionPassableFor(mover, Vec2::FromRaw(static_cast<std::int32_t>(curX - checkExtent), static_cast<std::int32_t>(curY))) ||
+                !IsPositionPassableFor(mover, Vec2::FromRaw(static_cast<std::int32_t>(curX + checkExtent), static_cast<std::int32_t>(curY))) ||
+                !IsPositionPassableFor(mover, Vec2::FromRaw(static_cast<std::int32_t>(curX), static_cast<std::int32_t>(curY - checkExtent))) ||
+                !IsPositionPassableFor(mover, Vec2::FromRaw(static_cast<std::int32_t>(curX), static_cast<std::int32_t>(curY + checkExtent)))) {
                 return false;
             }
         }
@@ -3044,7 +3344,8 @@ bool Simulation::HasLineOfSight(Vec2 start, Vec2 end, std::int32_t halfExtent) c
 }
 
 Vec2 Simulation::FindStringPulledTarget(Vec2 start, Vec2 destination, std::int32_t halfExtent) const {
-    if (HasLineOfSight(start, destination, halfExtent)) {
+    if (HasTraversableLineOfSight(kNeutralPlayer, start, destination,
+                                  halfExtent)) {
         return destination;
     }
     const std::int32_t startX = start.x.FloorToInt();
@@ -3133,13 +3434,49 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
 
     const std::int32_t halfExtent = FootprintHalfExtentRaw(entity.faction, entity.type);
 
+    // SPEC-MOV-006/008: a foreign seat's body and every completed structure
+    // block this step. If the unit is already standing in blocked ground — a
+    // structure finished on top of it, or a snapshot placed it there — it
+    // leaves on terrain alone rather than being imprisoned for good.
+    const bool trapped = !IsPositionPassableFor(entity.owner, entity.position);
+    const auto stepAllowed = [this, &entity, trapped](Vec2 candidate) {
+        if (!trapped) {
+            return IsPositionPassableFor(entity.owner, candidate);
+        }
+        if (!IsInsideMap(candidate)) {
+            return false;
+        }
+        const std::int32_t tileX = candidate.x.FloorToInt();
+        const std::int32_t tileY = candidate.y.FloorToInt();
+        return TerrainAt(tileX, tileY) != Terrain::Blocked ||
+               IsReshapedOpen(tileX, tileY);
+    };
+
     Vec2 movementTarget = destination;
-    if (!HasLineOfSight(entity.position, destination, halfExtent)) {
+    // A trapped unit walks straight out on terrain alone. Consulting the path
+    // field first would be futile: its own cell is masked blocked, so the
+    // field never reaches it and it would stand still for ever.
+    if (!trapped &&
+        !HasTraversableLineOfSight(entity.owner, entity.position, destination,
+                                   halfExtent)) {
         const std::optional<Vec2> waypoint = FindNextPathWaypoint(entity.position, destination);
         if (!waypoint.has_value()) {
             return false;
         }
-        movementTarget = FindStringPulledTarget(entity.position, destination, halfExtent);
+        // SPEC-MOV-006.FAIL: while an obstacle intercepts the direct line the
+        // unit follows the grid field to the next waypoint centre. String
+        // pulling resumes the moment the line is clear again. Re-deriving a
+        // pulled target every tick against an obstacle face made the unit
+        // argue with the field and oscillate on a tile boundary instead of
+        // rounding the corner.
+        const std::int32_t waypointTileX = waypoint->x.FloorToInt();
+        const std::int32_t waypointTileY = waypoint->y.FloorToInt();
+        movementTarget =
+            (waypointTileX == destination.x.FloorToInt() &&
+             waypointTileY == destination.y.FloorToInt())
+                ? destination
+                : Vec2::FromRaw(waypointTileX * kFixedScale + kFixedScale / 2,
+                                waypointTileY * kFixedScale + kFixedScale / 2);
     }
 
     const std::int64_t deltaX =
@@ -3179,7 +3516,7 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
 
     // Arrival damping (SPEC-MOV-012)
     if (distance <= movementPerTick) {
-        if (IsPositionPassable(movementTarget)) {
+        if (stepAllowed(movementTarget)) {
             entity.position = movementTarget;
             entity.vibrationSignatureUntilTick = std::min(
                 kMaximumSupportedTick,
@@ -3195,20 +3532,12 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
     const Vec2 candidate = Vec2::FromRaw(
         static_cast<std::int32_t>(entity.position.x.Raw() + stepX),
         static_cast<std::int32_t>(entity.position.y.Raw() + stepY));
-    if (!IsPositionPassable(candidate)) {
-        const Vec2 candidateX = Vec2::FromRaw(candidate.x.Raw(), entity.position.y.Raw());
-        const Vec2 candidateY = Vec2::FromRaw(entity.position.x.Raw(), candidate.y.Raw());
-        if (stepX != 0 && IsPositionPassable(candidateX)) {
-            entity.position = candidateX;
-            return false;
-        }
-        if (stepY != 0 && IsPositionPassable(candidateY)) {
-            entity.position = candidateY;
-            return false;
-        }
+    if (!stepAllowed(candidate)) {
         // SPEC-MOV-006.FAIL: the direct step clipped an obstacle corner the
-        // sampled line-of-sight test did not see. Fall back to the centre of
-        // the next grid waypoint for this tick instead of stalling in place.
+        // sampled line-of-sight test did not see. Route first and slide only
+        // as a last resort. Sliding first parks the unit on a tile boundary
+        // against the obstacle face, where the waypoint it derives from its
+        // own tile flips every tick and it oscillates instead of going round.
         const std::optional<Vec2> gridWaypoint =
             FindNextPathWaypoint(entity.position, destination);
         if (gridWaypoint.has_value()) {
@@ -3238,13 +3567,28 @@ bool Simulation::MoveTowards(Entity& entity, Vec2 destination) {
                     static_cast<std::int32_t>(
                         entity.position.y.Raw() + gridTravel * gridDeltaY / gridDistance));
                 if (gridCandidate != entity.position &&
-                    IsPositionPassable(gridCandidate)) {
+                    stepAllowed(gridCandidate)) {
                     entity.position = gridCandidate;
                     entity.vibrationSignatureUntilTick = std::min(
                         kMaximumSupportedTick,
                         currentTick_ + config_.rules.vibrationDetection.signatureLingerTicks);
+                    return false;
                 }
             }
+        }
+        // The route produced nothing this tick: slide along the obstacle face
+        // so a unit pressed into a corner still makes progress.
+        const Vec2 candidateX =
+            Vec2::FromRaw(candidate.x.Raw(), entity.position.y.Raw());
+        const Vec2 candidateY =
+            Vec2::FromRaw(entity.position.x.Raw(), candidate.y.Raw());
+        if (stepX != 0 && stepAllowed(candidateX)) {
+            entity.position = candidateX;
+            return false;
+        }
+        if (stepY != 0 && stepAllowed(candidateY)) {
+            entity.position = candidateY;
+            return false;
         }
         return false;
     }
@@ -3662,13 +4006,24 @@ EntityId Simulation::FindNearestOwnedDropoff(PlayerId player, Vec2 from) const {
         const auto y = static_cast<std::int32_t>(current / width);
         for (const auto& direction : directions) {
             const auto nx = x + direction[0], ny = y + direction[1];
-            if (!IsTileKnownPassableTo(player, nx, ny)) {
+            if (nx < 0 || ny < 0 || nx >= config_.mapWidthTiles ||
+                ny >= config_.mapHeightTiles) {
                 continue;
             }
             const auto next = static_cast<std::size_t>(ny) * width + static_cast<std::size_t>(nx);
-            if (distance[next] == unreachable) {
+            if (distance[next] != unreachable) {
+                continue;
+            }
+            if (IsTileKnownPassableTo(player, nx, ny)) {
                 distance[next] = distance[current] + 1;
                 frontier.push_back(next);
+                continue;
+            }
+            // A depot stands on solid ground of its own. It is still a
+            // destination, so it takes a cost from the open tile beside it,
+            // but the flood never continues through the building.
+            if (IsStructureOccupiedTile(nx, ny)) {
+                distance[next] = distance[current] + 1;
             }
         }
     }
@@ -3676,7 +4031,32 @@ EntityId Simulation::FindNearestOwnedDropoff(PlayerId player, Vec2 from) const {
     std::size_t bestCost = unreachable;
     std::uint64_t bestStraightDistance = std::numeric_limits<std::uint64_t>::max();
     for (const Entity* depot : candidates) {
-        const auto cost = distance[indexOf(depot->position)];
+        // A depot occupies several tiles and its centre one is solid, so the
+        // flood above stops at the rim. Cost it by the cheapest tile of its
+        // own footprint rather than by a centre no hauler can stand on.
+        const std::int32_t depotExtent =
+            FootprintHalfExtentRaw(depot->faction, depot->type);
+        const std::int32_t depotMinX = std::max(
+            0, (depot->position.x.Raw() - depotExtent) / kFixedScale);
+        const std::int32_t depotMaxX = std::min(
+            config_.mapWidthTiles - 1,
+            (depot->position.x.Raw() + depotExtent - 1) / kFixedScale);
+        const std::int32_t depotMinY = std::max(
+            0, (depot->position.y.Raw() - depotExtent) / kFixedScale);
+        const std::int32_t depotMaxY = std::min(
+            config_.mapHeightTiles - 1,
+            (depot->position.y.Raw() + depotExtent - 1) / kFixedScale);
+        std::size_t cost = distance[indexOf(depot->position)];
+        for (std::int32_t tileY = depotMinY; tileY <= depotMaxY; ++tileY) {
+            for (std::int32_t tileX = depotMinX; tileX <= depotMaxX; ++tileX) {
+                const std::size_t candidateCost =
+                    distance[static_cast<std::size_t>(tileY) * width +
+                             static_cast<std::size_t>(tileX)];
+                if (candidateCost < cost) {
+                    cost = candidateCost;
+                }
+            }
+        }
         const auto straight = DistanceSquaredRaw(from, depot->position);
         if (cost != unreachable &&
             (nearest == nullptr || std::tie(cost, straight, depot->id) <
@@ -4227,6 +4607,7 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
                                      command.buildType, command.position);
             site.id = siteId;
             site.completed = false;
+            MarkStructureOccupancyDirty();
             site.hitPoints = std::max(1, site.maxHitPoints / 10);
             site.constructionProgress = 0;
             site.constructionInvestedCost = cost;
@@ -4238,6 +4619,7 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
             // Set the order before push_back; vector growth may relocate the actor.
             const EntityId workerId = actor->id;
             entities_.push_back(site);
+            MarkStructureOccupancyDirty();
             constructionReceipts_[command.player].push_back({
                 currentTick_, workerId, site.id,
                 ConstructionTransition::Created, 0, cost, {},
@@ -4883,6 +5265,7 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
                 currentTick_ + rules.cooldownTicks);
             (void)SetTerrainTile(tileX, tileY, Terrain::Blocked);
             entities_.push_back(cover);
+            MarkStructureOccupancyDirty();
             outcome = CommandResolutionOutcome::Applied;
             return;
         }
@@ -5200,6 +5583,7 @@ void Simulation::ProcessBuild(Entity& worker) {
     }
     if (site->constructionProgress >= site->constructionRequired) {
         site->completed = true;
+        MarkStructureOccupancyDirty();
         site->hitPoints = site->maxHitPoints;
         if (IsChoirCoherenceStructure(*site)) {
             site->choirCoherenceNextChargeTick = std::min(
@@ -5938,6 +6322,7 @@ void Simulation::ProcessProduction() {
         unit.id = unitId;
         ClearActiveProduction(*producer);
         entities_.push_back(unit);
+        MarkStructureOccupancyDirty();
         producer = MutableEntity(producerId);
         Entity* spawned = MutableEntity(unitId);
         if (producer != nullptr && spawned != nullptr) {
@@ -6013,6 +6398,9 @@ void Simulation::ProcessResearch() {
 
 void Simulation::ProcessEntityOrders() {
     ReconcileHarvestReservations();
+    // One occupancy snapshot per tick, taken before any unit moves, so the
+    // order in which entities are processed cannot change who blocks whom.
+    RebuildMobileOccupancy();
     std::vector<PendingDamage> pendingDamage{};
     std::vector<Vec2> positionsBeforeOrders{};
     positionsBeforeOrders.reserve(entities_.size());
@@ -6206,6 +6594,7 @@ void Simulation::RemoveDestroyedEntities() {
         // Exhausted deposits remain as non-interactable terrain landmarks.
         return entity.hitPoints <= 0;
     });
+    MarkStructureOccupancyDirty();
 }
 
 void Simulation::ClearInvalidOrders() {
@@ -9156,6 +9545,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         entity.type = static_cast<EntityType>(type);
         entity.position = Vec2::FromRaw(rawX, rawY);
         entity.completed = completed != 0;
+        simulation.MarkStructureOccupancyDirty();
         entity.order.type = static_cast<OrderType>(orderType);
         entity.order.anchor =
             Vec2::FromRaw(orderAnchorRawX, orderAnchorRawY);
@@ -9197,6 +9587,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             return std::nullopt;
         }
         simulation.entities_.push_back(entity);
+        simulation.MarkStructureOccupancyDirty();
         priorId = entity.id;
     }
     if (simulation.nextEntityId_ == 0 ||
@@ -10039,6 +10430,7 @@ void Simulation::CaptureReplayBaseline() {
     legacyLinkReplaySemantics_ = false;
     legacyBulwarkReplaySemantics_ = false;
     legacyConstructionAssistReplaySemantics_ = false;
+    legacyOpenGroundReplaySemantics_ = false;
     replayForfeitingPlayer_ = kNeutralPlayer;
 }
 
@@ -10077,6 +10469,8 @@ bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
         prefix.version < kBulwarkCommitmentReplayVersion;
     restored.legacyConstructionAssistReplaySemantics_ =
         prefix.version < kMaintenanceReplayVersion;
+    restored.legacyOpenGroundReplaySemantics_ =
+        prefix.version < kGroundOccupancyReplayVersion;
     restored.ResolveAegisPower();
     if (replayed->StateChecksum() != restored.StateChecksum()) {
         SetError(error, "replay prefix state does not match restored state");
@@ -10126,6 +10520,7 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
         replay.version != kProductionReplayVersion &&
         replay.version != kLinkMechanicsReplayVersion &&
         replay.version != kBulwarkCommitmentReplayVersion &&
+        replay.version != kMaintenanceReplayVersion &&
         replay.version != kReplayVersion) {
         SetError(error, "replay version is unsupported");
         return std::nullopt;
@@ -10154,6 +10549,8 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
         replay.version < kBulwarkCommitmentReplayVersion;
     simulation->legacyConstructionAssistReplaySemantics_ =
         replay.version < kMaintenanceReplayVersion;
+    simulation->legacyOpenGroundReplaySemantics_ =
+        replay.version < kGroundOccupancyReplayVersion;
     // Loading a save applies current network rules. Playback must restore the
     // original rules before its first checksum, including zero-tick records.
     simulation->ResolveAegisPower();
@@ -10177,6 +10574,7 @@ std::optional<Simulation> Simulation::ReplayToEnd(const ReplayRecord& replay,
         replay.version != kProductionReplayVersion &&
         replay.version != kLinkMechanicsReplayVersion &&
         replay.version != kBulwarkCommitmentReplayVersion &&
+        replay.version != kMaintenanceReplayVersion &&
         replay.version != kReplayVersion) {
         SetError(error, "replay version is unsupported");
         return std::nullopt;
@@ -10310,6 +10708,7 @@ std::optional<MatchReport> Simulation::BuildMatchReport(
         replay.version != kProductionReplayVersion &&
         replay.version != kLinkMechanicsReplayVersion &&
         replay.version != kBulwarkCommitmentReplayVersion &&
+        replay.version != kMaintenanceReplayVersion &&
         replay.version != kReplayVersion) {
         SetError(error, "replay version is unsupported");
         return std::nullopt;

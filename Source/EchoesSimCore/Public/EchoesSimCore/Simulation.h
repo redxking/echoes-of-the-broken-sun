@@ -47,7 +47,11 @@ inline constexpr std::uint32_t kProductionReplayVersion = 26;
 inline constexpr std::uint32_t kLinkMechanicsReplayVersion = 27;
 inline constexpr std::uint32_t kBulwarkCommitmentReplayVersion = 28;
 inline constexpr std::uint32_t kMaintenanceReplayVersion = 29;
-inline constexpr std::uint32_t kReplayVersion = kMaintenanceReplayVersion;
+// Ground occupancy (SPEC-MOV-006): from this version a recording was produced
+// with entity footprints blocking movement. Anything older replays on the open
+// ground it was recorded on, so retained recordings still reproduce exactly.
+inline constexpr std::uint32_t kGroundOccupancyReplayVersion = 30;
+inline constexpr std::uint32_t kReplayVersion = kGroundOccupancyReplayVersion;
 // SPEC-UNIT-003/REL-FAC-005 fixed-step commitments, independent of render rate.
 inline constexpr Tick kBulwarkDeployTicks = 20;
 inline constexpr Tick kBulwarkPackTicks = 15;
@@ -1227,6 +1231,14 @@ public:
     [[nodiscard]] Terrain TerrainAt(std::int32_t tileX,
                                     std::int32_t tileY) const;
     [[nodiscard]] bool IsPositionPassable(Vec2 position) const;
+    /**
+     * Ground passability for one seat's mover. Terrain, completed structure
+     * footprints and mobile units belonging to any other seat all block;
+     * allied mobile units are resolved by soft separation instead so friendly
+     * formations never deadlock (SPEC-MOV-008).
+     */
+    [[nodiscard]] bool IsPositionPassableFor(PlayerId mover,
+                                             Vec2 position) const;
     [[nodiscard]] bool HasLineOfSight(Vec2 start, Vec2 end, std::int32_t halfExtent = 0) const;
     [[nodiscard]] Vec2 FindStringPulledTarget(Vec2 start, Vec2 destination, std::int32_t halfExtent = 0) const;
     // SPEC-MOV-008/012: separation acts between allied mobile units only.
@@ -1251,6 +1263,13 @@ public:
     [[nodiscard]] bool IsSpawnPositionAvailable(Faction faction,
                                                 EntityType type,
                                                 Vec2 position) const;
+    /**
+     * Half-extent, in raw fixed-point units, of the square footprint this
+     * archetype occupies. Ground occupancy, placement admission and
+     * interaction range are all derived from it.
+     */
+    [[nodiscard]] std::int32_t FootprintHalfExtentRaw(Faction faction,
+                                                      EntityType type) const;
     [[nodiscard]] PlacementResult ValidatePlacement(PlayerId player,
                                                     EntityType buildingType,
                                                     Vec2 position,
@@ -1441,8 +1460,6 @@ private:
     [[nodiscard]] Entity* MutableEntity(EntityId id);
     [[nodiscard]] bool IsBuilding(EntityType type) const;
     [[nodiscard]] bool IsDropoff(EntityType type) const;
-    [[nodiscard]] std::int32_t FootprintHalfExtentRaw(Faction faction,
-                                                      EntityType type) const;
     [[nodiscard]] Entity MakeEntity(PlayerId owner,
                                     Faction faction,
                                     EntityType type,
@@ -1630,10 +1647,30 @@ private:
     std::array<std::uint64_t, kMaximumPlayers> lastExecutedSequence_{};
     std::array<bool, kMaximumPlayers> hasExecutedSequence_{};
     mutable std::map<std::size_t, PathFieldCacheEntry> pathFieldCache_{};
+    // Ground occupancy rasterised from entity footprints (SPEC-MOV-006/008).
+    // Both grids are derived state: rebuilt from entities_, never serialised,
+    // never an input to a checksum, and never an authority of their own.
+    [[nodiscard]] bool IsGroundOpen(Vec2 position) const;
+    [[nodiscard]] bool HasTraversableLineOfSight(PlayerId mover,
+                                                 Vec2 start,
+                                                 Vec2 end,
+                                                 std::int32_t halfExtent) const;
+    void MarkStructureOccupancyDirty();
+    void EnsureStructureOccupancy() const;
+    void RebuildMobileOccupancy();
+    [[nodiscard]] bool IsStructureBlockedAt(Vec2 position) const;
+    [[nodiscard]] bool IsStructureOccupiedTile(std::int32_t tileX,
+                                               std::int32_t tileY) const;
+    [[nodiscard]] std::uint8_t MobileOwnerMaskAt(std::int32_t tileX,
+                                                 std::int32_t tileY) const;
+    mutable std::vector<std::uint8_t> structureOccupancy_{};
+    mutable bool structureOccupancyDirty_ = true;
+    std::vector<std::uint8_t> mobileOccupancy_{};
     std::vector<Projectile> projectiles_{};
     EntityId nextProjectileId_ = 1;
     bool legacyProductionReplaySemantics_ = false;
     bool legacyLinkReplaySemantics_ = false;
+    bool legacyOpenGroundReplaySemantics_ = false;
     bool legacyBulwarkReplaySemantics_ = false;
     bool legacyConstructionAssistReplaySemantics_ = false;
     void UpdateProjectiles();
