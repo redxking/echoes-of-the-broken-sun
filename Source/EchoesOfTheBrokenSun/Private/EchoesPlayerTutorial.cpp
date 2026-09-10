@@ -1,4 +1,5 @@
 #include "EchoesPlayerController.h"
+#include "EchoesTutorialCurriculumModel.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesRTSCameraPawn.h"
 #include "EchoesCinematicSubsystem.h"
@@ -337,19 +338,24 @@ void AEchoesPlayerController::TickTutorialObservation()
         ? static_cast<uint16>(FEchoesTutorialPracticeState::ImplementedLessonMask &
             ~PracticeTarget)
         : GetTutorialProgressMask();
-    static const TCHAR* LessonNames[] = {
-        TEXT("survey"), TEXT("roster"), TEXT("muster"),
-        TEXT("route"), TEXT("reserve")};
-    for (int32 Index = 0; Index < UE_ARRAY_COUNT(LessonNames); ++Index)
+    // The lesson key comes from the curriculum model, which returns the demo
+    // narrative contract's keys verbatim. A second hardcoded list here was a
+    // list that could drift from the contract silently: a lesson renamed in one
+    // place and not the other emits a signal no authored trigger listens for,
+    // and nothing fails until a player reaches that lesson and hears nothing.
+    for (int32 Index = 0; Index < EchoesTutorialLessonCount; ++Index)
     {
-        const uint16 Bit = 1u << Index;
+        const uint16 Bit = static_cast<uint16>(1u << Index);
         if (PracticeTarget != 0 ? Bit != PracticeTarget
                                 : (ProgressMask & Bit) != 0) continue;
         if (TutorialPresentedLessonBit != Bit)
         {
             if (auto* Narrative = GetGameInstance() ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>() : nullptr)
                 Narrative->EnqueueSignal(EEchoesOperationMode::CampaignPrologue,
-                    FString::Printf(TEXT("tutorial_lesson_opened:%s"), LessonNames[Index]), World->GetRealTimeSeconds());
+                    FString::Printf(TEXT("tutorial_lesson_opened:%s"),
+                        FEchoesTutorialCurriculumModel::StableName(
+                            static_cast<EEchoesTutorialLesson>(Index))),
+                    World->GetRealTimeSeconds());
             TutorialPresentedLessonBit = Bit;
         }
         break;
