@@ -6429,6 +6429,87 @@ void TestHostileBodyHoldsAChokeAndAlliedBodyDoesNot() {
     REQUIRE(held->position.x.FloorToInt() < 16);
 }
 
+// REL-AI-009/010/013 and REL-FAC-019: the generator could emit only Worker,
+// Soldier, Barracks and Dropoff. HeavyUnit and ScoutUnit appeared solely as
+// threat counts and UtilityStructure not at all, so the roster's soft-counter
+// design was inert against the only opponent in the game.
+struct AiCompositionOutcome final {
+    bool heavy = false;
+    bool scout = false;
+    bool fortified = false;
+    std::int32_t peakCombat = 0;
+};
+
+AiCompositionOutcome RunAiCompositionMatch(AiPersonality doctrine, Tick ticks) {
+    Simulation sim(SimulationConfig{64, 64, 20, 0x1300000ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{800, 350}));
+    REQUIRE(sim.SpawnEntity(0, Faction::MeridianCompact,
+                            EntityType::CommandCore,
+                            Vec2::FromTiles(10, 10)) != 0);
+    for (const Vec2 start : {Vec2::FromTiles(14, 10), Vec2::FromTiles(10, 14),
+                             Vec2::FromTiles(14, 14), Vec2::FromTiles(6, 14)}) {
+        REQUIRE(sim.SpawnEntity(0, Faction::MeridianCompact,
+                                EntityType::Worker, start) != 0);
+    }
+    REQUIRE(sim.SpawnResourceNode(Vec2::FromTiles(5, 10), 10000) != 0);
+    // Dawn income exists only through a Well; without one every combat unit is
+    // unaffordable and the composition question cannot even be asked.
+    REQUIRE(sim.SpawnFutureWell(Vec2::FromTiles(10, 5)) != 0);
+
+    AiCompositionOutcome outcome{};
+    for (Tick tick = 0; tick < ticks; ++tick) {
+        if (tick % 4 == 0) {
+            for (const Command& command : sim.GenerateAiCommands(0, doctrine)) {
+                (void)sim.QueueCommand(command);
+            }
+        }
+        sim.Step();
+        std::int32_t combat = 0;
+        for (const Entity& entity : sim.Entities()) {
+            if (entity.owner != 0 || entity.hitPoints <= 0) {
+                continue;
+            }
+            if (entity.type == EntityType::HeavyUnit) {
+                outcome.heavy = true;
+                ++combat;
+            } else if (entity.type == EntityType::ScoutUnit) {
+                outcome.scout = true;
+                ++combat;
+            } else if (entity.type == EntityType::Soldier) {
+                ++combat;
+            } else if (entity.type == EntityType::UtilityStructure &&
+                       entity.completed) {
+                outcome.fortified = true;
+            }
+        }
+        outcome.peakCombat = std::max(outcome.peakCombat, combat);
+    }
+    return outcome;
+}
+
+void TestOpponentFieldsMoreThanSoldiers() {
+    const AiCompositionOutcome balanced =
+        RunAiCompositionMatch(AiPersonality::Balanced, 6000);
+    REQUIRE(balanced.heavy);
+    REQUIRE(balanced.scout);
+
+    // REL-AI-009: the Warden fields a heavy line AND fortifies. It reaches both
+    // only because it now takes the Preserve protocol the requirement names; on
+    // a single Harvest lump its Dawn hit zero and it produced no heavy at all.
+    const AiCompositionOutcome warden =
+        RunAiCompositionMatch(AiPersonality::Defensive, 6000);
+    REQUIRE(warden.heavy);
+    REQUIRE(warden.scout);
+    REQUIRE(warden.fortified);
+
+    // REL-AI-010: the Raider fields fast mobile units and no slow screens.
+    const AiCompositionOutcome raider =
+        RunAiCompositionMatch(AiPersonality::Raider, 6000);
+    REQUIRE(raider.scout);
+    REQUIRE(!raider.heavy);
+    REQUIRE(!raider.fortified);
+}
+
 void TestLogisticsCeilingIsBounded() {
     // SPEC-BUD-006: the authored 200 Logistics ceiling holds however much
     // supply a player builds.
@@ -10248,6 +10329,8 @@ int main(int argc, char** argv) {
         {"legacy Relay scoped connectivity", TestLegacyRelayScopedConnectivity},
         {"hostile body holds a choke, allied body does not",
          TestHostileBodyHoldsAChokeAndAlliedBodyDoesNot},
+        {"opponent fields more than Soldiers",
+         TestOpponentFieldsMoreThanSoldiers},
         {"Logistics ceiling is bounded", TestLogisticsCeilingIsBounded},
         {"opponent runs an economy and industry",
          TestOpponentRunsAnEconomyAndIndustry},

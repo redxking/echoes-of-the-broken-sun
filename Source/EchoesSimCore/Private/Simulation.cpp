@@ -204,26 +204,76 @@ struct AiMacroTargets final {
     std::int32_t workerTarget;
     std::int32_t producerCap;
     std::int32_t dropoffCap;
+    std::int32_t utilityCap;
 };
+
+// REL-AI-009/010/012/013 and REL-FAC-019: what each doctrine puts in the field.
+// The generator could previously emit only Soldiers, so the roster's entire
+// soft-counter design was inert against the only opponent in the game.
+struct AiComposition final {
+    std::int32_t soldierWeight;
+    std::int32_t heavyWeight;
+    std::int32_t scoutWeight;
+};
+
+[[nodiscard]] AiComposition CompositionFor(AiPersonality personality) {
+    switch (personality) {
+        // Warden holds a perimeter with heavy line units (REL-AI-009).
+        case AiPersonality::Defensive:
+            return {40, 45, 15};
+        // Raider fields fast mobile units and no slow screens (REL-AI-010).
+        case AiPersonality::Raider:
+            return {55, 0, 45};
+        case AiPersonality::Economic:
+            return {55, 30, 15};
+        // Expansionist needs eyes on the territory it claims (REL-AI-012).
+        case AiPersonality::Expansionist:
+            return {45, 25, 30};
+        case AiPersonality::Adaptive:
+            return {45, 35, 20};
+        case AiPersonality::Balanced:
+            return {50, 30, 20};
+    }
+    return {50, 30, 20};
+}
+
+// REL-AI-013: Adaptive weights its army against what it has actually observed --
+// screens against heavy lines, sensors against fast movement.
+[[nodiscard]] AiComposition AdjustedCompositionFor(
+    AiPersonality personality,
+    std::int32_t visibleHeavyThreats,
+    std::int32_t visibleMobileThreats) {
+    AiComposition mix = CompositionFor(personality);
+    if (personality != AiPersonality::Adaptive) {
+        return mix;
+    }
+    if (visibleHeavyThreats > visibleMobileThreats) {
+        mix.soldierWeight += 20;
+    } else if (visibleMobileThreats > visibleHeavyThreats) {
+        mix.scoutWeight += 20;
+    }
+    return mix;
+}
 
 [[nodiscard]] AiMacroTargets MacroTargetsFor(AiPersonality personality) {
     switch (personality) {
         // The Steward maximises worker growth (REL-AI-011).
         case AiPersonality::Economic:
-            return {26, 4, 6};
+            return {26, 4, 6, 1};
         case AiPersonality::Expansionist:
-            return {20, 5, 6};
+            return {20, 5, 6, 1};
         case AiPersonality::Adaptive:
-            return {18, 4, 5};
+            return {18, 4, 5, 1};
         case AiPersonality::Balanced:
-            return {18, 4, 5};
+            return {18, 4, 5, 1};
+        // The Warden fortifies early and holds (REL-AI-009).
         case AiPersonality::Defensive:
-            return {16, 3, 4};
+            return {16, 3, 4, 3};
         // The Raider spends on pressure, not on a bigger base.
         case AiPersonality::Raider:
-            return {12, 5, 4};
+            return {12, 5, 4, 0};
     }
-    return {16, 3, 4};
+    return {16, 3, 4, 1};
 }
 
 [[nodiscard]] bool IsBarracksUnitType(EntityType type) {
@@ -7738,6 +7788,10 @@ std::vector<Command> Simulation::GenerateAiCommands(
     std::int32_t barracksCount = 0;
     std::int32_t dropoffCount = 0;
     std::int32_t workerCount = 0;
+    std::int32_t soldierCount = 0;
+    std::int32_t heavyCount = 0;
+    std::int32_t scoutCount = 0;
+    std::int32_t utilityCount = 0;
     std::int32_t visibleHeavyThreats = 0;
     std::int32_t visibleMobileThreats = 0;
     std::int32_t committedPopulation = PopulationUsed(player);
@@ -7756,6 +7810,14 @@ std::vector<Command> Simulation::GenerateAiCommands(
         }
         if (entity.type == EntityType::Worker) {
             ++workerCount;
+        } else if (entity.type == EntityType::Soldier) {
+            ++soldierCount;
+        } else if (entity.type == EntityType::HeavyUnit) {
+            ++heavyCount;
+        } else if (entity.type == EntityType::ScoutUnit) {
+            ++scoutCount;
+        } else if (entity.type == EntityType::UtilityStructure) {
+            ++utilityCount;
         }
         if (entity.type == EntityType::CommandCore && entity.completed &&
             (commandCore == nullptr || entity.id < commandCore->id)) {
@@ -7844,10 +7906,25 @@ std::vector<Command> Simulation::GenerateAiCommands(
         // condition required dropoffCount == 0, and a skirmish opponent starts
         // holding one, so capacity was pinned for the whole match.
         expansionType = EntityType::Dropoff;
+    } else if (personality == AiPersonality::Defensive && utilityCount < 1) {
+        // REL-AI-009: the Warden puts up ONE post early, then fields its heavy
+        // line, then fortifies further behind its industry. Taking its whole
+        // fortification ceiling up front spent the Dawn the heavy line needs
+        // and measured zero heavy units across fifty seeds.
+        expansionType = EntityType::UtilityStructure;
     } else if (barracksCount < macroTargets.producerCap &&
                capacityHeadroom > expansionHeadroom) {
         // Industry scales while there is room to use it.
         expansionType = EntityType::Barracks;
+    } else if (utilityCount < macroTargets.utilityCap &&
+               (heavyCount >= 1 ||
+                CompositionFor(personality).heavyWeight == 0)) {
+        // Fortification waits until the doctrine's heavy line exists, so posts
+        // cannot consume the Dawn those units need. It sits behind industry
+        // deliberately: a post costs 30 Dawn, the most of any building, and
+        // choosing an unaffordable expansion blocks the whole expansion path
+        // for that window rather than falling back to a cheaper one.
+        expansionType = EntityType::UtilityStructure;
     }
 
     EntityId expansionBuilder = 0;
@@ -7989,12 +8066,58 @@ std::vector<Command> Simulation::GenerateAiCommands(
                     continue;
                 }
                 command.buildType = EntityType::Worker;
-            } else {
-                command.buildType = EntityType::Soldier;
+                if (ValidateProduction(player, actor.id, command.buildType) ==
+                    ProductionResult::Valid) {
+                    commands.push_back(command);
+                }
+                continue;
             }
-            if (ValidateProduction(player, actor.id, command.buildType) ==
-                ProductionResult::Valid) {
-                commands.push_back(command);
+            // Fill the doctrine's shape rather than producing one unit type
+            // for ever. Candidates are tried in order of how far each sits
+            // below its authored share, so an unaffordable heavy does not stall
+            // a producer that could raise a scout this window.
+            const AiComposition mix = AdjustedCompositionFor(
+                personality, visibleHeavyThreats, visibleMobileThreats);
+            struct CompositionCandidate final {
+                EntityType type;
+                std::int32_t owned;
+                std::int32_t weight;
+                bool taken;
+            };
+            std::array<CompositionCandidate, 3> candidates{{
+                {EntityType::Soldier, soldierCount, mix.soldierWeight, false},
+                {EntityType::HeavyUnit, heavyCount, mix.heavyWeight, false},
+                {EntityType::ScoutUnit, scoutCount, mix.scoutWeight, false},
+            }};
+            bool produced = false;
+            for (std::size_t attempt = 0;
+                 attempt < candidates.size() && !produced; ++attempt) {
+                CompositionCandidate* choice = nullptr;
+                for (CompositionCandidate& candidate : candidates) {
+                    if (candidate.taken || candidate.weight <= 0) {
+                        continue;
+                    }
+                    // owned/weight compared by cross-multiplication: exact in
+                    // integers and independent of iteration order beyond the
+                    // stable enum ordering used to break ties.
+                    if (choice == nullptr ||
+                        static_cast<std::int64_t>(candidate.owned) *
+                                choice->weight <
+                            static_cast<std::int64_t>(choice->owned) *
+                                candidate.weight) {
+                        choice = &candidate;
+                    }
+                }
+                if (choice == nullptr) {
+                    break;
+                }
+                choice->taken = true;
+                command.buildType = choice->type;
+                if (ValidateProduction(player, actor.id, command.buildType) ==
+                    ProductionResult::Valid) {
+                    commands.push_back(command);
+                    produced = true;
+                }
             }
             continue;
         }
@@ -8092,8 +8215,14 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 // Choir MUST Preserve wells for sustainable dawnshard income
                 // (coherence upkeep requires ongoing dawnshards; Harvest is
                 // a one-time lump sum that runs out, collapsing all structures).
+                // REL-AI-009 names Preserve as the Warden's protocol, "for
+                // sustained advantage". It was taking Harvest: one 500-Dawn
+                // lump for the whole match, after which its Dawn sat at zero
+                // and it could not afford a single further combat unit, so its
+                // authored heavy line never reached the field.
                 command.wellChoice = (personality == AiPersonality::Economic ||
                                       personality == AiPersonality::Adaptive ||
+                                      personality == AiPersonality::Defensive ||
                                       playerState->faction == Faction::HollowChoir)
                                          ? FutureWellChoice::Preserve
                                      : personality == AiPersonality::Raider
