@@ -1232,9 +1232,12 @@ bool AEchoesTerrainView::InitializeMissionLandmarks()
     }
     for (size_t Kind = 0; Kind < Pack->kind_count; ++Kind)
     {
+        // The pack names the registered mesh family for each kind. M01-M03 name
+        // their bespoke per-mission assets; later missions name a shared kit,
+        // which is why they can be dressed at all without new art.
         UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr,
-            *FString::Printf(TEXT("/Game/Art/Generated/World/Environment/SM_World_%s%s"),
-                UTF8_TO_TCHAR(Pack->mission_code.data()), UTF8_TO_TCHAR(Pack->kind_names[Kind])));
+            *FString::Printf(TEXT("/Game/Art/Generated/World/Environment/SM_World_%s"),
+                UTF8_TO_TCHAR(Pack->kind_meshes[Kind])));
         if (!Mesh)
         {
             UE_LOG(LogEchoes, Error, TEXT("[ECHOES_MISSION_LANDMARKS_REFUSED] reason=missingRegisteredMesh kind=%s"),
