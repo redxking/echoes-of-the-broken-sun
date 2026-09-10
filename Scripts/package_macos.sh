@@ -425,6 +425,25 @@ build_command_argv="$(
 #
 # Gated on the ConflictingInstance string, never on the exit code: a genuine missing
 # SDK also exits 10 and must still fail immediately and loudly.
+# Preflight the build slot BEFORE invoking UAT, and name the holder. Without this the
+# operator's first signal is "AutomationTool exiting with ExitCode=10
+# (Error_SDKNotFound)" while the actual cause -- "Result: Failed (ConflictingInstance)"
+# three lines above -- scrolls past, sending them to inspect an Xcode and Metal
+# toolchain that are fine. That mislabelling cost hours across two sessions.
+#
+# Delegates to Scripts/acquire_build_slot.sh rather than re-implementing detection: a
+# hand-rolled filter here matched tool names as SUBSTRINGS of the command line and
+# silently excluded a live AutomationTool because its path happened to contain "rg".
+# The helper matches the executable basename and is negative-tested.
+build_slot_report() {
+  "$project_root/Scripts/acquire_build_slot.sh" 2>&1
+}
+if ! "$project_root/Scripts/acquire_build_slot.sh" >/dev/null 2>&1; then
+  print -u2 "another build is running - packaging must wait for the single build slot:"
+  build_slot_report | /usr/bin/sed 's/^/  /' >&2
+  print -u2 "  (this is a build-slot conflict, NOT a missing SDK; UAT mislabels it ExitCode=10 Error_SDKNotFound)"
+fi
+
 build_cook_run_attempts="${ECHOES_BUILD_MUTEX_RETRIES:-20}"
 build_cook_run_wait_seconds=15
 build_cook_run_attempt=1
@@ -442,7 +461,10 @@ while :; do
     exit 6
   fi
   if (( build_cook_run_attempt >= build_cook_run_attempts )); then
-    print -u2 "BuildCookRun still blocked by another UnrealBuildTool after $build_cook_run_attempt attempts."
+    print -u2 "another build is running - packaging aborted:"
+    build_slot_report | /usr/bin/sed 's/^/  /' >&2
+    print -u2 "BuildCookRun was blocked by a conflicting UnrealBuildTool/AutomationTool instance for all $build_cook_run_attempt attempts."
+    print -u2 "This is a build-slot conflict, NOT a missing SDK, despite UAT's ExitCode=10 Error_SDKNotFound label."
     exit 6
   fi
   holder="$(/usr/bin/pgrep -f 'UnrealBuildTool\.dll' 2>/dev/null | /usr/bin/head -3 | /usr/bin/tr '\n' ' ')"
