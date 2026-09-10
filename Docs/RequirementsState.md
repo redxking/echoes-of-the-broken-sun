@@ -138,8 +138,18 @@ read as evidence.
 and 56 rows additionally asserting `N AGENT VERIFIED (FAM-001..0NN)`. Those 56 rows assert verification
 for **393 requirement IDs**. Searching this file for each of those IDs individually:
 
-* **275 of 393 (70%) are never named anywhere in this file.** The family row is the only thing
-  asserting they were verified.
+* **373 of 393 (95%) have no dated per-ID entry.** Only twenty requirement IDs in the whole file
+  carry the thing D8 says a verification claim must be. For the rest, a family row is the only
+  assertion.
+
+  *This figure was 275, then 315, then 373, as the definition of "backed" was tightened twice — and
+  both corrections went the same way.* The first count accepted any mention of an ID anywhere in the
+  file. That let a family row's own printed range endpoints back themselves. The second count excluded
+  the endpoints, but still accepted a mention in prose — and the first draft of this very entry, which
+  names two IDs while explaining the bug, promptly "backed" them and improved the score by two. A check
+  its own documentation can satisfy is not a check. An ID now counts only when it **heads** an entry,
+  which is the shape D8 actually describes. Each correction made the problem look larger, which is the
+  direction that matters.
 * **All 56 families** contain at least one such ID. It is not a few stale rows; it is how the table works.
 * Fourteen families additionally claim *fewer* verified IDs than they declare — 40 further IDs whose
   status is neither claimed nor marked OPEN, simply absent.
@@ -170,7 +180,13 @@ came back false. Re-establishing the true state of a family is that family's own
 source and recorded per ID.
 
 **Method.** Mechanical: parse both tables, expand each asserted range, and search this file for each ID.
-No requirement's meaning was judged to produce the 275 figure. The four contradictions above were read
+It is now executable: `Scripts/check_requirement_evidence.py` parses the claim rows, expands each
+asserted range and counts per-ID mentions outside the row itself. It is a **ratchet** against
+`Docs/requirement-evidence-baseline.json` — the unbacked count may fall and never rise, so a lane
+appending real per-ID entries improves it while a lane adding a blanket family claim is refused.
+Failing every lane on a debt none of them created would have been the wrong gate. It checks document
+self-consistency only: a per-ID entry that contradicts the source passes there and is caught by reading
+source, as the four above were. No requirement's meaning was judged to produce the 373 figure. The four contradictions above were read
 from source individually and each cites its file and line.
 
 ## Outcome cause after a concession — 2026-09-09
@@ -525,10 +541,10 @@ now approved release scope, not dormant release scope; offline isolation remains
 > **These rows no longer carry verification. Read
 > [the 2026-09-10 audit](#family-rows-were-asserting-verification-nothing-supported--2026-09-10) before
 > relying on any of them.** A family row states a count. Verification is claimed for a requirement by a
-> dated per-ID entry naming its build, check and evidence class, or it is not claimed at all. **275 of
-> the 393 IDs these rows call `AGENT VERIFIED` are never named individually anywhere in this file**, and
-> four of those unbacked claims are contradicted by the source. The rows are retained as history, which
-> is what they now are.
+> dated per-ID entry naming its build, check and evidence class, or it is not claimed at all. **Only 20
+> of the 393 IDs these rows call `AGENT VERIFIED` have such an entry**, and four of the other 373 are
+> contradicted by the source. The rows are retained as history, which is what they now are.
+> `Scripts/check_requirement_evidence.py` ratchets that count so it can only fall.
 
 The family table below retains previously recorded engineering summaries. The former blanket “all OPEN”
 statement contradicted these rows and has been removed. Use exact dated per-ID entries and artifacts;
