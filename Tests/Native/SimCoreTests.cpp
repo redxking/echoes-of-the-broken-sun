@@ -6290,6 +6290,100 @@ void TestStructureFootprintsBlockMovementAndPathing() {
     }
 }
 
+// REL-AI-011/012/031: the opponent has to run an economy and an industry.
+// Its Matter income used to be exactly zero for a whole match, because the
+// planning pass re-issued Gather to workers that were already gathering and
+// BeginGather cleared the extraction timer every time. Every combat unit it
+// ever fielded came out of its opening resources.
+struct AiMacroOutcome final {
+    std::int32_t workers = 0;
+    std::int32_t producers = 0;
+    std::int32_t dropoffs = 0;
+    std::int32_t peakCombat = 0;
+    std::int32_t material = 0;
+    bool everEarned = false;
+};
+
+AiMacroOutcome RunAiMacroMatch(AiPersonality doctrine, Tick maxTicks) {
+    Simulation sim(SimulationConfig{48, 48, 20, 0xA1AC0001ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{800, 350}));
+    REQUIRE(sim.SpawnEntity(0, Faction::MeridianCompact,
+                            EntityType::CommandCore,
+                            Vec2::FromTiles(10, 10)) != 0);
+    for (const Vec2 start : {Vec2::FromTiles(13, 10), Vec2::FromTiles(10, 13),
+                             Vec2::FromTiles(13, 13), Vec2::FromTiles(7, 13)}) {
+        REQUIRE(sim.SpawnEntity(0, Faction::MeridianCompact,
+                                EntityType::Worker, start) != 0);
+    }
+    REQUIRE(sim.SpawnResourceNode(Vec2::FromTiles(6, 10), 10000) != 0);
+    REQUIRE(sim.SpawnResourceNode(Vec2::FromTiles(20, 24), 8000) != 0);
+
+    AiMacroOutcome outcome{};
+    const std::int32_t openingMaterial = sim.FindPlayer(0)->resources.material;
+    std::int32_t lowWater = openingMaterial;
+    for (Tick tick = 0; tick < maxTicks; ++tick) {
+        if (tick % 4 == 0) {
+            for (const Command& command : sim.GenerateAiCommands(0, doctrine)) {
+                (void)sim.QueueCommand(command);
+            }
+        }
+        sim.Step();
+        const std::int32_t material = sim.FindPlayer(0)->resources.material;
+        lowWater = std::min(lowWater, material);
+        if (material > lowWater) {
+            outcome.everEarned = true;
+        }
+        std::int32_t combat = 0;
+        for (const Entity& entity : sim.Entities()) {
+            if (entity.owner != 0 || entity.hitPoints <= 0) {
+                continue;
+            }
+            if (entity.type == EntityType::Soldier ||
+                entity.type == EntityType::HeavyUnit ||
+                entity.type == EntityType::ScoutUnit) {
+                ++combat;
+            }
+        }
+        outcome.peakCombat = std::max(outcome.peakCombat, combat);
+    }
+    for (const Entity& entity : sim.Entities()) {
+        if (entity.owner != 0 || entity.hitPoints <= 0) {
+            continue;
+        }
+        if (entity.type == EntityType::Worker) {
+            ++outcome.workers;
+        } else if (entity.type == EntityType::Barracks) {
+            ++outcome.producers;
+        } else if (entity.type == EntityType::Dropoff) {
+            ++outcome.dropoffs;
+        }
+    }
+    outcome.material = sim.FindPlayer(0)->resources.material;
+    return outcome;
+}
+
+void TestOpponentRunsAnEconomyAndIndustry() {
+    const AiMacroOutcome steward =
+        RunAiMacroMatch(AiPersonality::Economic, 4000);
+    // The regression that mattered: income exists at all.
+    REQUIRE(steward.everEarned);
+    REQUIRE(steward.workers >= 14);
+    REQUIRE(steward.producers >= 3);
+    REQUIRE(steward.dropoffs >= 1);
+    // Measured 11 peak combat units over a full 12,000-tick match and 5 over
+    // this shortened 4,000-tick window. The brief's target of 12 is not met and
+    // is reported as open, so this guards the floor actually achieved rather
+    // than asserting a number the implementation does not reach.
+    REQUIRE(steward.peakCombat >= 4);
+
+    // Doctrine has to change the shape of the economy (REL-AI-011): the Steward
+    // maximises worker growth, the Raider does not.
+    const AiMacroOutcome raider =
+        RunAiMacroMatch(AiPersonality::Raider, 4000);
+    REQUIRE(raider.everEarned);
+    REQUIRE(steward.workers > raider.workers);
+}
+
 void TestAlliedCrowdReachesDistinctTilesWithoutOverlap() {
     // (c) Thirty allied units ordered to one tile settle with no footprint
     // overlap, no deadlock and no residual drift (SPEC-MOV-008
@@ -10060,6 +10154,8 @@ int main(int argc, char** argv) {
         {"Bulwark front arc boundary", TestBulwarkFrontArcBoundary},
         {"authentic schema30 Bulwark replay", TestAuthenticSchema30BulwarkReplay},
         {"legacy Relay scoped connectivity", TestLegacyRelayScopedConnectivity},
+        {"opponent runs an economy and industry",
+         TestOpponentRunsAnEconomyAndIndustry},
         {"structure footprints block movement and pathing",
          TestStructureFootprintsBlockMovementAndPathing},
         {"allied crowd reaches distinct tiles without overlap",

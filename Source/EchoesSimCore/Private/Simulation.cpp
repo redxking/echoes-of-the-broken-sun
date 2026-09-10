@@ -193,6 +193,37 @@ constexpr std::array<EntityType, 8> kConfigurableEntityTypes{
            kConfigurableEntityTypes.end();
 }
 
+// REL-AI-011/012/031: how far each doctrine grows its economy and industry.
+// The opponent used to be capped structurally rather than by doctrine -- one
+// Barracks for the whole match, eight workers, and supply only if it happened
+// to start without a Dropoff -- so every personality ended a match with the
+// same three units.
+struct AiMacroTargets final {
+    std::int32_t workerTarget;
+    std::int32_t producerCap;
+    std::int32_t dropoffCap;
+};
+
+[[nodiscard]] AiMacroTargets MacroTargetsFor(AiPersonality personality) {
+    switch (personality) {
+        // The Steward maximises worker growth (REL-AI-011).
+        case AiPersonality::Economic:
+            return {26, 4, 6};
+        case AiPersonality::Expansionist:
+            return {20, 5, 6};
+        case AiPersonality::Adaptive:
+            return {18, 4, 5};
+        case AiPersonality::Balanced:
+            return {18, 4, 5};
+        case AiPersonality::Defensive:
+            return {16, 3, 4};
+        // The Raider spends on pressure, not on a bigger base.
+        case AiPersonality::Raider:
+            return {12, 5, 4};
+    }
+    return {16, 3, 4};
+}
+
 [[nodiscard]] bool IsBarracksUnitType(EntityType type) {
     return type == EntityType::Soldier || type == EntityType::HeavyUnit ||
            type == EntityType::ScoutUnit;
@@ -7798,13 +7829,19 @@ std::vector<Command> Simulation::GenerateAiCommands(
             expansionHeadroom = 0;
             break;
     }
+    const AiMacroTargets macroTargets = MacroTargetsFor(personality);
     if (barracksCount == 0) {
         expansionType = EntityType::Barracks;
     } else if (capacityHeadroom <= expansionHeadroom &&
-               (dropoffCount == 0 ||
-                (personality == AiPersonality::Adaptive &&
-                 dropoffCount < 2 && capacityHeadroom <= 6))) {
+               dropoffCount < macroTargets.dropoffCap) {
+        // Raise supply whenever the cap is the thing in the way. The old
+        // condition required dropoffCount == 0, and a skirmish opponent starts
+        // holding one, so capacity was pinned for the whole match.
         expansionType = EntityType::Dropoff;
+    } else if (barracksCount < macroTargets.producerCap &&
+               capacityHeadroom > expansionHeadroom) {
+        // Industry scales while there is room to use it.
+        expansionType = EntityType::Barracks;
     }
 
     EntityId expansionBuilder = 0;
@@ -7934,16 +7971,15 @@ std::vector<Command> Simulation::GenerateAiCommands(
                     continue;
                 }
             }
-            // Queueing is a player-directed production capability. Preserve the
-            // AI's established one-at-a-time cadence so repeated planning
-            // windows do not fill every waiting slot behind an active unit.
-            if (actor.productionRequired > 0 ||
-                !actor.productionQueue.empty()) {
+            // Keep one unit on the way behind the active one. Refusing to
+            // queue at all left every producer idle for a tick between units,
+            // which is most of why the opponent never fielded an army.
+            if (actor.productionQueue.size() >= 2) {
                 continue;
             }
             command.type = CommandType::Produce;
             if (actor.type == EntityType::CommandCore) {
-                if (workerCount >= 8) {
+                if (workerCount >= macroTargets.workerTarget) {
                     continue;
                 }
                 command.buildType = EntityType::Worker;
@@ -7997,6 +8033,10 @@ std::vector<Command> Simulation::GenerateAiCommands(
             if (actor.cargo > 0) {
                 const EntityId dropoff = FindNearestOwnedDropoff(player, actor.position);
                 if (dropoff != 0) {
+                    if (actor.order.type == OrderType::Deliver &&
+                        actor.order.target == dropoff) {
+                        continue;
+                    }
                     command.type = CommandType::Deliver;
                     command.target = dropoff;
                     commands.push_back(command);
@@ -8075,6 +8115,17 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 }
             }
             if (nearestResource != nullptr) {
+                // Leave a worker that is already working this node alone.
+                // Re-ordering it calls BeginGather, which clears the harvest
+                // state, and the extraction timer restarts from zero. At the
+                // planning cadence that reset always landed before an
+                // extraction could finish, so the opponent's Matter income was
+                // exactly zero for an entire match and every combat unit it
+                // ever fielded came out of its opening resources (REL-AI-011).
+                if (actor.order.type == OrderType::Gather &&
+                    actor.order.target == nearestResource->id) {
+                    continue;
+                }
                 command.type = CommandType::Gather;
                 command.target = nearestResource->id;
                 commands.push_back(command);
