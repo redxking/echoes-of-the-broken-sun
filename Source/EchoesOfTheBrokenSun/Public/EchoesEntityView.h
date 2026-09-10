@@ -583,6 +583,7 @@ private:
         echoes::sim::ChoirIdentityState::NotChoir;
     bool bTemporaryMineralCover = false;
     bool bAegisPowered = false;
+    int32 ResourceRemaining = 1500;
     bool bUsingAuthoredRosterMesh = false;
     bool bUsingAuthoredFutureWellMesh = false;
     bool bUsingAuthoredResourceMesh = false;

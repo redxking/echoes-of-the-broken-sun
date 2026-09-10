@@ -4932,7 +4932,7 @@ bool UEchoesSimulationSubsystem::StartScenario(
         for (const FIntPoint& Tile : MatterNodeTiles)
         {
             bSpawnSucceeded &=
-                Simulation->SpawnResourceNode(Vec2::FromTiles(Tile.X, Tile.Y), 1600) != 0;
+                Simulation->SpawnResourceNode(Vec2::FromTiles(Tile.X, Tile.Y), 1500) != 0;
         }
         if (bLumeReach)
         {

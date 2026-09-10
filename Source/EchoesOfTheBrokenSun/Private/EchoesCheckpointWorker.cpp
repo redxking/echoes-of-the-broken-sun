@@ -249,7 +249,11 @@ FEchoesCheckpointWriteResult FEchoesCheckpointCoordinator::Execute(
         }
     }
 
-    if (!AtomicReplaceFile(Request.SavePath, TemporaryPath))
+    bool bForceCommitFailure = false;
+#if WITH_DEV_AUTOMATION_TESTS
+    bForceCommitFailure = Request.bForcePrimaryCommitFailure;
+#endif
+    if (bForceCommitFailure || !AtomicReplaceFile(Request.SavePath, TemporaryPath))
     {
         Files.Delete(*TemporaryPath, false, true, true);
         Result.Feedback = bPriorPrimaryValid

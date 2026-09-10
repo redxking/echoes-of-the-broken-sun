@@ -151,14 +151,55 @@ bool FEchoesCheckpointWorkerTest::RunTest(const FString& Parameters)
 
     TArray<uint8> Primary;
     TArray<uint8> Backup;
-    TestTrue(
+    if (!TestTrue(
         TEXT("Newest generation is the primary"),
         FFileHelper::LoadFileToArray(Primary, *SavePath) &&
-            Primary == TArray<uint8>({'E', 'C', 'H', 'O', 2}));
-    TestTrue(
+            Primary == TArray<uint8>({'E', 'C', 'H', 'O', 2})))
+    {
+        return false;
+    }
+    if (!TestTrue(
         TEXT("Prior generation rotated to backup"),
         FFileHelper::LoadFileToArray(Backup, *(SavePath + TEXT(".bak"))) &&
+            Backup == TArray<uint8>({'E', 'C', 'H', 'O', 1})))
+    {
+        return false;
+    }
+
+    // Fail at the actual commit boundary, after the new bytes and recovery
+    // generation have been written and verified. Pre-write injection cannot
+    // establish preservation of the two existing generations at this boundary.
+    FEchoesCheckpointWriteRequest CommitFailure =
+        MakeWorkerRequest(20, SavePath, 9, WorkerThreadId);
+    CommitFailure.bForcePrimaryCommitFailure = true;
+    if (!TestTrue(TEXT("Post-staging failure request is accepted"),
+        Coordinator.Enqueue(MoveTemp(CommitFailure), Failure)))
+    {
+        return false;
+    }
+    Results.Reset();
+    Coordinator.WaitForAll(Results);
+    if (!TestEqual(TEXT("Post-staging failure completes once"), Results.Num(), 1))
+    {
+        return false;
+    }
+    TestFalse(TEXT("Failed replacement cannot report saved"), Results[0].bSucceeded);
+    TestEqual(TEXT("Failed replacement reports no committed bytes"),
+        Results[0].PersistedBytes, 0);
+    TestTrue(TEXT("Failed replacement identifies the commit boundary"),
+        Results[0].Feedback.Contains(TEXT("SAVE_COMMIT_FAILED")));
+    TestTrue(TEXT("Failed replacement preserves the prior primary byte-for-byte"),
+        FFileHelper::LoadFileToArray(Primary, *SavePath) &&
+            Primary == TArray<uint8>({'E', 'C', 'H', 'O', 2}));
+    TestTrue(TEXT("Failed replacement preserves the prior backup byte-for-byte"),
+        FFileHelper::LoadFileToArray(Backup, *(SavePath + TEXT(".bak"))) &&
             Backup == TArray<uint8>({'E', 'C', 'H', 'O', 1}));
+    TArray<uint8> Staged;
+    TestTrue(TEXT("Failed replacement retains the verified primary recovery copy"),
+        FFileHelper::LoadFileToArray(Staged, *(SavePath + TEXT(".bak.tmp"))) &&
+            Staged == TArray<uint8>({'E', 'C', 'H', 'O', 2}));
+    TestFalse(TEXT("Failed new generation is removed from the staging path"),
+        IFileManager::Get().FileExists(*(SavePath + TEXT(".tmp"))));
 
     FEchoesCheckpointWriteRequest Deferred =
         MakeWorkerRequest(3, SavePath, 3, WorkerThreadId);

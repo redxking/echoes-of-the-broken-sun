@@ -3363,6 +3363,11 @@ echoes::sim::Entity AEchoesPlayerController::BuildNetworkPresentationEntity(
     State.owner = Scoped.owner;
     State.faction = Scoped.faction;
     State.type = Scoped.type;
+    // The current scoped wire schema does not carry deposit quantity. -1 is
+    // presentation-only unknown, never authoritative stock or serialized state.
+    // Do not show an unreported quantity as an exhausted, unpickable deposit.
+    State.resourceRemaining = Scoped.type == echoes::sim::EntityType::ResourceNode
+        ? -1 : 0;
     State.position = Scoped.position;
     State.hitPoints = Scoped.hitPoints;
     State.maxHitPoints = Scoped.maxHitPoints;

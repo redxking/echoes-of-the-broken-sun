@@ -41,6 +41,8 @@ struct FEchoesCheckpointWriteRequest final
 #if WITH_DEV_AUTOMATION_TESTS
     bool bForceBackupRotationFailure = false;
     bool bForceWriteFailure = false;
+    // Exercise the commit boundary only after both staged files reopen.
+    bool bForcePrimaryCommitFailure = false;
 #endif
 };
 

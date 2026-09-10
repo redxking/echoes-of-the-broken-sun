@@ -1414,7 +1414,8 @@ void AEchoesEntityView::ApplyAuthoritativeState(
                                       State.choirIdentityState ||
                                   bTemporaryMineralCover !=
                                       State.temporaryMineralCover ||
-                                  bAegisPowered != State.aegisPowered;
+                                  bAegisPowered != State.aegisPowered ||
+                                  ResourceRemaining != State.resourceRemaining;
     EntityId = State.id;
     OwnerPlayerId = State.owner;
     EntityFaction = State.faction;
@@ -1433,6 +1434,7 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     ChoirIdentityState = State.choirIdentityState;
     bTemporaryMineralCover = State.temporaryMineralCover;
     bAegisPowered = State.aegisPowered;
+    ResourceRemaining = State.resourceRemaining;
     HitPoints = State.hitPoints;
     MaxHitPoints = State.maxHitPoints;
 
@@ -1865,6 +1867,21 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         }
     }
 
+    // SPEC-RES-006: the authored mesh already contains seven clustered spires.
+    // Absolute stock drives size, so load/reacquisition cannot refill the look.
+    // Keep the broad host-rock footprint recognizable after exhaustion.
+    if (State.type == echoes::sim::EntityType::ResourceNode)
+    {
+        // Negative stock is a network-presentation unknown, not exhaustion.
+        // Keep the ordinary landmark until the scoped wire carries quantity.
+        const float StockFraction = State.resourceRemaining < 0 ? 1.0f : FMath::Clamp(
+            static_cast<float>(State.resourceRemaining) / 1500.0f, 0.0f, 1.0f);
+        const float HeightFraction = FMath::Lerp(0.06f, 1.0f, StockFraction);
+        BodyScale.X *= FMath::Lerp(0.65f, 1.0f, StockFraction);
+        BodyScale.Y *= FMath::Lerp(0.65f, 1.0f, StockFraction);
+        BodyScale.Z *= HeightFraction;
+        BodyOffset.Z *= HeightFraction;
+    }
     BodyMesh->SetStaticMesh(DesiredMesh);
     BodyMesh->SetRelativeScale3D(BodyScale);
     BodyMesh->SetRelativeLocation(BodyOffset);
@@ -2541,6 +2558,37 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             TeamColor);
     }
 
+    if (State.type == echoes::sim::EntityType::ResourceNode)
+    {
+        const bool bExhausted = State.resourceRemaining == 0;
+        if (bExhausted)
+        {
+            SetBodyColor(FLinearColor(0.055f, 0.065f, 0.070f));
+            for (UMaterialInstanceDynamic* Material : BodyMaterials)
+            {
+                if (Material != nullptr)
+                {
+                    Material->SetScalarParameterValue(EmissiveStrengthParameterName, 0.0f);
+                    Material->SetScalarParameterValue(MaskedEmissiveStrengthParameterName, 0.0f);
+                }
+            }
+        }
+        // Restore picking as well when a pooled actor or an earlier snapshot
+        // reuses this view for an active deposit.
+        BodyMesh->SetCollisionEnabled(bExhausted
+            ? ECollisionEnabled::NoCollision : ECollisionEnabled::QueryOnly);
+        EntityPickProxy->SetCollisionEnabled(bExhausted
+            ? ECollisionEnabled::NoCollision : ECollisionEnabled::QueryOnly);
+        if (bExhausted)
+        {
+            SetSelected(false);
+            SelectionRing->SetVisibility(false, true);
+            SetOverlayVisibleAndPickable(HealthBarBackground, false);
+            SetOverlayVisibleAndPickable(HealthBarFill, false);
+            SetOverlayVisibleAndPickable(OwnerMarker, false);
+        }
+    }
+
     ConfigureM01SurveyorRig();
     ConfigureM01BulwarkParts();
     ConfigureFutureWellPresentation(State);
@@ -3087,7 +3135,8 @@ void AEchoesEntityView::SetBodyColor(const FLinearColor& Color)
 
 void AEchoesEntityView::SetSelected(bool bInSelected)
 {
-    bSelected = bFutureWellTerminallyCollapsed ? false : bInSelected;
+    const bool bExhaustedResource = EntityType == echoes::sim::EntityType::ResourceNode && ResourceRemaining == 0;
+    bSelected = (bFutureWellTerminallyCollapsed || bExhaustedResource) ? false : bInSelected;
     SelectionVFXTimeSeconds = 0.0f;
     SelectionRing->SetRelativeRotation(FRotator::ZeroRotator);
     SelectionRing->SetRelativeScale3D(SelectionVFXBaseScale);
@@ -3142,7 +3191,8 @@ void AEchoesEntityView::UpdateHealthBar()
     {
         return;
     }
-    const bool bShowHealth = !bFutureWellTerminallyCollapsed &&
+    const bool bExhaustedResource = EntityType == echoes::sim::EntityType::ResourceNode && ResourceRemaining == 0;
+    const bool bShowHealth = !bFutureWellTerminallyCollapsed && !bExhaustedResource &&
         (bSelected || DisplayedHealthFraction < 0.999f);
     SetOverlayVisibleAndPickable(HealthBarBackground, bShowHealth);
     SetOverlayVisibleAndPickable(

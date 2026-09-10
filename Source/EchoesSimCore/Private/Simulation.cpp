@@ -801,6 +801,18 @@ constexpr std::int32_t kScarredMovementPercent = 85;
         view.PopulationCapacity()) {
         return ProductionResult::CapacityReached;
     }
+
+    if (!IsBuildingType(unitType)) {
+        std::int32_t mobileEntities = 0;
+        for (const Entity& entity : view.Entities()) {
+            if (entity.owner == view.Player().id && entity.hitPoints > 0 && !IsBuildingType(entity.type)) {
+                mobileEntities++;
+            }
+        }
+        if (mobileEntities >= 30) {
+            return ProductionResult::CapacityReached;
+        }
+    }
     return ProductionResult::Valid;
 }
 
@@ -1112,7 +1124,7 @@ SimulationRules DefaultSimulationRules() {
          3 * kFixedScale / 4});
     set(Faction::MeridianCompact, EntityType::Barracks,
         {{170, 20}, 650, 0, 5, 0, 0, 0, 0, 0, 160, 0, 0, 0,
-         kFixedScale});
+         2 * kFixedScale});
     set(Faction::MeridianCompact, EntityType::HeavyUnit,
         {{130, 25}, 260, 117, 9, 3 * kFixedScale, 10, 24, 0, 0, 0, 3,
          0, 140, kFixedScale / 8});
@@ -2503,6 +2515,18 @@ ProductionResult Simulation::ValidateProduction(PlayerId player,
         PopulationCapacity(player)) {
         return ProductionResult::CapacityReached;
     }
+
+    if (!IsBuildingType(unitType)) {
+        std::int32_t mobileEntities = 0;
+        for (const Entity& entity : entities_) {
+            if (entity.owner == player && entity.hitPoints > 0 && !IsBuildingType(entity.type)) {
+                mobileEntities++;
+            }
+        }
+        if (mobileEntities >= 30) {
+            return ProductionResult::CapacityReached;
+        }
+    }
     if (entities_.size() >= kMaximumSerializedEntities || nextEntityId_ == 0 ||
         nextEntityId_ == std::numeric_limits<EntityId>::max() ||
         nextProductionItemId_ == 0 ||
@@ -2563,6 +2587,18 @@ ProductionStartBlockReason Simulation::ProductionStartBlockReasonFor(
             PopulationCost(playerState->faction, unitType)) >
         PopulationCapacity(player)) {
         return ProductionStartBlockReason::LogisticsCapacity;
+    }
+
+    if (!IsBuildingType(unitType)) {
+        std::int32_t mobileEntities = 0;
+        for (const Entity& entity : entities_) {
+            if (entity.owner == player && entity.hitPoints > 0 && !IsBuildingType(entity.type)) {
+                mobileEntities++;
+            }
+        }
+        if (mobileEntities >= 30) {
+            return ProductionStartBlockReason::LogisticsCapacity;
+        }
     }
     if (entities_.size() >= kMaximumSerializedEntities || nextEntityId_ == 0 ||
         nextEntityId_ == std::numeric_limits<EntityId>::max() ||
@@ -7679,10 +7715,11 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
                 observed.workRate = 0;
                 observed.cargo = 0;
                 observed.cargoCapacity = 0;
+                // The visible deposit's stock is public economy information.
+                // Hidden deposits never enter this visible-entity projection.
                 observed.resourceRemaining =
-                    entity.type == EntityType::ResourceNode &&
-                            entity.resourceRemaining > 0
-                        ? 1
+                    entity.type == EntityType::ResourceNode
+                        ? entity.resourceRemaining
                         : 0;
                 observed.harvestState = HarvestState::Idle;
                 observed.harvestSlotHeld = false;

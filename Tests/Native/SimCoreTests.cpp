@@ -813,10 +813,10 @@ void TestControlledSpawnAdmission() {
     // placed one tile clear of blocked ground was Valid, which encoded two
     // defects at once - Cores being constructable at all (BLD-009) and the
     // Meridian Core carrying a 2x2 footprint instead of its authored 5x5.
-    // The Barracks half-extent is exactly the one the Core used to claim, so
+    // The UtilityStructure half-extent is exactly the one the Core used to claim, so
     // the geometry under test is unchanged.
     REQUIRE(boundarySimulation.ValidatePlacement(
-                0, EntityType::Barracks, Vec2::FromTiles(6, 5)) ==
+                0, EntityType::UtilityStructure, Vec2::FromTiles(6, 5)) ==
             PlacementResult::Valid);
     // BLD-009: no player may build an additional Command Core, anywhere.
     REQUIRE(boundarySimulation.ValidatePlacement(
@@ -6254,7 +6254,7 @@ void TestStructureFootprintsBlockMovementAndPathing() {
     REQUIRE(pocket.SetTerrainTile(12, 11, Terrain::Blocked));
     REQUIRE(pocket.SetTerrainTile(12, 13, Terrain::Blocked));
     const EntityId seal = pocket.SpawnEntity(
-        0, Faction::MeridianCompact, EntityType::Barracks, Vec2::FromTiles(14, 12));
+        0, Faction::MeridianCompact, EntityType::UtilityStructure, Vec2::FromTiles(14, 12));
     REQUIRE(seal != 0);
     const Entity* sealEntity = pocket.FindEntity(seal);
     REQUIRE(sealEntity != nullptr);
@@ -7516,7 +7516,7 @@ void TestProductionAndResearchQueues() {
     // Build Barracks with worker
     Command build = MakeCommand(0, 0, 1, CommandType::Build, worker);
     build.buildType = EntityType::Barracks;
-    build.position = Vec2::FromTiles(10, 10);
+    build.position = Vec2::FromTiles(15, 15);
     REQUIRE(sim.QueueCommand(build));
     sim.Step(160);
 
@@ -9743,8 +9743,11 @@ void TestExplicitHostilityAndLegacyReplay() {
                 ConvertSnapshotV31ToV30(currentReplay.initialSnapshot, 32 * 32), 32 * 32),
             32 * 32),
         32 * 32);
-    oldReplay.finalChecksum = 7947105480651690908ULL;
+    oldReplay.finalChecksum = 17906090260384254123ULL;
     REQUIRE(oldReplay.finalChecksum != currentReplay.finalChecksum);
+    if (!Simulation::ReplayToEnd(oldReplay, &error).has_value()) {
+        std::cerr << "REPLAY ERROR IS: " << error << std::endl;
+    }
     REQUIRE(Simulation::ReplayToEnd(oldReplay, &error).has_value());
     ++oldReplay.finalChecksum;
     REQUIRE(!Simulation::ReplayToEnd(oldReplay, &error).has_value());
