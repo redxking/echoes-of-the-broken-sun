@@ -1911,7 +1911,20 @@ void UEchoesFieldHudWidget::RefreshContactWidgets()
             Slot->SetAnchors(FAnchors(
                 Contact.NormalizedScreenPosition.X,
                 Contact.NormalizedScreenPosition.Y));
-            Slot->SetAlignment(FVector2D(0.5f, 0.5f));
+            // A contact clamped to the view edge is anchored on that edge, so
+            // a box centred on its anchor puts half of itself off screen: the
+            // offscreen-attack marker lost the start of its own label to the
+            // right border. Slide the alignment toward the inside as the
+            // anchor approaches an edge, which keeps the label whole without
+            // moving the marker off the location it is reporting.
+            const auto InwardAlignment = [](double Normalized)
+            {
+                return FMath::GetMappedRangeValueClamped(
+                    FVector2D(0.10, 0.90), FVector2D(0.0, 1.0), Normalized);
+            };
+            Slot->SetAlignment(FVector2D(
+                InwardAlignment(Contact.NormalizedScreenPosition.X),
+                InwardAlignment(Contact.NormalizedScreenPosition.Y)));
             Slot->SetSize(FVector2D(230.0f, 52.0f) *
                 FMath::Clamp(View.HudScale, 0.8f, 1.5f));
             Slot->SetPosition(FVector2D::ZeroVector);
