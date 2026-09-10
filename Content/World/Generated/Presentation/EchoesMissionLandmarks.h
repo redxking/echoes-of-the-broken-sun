@@ -12,8 +12,8 @@ namespace m01 {
 inline constexpr const char* kMapId = "glass-scar-evacuation-margin";
 inline constexpr const char* kOperationMode = "CampaignPrologue";
 inline constexpr std::uint8_t kMissionOrdinal = 1;
-inline constexpr const char* kTerrainSourceSha256 = "8ae50fa5adf740f0f7f0508c151e82c4e86b7f3a1e70cf323717ee536418669b";
-inline constexpr const char* kSourceSha256 = "6d423c243a3ba813e9336fe431eccf821075ea1cda70629a7604d79d18eef9cc";
+inline constexpr const char* kTerrainSourceSha256 = "7b66cf21c7ba5a37f373f9b42f341e6bec8955c18e4716f5ab3ad1a042f2e7ee";
+inline constexpr const char* kSourceSha256 = "8eaad11b674e8c6fe34a7f8e7bcdf0e9e60b43cb66e4f9a4200387a781cdae35";
 inline constexpr std::array<const char*, 6> kKindNames{{"ArchiveCradle", "ArchiveFrame", "RoutePaving", "ServiceConduit", "ArchiveApron", "ArchiveLoadingFace"}};
 inline constexpr std::array<Record, 28> kRecords{{
     Record{"outpost-cradle-west", 0, 0, 11, 90, true, 0, 0, 11, 11, 0, 0},
