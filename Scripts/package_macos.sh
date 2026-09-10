@@ -429,8 +429,13 @@ build_cook_run_attempts="${ECHOES_BUILD_MUTEX_RETRIES:-20}"
 build_cook_run_wait_seconds=15
 build_cook_run_attempt=1
 while :; do
+  # errexit+pipefail are set at the top of this script, so a failing pipeline aborts
+  # immediately and the status capture below never runs -- which made the first version
+  # of this retry dead code. Disable errexit only across the invocation.
+  set +e
   "${build_command[@]}" 2>&1 | /usr/bin/tee "$build_log_pending"
   build_cook_run_status=${pipestatus[1]}
+  set -e
   (( build_cook_run_status == 0 )) && break
   if ! /usr/bin/grep -qi 'conflicting instance' "$build_log_pending"; then
     print -u2 "BuildCookRun failed with status $build_cook_run_status (not a build-slot conflict)."
