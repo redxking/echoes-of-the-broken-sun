@@ -354,3 +354,44 @@ class MissionOneDoctrineDivergenceTest(unittest.TestCase):
                 with self.subTest(doctrine=doctrine, site=name):
                     self.assertNotIn(cell, blocked)
                     self.assertIn(cell, reach)
+
+
+class LateCampaignBattlefieldDistinctnessTest(unittest.TestCase):
+    """M13 and M15 must not be the same battlefield wearing two objective sets.
+
+    They shared 63% of their blocked cells (Jaccard 0.633 over the compiled
+    masks, against 0.366 for the next-closest pair) while both ran the same
+    profile with no dressing and no landmarks, so nothing distinguished them.
+    MapTechnicalBlueprint's rule is explicit that a different objective overlay
+    on an unchanged route graph is not a distinct authored battlefield.
+    """
+
+    MAXIMUM_JACCARD = 0.35
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        root = Path(__file__).resolve().parents[2]
+        cls.header = (root / "Content/World/Generated/Campaign"
+                             "/EchoesCampaignMapPack.h").read_text()
+
+    def blocked(self, symbol: str) -> set[int]:
+        start = self.header.find(symbol)
+        self.assertNotEqual(start, -1, f"{symbol} missing from the compiled pack")
+        body = self.header[start:self.header.find("};", start)].split("{", 1)[1]
+        values = [token.strip() for token in body.split(",") if token.strip()]
+        return {index for index, value in enumerate(values) if value not in ("0", "false")}
+
+    def test_m13_and_m15_are_different_places(self) -> None:
+        doctrines = ("Harvest", "Preserve", "Reshape")
+        worst = 0.0
+        for left in doctrines:
+            for right in doctrines:
+                first = self.blocked(f"kM13{left}BlockedCells")
+                second = self.blocked(f"kM15{right}BlockedCells")
+                union = first | second
+                self.assertTrue(union)
+                worst = max(worst, len(first & second) / len(union))
+        self.assertLess(
+            worst, self.MAXIMUM_JACCARD,
+            f"M13/M15 blocked-cell Jaccard {worst:.3f} means one battlefield, not two",
+        )

@@ -18,44 +18,52 @@
   "base_terrain": "open",
   "terrain_region_ops": [
     {
-      "id": "approach-west-shoulder",
+      "id": "accord-dais-plinth",
       "op": "block",
-      "x0": 4,
-      "x1": 14,
-      "y0": 28,
-      "y1": 34
+      "x0": 26,
+      "x1": 38,
+      "y0": 46,
+      "y1": 58
     },
     {
-      "id": "approach-east-shoulder",
-      "op": "block",
-      "x0": 50,
-      "x1": 60,
-      "y0": 28,
-      "y1": 34
+      "id": "accord-dais-court",
+      "op": "open",
+      "x0": 29,
+      "x1": 35,
+      "y0": 49,
+      "y1": 57
     },
     {
-      "id": "dais-north-ring-west",
-      "op": "block",
-      "x0": 19,
-      "x1": 27,
-      "y0": 50,
-      "y1": 55
+      "id": "accord-causeway-north",
+      "op": "open",
+      "x0": 31,
+      "x1": 33,
+      "y0": 46,
+      "y1": 48
     },
     {
-      "id": "dais-north-ring-east",
-      "op": "block",
-      "x0": 37,
-      "x1": 45,
-      "y0": 50,
-      "y1": 55
+      "id": "accord-causeway-west",
+      "op": "open",
+      "x0": 26,
+      "x1": 28,
+      "y0": 52,
+      "y1": 53
     },
     {
-      "id": "southern-route-separation",
+      "id": "accord-causeway-east",
+      "op": "open",
+      "x0": 36,
+      "x1": 38,
+      "y0": 52,
+      "y1": 53
+    },
+    {
+      "id": "crownfall-rim-terrace",
       "op": "block",
-      "x0": 0,
-      "x1": 63,
-      "y0": 60,
-      "y1": 61
+      "x0": 8,
+      "x1": 55,
+      "y0": 61,
+      "y1": 62
     },
     {
       "id": "local-deployment-clearance",
@@ -74,12 +82,12 @@
       "y1": 58
     },
     {
-      "id": "open-evolution-conduit-socket",
+      "id": "resolution-conduit-sockets",
       "op": "open",
       "x0": 25,
-      "x1": 26,
-      "y0": 49,
-      "y1": 54
+      "x1": 27,
+      "y0": 48,
+      "y1": 55
     }
   ],
   "founding_doctrine_variants": [
@@ -95,7 +103,7 @@
           "y1": 61
         }
       ],
-      "expected_blocked_cell_count": 372
+      "expected_blocked_cell_count": 165
     },
     {
       "doctrine": "Preserve",
@@ -109,7 +117,7 @@
           "y1": 61
         }
       ],
-      "expected_blocked_cell_count": 368
+      "expected_blocked_cell_count": 163
     },
     {
       "doctrine": "Reshape",
@@ -123,7 +131,7 @@
           "y1": 61
         }
       ],
-      "expected_blocked_cell_count": 372
+      "expected_blocked_cell_count": 165
     }
   ],
   "required_clearance": [
