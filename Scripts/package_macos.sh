@@ -417,7 +417,36 @@ build_command_argv="$(
   /usr/bin/printf '%s\0' "${build_command[@]}" | /usr/bin/python3 -c \
     'import json, sys; print(json.dumps([part.decode("utf-8") for part in sys.stdin.buffer.read().split(b"\0") if part], separators=(",", ":")))'
 )"
-"${build_command[@]}" 2>&1 | /usr/bin/tee "$build_log_pending"
+# UnrealBuildTool holds a GLOBAL mutex, so any other lane's compile makes BuildCookRun
+# fail 1.24 s in with "Result: Failed (ConflictingInstance)". UAT then reports that as
+# ExitCode=10 "Error_SDKNotFound", which sends readers chasing an SDK problem that does
+# not exist. The failure is instant and costs nothing, so retry into the next gap
+# rather than requiring an hour of machine exclusivity nobody can enforce.
+#
+# Gated on the ConflictingInstance string, never on the exit code: a genuine missing
+# SDK also exits 10 and must still fail immediately and loudly.
+build_cook_run_attempts="${ECHOES_BUILD_MUTEX_RETRIES:-20}"
+build_cook_run_wait_seconds=15
+build_cook_run_attempt=1
+while :; do
+  "${build_command[@]}" 2>&1 | /usr/bin/tee "$build_log_pending"
+  build_cook_run_status=${pipestatus[1]}
+  (( build_cook_run_status == 0 )) && break
+  if ! /usr/bin/grep -qi 'conflicting instance' "$build_log_pending"; then
+    print -u2 "BuildCookRun failed with status $build_cook_run_status (not a build-slot conflict)."
+    exit 6
+  fi
+  if (( build_cook_run_attempt >= build_cook_run_attempts )); then
+    print -u2 "BuildCookRun still blocked by another UnrealBuildTool after $build_cook_run_attempt attempts."
+    exit 6
+  fi
+  holder="$(/usr/bin/pgrep -f 'UnrealBuildTool\.dll' 2>/dev/null | /usr/bin/head -3 | /usr/bin/tr '\n' ' ')"
+  print -u2 "build slot conflict (attempt $build_cook_run_attempt/$build_cook_run_attempts); holder pid(s): ${holder:-unidentified}; retrying in ${build_cook_run_wait_seconds}s"
+  print "echoes_build_slot_conflict_attempt=$build_cook_run_attempt holder=${holder:-unidentified}" >> "$build_log_pending"
+  sleep "$build_cook_run_wait_seconds"
+  (( build_cook_run_attempt += 1 ))
+done
+print "echoes_build_cook_run_attempts=$build_cook_run_attempt" >> "$build_log_pending"
 print "echoes_build_cook_run_outcome=passed" >> "$build_log_pending"
 
 verify_clean_pushed_source "after build"
