@@ -60,8 +60,20 @@ VOICES = {
     "Chancellor Cael Rhyse": ("bm_lewis", 0.95),
     "Meridian Operations Annunciator": ("af_sky", 1.06),
 }
-# Hook-named files already bound through m01_voice_bindings.json.
-ALREADY_BOUND_PREFIX = "aud_m01_vo_"
+BINDINGS = OUT_DIR / "m01_voice_bindings.json"
+
+
+def bound_line_ids() -> set[str]:
+    """Line ids already voiced under hook-named assets.
+
+    The M01 set is named by logical audio hook, not by line id, so a naive
+    existence check would regenerate all 28 under a second name and leave two
+    assets competing for one bound line.
+    """
+    if not BINDINGS.is_file():
+        return set()
+    body = json.loads(BINDINGS.read_text(encoding="utf-8"))
+    return {row["line_id"] for row in body.get("lines", []) if row.get("line_id")}
 
 
 class PreflightError(RuntimeError):
@@ -133,12 +145,16 @@ def main() -> int:
     rows = authored_lines()
     if args.only:
         rows = [r for r in rows if r["line_id"] in set(args.only)]
-    pending = [r for r in rows if not (OUT_DIR / f"{r['line_id']}.wav").exists()]
+    bound = bound_line_ids()
+    pending = [r for r in rows
+               if r["line_id"] not in bound
+               and not (OUT_DIR / f"{r['line_id']}.wav").exists()]
     if args.limit:
         pending = pending[:args.limit]
 
     print(f"[ECHOES_CAMPAIGN_VOICE_PLAN] authored={len(rows)} "
-          f"alreadyPresent={len(rows) - len([r for r in rows if not (OUT_DIR / (r['line_id'] + '.wav')).exists()])} "
+          f"alreadyBound={len([r for r in rows if r['line_id'] in bound])} "
+          f"alreadyPresent={len([r for r in rows if r['line_id'] not in bound and (OUT_DIR / (r['line_id'] + '.wav')).exists()])} "
           f"toSynthesize={len(pending)}")
     if not args.write:
         for row in pending[:5]:
