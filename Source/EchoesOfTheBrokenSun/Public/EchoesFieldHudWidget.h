@@ -203,7 +203,8 @@ public:
     void Configure(class UEchoesFieldHudWidget* InOwner);
     void SetView(
         const FEchoesFieldHudMinimapView& InView,
-        bool bInHighContrast);
+        bool bInHighContrast,
+        bool bInReducedFlashing = false);
 
 protected:
     virtual TSharedRef<SWidget> RebuildWidget() override;
@@ -236,6 +237,7 @@ private:
     TWeakObjectPtr<class UEchoesFieldHudWidget> Owner;
     FEchoesFieldHudMinimapView View;
     bool bHighContrast = false;
+    bool bReducedFlashing = false;
     bool bDragging = false;
     UPROPERTY(Transient) TObjectPtr<UCanvasPanel> RootCanvas;
     UPROPERTY(Transient) TArray<TObjectPtr<UTextBlock>> MissionLabels;

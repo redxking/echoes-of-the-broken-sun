@@ -18,6 +18,77 @@
 #include "Misc/App.h"
 #include "UnrealClient.h"
 
+namespace
+{
+/** The latest unshown off-screen attack, per controller.
+ *
+ * Held here rather than on AEchoesPlayerController because both adapter
+ * headers are frozen for the sprint. Presentation-only: it records where a
+ * warning was raised so the HUD can point at it, and touches no simulation,
+ * fog, save or checksum state. Weak keys, so a torn-down controller drops out
+ * rather than keeping a stale pin on the map.
+ *
+ * One entry per controller, overwritten rather than accumulated: sustained
+ * fire on one base must not stack a queue of near-identical arrows, which is
+ * the same reasoning as the alert subsystem's per-class admission window. */
+struct FEchoesOffscreenAlertRecord final
+{
+    FVector2D WorldLocation = FVector2D::ZeroVector;
+    double RaisedSeconds = 0.0;
+};
+
+TMap<TWeakObjectPtr<const AEchoesPlayerController>, FEchoesOffscreenAlertRecord>&
+OffscreenAlertRegistry()
+{
+    static TMap<TWeakObjectPtr<const AEchoesPlayerController>,
+                FEchoesOffscreenAlertRecord> Registry;
+    return Registry;
+}
+
+/** How long a raised attack keeps pointing before it stops being news. */
+constexpr double OffscreenAlertHoldSeconds = 12.0;
+}  // namespace
+
+void EchoesFieldHud::RaiseOffscreenCombatAlert(
+    const UObject* WorldContext,
+    const FVector2D& WorldLocation)
+{
+    if (WorldContext == nullptr || WorldLocation.ContainsNaN())
+    {
+        return;
+    }
+    const UWorld* World = WorldContext->GetWorld();
+    AEchoesPlayerController* Controller =
+        World != nullptr
+            ? Cast<AEchoesPlayerController>(World->GetFirstPlayerController())
+            : nullptr;
+    if (Controller == nullptr)
+    {
+        return;
+    }
+    TMap<TWeakObjectPtr<const AEchoesPlayerController>,
+         FEchoesOffscreenAlertRecord>& Registry = OffscreenAlertRegistry();
+    for (auto It = Registry.CreateIterator(); It; ++It)
+    {
+        if (!It.Key().IsValid())
+        {
+            It.RemoveCurrent();
+        }
+    }
+    FEchoesOffscreenAlertRecord Record;
+    Record.WorldLocation = WorldLocation;
+    Record.RaisedSeconds = World->GetRealTimeSeconds();
+    Registry.Add(Controller, Record);
+}
+
+void AEchoesPlayerController::PresentOffscreenCombatAlert(
+    const FVector2D& WorldLocation)
+{
+    // Kept as the reserved entry point; the shared implementation is the free
+    // function above, which callers outside this class can actually reach.
+    EchoesFieldHud::RaiseOffscreenCombatAlert(this, WorldLocation);
+}
+
 FEchoesFieldHudView AEchoesPlayerController::BuildFieldHudView() const
 {
     FEchoesFieldHudBuildContext Context;
@@ -30,6 +101,20 @@ FEchoesFieldHudView AEchoesPlayerController::BuildFieldHudView() const
     if (Width > 0 && Height > 0) Context.ViewportSize = FVector2D(Width, Height);
     Context.RealTimeSeconds = GetWorld() ? GetWorld()->GetRealTimeSeconds() : 0.0;
     FEchoesFieldHudView View;
+    // Carry the raised attack into the view before Build runs, so the minimap
+    // pulse and the edge indicator are produced by the same pass that places
+    // every other contact rather than by a second, divergent path.
+    if (const FEchoesOffscreenAlertRecord* Raised =
+            OffscreenAlertRegistry().Find(this))
+    {
+        if (Context.RealTimeSeconds - Raised->RaisedSeconds <
+            OffscreenAlertHoldSeconds)
+        {
+            Context.OffscreenAlertLocation = Raised->WorldLocation;
+            Context.OffscreenAlertRaisedSeconds = Raised->RaisedSeconds;
+            Context.bHasOffscreenAlert = true;
+        }
+    }
     FString Error;
     if (!FEchoesFieldHudModel::Build(Context, View, Error))
     {

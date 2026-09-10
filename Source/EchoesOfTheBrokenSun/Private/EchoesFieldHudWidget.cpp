@@ -951,10 +951,12 @@ void UEchoesFieldHudMinimapWidget::Configure(UEchoesFieldHudWidget* InOwner)
 
 void UEchoesFieldHudMinimapWidget::SetView(
     const FEchoesFieldHudMinimapView& InView,
-    bool bInHighContrast)
+    bool bInHighContrast,
+    bool bInReducedFlashing)
 {
     View = InView;
     bHighContrast = bInHighContrast;
+    bReducedFlashing = bInReducedFlashing;
     RefreshMissionLabels();
     InvalidateLayoutAndVolatility();
 }
@@ -1068,6 +1070,44 @@ int32 UEchoesFieldHudMinimapWidget::NativePaint(
             FMath::Clamp(Normalized.X, 0.0f, 1.0f) * Size.X,
             FMath::Clamp(Normalized.Y, 0.0f, 1.0f) * Size.Y);
     };
+    // The attack pulse: three expanding rings from the raised location, so the
+    // eye is pulled to a place rather than merely told that something happened
+    // somewhere. Reduced flashing holds it as a single static ring, which is
+    // still a location and still readable.
+    if (View.Alert.bActive)
+    {
+        const FVector2D AlertPoint = MapPoint(View.Alert.NormalizedMapPosition);
+        const FLinearColor AlertColor = bHighContrast
+            ? FLinearColor(1.0f, 0.85f, 0.1f, 1.0f)
+            : FLinearColor(1.0f, 0.35f, 0.2f, 0.95f);
+        const double Now = GetWorld() ? GetWorld()->GetRealTimeSeconds() : 0.0;
+        const double Age = FMath::Max(0.0, Now - View.Alert.RaisedSeconds);
+        const int32 RingCount = bReducedFlashing ? 1 : 3;
+        for (int32 Ring = 0; Ring < RingCount; ++Ring)
+        {
+            const double Phase = bReducedFlashing
+                ? 0.55
+                : FMath::Fmod(Age * 1.6 + Ring * 0.33, 1.0);
+            const float Radius = static_cast<float>(4.0 + Phase * 12.0);
+            const float Alpha = static_cast<float>(1.0 - Phase);
+            DrawBox(OutDrawElements, BaseLayer + 6, AllottedGeometry,
+                AlertPoint - FVector2D(Radius, Radius),
+                FVector2D(Radius * 2.0f, 2.0f),
+                AlertColor.CopyWithNewOpacity(Alpha * AlertColor.A));
+            DrawBox(OutDrawElements, BaseLayer + 6, AllottedGeometry,
+                AlertPoint - FVector2D(Radius, -Radius),
+                FVector2D(Radius * 2.0f, 2.0f),
+                AlertColor.CopyWithNewOpacity(Alpha * AlertColor.A));
+            DrawBox(OutDrawElements, BaseLayer + 6, AllottedGeometry,
+                AlertPoint - FVector2D(Radius, Radius),
+                FVector2D(2.0f, Radius * 2.0f),
+                AlertColor.CopyWithNewOpacity(Alpha * AlertColor.A));
+            DrawBox(OutDrawElements, BaseLayer + 6, AllottedGeometry,
+                AlertPoint + FVector2D(Radius, -Radius),
+                FVector2D(2.0f, Radius * 2.0f),
+                AlertColor.CopyWithNewOpacity(Alpha * AlertColor.A));
+        }
+    }
     for (const FEchoesFieldHudMissionMarker& Marker : View.MissionMarkers)
     {
         const FVector2D Point = MapPoint(Marker.NormalizedMapPosition);
@@ -2266,7 +2306,8 @@ void UEchoesFieldHudWidget::ApplyView()
                 : ESlateVisibility::Collapsed);
     }
 
-    MinimapWidget->SetView(View.Minimap, View.bHighContrast);
+    MinimapWidget->SetView(
+        View.Minimap, View.bHighContrast, View.bReducedFlashing);
     MinimapWidget->SetVisibility(bBattlefield && View.Minimap.bVisible
         ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
     RefreshContactWidgets();

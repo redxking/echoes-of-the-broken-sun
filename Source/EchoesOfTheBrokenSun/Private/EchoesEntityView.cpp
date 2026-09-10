@@ -7,6 +7,7 @@
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesInterfaceAudioSubsystem.h"
+#include "EchoesFieldHudView.h"
 #include "EchoesSimulationSubsystem.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/Texture2D.h"
@@ -1571,6 +1572,11 @@ void AEchoesEntityView::ApplyAuthoritativeState(
             {
                 InterfaceAudio->PlayAlert(EEchoesAlertCue::UnderAttack);
             }
+            // The sound says something is wrong; this says where. Without it
+            // the player hears a beep and has to hunt the map for the cause.
+            const FVector Location = GetActorLocation();
+            EchoesFieldHud::RaiseOffscreenCombatAlert(
+                this, FVector2D(Location.X, Location.Y));
         }
         const UEchoesGameUserSettings* Settings = UEchoesGameUserSettings::Get();
         const bool bReducedFlashing =

@@ -1310,6 +1310,33 @@ void AddSpatialPresentation(
     {
         return;
     }
+    // An off-screen attack becomes a contact like any other, so it inherits the
+    // existing edge-clamping placement below instead of growing a second path.
+    if (Context.bHasOffscreenAlert && View.Minimap.Width > 0 &&
+        View.Minimap.Height > 0)
+    {
+        View.CombatAlert.bActive = true;
+        View.CombatAlert.WorldLocation = FVector(
+            Context.OffscreenAlertLocation.X,
+            Context.OffscreenAlertLocation.Y,
+            90.0);
+        View.CombatAlert.RaisedSeconds = Context.OffscreenAlertRaisedSeconds;
+        if (Context.Simulation != nullptr)
+        {
+            const Vec2 AlertTile =
+                Context.Simulation->WorldToSim(View.CombatAlert.WorldLocation);
+            View.CombatAlert.NormalizedMapPosition = FVector2D(
+                double(AlertTile.x.Raw()) / kFixedScale /
+                    FMath::Max(1, View.Minimap.Width),
+                double(AlertTile.y.Raw()) / kFixedScale /
+                    FMath::Max(1, View.Minimap.Height));
+        }
+        FEchoesFieldHudContact AlertContact;
+        AlertContact.NormalizedMapPosition = View.CombatAlert.NormalizedMapPosition;
+        AlertContact.SecondaryLabel = LOCTEXT("AlertUnderAttack", "UNDER ATTACK");
+        View.Minimap.Contacts.Add(AlertContact);
+        View.Minimap.Alert = View.CombatAlert;
+    }
     AEchoesPlayerController* ProjectionController =
         const_cast<AEchoesPlayerController*>(Context.Controller);
     for (FEchoesFieldHudContact& Contact : View.Minimap.Contacts)

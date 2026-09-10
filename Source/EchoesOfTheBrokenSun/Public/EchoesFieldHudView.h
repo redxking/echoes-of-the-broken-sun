@@ -306,6 +306,24 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudMissionMarker final
     EEchoesFieldHudTone Tone = EEchoesFieldHudTone::Accent;
 };
 
+/** Where the player is being attacked, for the HUD to point at.
+ *
+ * FEchoesTerminalAlert already recorded that a warning was raised and carries
+ * the note that the audio subsystem owns only the sound channel and "records
+ * the warning here for the HUD to draw the other three" - but nothing consumed
+ * it, and UnderAttack was raised per-entity with no location at all. The player
+ * heard a beep and was never told where. This carries the place. */
+struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudCombatAlert final
+{
+    bool bActive = false;
+    /** Battlefield location of the attack, in world units. */
+    FVector WorldLocation = FVector::ZeroVector;
+    /** Map-normalized position, so the minimap can pulse without reprojecting. */
+    FVector2D NormalizedMapPosition = FVector2D::ZeroVector;
+    /** Real-time seconds the warning was raised, for the pulse phase. */
+    double RaisedSeconds = 0.0;
+};
+
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudMinimapView final
 {
     bool bVisible = false;
@@ -317,6 +335,9 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudMinimapView final
     TArray<FEchoesFieldHudMissionMarker> MissionMarkers;
     /** Ordered perimeter corners, normalized to map dimensions. */
     TArray<FVector2D> CameraFrustum;
+    /** The attack to pulse, carried here so the minimap widget - which only
+     * ever receives this view - can draw it without reaching upward. */
+    FEchoesFieldHudCombatAlert Alert;
 };
 
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudTargetingView final
@@ -431,6 +452,8 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudView final
     TArray<FEchoesNetworkCoverageView> NetworkCoverage;
     /** Queued-order breadcrumbs and rally routes for the current selection. */
     TArray<FEchoesFieldHudRouteLeg> OrderRoutes;
+    /** The most recent off-screen attack the player has not been shown. */
+    FEchoesFieldHudCombatAlert CombatAlert;
     TArray<FEchoesNetworkConnectionView> NetworkConnections;
     FEchoesFieldHudProductionView Production;
     FEchoesFieldHudCommandView Commands;
@@ -458,7 +481,25 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudBuildContext final
     UEchoesNarrativeSubsystem* Narrative = nullptr;
     FVector2D ViewportSize = FVector2D(1920.0f, 1080.0f);
     double RealTimeSeconds = 0.0;
+    /** An off-screen attack the player has been warned about but not shown. */
+    bool bHasOffscreenAlert = false;
+    FVector2D OffscreenAlertLocation = FVector2D::ZeroVector;
+    double OffscreenAlertRaisedSeconds = 0.0;
 };
+
+namespace EchoesFieldHud
+{
+/** Record where the local player is being attacked, for the HUD to point at.
+ *
+ * A free function rather than a controller call because the reserved
+ * declaration AEchoesPlayerController::PresentOffscreenCombatAlert landed
+ * inside a private section of a header that is frozen for the sprint, so no
+ * other translation unit can call it. That method now forwards here; this is
+ * the entry any raiser can reach. Presentation only. */
+ECHOESOFTHEBROKENSUN_API void RaiseOffscreenCombatAlert(
+    const UObject* WorldContext,
+    const FVector2D& WorldLocation);
+}  // namespace EchoesFieldHud
 
 /** Pure snapshot builder. Presentation never receives a live authority pointer. */
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudModel final

@@ -117,6 +117,30 @@ bool FEchoesFieldHudViewTest::RunTest(const FString& Parameters)
         FEchoesFieldHudModel::MatchStateText(MatchOutcome::Ongoing, 1)
             .ToString(), FString(TEXT("ACTIVE")));
 
+    // Negative control for the seat fix. The defect was that the seat was
+    // ignored, so the old behaviour is exactly "answer as if the viewer were
+    // always seat 0". Reproduce that here and assert it disagrees with the
+    // corrected path on the case that mattered - otherwise these assertions
+    // would still pass against the bug they exist to catch.
+    const auto SeatBlindOutcome = [](MatchOutcome Outcome)
+    {
+        return Outcome == MatchOutcome::Player0Victory
+            ? FString(TEXT("VICTORY"))
+            : Outcome == MatchOutcome::Draw
+                ? FString(TEXT("DRAW"))
+                : Outcome == MatchOutcome::Ongoing
+                    ? FString(TEXT("ACTIVE"))
+                    : FString(TEXT("DEFEAT"));
+    };
+    TestEqual(TEXT("Control: the old seat-blind mapping showed DEFEAT to a winning seat 1"),
+        SeatBlindOutcome(MatchOutcome::Player1Victory), FString(TEXT("DEFEAT")));
+    TestNotEqual(TEXT("The corrected mapping disagrees with the seat-blind one for a winning client"),
+        FEchoesFieldHudModel::MatchStateText(MatchOutcome::Player1Victory, 1).ToString(),
+        SeatBlindOutcome(MatchOutcome::Player1Victory));
+    TestEqual(TEXT("The correction changes nothing for seat 0, which was never wrong"),
+        FEchoesFieldHudModel::MatchStateText(MatchOutcome::Player0Victory, 0).ToString(),
+        SeatBlindOutcome(MatchOutcome::Player0Victory));
+
     // WI-5: hovering must say what is under the pointer, and must say nothing
     // about anything the scoped view does not carry. HiddenEnemy is outside
     // this player's vision, so it must resolve to no identity at all.
