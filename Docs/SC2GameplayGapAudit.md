@@ -3,7 +3,7 @@
 **Author and owner:** Angelis Pseftis  
 **Inspection date:** 2026-09-09  
 **Scope:** current Unreal checkout, `main` at `6b559889a4e7b0ed7fd86aee37b64728bd516017`, including dirty work.  
-**Standing:** dated assessment and recommendations. The subsequent owner-authorized intake is now captured in [Requirements.md](Requirements.md#gameplay-completeness-intake--sc2-audit-2026-09-09), [RequirementsState.md](RequirementsState.md#sc2-audit-intake-and-continuous-work--2026-09-09) and the [existing DeliveryPlan](DeliveryPlan.md#sc2-audit-integration-into-continuous-work--2026-09-09). This audit remains a historical source observation, not a competing live requirements/state record.
+**Standing:** dated assessment and recommendations. The subsequent owner-authorized intake is now captured in [Requirements.md](Requirements.md#gameplay-completeness-intake--sc2-audit-2026-09-09), [RequirementsState.md](RequirementsState.md#sc2-audit-intake-and-continuous-work--2026-09-09) and the [existing DeliveryPlan](Archive/ProjectLedger.md#sc2-audit-integration-into-continuous-work--2026-09-09). This audit remains a historical source observation, not a competing live requirements/state record.
 
 Echoes already implements much of an RTS simulation. Its largest SC2-class shortcomings are incomplete player command access, incomplete teaching, partial presentation and analysis tools, and unfinished supported modes. A list saying it lacks gathering, repair, research, rally points, control groups, fog, replays, sound, or saves would be incorrect.
 
@@ -319,7 +319,7 @@ SC2 offers established selection/command ergonomics, economic expansion, terrain
 | High-ground vision advantage | A genuine SC2 terrain mechanic, but Echoes currently makes elevation presentation-only. Adoption requires changed authority, maps, fog, AI and tests. Do not add a fictional generic SC2 high-ground miss-chance rule. |
 | Smoke/vision blockers, capturable towers and destructible route blockers | Consider purpose-built equivalents only where map contracts define targeting, fog, timers, counterplay and route changes. Do not turn arbitrary scenery into gameplay. |
 | Multiple headquarters and race-specific macro cycles | Echoes allows one active Core. Expansion should use permitted drop-offs, networks and outposts; copying SC2 townhall/larva/injection mechanics would change the game. |
-| SC2 supply and roster sizes | The inspected Unreal master uses a 200 Logistics cap, weighted by unit footprint. That is not 200 identical units. A remembered Unity-specific 30-entity limit was not applied to this checkout. |
+| SC2 supply and roster sizes | The inspected Unreal master uses a 200 Logistics cap, weighted by unit footprint. That is not 200 identical units. The owner-approved 30-entity limit is binding design direction, operating concurrently with the 200 Logistics cap. |
 | Large tech trees, broad roster and race-specific production rules | Current compact roster/technology design is intentional; TBR-SCP-003 records a breadth proposal. Test strategic depth before choosing more units/upgrades. |
 | Battle.net accounts, ranked ladder, public matchmaking, social graph and hosted relay | Hosted services are deferred. Direct/LAN lobby, supported formats and recovery remain current obligations; the deferral does not excuse them. |
 | Co-op commanders, persistent commander leveling, mutations or an Arcade ecosystem | SC2 modes are useful references, not automatic Echoes scope. Comp-stomp, Conquest and scenario-editor obligations should be delivered on their own contracts. |

@@ -24,7 +24,7 @@ Every building, menu, unit, and particle emitter is governed by three non-negoti
 The Compact builds with repairable frames, exposed load paths, redundant conduits, modular hardpoints, and visual status bands. Pale ceramic heat-plating (`ceramic_civic`) is layered over dark machined steel.
 
 #### 1. Anchor [Command Headquarters] (`SPEC-BLD-015.MC.ANCHOR`)
-- **Footprint & Scale:** 6x6 build grid (1200 cm x 1200 cm), octagonal reinforced perimeter hull.
+- **Footprint & Scale:** 5x5 build grid (1000 cm x 1000 cm), octagonal reinforced perimeter hull.
 - **Visual Features:** Heavy pale ceramic thermal armor plating, high-visibility status indicator bands (yellow/black diagonal safety striping), dual heavy surveyor exit ramps with hydraulic blast doors, and twin cyan sensor antenna arrays.
 - **Functional Animation:** When active, the roof-mounted communication dish rotates slowly and cyan sensor masts pulse. During worker assembly, hydraulic ramps open and emit interior amber work-light.
 - **Placement & Damage States:** Under construction: welded steel space-frame with holographic alignment brackets. Damaged (>50% HP lost): ceramic plates fracture, exposing dark smoking conduits and intermittent electrical arcing.
@@ -36,12 +36,12 @@ The Compact builds with repairable frames, exposed load paths, redundant conduit
 - **Damaged State:** Spreader pylons lose ground contact, sparking erratically; network radius flickers.
 
 #### 3. Array Foundry [Mech & Vehicle Assembly] (`SPEC-BLD-015.MC.FOUNDRY`)
-- **Footprint & Scale:** 8x6 build grid (1600 cm x 1200 cm), industrial fabrication facility.
+- **Footprint & Scale:** 4x4 build grid (800 cm x 800 cm), industrial fabrication facility.
 - **Visual Features:** Overhead gantry crane framework with robotic welding arms, side component intake feed conduits, and a reinforced roll-out bay with floor guide tracks.
 - **Functional Animation:** When manufacturing a unit (such as the Atlas Mech or Lancer), robotic arms swing into position emitting directional welding sparks and cyan plasma arcs. On 100% completion, the blast doors slide open and the unit rolls out onto the rally vector.
 
 #### 4. Aegis Post [Defensive Turret] (`SPEC-BLD-015.MC.AEGIS`)
-- **Footprint & Scale:** 3x3 build grid (600 cm x 600 cm), low-profile fortified bunker.
+- **Footprint & Scale:** 2x2 build grid (400 cm x 400 cm), low-profile fortified bunker.
 - **Visual Features:** Sloped ceramic-composite ballistic skirts, armor-plated observation visor, and an automated dual-axis turret mount housing twin kinetic accelerator cannons.
 - **Functional Animation:** While supplied by a Power Link, the turret tracks enemy targets with 360-degree rotation and projects a subtle cyan barrier perimeter ring. When firing, cannons recoil alternately with high-contrast kinetic muzzle flash and casing ejection.
 
@@ -51,19 +51,19 @@ The Compact builds with repairable frames, exposed load paths, redundant conduit
 The Assemblies cultivate living mineral-organic geology. Structures are grown from the planet's basalt strata, altering porosity, heat flow, and acoustic resonance.
 
 #### 1. Memory Hearth [Assembly Headquarters] (`SPEC-BLD-016.KA.HEARTH`)
-- **Footprint & Scale:** 7x7 build grid (1400 cm x 1400 cm), 145-meter living geological dome.
+- **Footprint & Scale:** 5x5 build grid (1000 cm x 1000 cm), 145-meter living geological dome.
 - **Visual Features:** Layered basalt strata outer shell, concentric illuminated amber geothermal conduits, multiple subterranean worker emergence chasms, and a towering central resonance spire.
 - **Functional Animation:** Geothermal heat pulses upwards through the concentric fissures. The resonance spire resonates with low-frequency acoustic tremors when ancestral memories are accessed or units are cultivated.
 
 #### 2. Waystone [Mobile Supply & Root Node] (`SPEC-BLD-016.KA.WAYSTONE`)
-- **Footprint & Scale:** 3x3 build grid (600 cm x 600 cm) rooted; 80-meter monolithic pillar.
+- **Footprint & Scale:** 2x2 build grid (400 cm x 400 cm) rooted; 80-meter monolithic pillar.
 - **Visual Features:** Banded mineral strata column studded with clusters of translucent amber quartz crystals, anchored by a sprawling root array of mineral tendrils.
 - **Functional Animation:**
   - *Rooted Mode:* Root tendrils bore deep into the basalt rock, drawing geothermal energy and illuminating the crystal clusters.
   - *Migrating Mode:* Tendrils extract from the ground, shifting into heavy geological tripod legs that walk with slow, deliberate tremors.
 
 #### 3. Growth Basin [Warform Gestation Facility] (`SPEC-BLD-016.KA.BASIN`)
-- **Footprint & Scale:** 7x7 build grid (1400 cm x 1400 cm), circular stepped terrace.
+- **Footprint & Scale:** 4x4 build grid (800 cm x 800 cm), circular stepped terrace.
 - **Visual Features:** Concentric carved basalt terraces descending into an iridescent geothermal mineral pool, surrounded by crystalline gestation nodes and an emergence incline ramp.
 - **Functional Animation:** The mineral pool swirls with warm amber and iridescent fluid. As a warform (Riftstalker, Cairnback) incubates, crystalline silhouettes coalesce beneath the surface before ascending the ramp.
 
@@ -78,7 +78,7 @@ The Assemblies cultivate living mineral-organic geology. Structures are grown fr
 The Choir does not construct or cultivate; it stabilizes unchosen timelines. Structures exhibit "maintained possibility": dual valid shadows, offset duplicate contours, and translucent chromatic refraction.
 
 #### 1. Concordance [Choir Core Sanctuary] (`SPEC-BLD-017.HC.CONCORDANCE`)
-- **Footprint & Scale:** 6x6 build grid (1200 cm x 1200 cm), levitating geometric hyper-structure.
+- **Footprint & Scale:** 5x5 build grid (1000 cm x 1000 cm), levitating geometric hyper-structure.
 - **Visual Features:** A massive central crystalline polyhedral core floating 15 meters above ground, bound by three rotating harmonic containment rings. Two distinct valid shadows fall at divergent angles across the terrain.
 - **Functional Animation:** The containment rings counter-rotate in silent precision. Deep magenta possibility bleed leaks from the core seams, creating a localized field of chromatic aberration.
 
@@ -88,12 +88,12 @@ The Choir does not construct or cultivate; it stabilizes unchosen timelines. Str
 - **Functional Animation:** The tines vibrate with high-frequency micro-oscillations, projecting an ethereal magenta refraction envelope across connected Choir structures.
 
 #### 3. Chorus Loom [Entity Synthesis Matrix] (`SPEC-BLD-017.HC.CHORUS`)
-- **Footprint & Scale:** 6x6 build grid (1200 cm x 1200 cm), open-air spatial distortion basin.
+- **Footprint & Scale:** 4x4 build grid (800 cm x 800 cm), open-air spatial distortion basin.
 - **Visual Features:** A ring of six levitating geometric mirrors angling inward toward an imploding spatial vortex.
 - **Functional Animation:** When summoning units, the mirrors converge, bending light from the surrounding environment until a duplicate reality solidifies into a physical Choir combat entity.
 
 #### 4. Phase Anchor [Dimensional Interceptor Turret] (`SPEC-BLD-017.HC.PHASE_ANCHOR`)
-- **Footprint & Scale:** 3x3 build grid (600 cm x 600 cm), tri-fold levitating prism.
+- **Footprint & Scale:** 2x2 build grid (400 cm x 400 cm), tri-fold levitating prism.
 - **Visual Features:** Three angular dark-crystal facets orbiting an inverted singularity core.
 - **Functional Animation:** When idle, the facets drift in gentle equilibrium. Upon targeting hostile units, the facets snap forward, discharging a focused magenta probability fracture beam that leaves an after-image trail.
 
@@ -254,3 +254,44 @@ When AI collaborators (ChatGPT, Codex, Antigravity, Claude) implement UI widgets
 - Tactical HUD elements must respect safe-zone margins (minimum 32px padding from screen edge).
 - Any button click or hover event must trigger sound cue routed to `SC_UIMaster` calibrated to `-24 LKFS`.
 - Flashing threshold: No emitter or material pulse may exceed 3 Hz frequency (photosensitivity compliance).
+
+## 6. Research Dependencies and Presentation
+
+Research is a visible strategic commitment, not an invisible modifier. All research is researched at the faction's primary production/headquarters facility, applies globally to all currently living and future entities of the specified types, and stacks additively with temporary identity/adaptation modifiers. Research is never lost upon facility destruction and cannot be cancelled once completed.
+
+### A. Meridian Compact
+1. **Prismatic Targeting (`SPEC-TECH-001`)**
+   - **Cost:** 120 M / 40 D. **Time:** 180 ticks (9.0s). **Prerequisite:** None.
+   - **Affected Units:** Lancer (`SPEC-UNIT-002`), Bulwark Team (`SPEC-UNIT-003`).
+   - **Effect:** Base weapon damage is increased to 115% of the baseline.
+   - **Visual Cue:** Persistent readable targeting-optic/weapon-module detail and a distinct restrained firing cue on eligible weapons.
+2. **Horizon Lattice (`SPEC-TECH-002`)**
+   - **Cost:** 90 M / 55 D. **Time:** 220 ticks (11.0s). **Prerequisite:** Prismatic Targeting.
+   - **Affected Units:** Relay Skiff (`SPEC-UNIT-004`), Anchor (`SPEC-STR-001`), Power Link (`SPEC-STR-002`), Aegis Post (`SPEC-STR-004`).
+   - **Effect:** Sight/vision radius is increased to 120% of the baseline.
+   - **Visual Cue:** Persistent sensor/lattice detail on eligible entities and an updated friendly sight preview overlay when selected.
+
+### B. Kharuun Assemblies
+1. **Echo Cartography (`SPEC-TECH-003`)**
+   - **Cost:** 100 M / 45 D. **Time:** 180 ticks (9.0s). **Prerequisite:** None.
+   - **Affected Units:** Resonant (`SPEC-UNIT-008`), Listening Spine (`SPEC-STR-008`).
+   - **Effect:** Sight/vision radius is increased to 120% of the baseline.
+   - **Visual Cue:** Persistent Kharuun sensor/strata detail on the model and an updated friendly sight preview.
+2. **Ancestral Edge (`SPEC-TECH-004`)**
+   - **Cost:** 110 M / 50 D. **Time:** 220 ticks (11.0s). **Prerequisite:** Echo Cartography.
+   - **Affected Units:** Riftstalker (`SPEC-UNIT-006`), Cairnback (`SPEC-UNIT-007`).
+   - **Effect:** Base weapon damage is increased to 115% of the baseline.
+   - **Visual Cue:** Distinct mineral weapon-edge detail on eligible fighters; attack presentation reflects stronger damage visually.
+
+### C. Hollow Choir
+1. **Held Alternatives (`SPEC-TECH-005`)**
+   - **Cost:** 105 M / 50 D. **Time:** 190 ticks (9.5s). **Prerequisite:** None.
+   - **Affected Units:** Intervalist (`SPEC-UNIT-010`), Lacuna Warden (`SPEC-UNIT-011`).
+   - **Effect:** Base weapon damage and vision radius are both increased to 110% of their baselines.
+   - **Visual Cue:** Stable Choir geometry/edge motif on the model that is distinguishable from temporary identity transitions.
+2. **Shared Resolution (`SPEC-TECH-006`)**
+   - **Cost:** 115 M / 60 D. **Time:** 230 ticks (11.5s). **Prerequisite:** Held Alternatives.
+   - **Affected Units:** Afterimage (`SPEC-UNIT-012`), Concordance (`SPEC-STR-009`), Phase Anchor (`SPEC-STR-012`).
+   - **Effect:** Sight/vision radius is increased to 120% of the baseline.
+   - **Visual Cue:** Distinct resolved sensor motif on the model and updated sight preview. Note: This stacks with the 110% vision from Held Alternatives if applied to the same unit, though this technology specifically targets separate units to expand overall sight.
+

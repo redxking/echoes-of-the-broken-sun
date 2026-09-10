@@ -5,12 +5,14 @@
 
 Use this brief in the existing project task. Read [AGENTS.md](../../AGENTS.md), the shared contract for every
 agent, then [Docs/README.md](../README.md) and [AgentSkillRouting.md](../AgentSkillRouting.md). Locate the
-checkout, inspect current work, and select/read only the skills needed for the requested outcome.
+checkout, respect the DeliveryPlan pause boundary before operational inspection, and select/read only
+the skills needed for the requested outcome.
 Frame and verify the assigned change using [GameDevelopmentWorkflow.md](GameDevelopmentWorkflow.md).
 Automatically select the supported model/effort for the bounded package using its
 [routing procedure](GameDevelopmentWorkflow.md#select-model-effort-and-work-ownership), and fill its
 [handoff contract](GameDevelopmentWorkflow.md#delegation-and-additional-task-handoff) before delegation or
-an authorized additional task. Use [DeliveryPlan.md](../DeliveryPlan.md) for dependency order.
+an authorized additional task. Start at the [DeliveryPlan active state](../DeliveryPlan.md#active-execution-state) for
+pause status, dependency order and package-scoped reading.
 
 Build a professional story-driven real-time strategy game in the original world of Soryn. Preserve the
 creative Bible's factions, Future Wells, characters, and consequences. The owner's campaign direction is

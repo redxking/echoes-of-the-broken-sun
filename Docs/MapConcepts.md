@@ -233,7 +233,7 @@ The player first recognizes the carrier and its route, then manages a separated 
 then returns along a now-familiar service corridor. The northern battlefield supplies pressure and scale;
 it is not the primary mission destination. Completion depends on evacuation, not clearing the map.
 
-Keep the current 64×64 mission layout and 200 cm presentation scale. At this scale the nominal field is
+The 64×64 mission layout is not a hard limit; select larger dimensions (e.g. 96×96 or 128×128) based on route timings, build space, objective separation, and the 30-entity force. Preserve 200 cm presentation scale. At this scale the nominal field is
 128×128 metres; this is an engine-space dimension, not a claim about travel time or world geography.
 Use the registered campaign source
 `Content/World/Source/Campaign/m01_glass-scar-evacuation-margin_v1.json`, SHA-256

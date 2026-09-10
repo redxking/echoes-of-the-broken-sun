@@ -429,3 +429,30 @@ Implementation references: [tutorial controller](../Source/EchoesOfTheBrokenSun/
 
 
 2026-09-08 additional owner direction: maps may be much larger than current prototypes, using Age of Empires/StarCraft II as mission-dependent scale references. SPEC-MAP-005 records this authorization without inventing equivalent tile sizes or enlarging every map. Keep the tutorial's initial home clearing readable; allow the enclosing operation to expand with its learning needs. Retain current named-map contracts until a specific authored enlargement is qualified. This steering does not interrupt closure of the current HUD batch.
+
+## Larger-Map Strategic Briefs
+As directed in Phase D1 (DeliveryPlan.md), existing 64x64 presets are not a permanent product limit. Larger dimensions are selected from route timings, build space, objective separation, exploration and the 30-entity force.
+
+### Strategic Brief Template (For future map production)
+Each map brief must answer:
+1. **What must I accomplish?**
+2. **What routes/resources/information can help me?**
+3. **What do I give up by choosing them?**
+4. **How can an opponent interfere?**
+
+**Required Layout Annotations:**
+- Starts and base expansion space
+- Worker routes
+- Objective chain
+- Direct and alternative approaches
+- Defensive positions
+- Retreat/reinforcement routes
+- Wells and their terrain variants
+- Sensors and passage endpoints
+- Camera/minimap boundary
+
+### Example: Glass Scar (M01 / SK01 Strategy)
+- **What must I accomplish?** Secure the Ash Cut/Buried Causeway/Folded Verge commitments and the central Well.
+- **What routes/resources/information can help me?** Safe local resources offer steady development, while exposed resources offer faster income. The authored Reshape route changes the player's available plan.
+- **What do I give up by choosing them?** Committing to the Reshape route sacrifices a permanent, safe fallback position.
+- **How can an opponent interfere?** The opponent can exploit the attacker's longer reinforcement route if they take the flank, or contest the central Well during the public capture window.

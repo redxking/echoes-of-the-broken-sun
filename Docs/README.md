@@ -2,7 +2,7 @@
 
 **Author and owner:** Angelis Pseftis
 **Created:** 2026-09-03
-**Maintained:** 2026-09-09
+**Maintained:** 2026-09-10
 
 Start with [AGENTS.md](../AGENTS.md) for shared agent rules. This index routes work to the controlling
 sources; it creates no game requirement and accepts no result. Current owner instructions and the host's
@@ -34,7 +34,7 @@ explicit owner decision, not permission to silently rewrite either. Record affec
 | Build, package, performance, runtime inspection | [SetupAndBuild.md](Archive/SetupAndBuild.md), live scripts/configuration, and specific build/verification skills. Recheck mounts, tool versions, processes, and storage before execution. |
 | AI integration with Unreal Editor | [UnrealEditorIntegrationResearch.md](UnrealEditorIntegrationResearch.md): dated local connection audit, primary-source research, and a proposed efficiency pilot. Recommendations are not implemented integration or measured productivity results. |
 | Asset generation, import, rights | [AssetRegister.md](Archive/AssetRegister.md), applicable direction and provenance skills. This register owns provenance, not human acceptance. |
-| Release sequencing and demo recovery | [GameCompletionDirective.md](GameCompletionDirective.md), [DeliveryPlan.md](DeliveryPlan.md), and [DemoRecoveryDirective.md](DemoRecoveryDirective.md). These organize work; the master owns criteria and the state record owns acceptance. |
+| Release sequencing and demo recovery | [GameCompletionDirective.md](GameCompletionDirective.md), [DeliveryPlan active state and package context](DeliveryPlan.md#active-execution-state), and [DemoRecoveryDirective.md](DemoRecoveryDirective.md). These organize work; the master owns criteria and the state record owns acceptance. |
 | Historical evidence lookup | [ProjectLedger.md](Archive/ProjectLedger.md) and exact retained artifacts. Dated runs remain historical until their applicability is checked. |
 | Agent handoff or specialist prompt | [AgentProjectBrief.md](Prompts/AgentProjectBrief.md), [ArtDirectorSessionPrompt.md](Prompts/ArtDirectorSessionPrompt.md), [AudioDirectorSessionPrompt.md](Prompts/AudioDirectorSessionPrompt.md), [AudioVisualDirectorMasterPrompt.md](Prompts/AudioVisualDirectorMasterPrompt.md), [P0P4CodeReviewPrompt.md](Prompts/P0P4CodeReviewPrompt.md). These select work; they do not grant ownership or override shared rules. |
 | Gaming prompts, implementation, debugging, presentation iteration | [GameDevelopmentWorkflow.md](Prompts/GameDevelopmentWorkflow.md): task brief, verification loop, review priorities, and dated official-source mapping. Subordinate procedure; it changes no game requirement or acceptance gate. |
@@ -85,7 +85,7 @@ Git state live rather than copying counts, branch names, or tracking assertions 
 
 ## SC2 audit intake and ongoing gameplay coverage
 
-The [SC2 gameplay audit](SC2GameplayGapAudit.md) is a dated source-level comparison, not a current defect ledger. Its complete 162-item/32-event intake now lives in [Requirements.md](Requirements.md#gameplay-completeness-intake--sc2-audit-2026-09-09). Read the [state and decision dispositions](RequirementsState.md#sc2-audit-intake-and-continuous-work--2026-09-09) and [existing P0–P7 integration](DeliveryPlan.md#sc2-audit-integration-into-continuous-work--2026-09-09) before continuing affected gameplay work. Keep passing recent repairs, unresolved design choices and required player evidence separate. The ordinary document checker includes `Scripts/check_gameplay_audit_traceability.py` so this coverage cannot silently lose a row.
+The [SC2 gameplay audit](SC2GameplayGapAudit.md) is a dated source-level comparison, not a current defect ledger. Its complete 162-item/32-event intake now lives in [Requirements.md](Requirements.md#gameplay-completeness-intake--sc2-audit-2026-09-09). Read the [state and decision dispositions](RequirementsState.md#sc2-audit-intake-and-continuous-work--2026-09-09) and [active D0–D10 sequence](DeliveryPlan.md#active-execution-state) before continuing affected gameplay work. Keep passing recent repairs, unresolved design choices and required player evidence separate. The ordinary document checker includes `Scripts/check_gameplay_audit_traceability.py` so this coverage cannot silently lose a row.
 
 ## Maintenance verification
 

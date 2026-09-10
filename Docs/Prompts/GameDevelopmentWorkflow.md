@@ -148,6 +148,8 @@ do not copy an entire rulebook or unrelated conversation into each prompt.
 
 ```text
 Outcome and package: [DeliveryPlan package; observable player/developer result.]
+Continuation: [Active-state date/source identity, execution authorization or pause,
+package dependencies, required design sections and exact next handback action.]
 Assignment: [Implement/review/research; selected model and effort; why appropriate.]
 Identity: [Absolute checkout/worktree, branch, commit, relevant dirty-state/hash receipt.]
 Authority: [AGENTS.md, Docs/README.md, this workflow, exact requirement IDs,

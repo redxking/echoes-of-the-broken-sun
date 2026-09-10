@@ -3,7 +3,7 @@ title: Echoes of the Broken Sun — Cutscene and Video Production List
 author: Angelis Pseftis
 creator: Angelis Pseftis
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-10
 status: Production inventory and detailed AI handoff briefs; proposed staging is not owner acceptance
 ---
 
@@ -489,7 +489,7 @@ For each recurring character, select **one** identity sheet and its compatible v
 
 ### Source and book comparison record
 
-**Owner-selected current book:** [Echoes_of_the_Broken_Sun_eBook.epub](</Users/angelispseftis/Desktop/kdp/01_Kindle_eBook/Echoes_of_the_Broken_Sun_eBook.epub>), explicitly designated by Angelis on 2026-09-07. The file was read directly as an EPUB for this comparison; no book content or metadata was edited.
+**Owner-selected current book:** [Echoes_of_the_Broken_Sun_eBook.epub](</Users/angelispseftis/Desktop/Writing/Books/Echoes of the Broken Sun/01_eBook_EPUB/Echoes_of_the_Broken_Sun_eBook.epub>), explicitly designated by Angelis on 2026-09-07. The file was read directly as an EPUB for this comparison; no book content or metadata was edited.
 
 **Artifact identity:** SHA-256 `7c01e138fb8badb0e0795355817cf0ce7002205f5a28ebfc78d6c2559fb8c2cc`; package `EPUB/content.opf`; title *Echoes of the Broken Sun*; creator/publisher Angelis Pseftis; embedded modified timestamp `2026-09-06T16:14:55Z`; identifier `105bd1c1-7000-4821-ad87-aae4a30303d6`. The package spine includes navigation plus `ch001.xhtml`–`ch031.xhtml`; file numbers are not chapter numbers. The locators below are internal XHTML filenames plus the actual chapter, not invented printed pages. Hash identifies the checked bytes; a future edited EPUB requires a refreshed comparison.
 
@@ -1560,3 +1560,5 @@ Give the editing AI approved in-engine footage matching each beat and the shared
 Before handing back any item, compare each shot to its brief: correct place and branch, stable faction forms, exact spoken text, no invented physical character, and no premature gameplay result. Review every transition for geometry/lighting continuity. Verify the final duration against the actual voice take; report changed timings. Inspect subtitles, reduced-motion/flashing alternatives and clean picture. Identify any unresolved source conflict by item/shot rather than hiding it in a generic disclaimer. Return the actual artifacts and state whether they are a concept video, an editable Unreal sequence, captured gameplay media or a tested in-game scene.
 
 Detailed direction also uses [ArtDirection.md](ArtDirection.md) and the expanded sky, faction, place and ending descriptions in [DevelopmentBible.md](Archive/DevelopmentBible.md). This expansion preserves the single authoritative document and authorship; source storyboards and requirements have not been edited.
+
+**2026-09-10 link maintenance:** the EPUB link now resolves under Desktop/Writing/Books. This repairs a missing local reference; the September 7 comparison was not repeated and no book content or authority was changed.
