@@ -4207,3 +4207,45 @@ and need a look at the composed frame rather than a source review.
   is built later it should carry both obligations rather than appending to the body. Nothing here records
   whether an acceptance capture taken with `-EchoesFinalArtPath` must declare that suppression — today the
   package manifest cannot distinguish such a capture from one taken from a finished build.
+
+2026-09-09 L1-SIM ground occupancy and opponent economy, per-ID source state (implementation and
+native evidence only; no acceptance is claimed or implied):
+
+* `SPEC-MOV-003` — IMPLEMENTED, native evidence. Enemy and neutral solid footprints now block routes
+  rigidly and allied bodies keep lateral steering. Landed `ab2877d` (occupancy) and `01ca3ad` (choke
+  evidence). `Simulation.cpp` rasterises completed structure footprints into a route grid consulted by
+  `IsPositionPassable`, the BFS `passable[]` construction and `MoveTowards`; a foreign seat's mobile
+  body blocks a step while an allied one is pushed past by the pre-existing separation pass. Measured
+  in one gated corridor from a fixed seed: gate clear crosses on tick 83, an allied body in the gate
+  still crosses on tick 83, a hostile body in the gate is never crossed in 600 ticks and holds the
+  mover at tile 15. The audit row above recording that this ID appeared nowhere in this file is
+  answered by this entry. The lower-priority-yields-at-chokepoints clause is only partly served by the
+  existing moving-yields-to-resting rule and is NOT claimed here.
+* `SPEC-MOV-006`, `SPEC-MOV-008`, `SPEC-MOV-012` — IMPLEMENTED, native evidence, `ab2877d`. Routes are
+  planned pessimistically (any tile a footprint touches is off-route) while standing room is measured
+  exactly, so a unit closes to a wall without a whole-tile rounding error pushing it outside
+  interaction range. 30 allied units ordered to one tile settle with 0 overlapping pairs at exactly
+  the 256-raw combined clearance and no residual drift over a further 20 ticks.
+* `SPEC-UNIT-003`, `SPEC-UNIT-007` — PARTIAL. The screening purpose of the Bulwark Team and Cairnback
+  is no longer inert because ground can now be blocked, but neither unit's own signature behaviour was
+  touched by this work and no per-unit evidence is recorded here.
+* `REL-AI-011`, `REL-AI-012`, `REL-AI-031`, `SPEC-BAL-005` — PARTIAL, native evidence, `a289ff5`. The
+  opponent's Matter income was exactly zero for a whole match: the planning pass re-issued Gather to
+  workers already gathering and `BeginGather` clears harvest state, restarting a 20-tick extraction
+  every 4-tick planning window. Workers already working a node, or hauling to a depot, are now left
+  alone, and doctrine sets worker, producer and supply ceilings in place of a literal eight workers and
+  a supply branch reachable only by an opponent that happened to start without a Dropoff. Peak combat
+  units reach 8 to 11 where the sprint target was 12; that gap is open and needs roster breadth, not
+  more economy. All quoted figures come from `DefaultSimulationRules` on a synthetic 48x48 map and are
+  therefore NOT balance evidence — see the WI-6 constraint below.
+* `SPEC-BUD-006` — IMPLEMENTED, native evidence, `d5ab052`. `PopulationCapacity` clamps to the authored
+  200 Logistics ceiling; forty depots hold it at exactly 200.
+* Constraint carried, not satisfied: no balance number from this lane may be cited until the balance
+  harness reads the real content-data rules on a 64x64 preset. The figures above are macro counts and
+  match durations, not win rates, and they were produced on the ruleset the harness currently builds
+  rather than the one the game builds.
+
+Evidence for every line above: `Scripts/test_sim.sh` 131/131 in all three configurations (optimized,
+debug, ASan+UBSan) at `01ca3ad`. Retained replays still reproduce their exact checksums because ground
+occupancy is gated on `kGroundOccupancyReplayVersion`; occupancy state is derived and is not part of
+`StateChecksum` or any snapshot payload.
