@@ -395,3 +395,70 @@ class LateCampaignBattlefieldDistinctnessTest(unittest.TestCase):
             worst, self.MAXIMUM_JACCARD,
             f"M13/M15 blocked-cell Jaccard {worst:.3f} means one battlefield, not two",
         )
+
+
+class TerrainMutationStrandsNoGroundTest(unittest.TestCase):
+    """A doctrine that reshapes terrain must not seal ground off from the map.
+
+    Stranding a pocket is the failure mode terrain mutation introduces most
+    easily, and it does not surface in a green suite: every objective can stay
+    reachable while an unrelated region quietly becomes an island. So for each
+    mutated map, the set reachable from a live anchor must equal the entire
+    passable set, under every doctrine.
+    """
+
+    GRID = 64
+    MUTATED = {
+        "m01_glass-scar-evacuation-margin_v1.json": (32, 32),
+        "m15_broken-sun-accord-dais_v1.json": (32, 53),
+    }
+
+    def masks(self, source: dict) -> dict:
+        variants = source.get("founding_doctrine_variants") or [
+            {"doctrine": "Base", "terrain_region_ops": []}
+        ]
+        out = {}
+        for variant in variants:
+            cells: set[tuple[int, int]] = set()
+            for op in list(source["terrain_region_ops"]) + list(variant["terrain_region_ops"]):
+                for y in range(op["y0"], op["y1"] + 1):
+                    for x in range(op["x0"], op["x1"] + 1):
+                        if op["op"] == "block":
+                            cells.add((x, y))
+                        else:
+                            cells.discard((x, y))
+            out[variant["doctrine"]] = cells
+        return out
+
+    def test_no_doctrine_strands_a_pocket(self) -> None:
+        from collections import deque
+
+        root = Path(__file__).resolve().parents[2] / "Content/World/Source/Campaign"
+        for filename, anchor in self.MUTATED.items():
+            source = json.loads((root / filename).read_text())
+            for doctrine, blocked in self.masks(source).items():
+                with self.subTest(map=filename, doctrine=doctrine):
+                    self.assertNotIn(anchor, blocked, "anchor must stand on open ground")
+                    passable = {
+                        (x, y)
+                        for y in range(self.GRID)
+                        for x in range(self.GRID)
+                        if (x, y) not in blocked
+                    }
+                    seen = {anchor}
+                    queue = deque([anchor])
+                    while queue:
+                        x, y = queue.popleft()
+                        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                            step = (x + dx, y + dy)
+                            if not (0 <= step[0] < self.GRID and 0 <= step[1] < self.GRID):
+                                continue
+                            if step in blocked or step in seen:
+                                continue
+                            seen.add(step)
+                            queue.append(step)
+                    stranded = sorted(passable - seen)
+                    self.assertEqual(
+                        stranded, [],
+                        f"{len(stranded)} passable cells are sealed off under {doctrine}",
+                    )
