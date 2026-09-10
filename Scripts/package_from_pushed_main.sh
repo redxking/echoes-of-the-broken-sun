@@ -51,7 +51,7 @@ typeset -a unset_flags
 for name in $(env | /usr/bin/sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do unset_flags+=(-u "$name"); done
 ( cd "$worktree" && env "${unset_flags[@]}" ECHOES_BUILD_ARTIFACT_ROOT="$project_root/BuildArtifacts" \
     /bin/zsh "$worktree/Scripts/package_macos.sh" ) >> "$evidence/run.log" 2>&1
-status=$?
+package_status=$?
 print "exit_code=$status" >> "$evidence/run.log"
 print "completed_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$evidence/run.log"
 
@@ -61,4 +61,4 @@ print "completed_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$evidence/run.log"
 cleanup | /usr/bin/tee -a "$evidence/run.log"
 trap - EXIT INT TERM
 print "evidence=$evidence"
-exit $status
+exit $package_status
