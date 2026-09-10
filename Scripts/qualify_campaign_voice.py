@@ -168,6 +168,21 @@ def main() -> int:
         findings.append({"severity": "blocker", "line_id": None,
                          "finding": "asset has no authored line", "detail": stem})
 
+    # Runtime reachability, measured on the ASSET side rather than the source
+    # side. A line is only audible if it is bound in a manifest AND its
+    # imported .uasset exists. Counting sources here would report full
+    # coverage while the game plays 28 lines - a green number that never
+    # exercised the thing it claims to prove.
+    voice_asset_dir = ROOT / "Content/Audio/Voice"
+    imported = {p.stem for p in voice_asset_dir.glob("*.uasset")}
+    reachable = 0
+    for record in rows:
+        stem = record["asset"]
+        record["binding_present"] = record["bound_binding"]
+        record["imported_uasset"] = stem in imported
+        record["runtime_reachable"] = bool(record["bound_binding"]) and stem in imported
+        reachable += record["runtime_reachable"]
+
     qualified = [r for r in rows if r["status"] == "QUALIFIED"]
     payload = {
         "schema": "echoes-voice-qualification-v1", "author": "Angelis Pseftis",
@@ -183,14 +198,27 @@ def main() -> int:
         "bus_targets_lufs": {k: {"target": v[0], "tolerance": v[1]}
                              for k, v in BUS_TARGETS.items()},
         "true_peak_ceiling_dbtp": CEILING_DBTP,
-        "authored_lines": len(authored), "assets_present": len(rows) - sum(
+        "authored_lines": len(authored),
+        "wav_sources_present": len(rows) - sum(
             1 for r in rows if r["status"] == "MISSING_ASSET"),
-        "qualified": len(qualified), "orphan_assets": orphans,
+        "wav_sources_qualified": len(qualified),
+        "orphan_wav_sources": orphans,
+        "imported_uassets": len(imported),
+        "runtime_reachable_lines": reachable,
+        "runtime_unreachable_lines": len(authored) - reachable,
+        "reachability_note": (
+            "wav_sources_qualified measures the WAV corpus. A line is audible "
+            "only when it is bound in a manifest AND its .uasset exists; "
+            "runtime_reachable_lines is that number. The two differ whenever "
+            "sources have been generated ahead of binding or import."),
         "findings": findings, "lines": rows,
     }
     print(f"[ECHOES_VOICE_QUALIFICATION] authored={len(authored)} "
-          f"qualified={len(qualified)} findings={len(findings)} "
+          f"wavSourcesQualified={len(qualified)} findings={len(findings)} "
           f"orphans={len(orphans)} listeningVerified=false")
+    print(f"[ECHOES_VOICE_REACHABILITY] importedUassets={len(imported)} "
+          f"runtimeReachable={reachable} unreachable={len(authored) - reachable} "
+          f"-- a qualified source is not an audible line")
     if findings:
         for finding in findings[:12]:
             print(f"  {finding['severity'].upper()} {finding.get('line_id') or ''} "

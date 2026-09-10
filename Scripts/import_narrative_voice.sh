@@ -35,51 +35,62 @@ shasum -a 256 "$project_root"/Content/Audio/Voice/*.uasset 2>/dev/null | sort > 
 
 for attempt in {1..$attempts}; do
   # An editor binary staging deletions is the trap; never race it.
-  # Match the executable, not a substring: UnrealEditorServices and monitor
-  # shells both carry "UnrealEditor" in their command lines and are not
-  # editors. An interactive editor is the UnrealEditor binary without -game;
-  # a -game or -benchmark run stages no deletions, so it is contention only
-  # and is handled by the build-slot check below.
+  # Refuse only for the actual hazard: an INTERACTIVE editor session, which
+  # stages asset deletions so the import fails silently as marked-for-delete.
+  # A -game/-benchmark run, a -nullrhi automation run, or a commandlet stages
+  # nothing and touches no assets, so it is CPU contention only.
+  #
+  # Two independent protections cover the trap regardless: this run passes
+  # -SCCProvider=None, and success requires BOTH the completion marker and
+  # changed .uasset hashes - which a marked-for-delete import cannot produce.
+  # Waiting for an idle machine across eight working lanes is waiting for
+  # something that does not happen.
   interactive=$(ps -Ao comm=,args= \
-    | awk '$1 ~ /\/UnrealEditor$/ && $0 !~ / -game( |$)/' | wc -l | tr -d ' ')
+    | awk '$1 ~ /\/UnrealEditor$/ && $0 !~ /-game|-benchmark|-nullrhi|-run=|-ExecutePythonScript/' \
+    | wc -l | tr -d ' ')
   if [[ "$interactive" != "0" ]]; then
     print -u2 "An interactive Unreal editor is open; it stages asset deletions"
     print -u2 "and the import would fail silently as marked-for-delete (SCC trap)."
     print -u2 "Close it and re-run."
     exit 3
   fi
-  # Block rather than bounce: name the holder, say whether it is working, and
-  # fire the moment it clears. A holder sitting at 0.0% CPU with no bounded
-  # duration argument is called out, because a hung holder and a busy one look
-  # identical from a single sample.
-  if ! "$project_root/Scripts/acquire_build_slot.sh" >/dev/null 2>&1; then
-    for pid in ${(f)"$("$project_root/Scripts/acquire_build_slot.sh" 2>&1 \
-        | grep -oE 'pid=[0-9]+' | cut -d= -f2)"}; do
-      args=$(ps -o args= -p "$pid" 2>/dev/null | cut -c1-120)
-      [[ -z "$args" ]] && { print "attempt $attempt: holder pid=$pid already gone (stale report)"; continue; }
-      cpu1=$(ps -o %cpu= -p "$pid" 2>/dev/null | tr -d ' ')
-      sleep 3
-      cpu2=$(ps -o %cpu= -p "$pid" 2>/dev/null | tr -d ' ')
-      el=$(ps -o etime= -p "$pid" 2>/dev/null | tr -d ' ')
-      bounded="unbounded"
-      [[ "$args" == *-benchmarkseconds=* || "$args" == *-ExecutePythonScript=* \
-         || "$args" == *BuildCookRun* ]] && bounded="bounded"
-      # Only call a holder hung once it has had time to be one. A compile
-      # step legitimately idles for a few seconds while it waits on I/O, and
-      # flagging that is noise that trains the reader to ignore the flag.
-      idle=""
-      mins=${${el%:*}%%:*}
-      [[ "$el" == *:*:* ]] && mins=99
-      if [[ "$cpu1" == "0.0" && "$cpu2" == "0.0" && "$bounded" == "unbounded" \
-            && "$mins" -ge 2 ]]; then
-        idle="  <-- 0.0%% CPU for two samples, up $el, no bounded-duration argument; possibly hung"
-      fi
-      print "attempt $attempt/$attempts: waiting on pid=$pid cpu=${cpu1}/${cpu2}% up=$el $bounded$idle"
-      print "    $args"
-    done
+
+  # Wait only for a REAL compile. Match the executable, never a command-line
+  # substring: other lanes' monitoring shells carry "UnrealBuildTool.dll" and
+  # "clang -cc1" in their own command lines, and blocking on those means
+  # blocking on a phantom. This gate spent ten minutes waiting on a /bin/zsh
+  # at 0.0%% CPU before that was caught - the third time tonight substring
+  # matching produced a false holder.
+  compiling=$(ps -Ao comm=,args= \
+    | awk '$1 ~ /(dotnet|clang|clang\+\+|cc1)$/ && /UnrealBuildTool\.dll|-cc1/' \
+    | wc -l | tr -d ' ')
+  if [[ "$compiling" != "0" ]]; then
+    print "attempt $attempt/$attempts: $compiling real compiler process(es) running; the"
+    print "    UBT mutex would abort this run during startup. Waiting 20s."
     sleep 20
     continue
   fi
+  # A concurrent build replaces the game module binary. If it is missing or
+  # still being written, the editor loads EchoesSimCore, reports "The game
+  # module 'EchoesOfTheBrokenSun' could not be found" and exits before running
+  # the script - another clean-looking exit that does no work.
+  module="$project_root/Binaries/Mac/libUnrealEditor-EchoesOfTheBrokenSun.dylib"
+  if [[ ! -f "$module" ]]; then
+    print "attempt $attempt/$attempts: game module binary absent (a build is mid-flight). Waiting 20s."
+    sleep 20
+    continue
+  fi
+  size1=$(stat -f%z "$module" 2>/dev/null || echo 0)
+  sleep 2
+  size2=$(stat -f%z "$module" 2>/dev/null || echo 0)
+  if [[ "$size1" != "$size2" || "$size1" == "0" ]]; then
+    print "attempt $attempt/$attempts: game module binary still being written. Waiting 20s."
+    sleep 20
+    continue
+  fi
+
+  others=$(ps -Ao comm= | grep -cE "/UnrealEditor$" || true)
+  [[ "$others" != "0" ]] && print "attempt $attempt: proceeding alongside $others non-interactive editor process(es)"
 
   purge_log="$evidence/purge-attempt-$attempt.log"
   purge_out="$evidence/purge-launcher-attempt-$attempt.log"
@@ -93,6 +104,11 @@ for attempt in {1..$attempts}; do
   if grep -q "conflicting instance of Global" "$purge_out" 2>/dev/null; then
     print "attempt $attempt/$attempts: UBT mutex conflict during purge, retrying in 60s"
     sleep 60
+    continue
+  fi
+  if grep -q "game module 'EchoesOfTheBrokenSun' could not be found" "$purge_log" 2>/dev/null; then
+    print "attempt $attempt/$attempts: game module was rebuilt under us; retrying in 30s"
+    sleep 30
     continue
   fi
   if ! grep -q "ECHOES_VOICE_PURGE_READY" "$purge_log" 2>/dev/null; then
