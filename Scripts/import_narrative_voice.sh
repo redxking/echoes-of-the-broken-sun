@@ -64,9 +64,16 @@ for attempt in {1..$attempts}; do
       bounded="unbounded"
       [[ "$args" == *-benchmarkseconds=* || "$args" == *-ExecutePythonScript=* \
          || "$args" == *BuildCookRun* ]] && bounded="bounded"
+      # Only call a holder hung once it has had time to be one. A compile
+      # step legitimately idles for a few seconds while it waits on I/O, and
+      # flagging that is noise that trains the reader to ignore the flag.
       idle=""
-      [[ "$cpu1" == "0.0" && "$cpu2" == "0.0" && "$bounded" == "unbounded" ]] \
-        && idle="  <-- 0.0%% CPU and no bounded-duration argument; possibly hung"
+      mins=${${el%:*}%%:*}
+      [[ "$el" == *:*:* ]] && mins=99
+      if [[ "$cpu1" == "0.0" && "$cpu2" == "0.0" && "$bounded" == "unbounded" \
+            && "$mins" -ge 2 ]]; then
+        idle="  <-- 0.0%% CPU for two samples, up $el, no bounded-duration argument; possibly hung"
+      fi
       print "attempt $attempt/$attempts: waiting on pid=$pid cpu=${cpu1}/${cpu2}% up=$el $bounded$idle"
       print "    $args"
     done
