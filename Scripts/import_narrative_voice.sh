@@ -35,16 +35,65 @@ shasum -a 256 "$project_root"/Content/Audio/Voice/*.uasset 2>/dev/null | sort > 
 
 for attempt in {1..$attempts}; do
   # An editor binary staging deletions is the trap; never race it.
-  if ps -Ao comm | grep -q "UnrealEditor$"; then
-    print -u2 "An Unreal editor is running; close it before importing (SCC trap)."
+  # Match the executable, not a substring: UnrealEditorServices and monitor
+  # shells both carry "UnrealEditor" in their command lines and are not
+  # editors. An interactive editor is the UnrealEditor binary without -game;
+  # a -game or -benchmark run stages no deletions, so it is contention only
+  # and is handled by the build-slot check below.
+  interactive=$(ps -Ao comm=,args= \
+    | awk '$1 ~ /\/UnrealEditor$/ && $0 !~ / -game( |$)/' | wc -l | tr -d ' ')
+  if [[ "$interactive" != "0" ]]; then
+    print -u2 "An interactive Unreal editor is open; it stages asset deletions"
+    print -u2 "and the import would fail silently as marked-for-delete (SCC trap)."
+    print -u2 "Close it and re-run."
     exit 3
   fi
-  # Courtesy check. UBT is the real contender, not just the editor.
+  # Block rather than bounce: name the holder, say whether it is working, and
+  # fire the moment it clears. A holder sitting at 0.0% CPU with no bounded
+  # duration argument is called out, because a hung holder and a busy one look
+  # identical from a single sample.
   if ! "$project_root/Scripts/acquire_build_slot.sh" >/dev/null 2>&1; then
-    print "attempt $attempt/$attempts: build slot busy, waiting 60s"
+    for pid in ${(f)"$("$project_root/Scripts/acquire_build_slot.sh" 2>&1 \
+        | grep -oE 'pid=[0-9]+' | cut -d= -f2)"}; do
+      args=$(ps -o args= -p "$pid" 2>/dev/null | cut -c1-120)
+      [[ -z "$args" ]] && { print "attempt $attempt: holder pid=$pid already gone (stale report)"; continue; }
+      cpu1=$(ps -o %cpu= -p "$pid" 2>/dev/null | tr -d ' ')
+      sleep 3
+      cpu2=$(ps -o %cpu= -p "$pid" 2>/dev/null | tr -d ' ')
+      el=$(ps -o etime= -p "$pid" 2>/dev/null | tr -d ' ')
+      bounded="unbounded"
+      [[ "$args" == *-benchmarkseconds=* || "$args" == *-ExecutePythonScript=* \
+         || "$args" == *BuildCookRun* ]] && bounded="bounded"
+      idle=""
+      [[ "$cpu1" == "0.0" && "$cpu2" == "0.0" && "$bounded" == "unbounded" ]] \
+        && idle="  <-- 0.0%% CPU and no bounded-duration argument; possibly hung"
+      print "attempt $attempt/$attempts: waiting on pid=$pid cpu=${cpu1}/${cpu2}% up=$el $bounded$idle"
+      print "    $args"
+    done
+    sleep 20
+    continue
+  fi
+
+  purge_log="$evidence/purge-attempt-$attempt.log"
+  purge_out="$evidence/purge-launcher-attempt-$attempt.log"
+  # Separate session: delete-then-reimport in one session strands the package name.
+  set +e
+  "$editor" "$project" \
+    -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
+    -ExecutePythonScript="$project_root/Scripts/purge_stale_voice_assets.py" \
+    -abslog="$purge_log" > "$purge_out" 2>&1
+  set -e
+  if grep -q "conflicting instance of Global" "$purge_out" 2>/dev/null; then
+    print "attempt $attempt/$attempts: UBT mutex conflict during purge, retrying in 60s"
     sleep 60
     continue
   fi
+  if ! grep -q "ECHOES_VOICE_PURGE_READY" "$purge_log" 2>/dev/null; then
+    print -u2 "attempt $attempt: stale-voice purge did not complete."
+    print -u2 "  purge log: $purge_log"
+    exit 6
+  fi
+  grep -o "\[ECHOES_VOICE_PURGE_READY\].*" "$purge_log" | tail -1
 
   log="$evidence/import-attempt-$attempt.log"
   out="$evidence/launcher-attempt-$attempt.log"
@@ -52,7 +101,7 @@ for attempt in {1..$attempts}; do
   "$editor" "$project" \
     -unattended -nop4 -nosplash -nullrhi -NoSound -SCCProvider=None \
     -ExecutePythonScript="$script" -abslog="$log" > "$out" 2>&1
-  status=$?
+  editor_status=$?
   set -e
 
   if grep -q "conflicting instance of Global" "$out" 2>/dev/null; then
@@ -61,7 +110,7 @@ for attempt in {1..$attempts}; do
     continue
   fi
   if ! grep -q "ECHOES_NARRATIVE_VOICE_READY" "$log" 2>/dev/null; then
-    print -u2 "attempt $attempt: editor exited (status $status) without the import marker."
+    print -u2 "attempt $attempt: editor exited (status $editor_status) without the import marker."
     print -u2 "  editor log:   $log"
     print -u2 "  launcher log: $out"
     exit 4
