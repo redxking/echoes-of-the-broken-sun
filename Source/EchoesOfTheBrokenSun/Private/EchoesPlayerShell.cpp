@@ -4,13 +4,17 @@
 #include "EchoesInputPrompt.h"
 #include "EchoesGameUserSettings.h"
 #include "EchoesSimulationSubsystem.h"
+#include "EchoesCampaignProgress.h"
+#include "EchoesNarrativeSubsystem.h"
 #include "EchoesInterfaceAudioSubsystem.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "HAL/FileManager.h"
 #include "HAL/PlatformTime.h"
 #include "GenericPlatform/GenericApplication.h"
 #include "Engine/GameViewportClient.h"
@@ -21,6 +25,57 @@
 
 namespace
 {
+/**
+ * What a journey slot holds, read without selecting it. The three rows read
+ * "Select Slot 1/2/3" and nothing else: a player could not tell an empty slot
+ * from the one carrying forty decisions, and the only way to find out was to
+ * commit to it. Reading is side-effect free -- no copy, no migration, no
+ * change of active slot -- so an unreadable slot reports that it needs
+ * recovery rather than being silently replaced.
+ */
+FText DescribeJourneySlot(int32 Slot)
+{
+    const FString Path = UEchoesSimulationSubsystem::GetJourneySlotPath(Slot);
+    if (Path.IsEmpty())
+    {
+        return LOCTEXT("SlotPathUnavailable", "unavailable");
+    }
+    if (!IFileManager::Get().FileExists(*Path))
+    {
+        return LOCTEXT("SlotEmpty", "empty — a new journey starts here");
+    }
+    FEchoesCampaignProgress Progress;
+    FString Feedback;
+    if (!FEchoesCampaignProgressStore::LoadWithBackup(Path, Progress, Feedback))
+    {
+        return LOCTEXT("SlotUnreadable",
+            "unreadable — choose Restore previous journey to recover it");
+    }
+    int32 FurthestMission = 0;
+    for (const FEchoesCampaignDecisionRecord& Decision : Progress.Decisions)
+    {
+        FurthestMission = FMath::Max(
+            FurthestMission, static_cast<int32>(Decision.Mission));
+    }
+    const FDateTime Written = IFileManager::Get().GetTimeStamp(*Path);
+    const FText When = Written == FDateTime::MinValue()
+        ? LOCTEXT("SlotTimeUnknown", "date unknown")
+        : FText::AsDateTime(Written);
+    if (Progress.Decisions.IsEmpty())
+    {
+        return FText::Format(
+            LOCTEXT("SlotStarted", "started, no decisions recorded yet · {0}"),
+            When);
+    }
+    return FText::Format(
+        LOCTEXT("SlotProgress", "mission {0} of {1} · {2} decisions · {3}"),
+        FText::AsNumber(FurthestMission),
+        FText::AsNumber(static_cast<int32>(
+            EEchoesCampaignMissionId::TheBrokenSun)),
+        FText::AsNumber(Progress.Decisions.Num()),
+        When);
+}
+
 // AssetRegister.md requires placeholders to remain visibly and textually labeled in
 // development builds and never to be described as final art. The vertical-slice
 // meshes, materials, lighting and effects currently on screen are first-pass work,
@@ -356,8 +411,95 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
     }
     case EEchoesShellScreen::Briefing:
     {
-        View.Title = Bridge ? FText::FromString(Bridge->GetOperationLabel()) : LOCTEXT("Brief", "Mission briefing");
-        View.Body = FText::FromString(GetStatusMessage());
+        // REL-UI-010. This screen was the operation label, one hardcoded
+        // sentence chosen from a sixteen-way chain, and a Deploy button, while
+        // the authored briefing and objectives for every operation sat unread
+        // in the narrative pack. It is the only screen between the front door
+        // and sixteen campaign missions, so a player deployed into authored
+        // content nobody had told them anything about.
+        const EEchoesOperationMode BriefingMode = Bridge
+            ? Bridge->GetOperationMode() : EEchoesOperationMode::Skirmish;
+        UGameInstance* BriefingGameInstance =
+            GetWorld() != nullptr ? GetWorld()->GetGameInstance() : nullptr;
+        const UEchoesNarrativeSubsystem* Narrative =
+            BriefingGameInstance != nullptr
+                ? BriefingGameInstance->GetSubsystem<UEchoesNarrativeSubsystem>()
+                : nullptr;
+        const FString AuthoredTitle =
+            Narrative != nullptr ? Narrative->GetTitle(BriefingMode) : FString();
+        View.Title = !AuthoredTitle.IsEmpty()
+            ? FText::FromString(AuthoredTitle)
+            : (Bridge ? FText::FromString(Bridge->GetOperationLabel())
+                      : LOCTEXT("Brief", "Mission briefing"));
+
+        TArray<FString> BriefingLines;
+        const FString AuthoredBriefing =
+            Narrative != nullptr ? Narrative->GetBriefing(BriefingMode) : FString();
+        if (!AuthoredBriefing.IsEmpty())
+        {
+            BriefingLines.Add(AuthoredBriefing);
+        }
+        const TArray<FString> Objectives = Narrative != nullptr
+            ? Narrative->GetObjectives(BriefingMode) : TArray<FString>();
+        if (!Objectives.IsEmpty())
+        {
+            BriefingLines.Add(FString());
+            BriefingLines.Add(LOCTEXT("BriefingObjectives", "OBJECTIVES").ToString());
+            for (int32 Index = 0; Index < Objectives.Num(); ++Index)
+            {
+                BriefingLines.Add(FString::Printf(
+                    TEXT("%d. %s"), Index + 1, *Objectives[Index]));
+            }
+        }
+        // An irreversible decision is warned about before the player can walk
+        // into it, not after. A Future Well protocol is committed once and the
+        // campaign ledger refuses to rewrite that mission's choice, so the
+        // warning is raised from the staged scenario rather than a per-mission
+        // list that would fall out of date.
+        // Only a campaign mission writes the journey ledger. The readiness
+        // drill shares M01's map, Future Well and all, but SPEC-TUT-008.COVERAGE
+        // forbids training from altering campaign state -- so warning there
+        // would be telling the player something untrue about their save.
+        static_assert(
+            static_cast<uint8>(EEchoesOperationMode::CampaignPrologue) <
+                static_cast<uint8>(EEchoesOperationMode::CampaignTheBrokenSun) &&
+            static_cast<uint8>(EEchoesOperationMode::TrainingReadiness) >
+                static_cast<uint8>(EEchoesOperationMode::CampaignTheBrokenSun),
+            "the campaign operations must stay one contiguous range");
+        const bool bLedgerMission =
+            BriefingMode >= EEchoesOperationMode::CampaignPrologue &&
+            BriefingMode <= EEchoesOperationMode::CampaignTheBrokenSun;
+        bool bCarriesIrreversibleChoice = false;
+        if (bLedgerMission && Bridge != nullptr && Bridge->IsScenarioReady())
+        {
+            if (const auto* BriefingSimulation = Bridge->GetSimulation())
+            {
+                for (const auto& Entity : BriefingSimulation->Entities())
+                {
+                    if (Entity.type == echoes::sim::EntityType::FutureWell)
+                    {
+                        bCarriesIrreversibleChoice = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (bCarriesIrreversibleChoice)
+        {
+            BriefingLines.Add(FString());
+            BriefingLines.Add(LOCTEXT("BriefingIrreversible",
+                "IRREVERSIBLE DECISION — this operation holds a Future Well. Committing a protocol (Harvest, Preserve or Reshape) is permanent: the choice is written to this journey's ledger and cannot be retaken on a later attempt at this mission.")
+                .ToString());
+        }
+        const FString BriefingStatus = GetStatusMessage();
+        if (!BriefingStatus.IsEmpty())
+        {
+            BriefingLines.Add(FString());
+            BriefingLines.Add(BriefingStatus);
+        }
+        View.Body = BriefingLines.IsEmpty()
+            ? FText::FromString(BriefingStatus)
+            : FText::FromString(FString::Join(BriefingLines, TEXT("\n")));
         Button(LOCTEXT("Deploy", "Deploy"), EEchoesShellAction::Primary,
             bPlayerProfileAvailable && Bridge && Bridge->IsScenarioReady());
         Back(); break;
@@ -372,8 +514,15 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
         Button(LOCTEXT("Help", "Help and lesson practice"), EEchoesShellAction::Help);
         Button(LOCTEXT("SaveLoad", "Save and load"), EEchoesShellAction::SaveLoad);
         Button(LOCTEXT("Restart", "Restart mission"), EEchoesShellAction::Restart);
-        if (Bridge && Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish)
-            Button(LOCTEXT("Concede", "Concede match"), EEchoesShellAction::Concede);
+        // SPEC-OUT-007: the player may concede at any time. A campaign operation going
+        // badly previously had no exit but winning or losing it, and losing depends on
+        // the opponent finishing the job. TrainingReadiness keeps its own opt-out and is
+        // not concedable, so the label distinguishes an operation from a skirmish match.
+        if (Bridge && Bridge->GetOperationMode() != EEchoesOperationMode::TrainingReadiness)
+            Button(Bridge->GetOperationMode() == EEchoesOperationMode::Skirmish
+                    ? LOCTEXT("Concede", "Concede match")
+                    : LOCTEXT("ConcedeOperation", "Concede operation"),
+                EEchoesShellAction::Concede);
         Button(LOCTEXT("ExitMenu", "Exit to menu"), EEchoesShellAction::ReturnToMenu);
         break;
     case EEchoesShellScreen::Results:
@@ -394,9 +543,27 @@ FEchoesShellView AEchoesPlayerController::BuildShellView() const
     case EEchoesShellScreen::SaveLoad:
         View.Title = LOCTEXT("SaveTitle", "Journeys and recovery");
         View.Body = FText::Format(LOCTEXT("SlotBody", "Active journey: Slot {0}\nEach journey keeps its own decisions, endings and checkpoints."), FText::AsNumber(Bridge ? Bridge->GetActiveJourneySlot() : 1));
-        for (int32 Slot = 1; Slot <= 3; ++Slot)
-            Button(FText::Format(LOCTEXT("Slot", "Select Slot {0}"), FText::AsNumber(Slot)), EEchoesShellAction::SelectSlot,
-                PlayerFlow.BaseScreen() == EEchoesShellScreen::Title, Slot);
+        {
+            // Slots are chosen from the title screen only, because selecting one
+            // swaps the active campaign ledger. Saying so turns three greyed
+            // rows from something that looks broken into something deliberate.
+            const bool bSlotsSelectable =
+                PlayerFlow.BaseScreen() == EEchoesShellScreen::Title;
+            if (!bSlotsSelectable)
+            {
+                View.Body = FText::Format(
+                    LOCTEXT("SlotBodyLocked", "{0}\n\nJourneys can only be switched from the title screen; leave this operation first."),
+                    View.Body);
+            }
+            for (int32 Slot = 1; Slot <= 3; ++Slot)
+            {
+                Button(
+                    FText::Format(
+                        LOCTEXT("SlotWithContents", "Slot {0} — {1}"),
+                        FText::AsNumber(Slot), DescribeJourneySlot(Slot)),
+                    EEchoesShellAction::SelectSlot, bSlotsSelectable, Slot);
+            }
+        }
         if (PlayerFlow.BaseScreen() == EEchoesShellScreen::Pause)
         {
             Button(LOCTEXT("SaveCheckpoint", "Save checkpoint"), EEchoesShellAction::Save, Bridge && !Bridge->IsCheckpointSavePending());
@@ -651,10 +818,10 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
             Fail(LOCTEXT("TrainingStartFailed", "The readiness check could not start. Return to the title menu and try again.").ToString());
             return;
         }
-        // A successful explicit start is a new learning attempt. Ordinary observer
-        // resets (including load/authority changes) must not erase session progress.
-        TutorialSkippedMask = 0;
-        TutorialSessionVerifiedMask = 0;
+        // Resume the durable record rather than erasing it: zeroing here meant a
+        // player who skipped a step and genuinely earned later ones came back to
+        // a tutorial that had forgotten both. ResetTutorialObservation restores
+        // both masks from the saved profile.
         bTutorialOperationAuthorized = true;
         ResetTutorialObservation();
         PlayerFlow.ClearOverlays();
@@ -871,10 +1038,29 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
         { PlayerFlow.ClearOverlays(); RestartScenario(); }
         break;
     case EEchoesShellAction::Concede:
-        if (!Confirm(LOCTEXT("ConcedeConfirm", "Concede this match and record a defeat?"))) break;
-        if (!Bridge->ConcedeOfflineMatch(Feedback)) Fail(Feedback);
-        else { PlayerFlow.ClearOverlays(); NotifyMatchFinished(Bridge->GetMatchOutcome()); }
+    {
+        const bool bConcedingCampaign = Bridge &&
+            Bridge->GetOperationMode() != EEchoesOperationMode::Skirmish;
+        if (!Confirm(bConcedingCampaign
+                ? LOCTEXT("ConcedeOperationConfirm",
+                    "Concede this operation? It is recorded as a failed mission, exactly as if it had been lost in play.")
+                : LOCTEXT("ConcedeConfirm", "Concede this match and record a defeat?")))
+        {
+            break;
+        }
+        if (!Bridge->ConcedeOfflineMatch(Feedback)) { Fail(Feedback); break; }
+        PlayerFlow.ClearOverlays();
+        // A skirmish result is reported here. A campaign operation must NOT be, or it
+        // would present the skirmish result screen and skip the mission consequence and
+        // the campaign ledger commit. Conceding retires the local Command Core, every
+        // mission model fails on that, and the operation's own dispatch then reports it
+        // through the authored path on the next evaluation.
+        if (!bConcedingCampaign)
+        {
+            NotifyMatchFinished(Bridge->GetMatchOutcome());
+        }
         break;
+    }
     case EEchoesShellAction::ReturnToMenu:
         if (Confirm(LOCTEXT("MenuConfirm", "Return to the main menu? Unsaved progress will be lost.")))
         { PlayerFlow.ClearOverlays(); PresentTitleScreen(); }

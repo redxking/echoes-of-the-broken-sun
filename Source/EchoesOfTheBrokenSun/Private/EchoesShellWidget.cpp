@@ -3,6 +3,8 @@
 #include "EchoesInterfaceAudioSubsystem.h"
 #include "EchoesPlayerController.h"
 #include "EchoesResultChart.h"
+#include "EchoesTypeface.h"
+#include "Engine/Font.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
@@ -23,6 +25,7 @@
 #include "Components/WrapBox.h"
 #include "Components/WrapBoxSlot.h"
 #include "Engine/World.h"
+#include "Styling/CoreStyle.h"
 #include "Engine/Texture2D.h"
 #include "InputCoreTypes.h"
 #include "EchoesOfTheBrokenSun.h"
@@ -201,6 +204,21 @@ FText TitlePresentationText(const FEchoesShellView& View)
     return View.Title;
 }
 
+/**
+ * The shell's branded face. Reading the widget's existing font and changing
+ * only its size left every menu, the title and the results screen in stock
+ * Roboto while the vendored Space Grotesk shipped unused beside them. A
+ * missing font file still degrades to a readable engine face rather than to
+ * no text at all, and `EchoesTypeface` logs that fallback.
+ */
+[[nodiscard]] FSlateFontInfo ShellFont(int32 Size)
+{
+    UFont* Face = EchoesTypeface::Chrome();
+    return Face != nullptr
+        ? FSlateFontInfo(Face, Size, TEXT("Regular"))
+        : FCoreStyle::GetDefaultFontStyle("Regular", Size);
+}
+
 void ConfigureText(
     UTextBlock* Text,
     const FText& Content,
@@ -210,9 +228,7 @@ void ConfigureText(
     Text->SetText(Content);
     Text->SetColorAndOpacity(Color);
     Text->SetAutoWrapText(true);
-    FSlateFontInfo Font = Text->GetFont();
-    Font.Size = FontSize;
-    Text->SetFont(Font);
+    Text->SetFont(ShellFont(FontSize));
 }
 
 bool SameButton(
