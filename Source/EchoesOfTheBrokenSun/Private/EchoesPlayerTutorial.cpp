@@ -722,3 +722,18 @@ void AEchoesPlayerController::CancelTutorialSkipModal()
 }
 
 #undef LOCTEXT_NAMESPACE
+
+void AEchoesPlayerController::ObserveTutorialConstructionEvent(
+    echoes::sim::EntityType StructureType,
+    uint32 BuilderEntity,
+    echoes::sim::Vec2 Site)
+{
+    // L4-ONBOARD will implement this later.
+}
+
+void AEchoesPlayerController::ObserveTutorialProductionEvent(
+    echoes::sim::EntityType ProducedType,
+    uint32 ProducerEntity)
+{
+    // L4-ONBOARD will implement this later.
+}

@@ -1216,9 +1216,15 @@ FEchoesCommandDeckProfile BuildNetworkCommandProfile(
                 ++Profile.WorkerCount;
                 break;
             case EntityType::Soldier:
+                ++Profile.CombatCount;
+                break;
             case EntityType::HeavyUnit:
+                ++Profile.CombatCount;
+                Profile.bHasHeavyUnit = true;
+                break;
             case EntityType::ScoutUnit:
                 ++Profile.CombatCount;
+                Profile.bHasScoutUnit = true;
                 break;
             case EntityType::CommandCore:
             case EntityType::Dropoff:

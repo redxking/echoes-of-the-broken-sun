@@ -12,6 +12,8 @@ struct FEchoesCommandDeckProfile final
     int32 OtherCount = 0;
     bool bHasCommandCore = false;
     bool bHasBarracks = false;
+    bool bHasHeavyUnit = false;
+    bool bHasScoutUnit = false;
     /** True only for one selected owned, unfinished cancellable structure. */
     bool bCanCancelSelectedConstruction = false;
     bool bUseM01RoleNames = false;
@@ -96,11 +98,25 @@ struct FEchoesCommandDeckModel final
             Add(EEchoesCommandDeckAction::AttackMove,
                 TEXT("ATTACK-MOVE"), TEXT("F"), true);
             Add(EEchoesCommandDeckAction::Patrol, TEXT("PATROL"), TEXT("T"), true);
-            Add(EEchoesCommandDeckAction::Hold, TEXT("HOLD"), TEXT("H"), false);
-            Add(EEchoesCommandDeckAction::Guard, TEXT("GUARD"), TEXT("J"), true);
             Add(EEchoesCommandDeckAction::Stop, TEXT("STOP"), TEXT("X"), false);
-            Add(EEchoesCommandDeckAction::CycleFormation,
-                TEXT("FORMATION"), TEXT("F8"), false);
+            if (Profile.bHasHeavyUnit) {
+                Add(EEchoesCommandDeckAction::ToggleBulwarkDeployment,
+                    TEXT("TOGGLE DEPLOYMENT"), TEXT("G"), true);
+            }
+            if (Profile.bHasScoutUnit) {
+                Add(EEchoesCommandDeckAction::ActivateRelaySupply,
+                    TEXT("EXTEND RELAY"), TEXT("V"), false);
+            }
+            if (Entries.Num() < 5) {
+                Add(EEchoesCommandDeckAction::Hold, TEXT("HOLD"), TEXT("H"), false);
+            }
+            if (Entries.Num() < 6) {
+                Add(EEchoesCommandDeckAction::Guard, TEXT("GUARD"), TEXT("J"), true);
+            }
+            if (Entries.Num() < 6) {
+                Add(EEchoesCommandDeckAction::CycleFormation,
+                    TEXT("FORMATION"), TEXT("F8"), false);
+            }
             return Entries;
         }
         if (Profile.WorkerCount > 0)
