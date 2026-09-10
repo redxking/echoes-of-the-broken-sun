@@ -166,6 +166,113 @@ bool FEchoesBuildPlacementPreviewTest::RunTest(const FString& Parameters)
         Before.Contains(TEXT("matter=2000 dawn=2000")) && Before.Contains(TEXT("node=")));
     UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT_TEST] case=boundary_crossing stage=previous %s"), *Before);
     UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT_TEST] case=boundary_crossing stage=resolved %s"), *After);
+
+    // SPEC-SIM-003 and SPEC-UI-008.F13: the preview may not promise a placement the
+    // authority will refuse. It used to, around every ore patch on every map.
+    //
+    // Simulation::FootprintHalfExtentFor gives ResourceNode kFixedScale/3 and FutureWell
+    // kFixedScale/2, but the preview read the archetype table for every type. Neither of
+    // those two is in kConfigurableEntityTypes, so nothing writes their rows -- while
+    // kConfigurableEntityTypeCount is larger than that list, so their indices passed the
+    // bounds check and returned the struct default kFixedScale/8. The preview therefore
+    // sized an ore patch at 128 where the authority uses 341, leaving a band that
+    // previewed valid, accepted the click, queued the order and then reported only
+    // "Order had no effect" with no cause and no resources spent.
+    //
+    // This asserts agreement rather than a single hand-picked tile, so it also covers the
+    // Well case and any future divergence in either direction.
+    // Sited beside the worker's own build area, not out in the dark. The preview
+    // additionally requires every footprint tile to be Visibility::Visible, which the
+    // authority neither has nor should have -- so a node in fog produces a wall of
+    // UnknownTerrain refusals that compare against an omniscient Valid and prove
+    // nothing about footprints. The first version of this sweep did exactly that.
+    const auto Node = Simulation.SpawnResourceNode(
+        echoes::sim::Vec2::FromTiles(13, 8), 1500);
+    if (TestTrue(TEXT("Resource node spawns for the footprint agreement sweep"), Node != 0))
+    {
+        Simulation.Step();
+        auto SweepView = Simulation.CreatePlayerView(0);
+        if (TestTrue(TEXT("Footprint agreement sweep view exists"), SweepView.has_value()))
+        {
+            int32 Compared = 0;
+            int32 Disagreements = 0;
+            int32 PreviewPromisedRefusal = 0;
+            int32 FogScoped = 0;
+            int32 AuthorityAccepted = 0;
+            int32 AuthorityRefused = 0;
+            // Quarter-tile steps across the contested band on both axes. The old preview
+            // and the authority differ by 213 raw units around a node, which is a fifth of
+            // a tile, so a coarser sweep would step straight over the defect.
+            for (int32 StepX = -8; StepX <= 8; ++StepX)
+            {
+                for (int32 StepY = -8; StepY <= 8; ++StepY)
+                {
+                    const echoes::sim::Vec2 Candidate{
+                        echoes::sim::Fixed::FromRaw(
+                            echoes::sim::Vec2::FromTiles(13, 8).x.Raw() +
+                            StepX * (echoes::sim::kFixedScale / 4)),
+                        echoes::sim::Fixed::FromRaw(
+                            echoes::sim::Vec2::FromTiles(13, 8).y.Raw() +
+                            StepY * (echoes::sim::kFixedScale / 4))};
+                    const auto Previewed = FEchoesBuildPlacementModel::Evaluate(
+                        *SweepView, Worker, echoes::sim::EntityType::Dropoff, Candidate);
+                    const bool bAuthorityAccepts =
+                        Simulation.ValidatePlacement(
+                            0, echoes::sim::EntityType::Dropoff, Candidate) ==
+                        echoes::sim::PlacementResult::Valid;
+                    // Range and resources are the preview's own concerns and are not part
+                    // of the authority's placement verdict, so only compare where the
+                    // preview's refusal is a footprint or terrain claim.
+                    // Compare only where both sides are answering the same question.
+                    // UnknownTerrain is a fog refusal the authority has no counterpart
+                    // for -- it sees the whole map by definition -- and resources and
+                    // worker range are the preview's own concerns. Footprint, terrain
+                    // and map bounds are the shared ground.
+                    if (Previewed.Validity == EEchoesBuildPreviewValidity::UnknownTerrain)
+                    {
+                        ++FogScoped;
+                        continue;
+                    }
+                    if (!Previewed.IsValid() &&
+                        Previewed.Validity != EEchoesBuildPreviewValidity::Occupied &&
+                        Previewed.Validity != EEchoesBuildPreviewValidity::TerrainBlocked &&
+                        Previewed.Validity != EEchoesBuildPreviewValidity::OutsideMap)
+                    {
+                        continue;
+                    }
+                    ++Compared;
+                    if (bAuthorityAccepts) { ++AuthorityAccepted; } else { ++AuthorityRefused; }
+                    if (Previewed.IsValid() != bAuthorityAccepts)
+                    {
+                        ++Disagreements;
+                        if (Previewed.IsValid())
+                        {
+                            ++PreviewPromisedRefusal;
+                        }
+                    }
+                }
+            }
+            // Non-vacuity, stated as a property rather than a count. A raw threshold is one
+            // map or vision change away from silently passing on nothing -- an earlier version
+            // of this sweep compared 200+ positions and every one of them was fog. What makes
+            // the comparison meaningful is that it STRADDLES the authority's boundary: some
+            // positions it accepts, some it refuses. If either side is empty the sweep sits
+            // entirely inside or entirely outside the footprint and proves nothing, whatever
+            // the count says.
+            TestTrue(TEXT("Footprint sweep straddles the authority's boundary rather than sitting on one side"),
+                AuthorityAccepted > 0 && AuthorityRefused > 0 && Compared > 50);
+            TestEqual(
+                TEXT("The preview never promises a placement the authority refuses"),
+                PreviewPromisedRefusal, 0);
+            TestEqual(
+                TEXT("Preview and authority agree on every footprint verdict near a resource node"),
+                Disagreements, 0);
+            UE_LOG(LogEchoes, Display,
+                TEXT("[ECHOES_PLACEMENT_TEST] case=footprint_agreement compared=%d disagreements=%d falseValid=%d fogScoped=%d authorityAccepted=%d authorityRefused=%d"),
+                Compared, Disagreements, PreviewPromisedRefusal, FogScoped,
+                AuthorityAccepted, AuthorityRefused);
+        }
+    }
     return true;
 }
 

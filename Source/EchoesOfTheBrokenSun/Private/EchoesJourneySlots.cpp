@@ -58,18 +58,41 @@ bool UEchoesSimulationSubsystem::SelectJourneySlot(int32 Slot, FString& OutFeedb
 
 bool UEchoesSimulationSubsystem::ConcedeOfflineMatch(FString& OutFeedback)
 {
+    // SPEC-OUT-007: the player may continue or concede at any time. This was gated to
+    // Skirmish, so a campaign operation going badly had no exit except winning or
+    // losing it -- and losing requires the opponent to finish the job.
+    // TrainingReadiness stays excluded: it is a passive-AI mastery drill whose result
+    // feeds the readiness proof, and it already has an explicit opt-out. Conceding it
+    // would be a second, unaudited way to end a drill that grants an unlock.
     if (!bScenarioReady || !Simulation.IsValid() || bNetworkHumanOpponent ||
-        SelectedOperation != EEchoesOperationMode::Skirmish ||
+        SelectedOperation == EEchoesOperationMode::TrainingReadiness ||
         Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
     {
-        OutFeedback = TEXT("[CONCEDE_UNAVAILABLE] No active offline match can be conceded.");
+        OutFeedback = TEXT("[CONCEDE_UNAVAILABLE] No active offline operation can be conceded.");
         return false;
     }
     if (!Simulation->ForfeitPlayer(LocalPlayerId)) return false;
-    bSimulationPaused = true;
-    bMatchResultReported = true;
     FixedTimeAccumulator = 0.0;
-    BeginReplayArchiveForCurrentResult();
-    OutFeedback = TEXT("Match conceded.");
+    if (SelectedOperation == EEchoesOperationMode::Skirmish)
+    {
+        bSimulationPaused = true;
+        bMatchResultReported = true;
+        BeginReplayArchiveForCurrentResult();
+        OutFeedback = TEXT("Match conceded.");
+        return true;
+    }
+    // A campaign operation must finish through its OWN authored path, so the mission
+    // consequence, the campaign ledger commit and the per-mission result screen all
+    // behave exactly as they do for a mission lost in play. Every mission model fails
+    // on `!Facts.bLocalCoreIntact`, and ForfeitPlayer retires precisely that Core, so
+    // the next evaluation moves the operation to its Failed phase and the existing
+    // dispatch reports it.
+    //
+    // Deliberately NOT setting bMatchResultReported or pausing here: that dispatch is
+    // guarded on `!bMatchResultReported`, so claiming the result now would skip the
+    // consequence and the ledger commit and leave the player on a screen the campaign
+    // never recorded. The concession has to be an ordinary mission failure, not a
+    // second, quieter way to end an operation.
+    OutFeedback = TEXT("Operation conceded.");
     return true;
 }

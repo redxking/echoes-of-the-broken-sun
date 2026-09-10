@@ -26,6 +26,45 @@ int32 FactionIndex(echoes::sim::Faction Faction)
 {
     return static_cast<int32>(Faction);
 }
+
+// Mirror of echoes::sim::FootprintHalfExtentFor. The preview must size a neighbour
+// exactly as the authority will, or it promises placements ValidatePlacement then
+// refuses. Public resource and Well footprints are fixed constants; roster footprints
+// come from the rules. That is the same convention EchoesSimulationSubsystem.cpp
+// already carries for its own footprint switch.
+//
+// Reading the archetype table for every type is what went wrong: ResourceNode and
+// FutureWell are not in kConfigurableEntityTypes, so nothing ever writes their rows,
+// yet kConfigurableEntityTypeCount is larger than that list and their indices pass a
+// bounds check. They came back as the struct default kFixedScale / 8 -- a third of the
+// authority's ResourceNode extent and a quarter of its Well extent -- so a band around
+// every ore patch previewed valid and was refused on execution.
+int32 FootprintHalfExtentRaw(
+    const echoes::sim::SimulationRules& Rules,
+    echoes::sim::Faction Faction,
+    echoes::sim::EntityType Type)
+{
+    switch (Type)
+    {
+    case echoes::sim::EntityType::FutureWell:
+        return echoes::sim::kFixedScale / 2;
+    case echoes::sim::EntityType::ResourceNode:
+        return echoes::sim::kFixedScale / 3;
+    default:
+        break;
+    }
+    const int32 TypeSlot = TypeIndex(Type);
+    const int32 FactionSlot = FactionIndex(Faction);
+    if (TypeSlot < 0 ||
+        TypeSlot >= static_cast<int32>(echoes::sim::kConfigurableEntityTypeCount) ||
+        FactionSlot < 0 ||
+        FactionSlot >= static_cast<int32>(echoes::sim::kFactionCount))
+    {
+        // Matches the authority's trailing return for a type it does not enumerate.
+        return echoes::sim::kFixedScale;
+    }
+    return Rules.archetypes[FactionSlot][TypeSlot].footprintHalfExtentRaw;
+}
 }
 
 FEchoesBuildPlacementEvaluation FEchoesBuildPlacementModel::Evaluate(
@@ -68,7 +107,9 @@ FEchoesBuildPlacementEvaluation FEchoesBuildPlacementModel::Evaluate(
     }
     const echoes::sim::EntityArchetypeRules& BuildingRules =
         View.Config().rules.archetypes[OwnerFactionIndex][BuildingIndex];
-    Result.FootprintHalfExtentRaw = BuildingRules.footprintHalfExtentRaw;
+    // Through the same helper as every neighbour, so this file has one footprint path.
+    Result.FootprintHalfExtentRaw = FootprintHalfExtentRaw(
+        View.Config().rules, View.Player().faction, BuildingType);
     const int64 X = Position.x.Raw();
     const int64 Y = Position.y.Raw();
     const int64 MapWidthRaw =
@@ -117,18 +158,14 @@ FEchoesBuildPlacementEvaluation FEchoesBuildPlacementModel::Evaluate(
 
     for (const echoes::sim::Entity& Entity : View.Entities())
     {
-        const int32 EntityFactionIndex = FactionIndex(Entity.faction);
-        const int32 EntityTypeIndex = TypeIndex(Entity.type);
-        if (Entity.hitPoints <= 0 || EntityFactionIndex < 0 ||
-            EntityFactionIndex >= static_cast<int32>(echoes::sim::kFactionCount) ||
-            EntityTypeIndex < 0 ||
-            EntityTypeIndex >= static_cast<int32>(echoes::sim::kConfigurableEntityTypeCount))
+        if (Entity.hitPoints <= 0)
         {
             continue;
         }
+        // The bounds check lives in the helper now, so ResourceNode and FutureWell stop
+        // being skipped-or-misread here and get the authority's fixed extents instead.
         const int32 CombinedExtent = Result.FootprintHalfExtentRaw +
-            View.Config().rules.archetypes[EntityFactionIndex][EntityTypeIndex]
-                .footprintHalfExtentRaw;
+            FootprintHalfExtentRaw(View.Config().rules, Entity.faction, Entity.type);
         if (FMath::Abs(static_cast<int64>(Position.x.Raw()) - Entity.position.x.Raw()) <
                 CombinedExtent &&
             FMath::Abs(static_cast<int64>(Position.y.Raw()) - Entity.position.y.Raw()) <

@@ -611,6 +611,19 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
         PreArchiveDossier.Contains(TEXT("Command Core has fallen")));
     TestTrue(TEXT("The dossier names the concession before the replay archive publishes"),
         PreArchiveDossier.Contains(TEXT("concession")));
+    // REL-UI-009.FAIL: "Generic single-line failure text discarding match statistics is
+    // strictly prohibited." The reconstructed report comes from the async replay archive,
+    // so this screen used to carry a cause, a duration and nothing else on the first frame
+    // a player reads it, and permanently whenever the archive failed. The live simulation
+    // is paused at the terminal tick, so the standing forces and banked resources are
+    // authoritative and can be shown as the final state while the totals are prepared.
+    TestTrue(TEXT("The pre-archive dossier reports the battlefield instead of discarding statistics"),
+        PreArchiveDossier.Contains(TEXT("Standing at the final tick")) &&
+        PreArchiveDossier.Contains(TEXT("Banked Matter")));
+    TestTrue(TEXT("The pre-archive dossier labels those figures as superseded by the full totals"),
+        PreArchiveDossier.Contains(TEXT("Totals over the whole match follow")));
+    TestTrue(TEXT("The pre-archive dossier still names both seats"),
+        PreArchiveDossier.Contains(TEXT("Player 1")) && PreArchiveDossier.Contains(TEXT("Player 2")));
     // This is a controller route check. It does not stand in for physical input qualification.
     const double ArchiveDeadline = FPlatformTime::Seconds() + 15.0;
     while (Bridge->GetReplayArchiveState() == EEchoesReplayArchiveState::Pending && FPlatformTime::Seconds() < ArchiveDeadline)

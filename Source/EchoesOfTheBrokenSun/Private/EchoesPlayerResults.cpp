@@ -54,6 +54,62 @@ void AEchoesPlayerController::AppendMatchResultDossier(FEchoesShellView& View) c
     Sections.Add(FText::Format(LOCTEXT("Elapsed", "Match duration: {0}"), ElapsedTime(Report ? Report->finalTick : PresentedFinalTick)));
     if (!Report)
     {
+        // REL-UI-009.FAIL prohibits a results screen that discards match statistics.
+        // The reconstructed report is produced by the ASYNC replay archive, so on the
+        // first composed frame -- and permanently whenever that archive fails -- this
+        // screen used to show a cause, a duration and nothing else. That is the window
+        // in which a player actually reads it.
+        //
+        // The live simulation is still present and paused at the terminal tick, so the
+        // banked resources and standing forces are authoritative right now. They are a
+        // different and smaller thing than the reconstructed statistics: they are the
+        // final state, not the totals over the match. Presented as provisional, and
+        // superseded the moment the report lands. No fog concern -- the match is over
+        // and the full report shows every seat regardless.
+        const echoes::sim::Simulation* Live = Bridge ? Bridge->GetSimulation() : nullptr;
+        if (Live != nullptr)
+        {
+            TArray<FText> Provisional;
+            for (int32 Seat = 0; Seat < static_cast<int32>(echoes::sim::kMaximumPlayers); ++Seat)
+            {
+                const echoes::sim::PlayerState* Player =
+                    Live->FindPlayer(static_cast<echoes::sim::PlayerId>(Seat));
+                if (Player == nullptr || !Player->active) continue;
+                int32 Units = 0;
+                int32 Structures = 0;
+                for (const echoes::sim::Entity& Entity : Live->Entities())
+                {
+                    if (Entity.owner != static_cast<echoes::sim::PlayerId>(Seat) ||
+                        Entity.hitPoints <= 0)
+                    {
+                        continue;
+                    }
+                    if (Entity.type == echoes::sim::EntityType::CommandCore ||
+                        Entity.type == echoes::sim::EntityType::Dropoff ||
+                        Entity.type == echoes::sim::EntityType::Barracks ||
+                        Entity.type == echoes::sim::EntityType::UtilityStructure)
+                    {
+                        ++Structures;
+                    }
+                    else
+                    {
+                        ++Units;
+                    }
+                }
+                Provisional.Add(FText::Format(
+                    LOCTEXT("ProvisionalSeat",
+                        "{0}\nStanding at the final tick — units: {1}   structures: {2}\nBanked Matter: {3}   Dawnshards: {4}"),
+                    SeatLabel(Seat, Player->faction), FText::AsNumber(Units),
+                    FText::AsNumber(Structures), FText::AsNumber(Player->resources.material),
+                    FText::AsNumber(Player->resources.dawnshards)));
+            }
+            if (Provisional.Num() > 0)
+            {
+                Sections.Add(LOCTEXT("ProvisionalHeading",
+                    "Final state of the battlefield. Totals over the whole match follow with the replay."));
+                Sections.Append(Provisional);
+            }
+        }
         View.Status = Bridge && Bridge->GetReplayArchiveState() == EEchoesReplayArchiveState::Pending
             ? LOCTEXT("Preparing", "Preparing match statistics and replay…")
             : FText::Format(LOCTEXT("Unavailable", "Match statistics are unavailable. {0}"),
