@@ -24,7 +24,13 @@
 namespace
 {
 template <typename Digest>
-FString DigestHex(const Digest& Value)
+// File-unique by name. Separate anonymous namespaces merge into one when the
+// build batches test files into a single translation unit, so a helper called
+// DigestHex here collides with the identical helpers in
+// EchoesSimulationSubsystemReplay.cpp and EchoesTrainingReadinessOperationTest.cpp.
+// The error names the symbol rather than the collision, which reads as a local
+// mistake; that exact class of break cost another lane time on 2026-09-10.
+FString FieldHudRoutesDigestHex(const Digest& Value)
 {
     FString Result;
     Result.Reserve(static_cast<int32>(Value.size() * 2));
@@ -931,8 +937,8 @@ bool FEchoesFieldHudRoutesTest::RunTest(const FString& Parameters)
         *FGuid::NewGuid().ToString(EGuidFormats::Digits));
     Metadata.MapId = TEXT("glass-scar");
     Metadata.OperationId = TEXT("skirmish");
-    Metadata.BuildIdentity = DigestHex(Compatibility.buildIdSha256);
-    Metadata.RulesIdentity = DigestHex(Compatibility.rulesPackSha256);
+    Metadata.BuildIdentity = FieldHudRoutesDigestHex(Compatibility.buildIdSha256);
+    Metadata.RulesIdentity = FieldHudRoutesDigestHex(Compatibility.rulesPackSha256);
     Metadata.RecordedUtc = FDateTime(2026, 9, 5, 12, 0, 0);
     Metadata.OperationType = EEchoesReplayOperationType::Skirmish;
     Metadata.bOperationCompleted = true;
