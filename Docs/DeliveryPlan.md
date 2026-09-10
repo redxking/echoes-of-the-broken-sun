@@ -25,14 +25,14 @@ The retired lane-fleet roster and missing lock files do not govern current work.
 
 | Field | Current continuation state |
 |---|---|
-| First unfinished package | **D1 — Bind the game design.** (D0 candidate disposition complete) |
-| Completed indexing | Main preserved; 6 salvage candidates verified and dispositioned. Next integration identified. |
-| Saved baseline | Main `af3475eb`; candidate worktrees verified against salvage baselines. |
+| First unfinished package | **D2 — Establish integrated foundation.** (D1 game design bound) |
+| Completed indexing | D1 design synchronization completed (commit `23e7230`). |
+| Saved baseline | `integration/d0-reconciliation` branch at `23e7230`. |
 | Ownership | Owner granted this task checkout ownership. Active working branch is `integration/d0-reconciliation`. |
 | Preservation boundary | Main untracked and dirty files preserved in `BuildArtifacts/Evidence/resume-preservation-20260910`. Salvage archives verified intact. |
-| Last retained evidence | D0 inventory disposition completed in `BuildArtifacts/Evidence/resume-preservation-20260910/inventory_review.md`. |
-| Next exact action after resume | Advance to D1: Synchronize the approved 30-entity rule; resolve roster/footprint/control/document conflicts. |
-| Next dependency | D1 design synchronization before starting D2 integration. |
+| Last retained evidence | D1 documentation updates committed (`23e7230`). |
+| Next exact action after resume | Advance to D2: Integrate retained repairs (`resource-depletion` and `unit-abilities`); close core sim failures against D1. |
+| Next dependency | D2 completion required before D3 Meridian slice. |
 | Open evidence | Current game reproduction, integrated verification and owner acceptance remain open. |
 
 This table is the sole current continuation summary. Update it before each handoff or interruption with
