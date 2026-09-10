@@ -209,13 +209,25 @@ bool FEchoesTutorialAnchorSelectionTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Camera observation restarts after a programmatic move"),
         Controller->GetTutorialSurvey().IsActive());
 
+    // Selecting the Anchor is now the whole of lesson one: SPEC-TUT-008 retired
+    // the pan, zoom, recentre and waypoint-dwell gate that used to sit behind
+    // it, so the click the player already made completes the lesson.
+    TestTrue(TEXT("Selecting the Anchor completes the survey lesson"),
+        (Controller->GetTutorialProgressMask() & 1) != 0);
+    TestEqual(TEXT("Completing it durably records exactly that lesson"),
+        Controller->GetPlayerProfile().TutorialVerifiedMask, uint16(1));
+
     // Authority changes still clear the selection gate: a restarted scenario
     // must re-demand the click rather than carry stale evidence forward.
     Controller->ResetTutorialObservation();
     TestFalse(TEXT("Observer reset clears the Anchor selection"),
         Controller->IsTutorialCoreSelected());
+    // A fresh curriculum, as a new player would meet it, demands the click.
+    Controller->PlayerProfile.TutorialVerifiedMask = 0;
+    Controller->SelectedEntityIds.Reset();
+    Controller->ResetTutorialObservation();
     Step();
-    TestTrue(TEXT("Survey re-demands Anchor selection after a full reset"),
+    TestTrue(TEXT("A fresh curriculum demands the Anchor selection again"),
         IsAnchorSelectionInstruction(Controller->GetTutorialInstruction()));
 
     Controller->Destroy();

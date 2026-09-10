@@ -356,37 +356,33 @@ void AEchoesPlayerController::TickTutorialObservation()
     }
     if ((ProgressMask & 1) == 0)
     {
-        const int32 Waypoint = TutorialSurvey.CompletedWaypoints();
+        // SPEC-TUT-008 retires the mandatory centering, camera-distance and
+        // waypoint-dwell exercises. A new player's first act was a camera
+        // calibration chore -- pan a set distance, zoom to both limits,
+        // recentre, then hold the view over three map sites for 1.5 seconds
+        // each -- before a single RTS idea had been introduced. Camera help
+        // stays, as help: offered alongside the real instruction while the
+        // player has not moved the camera yet, and never gating progress.
         if (!bTutorialCoreSelected)
         {
-            TutorialInstruction = BoundTutorialText(LOCTEXT("SurveySelectAnchor", "Survey: use {select_key} on your Anchor to begin."));
+            TutorialInstruction = BoundTutorialText(TutorialSurvey.HasPanned()
+                ? LOCTEXT("SurveySelectAnchor", "Survey: use {select_key} on your Anchor to begin.")
+                : LOCTEXT("SurveySelectAnchorWithCamera", "Survey: use {select_key} on your Anchor to begin. You can look around with {pan_keys} at any time."));
         }
-        else if (!TutorialSurvey.HasPanned())
+        else if (SelectedEntityIds.Num() == 1 &&
+            SelectedEntityIds[0] == TutorialCoreId)
         {
-            TutorialInstruction = BoundTutorialText(LOCTEXT("SurveyPan", "Survey: pan the camera across the map using {pan_keys}."));
-        }
-        else if (!(TutorialSurvey.HasZoomedMin() && TutorialSurvey.HasZoomedMax()))
-        {
-            TutorialInstruction = BoundTutorialText(LOCTEXT("SurveyZoom", "Survey: use {zoom_in_key} and {zoom_out_key} to zoom fully in and out."));
-        }
-        else if (!TutorialSurvey.HasRecentered() || Waypoint == 0)
-        {
-            TutorialInstruction = BoundTutorialText(LOCTEXT("SurveyRecenter", "Survey: use {recenter_key} and keep the camera centered over it for 1.5 seconds."));
-        }
-        else if (Waypoint == 1)
-        {
-            TutorialInstruction = LOCTEXT("SurveySite1",
-                "Anchor verified. Next, locate the Archive Recovery Site marked on your minimap and keep the camera centered over it for 1.5 seconds.");
-        }
-        else if (Waypoint == 2)
-        {
-            TutorialInstruction = LOCTEXT("SurveySite2",
-                "Archive Recovery Site verified. Next, find the Evacuation Site marked on your minimap and keep the camera centered over it for 1.5 seconds.");
+            TutorialInstruction = LOCTEXT("SurveyAnchorRead",
+                "Anchor selected. Its readout names what it does, what it cannot do, and what it costs you to lose.");
         }
         else
         {
-            TutorialInstruction = LOCTEXT("SurveySiteComplete",
-                "All survey sites verified: Anchor, Archive Recovery Site, and Evacuation Site. Select your Anchor to complete the survey.");
+            // The Anchor was clicked at some point, but it is not what is
+            // selected now -- a box that caught other units, or a later click
+            // elsewhere. Without this the lesson would sit silently unadvanced
+            // with no way for the player to tell what it was still waiting for.
+            TutorialInstruction = BoundTutorialText(LOCTEXT("SurveyAnchorAlone",
+                "Survey: select your Anchor on its own with {select_key}, so its readout is the one on screen."));
         }
         if (!bForegroundWindow)
         {
@@ -411,8 +407,10 @@ void AEchoesPlayerController::TickTutorialObservation()
                     Sample.Zoom, static_cast<unsigned long long>(Tick), bTutorialCoreSelected));
             }
         }
-        if (TutorialSurvey.CameraPredicateSatisfied() && bTutorialCoreSelected &&
-            SelectedEntityIds.Num() == 1 && SelectedEntityIds[0] == TutorialCoreId)
+        // The lesson is the selection itself: the player found their Anchor and
+        // read it. The camera predicate is no longer part of the gate.
+        if (bTutorialCoreSelected && SelectedEntityIds.Num() == 1 &&
+            SelectedEntityIds[0] == TutorialCoreId)
         {
             CommitTutorialLesson(1, TEXT("survey"));
         }
