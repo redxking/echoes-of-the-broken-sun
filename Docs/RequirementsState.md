@@ -4396,3 +4396,37 @@ the gap is real and the next attempt should not have to rediscover either.
   route is a sized piece of work; neither is a patch.
 * Nothing was left in the tree. `Scripts/test_sim.sh` is 134/134 in all three configurations at
   `a3ae856` with the attempt reverted.
+
+### 2026-09-10 — SPEC-MOV-003 / SPEC-MOV-006 / SPEC-MOV-008 — destination legality separated from standing room
+
+Ground occupancy (`ab2877d`) gave `IsPositionPassable` a single answer for two
+different questions. The step solver asks whether a unit may *stand* on a
+position; the adapter's order gate
+(`EchoesSimulationSubsystem.cpp`, `[INVALID_DESTINATION]`) asks whether a
+position is a legal thing to *aim at*. Answering the standing question for both
+refused every authored campaign route whose destination a completed structure
+clips — the observed movement failures in
+`BuildArtifacts/Automation/20260910T100915Z-66083`.
+
+Resolution (`add7a2d`): the two questions are now two predicates.
+`IsPositionPassable` is terrain-only again (destination legality).
+`IsPositionPassableFor` retains structure and mobile occupancy (standing room)
+and is what the mover consults, so SPEC-MOV-006 is unweakened — a unit still
+cannot occupy a structure's ground. `ValidateMoveOrder`'s knowledge gate uses a
+new terrain-only `IsTileKnownGroundOpenTo`, and
+`IsTileReachableInPlayerKnowledge` treats a goal tile carrying a structure as
+reached when the search lands anywhere in that structure's footprint halo,
+since the centre it was pointed at is by construction unreachable.
+
+Measured: order aimed at a `CommandCore` centre — adapter gate
+`IsPositionPassable` = 1, standing room `IsPositionPassableFor(0, centre)` = 0,
+command Applied, unit halts at `dxFromCentre` 2645 raw against a 2560-raw
+footprint half-extent (no penetration). Covered by
+`order aimed at a structure is accepted and halts at its edge`, which fails on
+the pre-split simulation at its first assertion. 135/135 native tests, all three
+configurations.
+
+Not verified here: `Scripts/test_sim.sh` runs no `Echoes.Runtime.*` test, so
+whether the ~11 Unreal movement failures clear needs an automation re-run by a
+lane that can build the editor. `Simulation.h` changed, so that re-run must
+follow an adapter rebuild.
