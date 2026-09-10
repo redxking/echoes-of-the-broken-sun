@@ -770,6 +770,17 @@ application_executable_sha256="$(/usr/bin/shasum -a 256 "$binary" | /usr/bin/awk
   print "normal_startup_smoke=${smoke_log:t}"
   print "normal_startup_smoke_sha256=$smoke_log_sha256"
   print "normal_startup_smoke_outcome=passed"
+  # The startup smoke proves the packaged app boots and reaches its first fixed tick.
+  # It does NOT exercise the Unreal automation suite, and a package whose provenance
+  # lists only a passing smoke reads as qualified when automation may be red at the
+  # same sha -- which is exactly what happened: a package was called verified on the
+  # strength of the native SimCore suite (Scripts/test_sim.sh, zero Echoes.Runtime.*
+  # tests) while 23 Unreal automation tests were failing at that commit.
+  #
+  # Default to the honest answer. A caller that has actually run the suite against
+  # THIS sha may record it via ECHOES_PACKAGE_SUITE_RESULT, e.g. "passed-133-of-133".
+  print "unreal_automation_suite=${ECHOES_PACKAGE_SUITE_RESULT:-not-run-by-package-tool}"
+  print "unreal_automation_suite_scope=startup-smoke-only-unless-stated"
   print "legacy_stress_startup_smoke=${stress_smoke_log:t}"
   print "legacy_stress_startup_smoke_sha256=$stress_smoke_log_sha256"
   print "legacy_stress_startup_smoke_outcome=passed"
