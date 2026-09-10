@@ -83,6 +83,94 @@ durability, and owner acceptance are each separate gates. The
 [receipt](../BuildArtifacts/Evidence/display-revert-20260909T180500Z/session.json) records the
 candidate identity, commands, and the inconclusive field-HUD probe.
 
+## Sprint sequencing decisions D1–D9 and voice decisions V1–V7 — 2026-09-10
+
+**Provenance, stated exactly.** These rulings were made by a peer agent session ("Game progress deep
+dive", `local_91ab78d6`) which reports that Angelis delegated them to it on 2026-09-10 ("Decide what
+the best decision is to do", and separately "You figure out the voice thing"). **I did not witness that
+delegation.** It is recorded here as the deciding session's own account, not as an owner instruction I
+verified. The full text is retained at
+[DECISIONS.md](../BuildArtifacts/Evidence/completion-deep-dive-20260909T232000Z/DECISIONS.md); this is
+a pointer and a summary, and that file governs its own wording.
+
+These are **sequencing and engineering rulings**. No requirement changes state, nothing is closed, and
+no owner acceptance is assigned by any of them. Deferral means "not this sprint" and never "not
+required": every deferred item below remains a bound release obligation in
+[Requirements.md](Requirements.md).
+
+| ID | Ruling | Note |
+|---|---|---|
+| D1 | Packaging may create one throwaway worktree per run, detached at pushed `main`, destroyed inside the same run with removal verified into the provenance JSON. | Resolves the packaging-vs-no-new-worktrees conflict. Nothing is ever authored in it, so it strands nothing. |
+| D2 | Do not block on Developer ID or notarization; ship ad-hoc-signed Development packages for play on the machine that built them. | **Superseded by an owner ruling the same day** — see the owner-action row below. |
+| D3 | Adopt the `SPEC-CTL-005/006/007` hotkey scheme; camera moves off WASD to arrows, screen edge and middle-drag; Well choices to contextual Q/W/E. | Must land as one commit covering the context map, teaching copy and displayed bindings together. |
+| D4 | Sprint scope is 1v1-versus-AI plus M01 on macOS. | Deferred **but still bound**: Conquest; multiplayer beyond loopback 1v1; six-seat/3v3; combat stances; the four missing unit signature abilities; localization; Niagara/Cascade/skeletal animation; the concept-art pipeline; website work; M02–M15 rosters and encounters; M08–M15 landmark packs. Also rules `kMaximumPlayers` stays at 4, because it is a compile-time bound on ~22 per-player arrays and the snapshot payload is sized from it. |
+| D5 | M01 ships audible on unqualified voice; the flag already records the truth and a silent M01 is worse. | **Owner action outstanding** — see below. |
+| D6 | Retire the per-candidate accounting (candidate-N numbering, per-candidate identity JSONs, re-verifying an unchanged tree). | The evidence contract is untouched. `AGENTS.md` requires a gate directory with source commit, dirty state, command, date, environment, outcome and hashes; the string "candidate" does not appear in it. The retired accounting had accreted as practice, never as contract. Verified independently against `AGENTS.md` before recording. |
+| D7 | L1-SIM raises AI worker/producer/army caps and clamps population to the 200 Logistics ceiling on engineering judgement, then re-measures. | Constraint: the real-rules harness lands before **any** balance number is quoted by any lane in any document. The retained balance matrix measured `DefaultSimulationRules`, not the JSON rules the game builds, and may not be cited. |
+| D8 | Family rows may no longer carry verification. | Same finding as [the audit above](#family-rows-were-asserting-verification-nothing-supported--2026-09-10), reached independently. Binding on every lane. |
+| D9 | Entity collision splits in two: **D9a** completed structures block routes first, then **D9b** hostile mobile units as a separate change. | D9a is static, so `pathFieldCache_` invalidates on construction and destruction only, never per tick. Pre-collision replays are historical, are not migrated, and **checksums are explicitly not re-baselined to force a pass** — a pre-collision replay diverging under post-collision routing is correct behaviour, not a defect. |
+
+**Voice rulings V1–V7** cover the Annunciator being Meridian-locked for this sprint, its Kokoro voice
+and speed, voicing the whole campaign rather than M01 alone, a measured ~6 LU loudness deficit across
+every existing line to be corrected before more are generated, a loudness validator that cannot open
+the files it validates, the listening gate ceasing to block while explicitly **not** becoming passed,
+and recording real sample rates in provenance. Kokoro was already owner-pre-authorized as the voice
+source. Read [DECISIONS.md](../BuildArtifacts/Evidence/completion-deep-dive-20260909T232000Z/DECISIONS.md)
+before acting on any of them.
+
+### Owner actions — not agent-dispositioned
+
+| Item | State |
+|---|---|
+| **Developer ID certificate and `notarytool` credentials** | The deciding session reports Angelis ruled on 2026-09-10 not to provision these until he is ready to publish. Recorded as that session's account of an owner ruling. The three code layers that refuse non-ad-hoc signature strings stay exactly as they are. Owner ruling #31 remains the standing record of the credentials being unprovisioned. |
+| **M01 listening pass over 28 bound lines** | Outstanding. All 28 carry `candidate_status: unqualified_pending_listening` and the runtime logs `listeningVerified=false`. **Only Angelis can pass a listening gate**; no agent may record it as passed, and D5 explicitly does not. |
+
+## Family rows were asserting verification nothing supported — 2026-09-10
+
+**This withdraws unsupported agent claims. It assigns no new status, closes nothing, and is not owner
+acceptance.** `AGENTS.md` requires historical claims to be preserved while missing or conflicting
+support is recorded, so every family row stays where it is; what changes is that it may no longer be
+read as evidence.
+
+**The measurement.** `Docs/RequirementsState.md` carries two family tables: 95 rows declaring a count,
+and 56 rows additionally asserting `N AGENT VERIFIED (FAM-001..0NN)`. Those 56 rows assert verification
+for **393 requirement IDs**. Searching this file for each of those IDs individually:
+
+* **275 of 393 (70%) are never named anywhere in this file.** The family row is the only thing
+  asserting they were verified.
+* **All 56 families** contain at least one such ID. It is not a few stale rows; it is how the table works.
+* Fourteen families additionally claim *fewer* verified IDs than they declare — 40 further IDs whose
+  status is neither claimed nor marked OPEN, simply absent.
+
+**Four of the unbacked claims are contradicted by the source**, checked at `1122c8a`:
+
+| Claim | Source |
+|---|---|
+| `SPEC-MOV-*` — 13/13 verified | `SPEC-MOV-003` ([Requirements.md](Requirements.md)) requires "Enemy and neutral solid entity footprints block movement paths rigidly." `Simulation.cpp:2909` builds the BFS passability field as `passable[tile] = terrain_[tile] != Terrain::Blocked`. The only entity it consults is a Future Well in Reshape, which it *opens*. No footprint blocks any route. `SPEC-MOV-003` appears nowhere in this file. |
+| `SPEC-CMD-*` — 15/15 verified | `UEchoesSimulationSubsystem::IssueCommand` takes no queue or append parameter, so the entity's `orderQueue` is unreachable from the player. |
+| `SPEC-AI-*` 6/6, `SPEC-AIST-*` 10/10 | `Simulation.cpp:7413-7418` gates Dropoff expansion on `dropoffCount == 0` for every non-Adaptive personality while the skirmish opponent spawns holding one, so its population cap can never rise; `barracksCount == 0` allows one production building; worker production is a literal `workerCount >= 8`. |
+| `SPEC-OUT-*` — 7/7 verified | `SPEC-OUT-007` requires a 45-minute prolonged-match warning, an AI with no recoverable path conceding, and concession available at any time. The only file in `Source/` naming `ProlongedMatch` is a test; `ForfeitPlayer`'s only non-replay callers are the player concede path and the network forfeit path; campaign concession is gated to Skirmish. None of the three exists. |
+
+**Why this mattered more than a bookkeeping error.** A false `AGENT VERIFIED` is worse than an `OPEN`,
+because `OPEN` keeps work findable and a false verification removes it from every future search. These
+four families are movement, commands, opponent AI and match outcome — the systems a player actually
+touches. Any plan built by reading this table would have skipped exactly the work that makes this a game.
+
+**What is now binding.** A family row states counts only. Verification is claimed per requirement ID, by
+a dated entry naming the build, the check run and the evidence class, or it is not claimed. Work landing
+against a requirement appends that entry rather than leaving a family row to carry it. This restates
+`AGENTS.md` and the [state vocabulary](#state-vocabulary); it adds no new obligation.
+
+**What this entry does not do.** It does not assert that the other 271 unbacked IDs are unimplemented —
+most are probably fine, and several families have real dated evidence elsewhere in this file under a
+different heading. It establishes only that the table cannot tell you which, and that four checked cases
+came back false. Re-establishing the true state of a family is that family's own work, done against
+source and recorded per ID.
+
+**Method.** Mechanical: parse both tables, expand each asserted range, and search this file for each ID.
+No requirement's meaning was judged to produce the 275 figure. The four contradictions above were read
+from source individually and each cites its file and line.
+
 ## Outcome cause after a concession — 2026-09-09
 
 **Engineering state: AGENT VERIFIED at the source, native-simulation, engine-test, and
@@ -431,6 +519,14 @@ now approved release scope, not dormant release scope; offline isolation remains
 | `SPEC-WELLP-*` | 3 | Use exact dated ID/build/class entries; this count grants no acceptance. |
 
 ## Historical `SPEC-*` family snapshot
+
+> **These rows no longer carry verification. Read
+> [the 2026-09-10 audit](#family-rows-were-asserting-verification-nothing-supported--2026-09-10) before
+> relying on any of them.** A family row states a count. Verification is claimed for a requirement by a
+> dated per-ID entry naming its build, check and evidence class, or it is not claimed at all. **275 of
+> the 393 IDs these rows call `AGENT VERIFIED` are never named individually anywhere in this file**, and
+> four of those unbacked claims are contradicted by the source. The rows are retained as history, which
+> is what they now are.
 
 The family table below retains previously recorded engineering summaries. The former blanket “all OPEN”
 statement contradicted these rows and has been removed. Use exact dated per-ID entries and artifacts;
