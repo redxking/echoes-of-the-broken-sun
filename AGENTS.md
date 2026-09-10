@@ -2,7 +2,7 @@
 
 **Author and owner:** Angelis Pseftis
 **Applies to:** every AI collaborator, including Codex, Claude, Gemini, and OpenCode.
-**Maintained:** 2026-09-05
+**Maintained:** 2026-09-10
 
 This is the single repository source for agent operating rules. Client entry files and skills refer here.
 Follow the host's system/developer instructions and the owner's current and standing instructions first.
@@ -11,9 +11,13 @@ into a current restriction.
 
 ## Start each task
 
-1. Locate the checkout: from the containing `EchoesOfTheBrokenSun` folder, enter `Project`. Inspect branch,
-   commit, dirty paths, and relevant running work. Preserve other work.
-2. Read [Docs/README.md](Docs/README.md), then the relevant sections of
+1. Locate the checkout: from the containing `EchoesOfTheBrokenSun` folder, enter `Project`. Read the
+   execution state before operational preflight. For authorized implementation inspect branch, commit,
+   dirty paths and relevant running work. Preserve other work.
+2. For execution or continuation, first read the [active execution state](Docs/DeliveryPlan.md#active-execution-state)
+   and follow its package context routing and pause boundary. Documentation-only maintenance respects
+   that boundary and does not require execution preflight or active-writer checks.
+   Read [Docs/README.md](Docs/README.md), then the relevant sections of
    [Docs/Requirements.md](Docs/Requirements.md) and [Docs/RequirementsState.md](Docs/RequirementsState.md).
    Requirements define behavior; the state record defines evidence state and owner acceptance.
 3. Read [Docs/AgentSkillRouting.md](Docs/AgentSkillRouting.md), inspect skill descriptions, and read the

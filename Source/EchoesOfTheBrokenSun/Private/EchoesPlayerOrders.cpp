@@ -74,6 +74,10 @@ void AEchoesPlayerController::IssueContextOrder(
     const FHitResult& HitResult,
     bool bPointerSource)
 {
+    // Shift appends to the actor's order queue instead of replacing it
+    // (Entity::orderQueue, kMaxQueuedOrders = 16).
+    const bool bQueueOrder = IsInputKeyDown(EKeys::LeftShift) ||
+        IsInputKeyDown(EKeys::RightShift);
     UEchoesSimulationSubsystem* Bridge =
         GetWorld() != nullptr
             ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
@@ -347,7 +351,8 @@ void AEchoesPlayerController::IssueContextOrder(
                     TargetEntity->type == echoes::sim::EntityType::FutureWell &&
                     TargetEntity->wellChoice == echoes::sim::FutureWellChoice::Preserve
                         ? echoes::sim::FutureWellChoice::Preserve : FutureWellChoice,
-                Feedback))
+                Feedback,
+                bQueueOrder))
         {
             CaptureTutorialAcceptedCommand(
                 Bridge,
@@ -450,6 +455,10 @@ void AEchoesPlayerController::IssueContextOrder(
 
 void AEchoesPlayerController::AttackMoveAtCursor()
 {
+    // Shift appends to the actor's order queue instead of replacing it
+    // (Entity::orderQueue, kMaxQueuedOrders = 16).
+    const bool bQueueOrder = IsInputKeyDown(EKeys::LeftShift) ||
+        IsInputKeyDown(EKeys::RightShift);
     if (IsModalOverlayVisible())
     {
         return;
@@ -517,7 +526,8 @@ void AEchoesPlayerController::AttackMoveAtCursor()
                 0,
                 UnitDestination,
                 FutureWellChoice,
-                Feedback))
+                Feedback,
+                bQueueOrder))
         {
             ++AcceptedCount;
         }
@@ -564,6 +574,10 @@ void AEchoesPlayerController::AttackMoveAtCursor()
 
 void AEchoesPlayerController::PatrolAtCursor()
 {
+    // Shift appends to the actor's order queue instead of replacing it
+    // (Entity::orderQueue, kMaxQueuedOrders = 16).
+    const bool bQueueOrder = IsInputKeyDown(EKeys::LeftShift) ||
+        IsInputKeyDown(EKeys::RightShift);
     if (IsModalOverlayVisible())
     {
         return;
@@ -633,7 +647,8 @@ void AEchoesPlayerController::PatrolAtCursor()
                 0,
                 UnitDestination,
                 FutureWellChoice,
-                Feedback))
+                Feedback,
+                bQueueOrder))
         {
             CaptureTutorialAcceptedCommand(
                 Bridge,

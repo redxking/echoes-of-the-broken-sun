@@ -18160,7 +18160,8 @@ bool UEchoesSimulationSubsystem::IssueCommand(
     uint32 TargetId,
     const FVector& WorldPosition,
     echoes::sim::FutureWellChoice WellChoice,
-    FString& OutFeedback)
+    FString& OutFeedback,
+    bool bQueue)
 {
     return QueuePlayerCommand(
         CommandType,
@@ -18169,7 +18170,8 @@ bool UEchoesSimulationSubsystem::IssueCommand(
         WorldToSim(WorldPosition),
         WellChoice,
         echoes::sim::EntityType::Barracks,
-        OutFeedback);
+        OutFeedback,
+        bQueue);
 }
 
 bool UEchoesSimulationSubsystem::IssueBuildCommand(

@@ -538,9 +538,14 @@ bool AEchoesPlayerController::HandleFieldHudPointer(
     const auto Type = Target ? echoes::sim::CommandType::Attack : echoes::sim::CommandType::Move;
     const auto Destinations = BuildSelectedFormationDestinations(Destination, SelectedEntityIds.Num());
     int32 Accepted = 0; FString Feedback;
+    // Shift appends to the order queue instead of replacing it, matching the
+    // battlefield right-click paths.
+    const bool bQueueOrder = IsInputKeyDown(EKeys::LeftShift) ||
+        IsInputKeyDown(EKeys::RightShift);
     for (int32 Index = 0; Index < SelectedEntityIds.Num(); ++Index)
         Accepted += Bridge->IssueCommand(Type, SelectedEntityIds[Index], Target,
-            Target ? Destination : Destinations[Index], echoes::sim::FutureWellChoice::Dormant, Feedback) ? 1 : 0;
+            Target ? Destination : Destinations[Index], echoes::sim::FutureWellChoice::Dormant, Feedback,
+            bQueueOrder) ? 1 : 0;
     if (Accepted > 0)
     {
         ShowAcceptedCommandMarker(Destination, Target ? EEchoesCommandMarkerType::Attack : EEchoesCommandMarkerType::Move, Accepted);

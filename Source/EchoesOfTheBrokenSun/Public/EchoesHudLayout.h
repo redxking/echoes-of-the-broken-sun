@@ -96,8 +96,15 @@ struct FEchoesHudLayout final
         // 18-point value row over two 14-point context rows measures about 84
         // units with no padding at all; 104 keeps the border off the text at
         // every scale in the accessibility range.
-        Layout.ResourcePanel = FBox2D(FVector2D(ResourceRight - ResourceWidth, Gap),
-            FVector2D(ResourceRight, Gap + 104.0f * Scale));
+        // The ledger's headroom belongs to the edge it already reserves, not to the
+        // battlefield below it. KeyboardTargetPoint halves StatusPanel.Min.Y to place
+        // the deployment framing centre, and the framed headquarters' silhouette
+        // reaches to that centre minus 70 -- which this panel's lower edge had grown
+        // onto. 2 is ConfineToView's own just-inside-the-edge inset. The authored
+        // 104*Scale height is unchanged.
+        constexpr float ResourceTop = 2.0f;
+        Layout.ResourcePanel = FBox2D(FVector2D(ResourceRight - ResourceWidth, ResourceTop),
+            FVector2D(ResourceRight, ResourceTop + 104.0f * Scale));
         Layout.MinimapPanel = FBox2D(FVector2D(Gap, InnerBottom - MapSize),
             FVector2D(Gap + MapSize, InnerBottom));
         Layout.ObjectivePanel = FBox2D(FVector2D(CenterLeft, InnerTop),
@@ -110,8 +117,13 @@ struct FEchoesHudLayout final
         // A full status sentence wraps to two lines once the accessibility
         // scale grows the text on a 1280-wide surface, and 62 units held only
         // one of them: the second line was cut by the panel's own lower edge.
-        Layout.StatusPanel = FBox2D(FVector2D(Edge, Top - 92.0f * Scale),
-            FVector2D(Width - Edge, Top - 8.0f));
+        // This band's top edge is the battlefield floor the camera frames against,
+        // so it may not rise into the deployment frame. Take the 6 units from the
+        // band's own gap above the bar -- ConfineToView already lands BottomBar at
+        // Top-2, so Top-2 is the bar's real top edge -- and keep the two-line height
+        // measured above (92*Scale - 8) intact at every accessibility scale.
+        Layout.StatusPanel = FBox2D(FVector2D(Edge, Top - 92.0f * Scale + 6.0f),
+            FVector2D(Width - Edge, Top - 2.0f));
         Layout.bBottomBarVisible = Height >= 360;
         Layout.bMenuVisible = Layout.bBottomBarVisible &&
             Layout.MenuPanel.Max.X <= Width - Edge;

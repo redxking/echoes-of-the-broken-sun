@@ -3,6 +3,7 @@ set -euo pipefail
 
 project_root="${0:A:h:h}"
 
+/usr/bin/python3 "$project_root/Tests/Tools/test_build_slot.py"
 /usr/bin/python3 "$project_root/Tests/Content/test_world_kits.py"
 /usr/bin/python3 "$project_root/Tests/Content/test_evacuation_props.py"
 /usr/bin/python3 "$project_root/Tests/Content/test_cliff_material_validation.py"

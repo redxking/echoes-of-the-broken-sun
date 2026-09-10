@@ -507,14 +507,17 @@ public:
         const FEchoesRecoveryCandidate& Candidate,
         FString& OutFeedback);
 
-    /** Queues one player command for the next deterministic simulation tick. */
+    /** Queues one player command for the next deterministic simulation tick.
+     * bQueue appends to the actor's order queue instead of replacing it, which
+     * is what the shift modifier means at the player order paths. */
     bool IssueCommand(
         echoes::sim::CommandType CommandType,
         uint32 ActorId,
         uint32 TargetId,
         const FVector& WorldPosition,
         echoes::sim::FutureWellChoice WellChoice,
-        FString& OutFeedback);
+        FString& OutFeedback,
+        bool bQueue = false);
 
     bool IssueBuildCommand(
         uint32 WorkerId,

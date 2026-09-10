@@ -9,7 +9,8 @@ if [ -z "${ZSH_VERSION:-}" ]; then
   exec /bin/zsh "$0" "$@"
 fi
 
-# Report whether this Mac's single Unreal build slot is free.
+# Inspect whether this Mac's single Unreal build slot is free.
+# This is a preflight inspection, not an atomic reservation; coordinate ownership separately.
 #
 # Author and owner: Angelis Pseftis
 #
@@ -49,8 +50,24 @@ add() {  # add <label> <pid> <detail>
   holders+=("$1 pid=$2 $3")
 }
 
+# Obtain both inventories explicitly. Process substitution hides the producer's exit
+# status; a denied ps previously produced an empty inventory and reported "free".
+process_snapshot="$(ps -Ao pid=,command=)"
+inspection_result=$?
+if (( inspection_result != 0 )) || [[ -z "${process_snapshot//[[:space:]]/}" ]]; then
+  print -u2 "build slot unknown: process inspection failed or returned no processes; refusing launch."
+  exit 2
+fi
+editor_pids="$(pgrep -x UnrealEditor)"
+inspection_result=$?
+# pgrep exit 1 means no matches; every other nonzero result is an inspection error.
+if (( inspection_result > 1 )); then
+  print -u2 "build slot unknown: editor inspection failed; refusing launch."
+  exit 2
+fi
+
 # 1. Editor, exact name only.
-for pid in ${(f)"$(pgrep -x UnrealEditor 2>/dev/null)"}; do
+for pid in ${(f)editor_pids}; do
   [[ -n "$pid" ]] || continue
   stats="$(ps -o etime=,%cpu= -p "$pid" 2>/dev/null | tr -s ' ')"
   add "UnrealEditor" "$pid" "elapsed/cpu:${stats}"
@@ -76,21 +93,16 @@ while read -r pid cmd; do
         *clang*|*ld*|*libtool*) add "compile" "$pid" "" ;;
       esac ;;
   esac
-done < <(ps -Ao pid=,command= 2>/dev/null \
+done < <(print -r -- "$process_snapshot" \
            | grep -v "acquire_build_slot" \
            | grep -vE "^ *[0-9]+ +/bin/(zsh|bash|sh) -c ")
 
-checks_completed=1
 
 if (( ${#holders} > 0 )); then
   print -u2 "BUILD SLOT HELD (${#holders} holder(s)):"
   for h in "${holders[@]}"; do print -u2 "  $h"; done
   print -u2 "Do not start a build, cook, editor or packaged run. Wait, or coordinate."
   exit 1
-fi
-if [[ "${checks_completed:-0}" != "1" ]]; then
-  print -u2 "acquire_build_slot: checks did not complete; refusing to report the slot free."
-  exit 2
 fi
 print "build slot free"
 exit 0
