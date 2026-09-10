@@ -7,6 +7,7 @@
 #include "EchoesCampaignProgress.h"
 #include "EchoesPlayerFlow.h"
 #include "EchoesPlayerProfile.h"
+#include "EchoesTutorialConstructionObservation.h"
 #include "EchoesTutorialOrderObservation.h"
 #include "EchoesTutorialSelectionObservation.h"
 #include "EchoesTutorialSurveyObservation.h"
@@ -1111,10 +1112,40 @@ private:
     uint64 ObserveTutorialRejectedCommandAttempt(
         const FEchoesTutorialExpectedCommand& Attempt);
     void ObserveTutorialRejectionAcknowledged(uint64 InputAttemptSequence);
+    // ---- RESERVED DECLARATIONS (L2-CONTROL owns this header; bodies live elsewhere) ----
+    // Declared here so downstream lanes can implement against a frozen header without
+    // editing it. Each body belongs in the named file, owned by the named lane.
+    // Both adapter headers are FROZEN after this commit: further header changes are
+    // batched requests through L2-CONTROL.
+    //
+    // L3-HUD   — body in EchoesPlayerFieldHud.cpp
+    void PresentOffscreenCombatAlert(const FVector2D& WorldLocation);
+    // L6-AUDIO — body in a new EchoesPlayerCinematicHooks.cpp
+    void PresentCampaignCinematicForSignal(const FString& Signal);
+    // L4-ONBOARD — bodies in EchoesPlayerTutorial.cpp. Signatures were left open in the
+    // lane brief and are chosen here to match the existing ObserveTutorial* style; if
+    // L4 needs different parameters, request the change rather than editing this header.
+    void ObserveTutorialConstructionEvent(
+        echoes::sim::EntityType StructureType,
+        uint32 BuilderEntity,
+        echoes::sim::Vec2 Site);
+    void ObserveTutorialProductionEvent(
+        echoes::sim::EntityType ProducedType,
+        uint32 ProducerEntity);
+    // ---- end reserved declarations ----
     bool CommitTutorialLesson(uint16 Bit, const TCHAR* LessonName);
     FEchoesTutorialSurveyObservation TutorialSurvey;
     FEchoesTutorialSelectionObservation TutorialSelection;
     FEchoesTutorialOrderObservation TutorialOrders;
+    // ---- RESERVED MEMBERS for L4-ONBOARD (lessons 6-10); written only by that lane ----
+    FEchoesTutorialConstructionObservation TutorialConstruction;
+    uint16 TutorialConstructionLessonBit = 0;
+    uint16 TutorialProductionLessonBit = 0;
+    uint32 TutorialObservedConstructionEntity = 0;
+    uint32 TutorialObservedProductionEntity = 0;
+    uint64 TutorialConstructionSequence = 0;
+    uint64 TutorialProductionSequence = 0;
+    // ---- end reserved members ----
     FText TutorialInstruction;
     uint64 TutorialSession = 0;
     uint64 TutorialSelectionSequence = 0;
