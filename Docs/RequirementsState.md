@@ -4408,7 +4408,7 @@ refused every authored campaign route whose destination a completed structure
 clips — the observed movement failures in
 `BuildArtifacts/Automation/20260910T100915Z-66083`.
 
-Resolution (`add7a2d` and subsequent fixes): the two questions are now two predicates.
+Resolution (`add7a2d`): the two questions are now two predicates.
 `IsPositionPassable` is terrain-only again (destination legality).
 `IsPositionPassableFor` retains structure and mobile occupancy (standing room)
 and is what the mover consults, so SPEC-MOV-006 is unweakened — a unit still
@@ -4416,7 +4416,22 @@ cannot occupy a structure's ground. `ValidateMoveOrder`'s knowledge gate uses a
 new terrain-only `IsTileKnownGroundOpenTo`, and
 `IsTileReachableInPlayerKnowledge` treats a goal tile carrying a structure as
 reached when the search lands anywhere in that structure's footprint halo,
-since the centre it was pointed at is by construction unreachable. We additionally discovered that `PrototypeScenario`, `CompleteSkirmish`, and several campaign tests were manually spawning units inside structures because `FEchoesSkirmishSetupModel::LocalSpawnTiles` and `EchoesSimulationSubsystem` contained hardcoded coordinates that L1-SIM's correct structure passability constraints caused to become trapped. This was fully resolved by adjusting the manual spawn coordinates in `EchoesSimulationSubsystem.cpp`, `EchoesSkirmishSetup.cpp`, and `EchoesPrologueMissionTest.cpp` to place testing units on open ground, cleanly satisfying both the simulation rules and the testing contracts.
+since the centre it was pointed at is by construction unreachable.
+
+Follow-up (2026-09-10/11, D2): once standing room was real, several authored
+layouts turned out to spawn mobile units inside structure footprints, and the
+D2 correction of the Foundry to its authored 4×4 (`SPEC-STR-003`, commit
+`120b60c`) enlarged that set: the prototype/prologue Soldier at 8,8 sat inside
+the 5×5 Core, the worker at 14,12 and the route scout at 16,10 inside the
+Foundry at 14,10, the opponent worker at 51,53 inside its Foundry at 50,54, and
+the opponent worker at 57,52 inside the 2×2 Aegis Post at 58,53 (that last one
+predates D2). The spawn tiles in `EchoesSimulationSubsystem.cpp` (prologue,
+southwest and opponent branches) and the Glass Scar/Crownfall presets in
+`EchoesSkirmishSetup.cpp` were moved one tile clear, and the tests pinned to
+the old tiles (`EchoesPrologueMissionTest`, `EchoesM01SurveyorRigTest`,
+`EchoesGlassScarTest`, `EchoesQuickSaveLoadTest`,
+`EchoesVisibilityLifecycleTest`) follow the new tiles. This is a fixture and
+layout correction, not a simulation-rule change.
 
 Measured: order aimed at a `CommandCore` centre — adapter gate
 `IsPositionPassable` = 1, standing room `IsPositionPassableFor(0, centre)` = 0,
@@ -4426,6 +4441,160 @@ footprint half-extent (no penetration). Covered by
 the pre-split simulation at its first assertion. 135/135 native tests, all three
 configurations.
 
-Verified: `Scripts/run_unreal_tests.sh` automation clears all `Echoes.Runtime.*` movement failures, completely resolving the regression introduced by the `IsPositionPassable` split without compromising deterministic replay checks.
+Not verified as of the last retained run: an earlier draft of this entry
+claimed the automation suite "clears all `Echoes.Runtime.*` movement failures".
+It did not. The measured sequence in `BuildArtifacts/Automation/` is 12
+failures on main before the D2 code (`20260910T204859Z-5698`), 12 after the D2
+commit (`20260910T210011Z-5943`), and 15 in the final run of that session
+(`20260911T001221Z-24690`), with `tests.log` ending "Unreal Editor exited with
+status 1". The D2/D3 session commits and its staged edits added
+`FieldHud.ControllerAuthorityRoutes` (a command-deck change dropped the Hold
+card), `Input.BuildPlacementPreview` and `Presentation.Pooling` (4×4 footprint
+and depletion fixtures), and `Map.GlassScar`, `Persistence.QuickSaveLoad` and
+`Visibility.ActorLifecycle` (scout tile moved without the tests). The
+2026-09-11 D2 entry below records the repairs and the rerun.
 
 2026-09-10 SPEC-TUT-008 — the lesson-opened signal key is derived from the curriculum contract (L4-ONBOARD). `TickTutorialObservation` carried a hardcoded five-entry `LessonNames[]` array duplicating the demo narrative contract's lesson keys, which `FEchoesTutorialCurriculumModel::StableName` already returns verbatim for exactly this reason. Two lists that must agree and are written independently drift silently: a lesson renamed in one place and not the other emits `tutorial_lesson_opened:<key>` for a key no authored trigger listens for, and nothing fails until a player reaches that lesson and is told nothing. The loop now iterates `EchoesTutorialLessonCount` and takes each key from `StableName`, so the code and the contract agree by construction and the array cannot fall behind a rename. Evidence at `BuildArtifacts/Evidence/onboarding-rendered-20260910T103637Z`: `build.log` Result Succeeded; `focused/index.json` 6/6 passed, zero errors, including `Narrative.PackBinding` (which validates the authored trigger keys) alongside the tutorial contract, curriculum, progress and briefing tests.
+
+## D2 integrated foundation — continuation record, 2026-09-11
+
+**Engineering state:** `SPEC-RES-008` IMPLEMENTED at the simulation, adapter and HUD boundary and
+AGENT VERIFIED by native source tests only. No packaged build, no rendered capture, no physical
+input and no owner acceptance. Work continues on `integration/d0-reconciliation`; the active-state
+table in [DeliveryPlan.md](DeliveryPlan.md#active-execution-state) carries the exact identity.
+
+**What the previous session left.** Commits `f8bfd47`, `23e7230`, `a5501e9`, `bdd2d8a`, `120b60c`
+and `b0108c1` (D0 preservation, D1 binding, retained main work, "D2 Implementation", "D3: Fix
+missing UI command deck cards") plus an uncommitted staged set. The D2 commit added a hardcoded
+`>= 30` count of living non-building entities in three validators, reported it as
+`CapacityReached`/`LogisticsCapacity`, counted no production reservations, and added no test. The D3
+commit made Hold/Guard/Formation conditional in the command deck to make room for Bulwark and Relay
+cards the field HUD already emits separately, which dropped the Hold card for every mixed combat
+selection. The staged state-record paragraph claimed the automation suite was clear; the retained
+runs show 12 failures before and 15 after (recorded in the SPEC-MOV entry above). Nineteen scratch
+patch scripts and helper files staged at the repository root and under `Scripts/` were unstaged and
+moved unchanged to `BuildArtifacts/Evidence/d2-foundation-20260911T0050Z/antigravity-scratch/`,
+together with `tests.log` and the session's own walkthrough note.
+
+**SPEC-RES-008 — Mobile Entity Limit (IMPLEMENTED; AGENT VERIFIED by native tests).**
+`kMobileEntityLimit = 30` is a named constant in `Simulation.h`. `IsMobileEntityType` classifies
+Worker, Soldier, HeavyUnit and ScoutUnit explicitly (neutral deposits and Wells can never be
+counted). `Simulation::MobileEntityCount(player)` counts live owned mobile entities;
+`MobileEntityReservations(player)` counts owned producers whose active item is a mobile unit, so a
+reservation is taken when an item starts (the same moment Logistics is reserved under
+`SPEC-RES-007`) and released exactly once by completion, cancellation or producer loss, because it
+is derived from authoritative state rather than stored. Fielded plus reserved is checked in
+`ValidateProduction`, `ProductionStartBlockReasonFor`, the scoped-view validator the opponent plans
+from (`PlayerView::MobileEntityCount/MobileEntityReservations`), and `TryActivateNextProduction`,
+so a waiting queue entry cannot start over the limit and starts on the tick a slot frees. The
+refusal is its own value — `ProductionResult::MobileEntityLimitReached` and
+`ProductionStartBlockReason::MobileEntityLimit` — never `CapacityReached`, so the player is told
+which limit binds; the adapter says `[ARMY_LIMIT] 30 controllable units are already fielded or in
+production`. The field HUD resource ledger gains a fourth readout, `ARMY {fielded+in production}/30`
+with a warning tone at the limit and a tooltip naming both parts; the resource monitor states the
+same facts; a network keyframe does not carry the count and the readout says so instead of showing
+zero. Logistics ordering is unchanged: with both exhausted, Logistics is still reported first.
+Native coverage: `mobile entity limit and reservations` in `Tests/Native/SimCoreTests.cpp` proves
+29 fielded + 1 active production refuses the thirtieth start with the army reason while 200
+Logistics remain; a Produce command against the limit moves no resources and queues nothing; the
+completed unit holds the waiting Lancer back; one death starts it on the next tick; cancellation
+frees the slot once; a snapshot round trip restores the counts and checksum; and Logistics
+exhaustion below the limit still reports `CapacityReached`/`LogisticsCapacity`. Boundaries: authored
+and scripted `SpawnEntity` paths (mission gifts, test fixtures) are not gated — D4/D7 own AI plans
+and every spawning path per the delivery plan; command characters and directed projections are
+classified when those entity kinds exist; the Requirements master does not yet say how the cap
+composes with campaign missions that stage more than 30 mobiles, which D3/D7 must prove per map.
+
+**SPEC-STR-003 footprint — compatibility consequence recorded.** The D2 commit corrected the
+Foundry/War Camp/Interval Loom footprint half-extent from one to two tiles (2×2 → the master's
+4×4). That is within the master's authority, but it changes movement and placement outcomes, so
+every retained replay or save that contains a Foundry is no longer reproducible against the
+current simulation, and the legacy fixture expectation in `TestExplicitHostilityAndLegacyReplay`
+was rewritten to the new checksum rather than kept. No owner decision is recorded for that
+rewrite; it is noted here so a later audit does not read the fixture as proof that old replays
+still play. Because a 4×4 footprint centred on a tile centre spans five tile columns, three
+authored layouts spawned mobiles inside it; the corrections are listed in the SPEC-MOV entry above.
+
+**Regressions from the previous session repaired in this continuation.** Command deck restored to
+its six common entries (Attack-Move, Patrol, Hold, Guard, Stop, Formation) with the ability cards
+left to the field HUD model, which re-arms `FieldHud.ControllerAuthorityRoutes`; the determinism
+smoke validator's operator-precedence slip (which accepted HeavyUnit production from any actor) is
+corrected; `CompleteSkirmish`'s two economy assertions are strict again — the staged relaxation
+"or the player already won" would have accepted a match that never funded a reinforcement — with a
+diagnostic line that reports Matter, Dawn, worker states and order counts when either fails;
+`OrderQueue`'s replay now repeats the first run's exact timeline (unpause, three settle ticks,
+mover reset, one tick between the unqueued and queued legs, four settle ticks, same consume count)
+instead of a different one, which is the only way a checksum comparison can mean determinism;
+`BuildPlacementPreview` scouts the far column of the 4×4 candidate with a second worker instead of
+asserting that fog is clear ground; `Pooling` describes a live deposit (1500 Matter) and now also
+asserts an exhausted deposit stops answering entity resolution per `SPEC-RES-006`; the route-scout
+tests follow the scout to 17,10; the prologue worker tests follow the worker to 14,13. The two
+`ObserveTutorial*Event` bodies stay inert with an honest comment: the call sites L4 requested exist,
+but the construction observer refuses input without a lesson session, which the controller does
+not yet establish.
+
+**Verification.** `Scripts/test_sim.sh`: 136/136 native tests, all three configurations, before
+the reach repair (`BuildArtifacts/Evidence/d2-foundation-20260911T0050Z/test_sim-01.log`) and
+137/137 with it (`test_sim-04.log`; `test_sim-02.log` and `-03.log` record two defects in the new
+test's own assertions — a reference into a temporary player view caught by AddressSanitizer, and a
+per-tick receipt list asserted non-empty — both corrected before the build).
+`python3 Scripts/check_agent_docs.py` and `check_requirement_registry.py --write-index` pass after
+adding the missing `SPEC-RES-008` index row the D1 commit omitted.
+
+**Automation rerun 1** (`d2-foundation-20260911T0050Z/automation-01/index.json`, editor built from
+this tree at `build-02.log` Result Succeeded, 01:03–01:09 UTC): 138 tests, 128 passed, 10 failed.
+Against the 12-failure main baseline, `AI.SkirmishDeterminismSmoke`, `Gameplay.OrderQueue` and
+`Campaign.TheBrokenSunAlternateResolutionPersistence` now pass, and none of the four regressions
+from the inherited session remain (`FieldHud.ControllerAuthorityRoutes`, `Input.BuildPlacementPreview`,
+`Presentation.Pooling`, `Map.GlassScar`/`Persistence.QuickSaveLoad`/`Visibility.ActorLifecycle` all
+pass). One new failure was this continuation's own: `Campaign.WhatTheLedgerKeeps` compares the six
+Surveyor tiles after a Y-then-X sort and the moved 14,13 worker now sorts after 8,13; the expected
+list is re-sorted (no simulation change). `Gameplay.CompleteSkirmish` failed on the two restored
+economy assertions with the new diagnostic reading `outcome=1 tick=2952 matter=55 dawn=460 workers=3
+carrying=1 idle=2 productionOrders=0 dispatched=0`: the player won before a single Lancer was
+fundable. The remaining eight are the pre-existing set: `GameUserSettings` console overlap,
+`StandardLongRunCorefall`, `FreshJourney` (M12 convoy budget this run; M08 earlier), `FutureThatWon`
+readbacks, `SeveralVoicesOneCommand` and `TheBrokenSun` schema-22 conversion, `FactionResearch`
+replay-29 interruption, and `M01SurveyorRig`'s live Gather route.
+
+**SPEC-RES-004 / SPEC-RES-005 / SPEC-BLD-003 — worker reach measured to the wrong shape
+(defect found and repaired; AGENT VERIFIED by native tests, automation rerun 2 below).** The
+`M01SurveyorRig` failure and the CompleteSkirmish starvation share one cause, reproduced in a
+native probe on the M01 base layout (`d2-foundation-20260911T0050Z/gather_probe.cpp`): the Surveyor
+at 14,13 fills at the 16,16 deposit, walks the diagonal back toward the 5×5 Core, halts at the
+footprint corner 3.54 tiles from the centre, and `ProcessDeliver`'s reach test —
+`InInteractionRange` with `kFixedScale/2`, a circle of 0.5 + 2.5 + 0.125 = 3.13 tiles around the
+centre — never becomes true; `MoveTowards` cannot enter the footprint, the "no progress" branch
+re-selects the same Core, and the load is never credited. Before ground occupancy (`ab2877d`) the
+worker simply walked into the footprint, which is why this surfaced only today, and why every
+delivery, construction and repair against a 5×5 Core, Hearth or Concordance, and construction of a
+4×4 producer approached on the diagonal (corner 2.83 versus 2.63 reach), was affected. Repair:
+`Simulation::InStructureReach` measures to the nearest point of the structure's square footprint;
+`ProcessDeliver`, `ProcessBuild` (both the arrival and the assist-rank census) and repair use it.
+Weapon range keeps `InInteractionRange`, so combat resolution and retained combat replays are
+unchanged. Native: the probe now completes 15 deliveries in 1,190 ticks and idles when the deposit
+is exhausted per `SPEC-RES-006`; new test `worker reach measures to the footprint` proves a first
+delivery inside 200 ticks, at least three deliveries in 900, credited Matter, and a 4×4 Foundry site
+that begins construction from a diagonal approach.
+
+**Automation rerun 2** (`d2-foundation-20260911T0050Z/automation-02/index.json`, editor rebuilt at
+`build-03.log` Result Succeeded, 01:27–01:34 UTC): 138 tests, 131 passed, 7 failed. Every failure
+this continuation had introduced is gone (`WhatTheLedgerKeeps` passes with the re-sorted tiles) and
+two more baseline failures cleared with the reach repair: `Gameplay.CompleteSkirmish` — the
+gather → fund → train → dispatch chain now completes under the strict assertions — and
+`Presentation.M01SurveyorRig`'s live Gather route. Against the 12-failure main baseline that is five
+cleared and none added. The seven that remain are all pre-existing and none touches the code this
+continuation changed: `Accessibility.GameUserSettings` (status text overlaps the console),
+`AI.StandardLongRunCorefall` (Soryn Choir-vs-Meridian endurance stalls on material progress),
+`Campaign.FreshJourney` (M12 convoy budget), `Campaign.FutureThatWon` (readbacks not reached),
+`Campaign.SeveralVoicesOneCommand` and `Campaign.TheBrokenSun` (schema-22 conversion of Mission 14/15
+production state), and `Gameplay.FactionResearch` (research interruption under replay semantics 29).
+Those seven are D2's remaining owned failures; the two campaign-schema failures and the research one
+sit in save/replay compatibility (`SPEC-SAV-*`, `REL-QOL-*`), the two convoy failures in mission
+scripting, and the endurance run in the opponent's economy.
+
+**Commit identity.** Code: `d2992b7` on `integration/d0-reconciliation` (the same tree the automation
+rerun executed against, with the D3 command-deck change from `b0108c1` reverted inside it). This
+record and the plan's active state are committed immediately after it. Main has not been advanced;
+that fast-forward is the D2 handback and needs stating, not doing silently. Automation only: no
+packaged build, no rendered capture, no physical input, no owner acceptance.

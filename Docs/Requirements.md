@@ -7074,6 +7074,7 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `SPEC-RES-005` | Drop-off target selection: | §9. Economy, resources, Logistics, and forecasting |
 | `SPEC-RES-006` | Deposit depletion lifecycle: | §9. Economy, resources, Logistics, and forecasting |
 | `SPEC-RES-007` | Logistics cap enforcement & supply deficit: | §9. Economy, resources, Logistics, and forecasting |
+| `SPEC-RES-008` | Mobile Entity Limit: | §9. Economy, resources, Logistics, and forecasting |
 | `SPEC-RES-018` | Spatial economy | §4. Player experience pillars and gameplay loops |
 | `SPEC-SAV-001` | Transactional save. Manual save, autosave, checkpoint, settings, campaign ledger, and replay write atomically through temporary file, validation, and  | 25. Saves, campaign records, and replays |
 | `SPEC-SAV-002` | Slots. Campaign provides three named journeys plus autosave and one prior validated generation. Skirmish provides quicksave and manual saves. Delete r | 25. Saves, campaign records, and replays |

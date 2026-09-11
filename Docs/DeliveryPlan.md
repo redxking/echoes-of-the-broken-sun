@@ -2,7 +2,7 @@
 
 **Author and owner:** Angelis Pseftis
 **Adopted:** 2026-09-02
-**Maintained:** 2026-09-10
+**Maintained:** 2026-09-11
 **Standing:** sequencing reference under [AGENTS.md](../AGENTS.md) and the [authority map](README.md).
 
 The owner rejected a technically demonstrated prototype that did not yet provide the expected player
@@ -25,15 +25,15 @@ The retired lane-fleet roster and missing lock files do not govern current work.
 
 | Field | Current continuation state |
 |---|---|
-| First unfinished package | **D2 — Establish integrated foundation.** (D1 game design bound) |
-| Completed indexing | D1 design synchronization completed (commit `23e7230`). |
-| Saved baseline | `integration/d0-reconciliation` branch at `23e7230`. |
-| Ownership | Owner granted this task checkout ownership. Active working branch is `integration/d0-reconciliation`. |
-| Preservation boundary | Main untracked and dirty files preserved in `BuildArtifacts/Evidence/resume-preservation-20260910`. Salvage archives verified intact. |
-| Last retained evidence | D1 documentation updates committed (`23e7230`). |
-| Next exact action after resume | Advance to D2: Integrate retained repairs (`resource-depletion` and `unit-abilities`); close core sim failures against D1. |
-| Next dependency | D2 completion required before D3 Meridian slice. |
-| Open evidence | Current game reproduction, integrated verification and owner acceptance remain open. |
+| First unfinished package | **D2 — Establish integrated foundation.** In progress; not exited. |
+| Completed indexing | D0 preservation (`f8bfd47`), D1 binding (`23e7230`), retained main work (`bdd2d8a`), first D2 code (`120b60c`: 30-cap count, 4×4 Foundry, resource-depletion and unit-abilities salvage integrated). `b0108c1` ("D3") is a deck-card change that was reverted in this continuation; D3 has not started. |
+| Saved baseline | `integration/d0-reconciliation` at code commit `d2992b7` (SPEC-RES-008 reservations, distinct refusal and HUD readout; footprint-measured worker reach; inherited regressions and fixtures repaired) followed by the documentation commit that carries this table. |
+| Ownership | Owner granted checkout ownership. Single writer on `integration/d0-reconciliation`; Antigravity's session is inactive (last write 2026-09-11 00:12 UTC). Main is not yet fast-forwarded; that is the D2 handback step and is stated, not done silently. |
+| Preservation boundary | Main dirty files in `BuildArtifacts/Evidence/resume-preservation-20260910`; Antigravity's scratch scripts, `tests.log` and walkthrough in `BuildArtifacts/Evidence/d2-foundation-20260911T0050Z/antigravity-scratch/`. Salvage worktrees untouched. |
+| Last retained evidence | `BuildArtifacts/Evidence/d2-foundation-20260911T0050Z`: `test_sim-04.log` 137/137 native tests in three configurations; `build-03.log` Result Succeeded; `automation-02/index.json` 138 tests, 131 passed, 7 failed — all seven pre-existing on main (baseline 12; the inherited session's last run 15). Cleared this continuation: `SkirmishDeterminismSmoke`, `OrderQueue`, `TheBrokenSunAlternateResolutionPersistence`, `CompleteSkirmish`, `M01SurveyorRig`. |
+| Next exact action after resume | Continue D2 against the seven remaining failures, in this order: `FactionResearch` replay-29 interruption and the `SeveralVoicesOneCommand`/`TheBrokenSun` schema-22 conversions (save/replay contract, one root); `GameUserSettings` status/console overlap (HUD layout); `FreshJourney` M12 and `FutureThatWon` readback convoys (mission scripting); `StandardLongRunCorefall` Soryn endurance (opponent economy). Then the D2 exit check: a player gathers, builds, trains, moves, fights, repairs and recovers under 30 on an ordinary map, with the affected suite green. State the main fast-forward as the handback. No D3 work before that. |
+| Next dependency | D2 exit requires the affected integration suite green and a player able to gather, build, train, move, fight, repair and recover under 30 on an ordinary map; D3 (Meridian slice, REL-UI-025 3×3 deck, practice lessons) waits on it. |
+| Open evidence | Current game reproduction, packaged/rendered verification and owner acceptance remain open. Retained replays containing a Foundry predate the 4×4 correction and no longer reproduce (recorded in RequirementsState). |
 
 This table is the sole current continuation summary. Update it before each handoff or interruption with
 owned paths, exact source/dirty/package identity, last relevant result, unresolved failure and next action.
