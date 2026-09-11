@@ -36,7 +36,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-FAC-028` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z | 34ca1a0 | 2026-09-11 | Authored optic mesh generated via asset pipeline and integrated in C++ in place of placeholder cube |
 | `REL-UI-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
-| `SPEC-BAL-009` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | BAL-STR-1 passes its 1.3x bar with role bodies; control 7/60 |
+| `SPEC-BAL-009` | AGENT VERIFIED | SRC | — | 85eaf3c | 2026-09-11 | Re-measured on schema 36 (85eaf3c): unchanged, 60/60 vs 7/60 control; harness units all carry explicit orders so idle return fire does not apply |
 | `SPEC-BAL-011` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar | 46f1c14 | 2026-09-11 | BAL-STR-3 native blind 30/30, scouted 0/30, flat 0/30; Glass Scar wiring verified in Unreal 138/139 |
 | `SPEC-CMB-007` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-22.log | e925a75 | 2026-09-11 | Idle entities acquire and return fire under schema 36; return-fire scope only, full hierarchy deferred with the Stop stand-down stance |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
@@ -55,6 +55,27 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
 | `TBR-STR-006` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## Schema 36 lands; this lane's balance numbers re-measured against it — 2026-09-11, 22:35Z
+
+The D3 lane committed idle return fire (`85eaf3c`, replay schema 36), which fixes the acquisition defect
+this lane reported and narrowed. Scope is return fire only; a Stop stand-down stance is recorded as a
+follow-up because it needs entity state and a snapshot bump.
+
+**Fixture review (requested of this lane).** `TestBallisticCoverAndTrackingRegression` now selects the
+attacker's own projectile by `source` instead of asserting the world holds exactly one. Reviewed and
+correct: the fixture's subject is that a covered shot resolves against the cover and a tracked shot follows
+a moving target, and both assertions still pin exactly that; "only one projectile exists" was an incidental
+assumption the defect made true. `TestExploredTerrainAndPermanentObjectMemory` clearing the defender first
+is likewise the repair that keeps its subject (terrain and object memory) intact.
+
+**Re-measurement.** That lane correctly warned that any defence measured before schema 36 was taken against
+silent defenders. Re-run on the tree containing `85eaf3c`, this lane's two balance tests are unchanged:
+native 150/150; BAL-STR-1 defender 60/60 with a 7/60 rule-off control at 13 attackers against 10;
+BAL-STR-3 defender 30/30 crossing blind, 0/30 with two scouts on the rim, 0/30 on flat ground. The reason
+they are unaffected is that every unit in these harnesses carries an explicit order (AttackMove or Hold),
+so idle return fire never applies to them. The warning still stands for BAL-STR-2 and for any future
+harness that leaves defenders order-less.
 
 ## Combined Unreal verdict at d846a3b, with the D3 lane's idle fire in the tree — 2026-09-11, 22:30Z
 
@@ -6092,3 +6113,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T22:31Z — `SPEC-BAL-011` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar; commit 46f1c14; BAL-STR-3 native blind 30/30, scouted 0/30, flat 0/30; Glass Scar wiring verified in Unreal 138/139
 - 2026-09-11T22:32Z — `SPEC-CMB-007` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-22.log; commit e925a75; Idle entities acquire and return fire under schema 36; return-fire scope only, full hierarchy deferred with the Stop stand-down stance
 - 2026-09-11T22:32Z — `SPEC-STANCE-002` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-22.log; commit e925a75; Defensive default answers attackers in weapon range; the 400 cm pursuit is not built
+- 2026-09-11T22:33Z — `SPEC-BAL-009` → **AGENT VERIFIED**; class SRC; evidence —; commit 85eaf3c; Re-measured on schema 36 (85eaf3c): unchanged, 60/60 vs 7/60 control; harness units all carry explicit orders so idle return fire does not apply

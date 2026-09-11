@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-11 22:31 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-11 22:33 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `46f1c14` (upstream `50dc165`); 360 dirty paths, of which non-asset: `Docs/DeliveryPlan.md`, `Docs/RequirementsState.md`, `Source/EchoesSimCore/Private/Simulation.cpp`, `Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h`.
+- Branch `main` at `85eaf3c` (upstream `50dc165`); 355 dirty paths, of which non-asset: `Docs/RequirementsState.md`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -25,10 +25,10 @@ Read this, then fetch only the requirement records you touch:
 
 ## Newest RequirementsState entries
 
+- Schema 36 lands; this lane's balance numbers re-measured against it — 2026-09-11, 22:35Z
 - Combined Unreal verdict at d846a3b, with the D3 lane's idle fire in the tree — 2026-09-11, 22:30Z
 - Regression: GuardEscortSemantics fails on the combined tree — 2026-09-11, 22:23Z
 - Idle defensive fire: reproduced and owned by the D3 lane, schema 36 — 2026-09-11
-- Glass Scar crossings are low ground — TBR-STR-002 wiring verified, 2026-09-11, 22:18Z
 
 ## Recently recorded state rows
 
