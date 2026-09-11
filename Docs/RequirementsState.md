@@ -77,10 +77,15 @@ on its own build; this build measures 13,265. The difference is not only the com
 `Source/EchoesSimCore/Private/Simulation.cpp` modified with four uncommitted hunks, all inside
 `GenerateAiCommands`, implementing the D3 lane's retreat fix (a unit nearer the enemy than its own Core no
 longer walks home, and orders already being carried out are not re-issued). A build compiles the working
-tree, so 13,265 was measured *with* that unlanded fix present, and it changes exactly the behaviour that
+tree, so 13,265 was measured *with* that then-unlanded fix present, and it changes exactly the behaviour that
 sets match length. The verdict stands — the test passes well inside 60,000 either way, and the retreat fix
 can only shorten matches — but the number is provenance-tagged rather than clean, and 60,000 keeps room for
 a tree without it. A future raise should quote both the commit and the dirty list, not just the tick.
+
+**Follow-up, same day:** that retreat fix has since landed as `61e6df1`, so the tree is clean again and the
+hunks described above are now committed history rather than in-flight work. The 13,265 measurement is
+therefore reproducible from `3f62675` plus `61e6df1`, and the caveat above is a provenance note, not an
+outstanding risk.
 
 That closes the last task this lane owned. Remaining open items belong to the D3 lane (the unimplemented
 denial play, `REL-AI-006` muster with a synchronised release, and retreat oscillation in the harness) or to
