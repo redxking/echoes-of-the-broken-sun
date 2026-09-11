@@ -76,14 +76,31 @@ Every combat unit costs Dawn and `REL-ECO-009` restricts Dawn to Well interactio
 so on the shipping one-Well maps (`SPEC-SKM-011..013` each author a single Well) the seat that loses the
 Well cannot replace a single loss for the rest of the match. `SPEC-WEL-002` and `REL-WEL-018` promise that
 each protocol is "situationally rational" with "explicit, readable opponent counterplay" and that no
-protocol is an automatic-win button. A monopoly on the only source of army does not read that way: the
-choice is not *which* protocol serves this situation but *whether you hold the Well at all*, and the loser
-of that contest has no counterplay left to read.
+protocol is an automatic-win button.
+
+**Corrected 23:25Z: the counterplay exists, and this lane's original wording ("the loser of that contest has
+no counterplay left to read") was wrong.** Read from the code and the records: `ApplyPreserveIncome` pays
+the holder only when `IsFutureWellContested` is false, and that test is satisfied by *any* hostile entity
+standing in the Well's zone, so one unit walking in stops the holder's entire Dawn income at once, without
+capturing anything. `REL-WEL-009` and `REL-WEL-016` then make a Preserved Well permanently recapturable
+over 300 uncontested ticks, transferring the income rather than duplicating it, and `SPEC-WEL-004` allows
+control to change hands continuously. Denial is cheaper than recapture, and both are exactly the counterplay
+the design intends.
+
+**What survives the correction** is a question of proportion rather than of missing counterplay: the swing
+between holding and not holding is roughly one fighter against thirty-three over seventeen minutes, and the
+holder must defend a fixed point indefinitely to keep it. Whether that swing is proportionate, and whether
+a seat driven off the Well can realistically fight its way back with the one fighter it can afford, is the
+owner decision. The D3 lane's planner defect (its Well branch only considers a Dormant Well, so it cannot
+target a Well another seat has claimed) means the AI never exercises this counterplay at all, which is a
+separate defect in its lane and not evidence about the rules.
 
 This is a design question for the owner, not a defect, and not something this lane should resolve by
 tuning: it touches the premise, the three protocols, map authoring and AI doctrine at once.
 
-* **TBR-STR-008 — Dawn scarcity versus Well neutrality.** OPEN, owner decision. Options: (A) accept it and
+* **TBR-STR-008 — Dawn scarcity versus Well neutrality.** OPEN, owner decision. *Scoped 23:25Z: this is
+  about the size of the swing, not about absent counterplay — contesting the zone denies the holder's income
+  immediately and recapture transfers it.* Options: (A) accept it and
   say so plainly — the Well *is* the game, protocols are a second-order choice, and `SPEC-WEL-002`'s
   "no automatic win" wording is narrowed to mean "no instant victory" rather than "no decisive advantage";
   (B) give every seat a small Dawn trickle independent of Wells (a base income or a structure), so losing

@@ -102,8 +102,11 @@ Keep `REL-ECO-011`'s accounting; change the ceiling and add a curve:
 - **Dawn is only from Wells** (`REL-ECO-009`, unchanged). **Measured consequence, 2026-09-11:** since every
   combat unit costs Dawn and the shipping maps author one Well each, the seat that loses the Well can buy
   exactly one fighter from its 30-Dawn start and none thereafter, while a Preserve holder earns ~990 Dawn
-  (about 33 fighters) in a 17-minute match. That makes the Well a Dawn monopoly rather than a situational
-  choice, which strains `SPEC-WEL-002` and `REL-WEL-018`. Owner decision `TBR-STR-008`. Every faction's power spike costs Dawn (Prismatic
+  (about 33 fighters) in a 17-minute match. That makes the Well the decisive economic asset rather than one
+  situational choice among three. The counterplay the design promises does exist and is cheap: any hostile
+  unit inside the zone stops the holder's income (`ApplyPreserveIncome` pays only when uncontested), and a
+  Preserved Well is permanently recapturable (`REL-WEL-009`). The open question is proportion, not absence:
+  one fighter against about thirty-three over seventeen minutes. Owner decision `TBR-STR-008`. Every faction's power spike costs Dawn (Prismatic
   Targeting, molt, reconciliation, Relay burst, cover, research). So the *tempo* decision is the Well
   decision, and no faction can buy tempo with Matter alone.
 
