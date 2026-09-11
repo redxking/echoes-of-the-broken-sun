@@ -381,6 +381,20 @@ def meridian_surveyor_body(mesh: unreal.DynamicMesh, high: bool) -> None:
         box(mesh, (10.0, 10.0, 6.0), (-3.0, 0.0, 153.0), PRIMARY)
 
 
+
+def meridian_prismatic_optic(mesh: unreal.DynamicMesh, high: bool) -> None:
+    """Prismatic Optic: visible accessory indicating Prismatic Targeting research."""
+    # A small angled sensor/targeting module.
+    # Base mount
+    box(mesh, (16.0, 16.0, 6.0), (0.0, 0.0, 3.0), DARK)
+    # Angled lens casing
+    box(mesh, (20.0, 12.0, 12.0), (4.0, 0.0, 12.0), PRIMARY, (0.0, -15.0, 0.0))
+    # Glowing lens
+    box(mesh, (4.0, 8.0, 8.0), (14.0, 0.0, 14.0), GLOW, (0.0, -15.0, 0.0))
+    if high:
+        # Extra detail on high LOD
+        cylinder(mesh, 4.0, 14.0, (-4.0, 0.0, 14.0), LIGHT, (0.0, 90.0, 0.0))
+
 def meridian_surveyor(mesh: unreal.DynamicMesh, high: bool) -> None:
     """Meridian Surveyor: compact engineering exoframe with twin tool arms and sensor mast."""
     meridian_surveyor_body(mesh, high)
@@ -1702,6 +1716,7 @@ ASSETS = (
     AssetSpec("Meridian", "Structures", "PowerLink", "Power Link", "supply and network node", meridian_power_link),
     AssetSpec("Meridian", "Structures", "ArrayFoundry", "Array Foundry", "production and research", meridian_array_foundry),
     AssetSpec("Meridian", "Structures", "AegisPost", "Aegis Post", "network-powered defense", meridian_aegis_post),
+    AssetSpec("Meridian", "Accessories", "PrismaticOptic", "Prismatic Optic", "research visual cue", meridian_prismatic_optic),
     AssetSpec("Kharuun", "Units", "Tender", "Tender", "worker cultivator", kharuun_tender),
     AssetSpec("Kharuun", "Units", "Riftstalker", "Riftstalker", "mobile skirmisher", kharuun_riftstalker),
     AssetSpec("Kharuun", "Units", "Cairnback", "Cairnback", "assault screen", kharuun_cairnback),
@@ -3995,7 +4010,7 @@ def main() -> None:
     roster_assets = [
         asset
         for asset, spec in zip(generated, ASSETS)
-        if spec.faction in ("Meridian", "Kharuun", "Choir")
+        if spec.faction in ("Meridian", "Kharuun", "Choir") and spec.category in ("Units", "Structures")
     ]
     if (
         len(roster_assets) != 24
@@ -4006,7 +4021,7 @@ def main() -> None:
             )
             != roster_asset_revision(spec)
             for asset, spec in zip(generated, ASSETS)
-            if spec.faction in ("Meridian", "Kharuun", "Choir")
+            if spec.faction in ("Meridian", "Kharuun", "Choir") and spec.category in ("Units", "Structures")
         )
     ):
         raise RuntimeError(f"Roster asset audit failed: count={len(roster_assets)}")

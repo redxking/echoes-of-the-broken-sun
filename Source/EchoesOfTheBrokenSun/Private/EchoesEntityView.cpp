@@ -627,6 +627,11 @@ AEchoesEntityView::AEchoesEntityView()
         TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> ConeFinder(
         TEXT("/Engine/BasicShapes/Cone.Cone"));
+    // The authored optic is optional until it lands in Content: a hard finder
+    // failed the class default object and no entity view could spawn
+    // (2026-09-11, 92 automation failures). The cube stays the fallback.
+    static ConstructorHelpers::FObjectFinderOptional<UStaticMesh> PrismaticOpticFinder(
+        TEXT("/Game/Art/Generated/Meridian/Accessories/SM_Meridian_PrismaticOptic.SM_Meridian_PrismaticOptic"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> FutureWellOrbitFinder(
         TEXT("/Game/Art/Generated/World/Landmarks/SM_World_FutureWellOrbit.SM_World_FutureWellOrbit"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> FutureWellCoreFinder(
@@ -648,6 +653,7 @@ AEchoesEntityView::AEchoesEntityView()
     SphereMesh = SphereFinder.Object;
     CylinderMesh = CylinderFinder.Object;
     ConeMesh = ConeFinder.Object;
+    PrismaticOpticMesh = PrismaticOpticFinder.Get();
     FutureWellOrbitMesh = FutureWellOrbitFinder.Object;
     FutureWellCoreMesh = FutureWellCoreFinder.Object;
     FutureWellGlyphMesh = FutureWellGlyphFinder.Object;
@@ -692,7 +698,7 @@ AEchoesEntityView::AEchoesEntityView()
     WarformStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
     ChoirIdentityField->SetStaticMesh(CylinderMesh);
     ChoirIdentityField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
-    ResearchCueField->SetStaticMesh(CubeMesh);
+    ResearchCueField->SetStaticMesh(PrismaticOpticMesh != nullptr ? PrismaticOpticMesh : CubeMesh);
     ResearchCueField->SetRelativeLocation(FVector(0.0f, 0.0f, 118.0f));
     ResearchCueField->SetRelativeScale3D(FVector(0.16f, 0.16f, 0.16f));
     AegisPowerField->SetStaticMesh(AbilityRangeRingMesh != nullptr ? AbilityRangeRingMesh : CylinderMesh);

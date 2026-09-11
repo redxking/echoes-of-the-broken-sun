@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-11 17:52 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-11 20:30 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `3481fa3` (upstream `27aaf68`); 378 dirty paths, of which non-asset: `Docs/DeliveryPlan.md`, `Docs/RequirementsState.md`, `Source/EchoesOfTheBrokenSun/Private/EchoesEntityView.cpp`, `Source/EchoesOfTheBrokenSun/Private/EchoesPlayerReadinessReview.cpp`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesCombatEffectsTest.cpp`, `Source/EchoesOfTheBrokenSun/Public/EchoesEntityView.h`.
+- Branch `main` at `34ca1a0` (upstream `27aaf68`); 400 dirty paths, of which non-asset: `Docs/CONTEXT.md`, `Docs/DeliveryPlan.md`, `Docs/README.md`, `Docs/Requirements.md`, `Docs/RequirementsState.md`, `Scripts/generate_art_assets.py`, `Scripts/generate_art_assets.sh`, `Source/EchoesOfTheBrokenSun/Private/EchoesEntityView.cpp`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -18,28 +18,28 @@ Read this, then fetch only the requirement records you touch:
 - **Saved baseline.** `main` = `origin/main` after the schema 31 movement fix (code, tests and records `a8607f8`: masked-ground escape in the route field and the move-order gate, replay schema 31, native corridor tests, D2 review driver hardening, record correction; this baseline row follows it). … (full text: DeliveryPlan.md, Active execution state)
 - **Ownership.** Owner granted checkout ownership. On 2026-09-11 the owner ordered the push: main was fast-forwarded to `68653ab` and pushed to `origin/main` (862d7b2..68653ab); the checkout now works on `main`, single writer. `integration/d0-reconciliation` is folded in and retained only as a label.
 - **Preservation boundary.** Main dirty files in `BuildArtifacts/Evidence/resume-preservation-20260910`; Antigravity's scratch scripts, `tests.log` and walkthrough in `BuildArtifacts/Evidence/d2-foundation-20260911T0050Z/antigravity-scratch/`. Salvage worktrees untouched.
-- **Last retained evidence.** D3 fourth slice (2026-09-11, RequirementsState "D3 Meridian slice — fourth slice"): `BuildArtifacts/Evidence/d3-meridian-20260911T161144Z` — `automation-6/index.json` 139/139; researched Meridian fighters carry a persistent optic cue (placeholder cube; faction mesh open). … (full text: DeliveryPlan.md, Active execution state)
-- **Next exact action after resume.** Owner: replay the D2 chain on Glass Scar (five repaired findings, rebuilt console) and rule on SPEC-UI-007 / REL-UI-025, REL-FAC-002.PROD, SPEC-RES-006.INSPECT; play the ten-lesson readiness check (all ten lessons proven by the readiness review driver); rule on TBR-UX-001 (recommendation recorded: command-first QWE/ASD/ZXC grid, WASD as a camera preset); authorize the push of main so the post-D3 package can be produced (`package_macos.sh` requires a detached worktree at pushed origin/main). Agent: continue D3 — REL-AI-022 measured Meridian strategy runs (Standard AI mirrors and cross-faction pairings on Glass Scar with retained seeds), an authored optic mesh for the research cue, then the D3 packaged complete match once the push is authorized. Carry the open decisions: SPEC-MOV-003 route-field body blindness, REL-AI-024, REL-AI-031; TBR-SCP-012 is decided (option B, D7).
+- **Last retained evidence.** D3 fifth slice (2026-09-11, RequirementsState "D3 Meridian slice — fifth slice"): `BuildArtifacts/Evidence/d3-meridian-20260911T161144Z` — the opponent planner spreads workers over known deposits, re-sends waiting workers, walks to remembered deposits and prospects the frontier near its Anchor (fair scoped view only; no roaming during the opening posture); campaign Well doctrine in the bridge (TBR-SCP-012 first rule) … (full text: DeliveryPlan.md, Active execution state)
+- **Next exact action after resume.** Owner: replay the D2 chain on Glass Scar (five repaired findings, rebuilt console) and rule on SPEC-UI-007 / REL-UI-025, REL-FAC-002.PROD, SPEC-RES-006.INSPECT; play the ten-lesson readiness check (all ten lessons proven by the readiness review driver); rule on TBR-UX-001 (recommendation recorded: command-first QWE/ASD/ZXC grid, WASD as a camera preset); authorize the push of main so the post-D3 package can be produced (`package_macos.sh` requires a detached worktree at pushed origin/main). Shared tree: the strategy-validation lane holds uncommitted firing lanes (schema 33) on the same checkout; stage by hunk and re-run the balance matrix once both land. Agent (AI, after the lanes commit): REL-AI-006 strike-force spreading across the line of fire (the `CompleteSkirmishDefeat` finding), REL-AI-031 convert-advantage pressure (Meridian vs Kharuun stalls), REL-AI-024 Choir mirror economy, then REL-AI-022 measured runs on Glass Scar and the D3 packaged complete match once the push is authorized. Carry the open decisions: SPEC-MOV-003 route-field body blindness; TBR-SCP-012 is decided (option B; first campaign Well rule landed). Update 20:30Z: the CompleteSkirmishDefeat budget change (60,000 → 90,000) is provisional; its attribution to firing lanes is withdrawn pending the match-end tick from the other lane's current full suite. No simulation behaviour changes from this lane until that suite reports.
 - **Next dependency.** D2 exit requires the affected integration suite green and a player able to gather, build, train, move, fight, repair and recover under 30 on an ordinary map; D3 (Meridian slice, REL-UI-025 3×3 deck, practice lessons) waits on it.
 - **Open evidence.** Owner acceptance of D2 is not given: the 2026-09-11 owner play test FAILED on five player-facing points, all five now repaired and awaiting the owner's replay (see RequirementsState "D2 owner play-test findings repaired"). Agent-driven rendered review and automation are green but are not human evidence. Current game reproduction and packaged verification remain open. … (full text: DeliveryPlan.md, Active execution state)
 
 ## Newest RequirementsState entries
 
-- D2 integrated foundation — continuation record, 2026-09-11
-- D2 continuation, second slice — the seven remaining failures, 2026-09-11
-- D2 exit check — rendered agent-driven review of the player chain, 2026-09-11
-- D2 owner play test — FAILED, 2026-09-11
+- Committed band, lane body radius, and the first BAL-STR-1 measurement — 2026-09-11
+- Owner delegation on strategic depth — decisions taken, 2026-09-11
+- Firing lanes implemented — SPEC-CMB-013 / TBR-STR-001, 2026-09-11
+- Strategic depth over mass — owner direction and TBR-STR decisions, 2026-09-11
 
 ## Recently recorded state rows
 
 - `TBR-UX-001` OPEN · NONE · 2026-09-11
-- `SPEC-UI-008` IN PROGRESS · PKG-AUTO · 2026-09-11
-- `SPEC-TUT-008` AGENT VERIFIED · PKG-REND · 2026-09-11
-- `SPEC-RES-006` AWAITING HUMAN ACCEPTANCE · PKG-AUTO · 2026-09-11
-- `SPEC-HUD-004` AWAITING HUMAN ACCEPTANCE · PKG-REND · 2026-09-11
-- `REL-UI-003` IMPLEMENTED · PKG-AUTO · 2026-09-11
-- `REL-UI-002` AWAITING HUMAN ACCEPTANCE · PKG-REND · 2026-09-11
-- `REL-FAC-028` AGENT VERIFIED · PKG-AUTO · 2026-09-11
+- `TBR-STR-006` OPEN · NONE · 2026-09-11
+- `TBR-STR-005` IN PROGRESS · SRC · 2026-09-11
+- `TBR-STR-004` OPEN · NONE · 2026-09-11
+- `TBR-STR-003` IMPLEMENTED · SRC · 2026-09-11
+- `TBR-STR-002` OPEN · NONE · 2026-09-11
+- `TBR-STR-001` IMPLEMENTED · SRC · 2026-09-11
+- `TBR-SCP-012` IN PROGRESS · PKG-AUTO · 2026-09-11
 
 ## Before you stop
 

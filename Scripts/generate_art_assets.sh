@@ -158,7 +158,7 @@ fi
   -ExecutePythonScript="$generator" \
   -abslog="$log"
 
-if ! grep -Eq '\[ECHOES_ART_COMPLETE\] generated=49 roster=24 landmarks=4 environment=9 vfx=9 destructionVfx=3' "$log"; then
+if ! grep -Eq '\[ECHOES_ART_COMPLETE\] generated=50 roster=24 landmarks=4 environment=9 vfx=9 destructionVfx=3' "$log"; then
   print -u2 "The Unreal art generator did not report all 49 assets."
   print -u2 "Inspect: $log"
   exit 3
@@ -212,5 +212,5 @@ if grep -Eq 'LogPython: Error:|LogGeometry: Error:|LogStaticMesh: Error:|LogEdit
   exit 4
 fi
 
-print "Generated 24 roster meshes, 4 Future Well meshes, 8 Glass Scar environment meshes, 9 selection/command VFX meshes, 3 destruction VFX meshes, and their authored material families."
+print "Generated 24 roster meshes, 1 accessory,, 4 Future Well meshes, 8 Glass Scar environment meshes, 9 selection/command VFX meshes, 3 destruction VFX meshes, and their authored material families."
 print "Evidence log: $log"

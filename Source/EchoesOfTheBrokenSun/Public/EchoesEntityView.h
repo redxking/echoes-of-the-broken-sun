@@ -428,6 +428,9 @@ private:
     TObjectPtr<UStaticMeshComponent> FutureWellCollapseFractureB;
 
     UPROPERTY()
+    TObjectPtr<UStaticMesh> PrismaticOpticMesh;
+
+    UPROPERTY()
     TObjectPtr<UStaticMesh> CubeMesh;
 
     UPROPERTY()

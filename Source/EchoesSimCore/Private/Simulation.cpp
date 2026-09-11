@@ -1,6 +1,7 @@
 #include "EchoesSimCore/Simulation.h"
 
 #include <algorithm>
+#include <cmath>
 #include <array>
 #include <limits>
 #include <set>
@@ -8811,37 +8812,313 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 commands.push_back(command);
                 continue;
             }
-            const Entity* nearestResource = nullptr;
-            std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
+            // Leave a worker that is already working a live node alone.
+            // Re-ordering it calls BeginGather, which clears the harvest
+            // state, and the extraction timer restarts from zero. At the
+            // planning cadence that reset always landed before an
+            // extraction could finish, so the opponent's Matter income was
+            // exactly zero for an entire match and every combat unit it
+            // ever fielded came out of its opening resources (REL-AI-011).
+            // A worker queued beside a crowded deposit (waiting for its one
+            // extraction slot, carrying nothing) may be re-sent to a clearly
+            // better one; nothing in progress is lost. Any other gatherer is
+            // left alone.
+            const Entity* waitingOn = nullptr;
+            if (actor.order.type == OrderType::Gather) {
+                const Entity* liveTarget = nullptr;
+                for (const Entity& candidate : entities_) {
+                    if (candidate.id == actor.order.target &&
+                        candidate.type == EntityType::ResourceNode &&
+                        candidate.resourceRemaining > 0) {
+                        liveTarget = &candidate;
+                        break;
+                    }
+                }
+                if (liveTarget != nullptr) {
+                    const bool waiting =
+                        actor.harvestState == HarvestState::Harvesting &&
+                        !actor.harvestSlotHeld && actor.cargo == 0;
+                    if (!waiting) {
+                        continue;
+                    }
+                    waitingOn = liveTarget;
+                }
+            }
+            // SPEC-DOC-005 / SIM-033: during the Adaptive opening posture the
+            // seat holds what it has; no worker walks to a remembered deposit
+            // or prospects the frontier until the posture ends. Without this
+            // the opponent's prospector found and captured Mission 11's Well
+            // and Oruun died before tick 665 (strategy-validation lane,
+            // 2026-09-11).
+            const bool holdingOpeningPosture =
+                personality == AiPersonality::Adaptive && commandCore != nullptr &&
+                currentTick_ < kAdaptiveOpeningPostureTicks;
+            // A worker already walking, to a remembered deposit or to the
+            // frontier (below), is left to arrive; the pass after it arrives
+            // sees what it found and gathers or prospects again. Re-ordering
+            // a mover every planning pass sent the prospector back to the
+            // queue it had just left (probe, 2026-09-11).
+            if (actor.order.type == OrderType::Move) {
+                continue;
+            }
+            // REL-AI-031 / REL-FAC-016 / SPEC-RES-003: a deposit serves one
+            // extractor at a time, so the nearest node alone is a queue, not
+            // an economy. Ten workers on one home deposit realized one
+            // worker's income and the opponent starved (balance matrix,
+            // 2026-09-11). Choose the least-loaded known deposit, with
+            // distance as the price of spreading: each worker already on a
+            // node costs six tiles of route, so a home deposit fills to a
+            // handful before a farther one is worth the walk. Ties break by
+            // id; the count includes assignments made earlier in this pass.
+            const Entity* chosenResource = nullptr;
+            std::uint64_t chosenScore = std::numeric_limits<std::uint64_t>::max();
             for (const Entity& candidate : entities_) {
                 if (candidate.type != EntityType::ResourceNode ||
                     candidate.resourceRemaining <= 0 ||
                     !IsEntityVisibleTo(player, candidate.id)) {
                     continue;
                 }
-                const std::uint64_t distance =
-                    DistanceSquaredRaw(actor.position, candidate.position);
-                if (distance < nearestDistance ||
-                    (distance == nearestDistance &&
-                     (nearestResource == nullptr || candidate.id < nearestResource->id))) {
-                    nearestResource = &candidate;
-                    nearestDistance = distance;
+                std::uint64_t load = 0;
+                for (const Entity& other : entities_) {
+                    if (other.owner == player && other.id != actor.id &&
+                        other.type == EntityType::Worker && other.hitPoints > 0 &&
+                        ((other.order.type == OrderType::Gather &&
+                          other.order.target == candidate.id) ||
+                         other.assignedResourceNode == candidate.id)) {
+                        ++load;
+                    }
+                }
+                for (const Command& earlier : commands) {
+                    if (earlier.type == CommandType::Gather &&
+                        earlier.target == candidate.id) {
+                        ++load;
+                    }
+                }
+                const std::uint64_t distanceTiles =
+                    static_cast<std::uint64_t>(std::sqrt(static_cast<double>(
+                        DistanceSquaredRaw(actor.position, candidate.position)))) /
+                    static_cast<std::uint64_t>(kFixedScale);
+                const std::uint64_t score = load * 6 + distanceTiles;
+                if (score < chosenScore ||
+                    (score == chosenScore &&
+                     (chosenResource == nullptr || candidate.id < chosenResource->id))) {
+                    chosenResource = &candidate;
+                    chosenScore = score;
                 }
             }
-            if (nearestResource != nullptr) {
-                // Leave a worker that is already working this node alone.
-                // Re-ordering it calls BeginGather, which clears the harvest
-                // state, and the extraction timer restarts from zero. At the
-                // planning cadence that reset always landed before an
-                // extraction could finish, so the opponent's Matter income was
-                // exactly zero for an entire match and every combat unit it
-                // ever fielded came out of its opening resources (REL-AI-011).
-                if (actor.order.type == OrderType::Gather &&
-                    actor.order.target == nearestResource->id) {
+            // REL-AI-031 "expand to known resources": a deposit this seat has
+            // seen but cannot see now is still worth the walk once the visible
+            // ones are crowded. A Gather cannot target fog (exactly as for the
+            // player), so the worker is sent to the remembered position and
+            // gathers on the pass after it arrives in sight. Four tiles of
+            // route stand in for the uncertainty of an unseen stock.
+            const RememberedObject* chosenMemory = nullptr;
+            for (const RememberedObject& memory : view.RememberedObjects()) {
+                if (memory.type != EntityType::ResourceNode || holdingOpeningPosture) {
+                    continue;
+                }
+                bool visibleNow = false;
+                for (const Entity& candidate : entities_) {
+                    if (candidate.id == memory.id) { visibleNow = true; break; }
+                }
+                if (visibleNow) {
+                    continue;
+                }
+                std::uint64_t load = 0;
+                for (const Entity& other : entities_) {
+                    if (other.owner == player && other.id != actor.id &&
+                        other.type == EntityType::Worker && other.hitPoints > 0 &&
+                        other.order.type == OrderType::Move &&
+                        DistanceSquaredRaw(other.order.destination, memory.position) <=
+                            static_cast<std::uint64_t>(kFixedScale) * kFixedScale) {
+                        ++load;
+                    }
+                }
+                for (const Command& earlier : commands) {
+                    if (earlier.type == CommandType::Move &&
+                        DistanceSquaredRaw(earlier.position, memory.position) <=
+                            static_cast<std::uint64_t>(kFixedScale) * kFixedScale) {
+                        ++load;
+                    }
+                }
+                const std::uint64_t distanceTiles =
+                    static_cast<std::uint64_t>(std::sqrt(static_cast<double>(
+                        DistanceSquaredRaw(actor.position, memory.position)))) /
+                    static_cast<std::uint64_t>(kFixedScale);
+                const std::uint64_t score = load * 6 + distanceTiles + 4;
+                if (score < chosenScore ||
+                    (score == chosenScore &&
+                     (chosenMemory == nullptr || memory.id < chosenMemory->id))) {
+                    chosenMemory = &memory;
+                    chosenResource = nullptr;
+                    chosenScore = score;
+                }
+            }
+            // REL-AI-031 "expand to known resources" begins with finding
+            // them. A worker with nothing better to do than queue prospects:
+            // it walks to the known-passable frontier tile nearest the map
+            // centre, as the scout does, and what it sees on arrival feeds
+            // the next pass. Only from this seat's own map knowledge; one
+            // prospector at a time.
+            const auto Prospect = [&]() -> bool {
+                    if (holdingOpeningPosture) {
+                        return false;
+                    }
+                    // REL-AI-031 "expand to known resources" begins with
+                    // finding them. When the only known deposit is crowded
+                    // (two or more others already on it) and nothing better
+                    // is known, one waiting worker prospects: it walks to the
+                    // known-passable frontier tile nearest the map centre, as
+                    // the scout does, and what it sees on arrival feeds the
+                    // next pass. Only from this seat's own map knowledge; one
+                    // prospector at a time.
+                    bool prospecting = false;
+                    for (const Entity& other : entities_) {
+                        if (other.owner != player || other.id == actor.id ||
+                            other.type != EntityType::Worker || other.hitPoints <= 0 ||
+                            other.order.type != OrderType::Move) {
+                            continue;
+                        }
+                        bool towardDeposit = false;
+                        for (const RememberedObject& memory : view.RememberedObjects()) {
+                            if (memory.type == EntityType::ResourceNode &&
+                                DistanceSquaredRaw(other.order.destination, memory.position) <=
+                                    static_cast<std::uint64_t>(kFixedScale) * kFixedScale) {
+                                towardDeposit = true;
+                                break;
+                            }
+                        }
+                        if (!towardDeposit) { prospecting = true; break; }
+                    }
+                    for (const Command& earlier : commands) {
+                        if (earlier.type == CommandType::Move && earlier.target == 0) {
+                            prospecting = true;
+                            break;
+                        }
+                    }
+                    if (prospecting) {
+                        return false;
+                    }
+                    // Prospecting rings outward from the seat's own Anchor and
+                    // stays within a bounded radius of it: a human scouts the
+                    // ground near home first and does not send a Surveyor
+                    // across the map into the other side's corridor. The
+                    // radius covers the shipping maps' base-side deposits
+                    // (about eleven tiles out); farther ground is the scout's
+                    // to reveal, after which a remembered deposit is walked to.
+                    if (commandCore == nullptr) {
+                        return false;
+                    }
+                    const Vec2 centre = commandCore->position;
+                    constexpr std::uint64_t kProspectRadiusRaw =
+                        static_cast<std::uint64_t>(16) * kFixedScale;
+                    std::uint64_t bestDistance = std::numeric_limits<std::uint64_t>::max();
+                    Vec2 frontier{};
+                    bool haveFrontier = false;
+                    constexpr std::array<std::array<std::int32_t, 2>, 4> steps{{
+                        {{0, -1}}, {{1, 0}}, {{0, 1}}, {{-1, 0}},
+                    }};
+                    for (std::int32_t tileY = 0; tileY < config_.mapHeightTiles; ++tileY) {
+                        for (std::int32_t tileX = 0; tileX < config_.mapWidthTiles; ++tileX) {
+                            const Vec2 tile = Vec2::FromTiles(tileX, tileY);
+                            if (view.VisibilityAt(tile) == Visibility::Unexplored ||
+                                view.TerrainAt(tileX, tileY) == Terrain::Blocked) {
+                                continue;
+                            }
+                            bool touchesUnknown = false;
+                            for (const auto& step : steps) {
+                                const std::int32_t nextX = tileX + step[0];
+                                const std::int32_t nextY = tileY + step[1];
+                                if (nextX < 0 || nextY < 0 ||
+                                    nextX >= config_.mapWidthTiles ||
+                                    nextY >= config_.mapHeightTiles) {
+                                    continue;
+                                }
+                                if (view.VisibilityAt(Vec2::FromTiles(nextX, nextY)) ==
+                                    Visibility::Unexplored) {
+                                    touchesUnknown = true;
+                                    break;
+                                }
+                            }
+                            if (!touchesUnknown) {
+                                continue;
+                            }
+                            const std::uint64_t distance = DistanceSquaredRaw(centre, tile);
+                            if (distance > kProspectRadiusRaw * kProspectRadiusRaw) {
+                                continue;
+                            }
+                            if (distance < bestDistance) {
+                                bestDistance = distance;
+                                frontier = tile;
+                                haveFrontier = true;
+                            }
+                        }
+                    }
+                    if (!haveFrontier) {
+                        return false;
+                    }
+                    command.type = CommandType::Move;
+                    command.target = 0;
+                    command.position = frontier;
+                    commands.push_back(command);
+                    return true;
+            };
+            if (waitingOn != nullptr) {
+                // Keep the queue unless the alternative saves a clear margin:
+                // one worker's worth of load (six tiles) beyond the current
+                // node's own score, so a crowd does not shuffle every pass.
+                std::uint64_t currentLoad = 0;
+                for (const Entity& other : entities_) {
+                    if (other.owner == player && other.id != actor.id &&
+                        other.type == EntityType::Worker && other.hitPoints > 0 &&
+                        ((other.order.type == OrderType::Gather &&
+                          other.order.target == waitingOn->id) ||
+                         other.assignedResourceNode == waitingOn->id)) {
+                        ++currentLoad;
+                    }
+                }
+                const std::uint64_t currentDistanceTiles =
+                    static_cast<std::uint64_t>(std::sqrt(static_cast<double>(
+                        DistanceSquaredRaw(actor.position, waitingOn->position)))) /
+                    static_cast<std::uint64_t>(kFixedScale);
+                const std::uint64_t currentScore = currentLoad * 6 + currentDistanceTiles;
+                const bool noAlternative =
+                    chosenResource == waitingOn ||
+                    (chosenResource == nullptr && chosenMemory == nullptr) ||
+                    chosenScore + 6 >= currentScore;
+                if (noAlternative) {
+                    if (currentLoad >= 2) {
+                        (void)Prospect();
+                    }
+                    continue;
+                }
+            }
+            if (chosenResource != nullptr) {
+                // An idle worker (one that just returned from prospecting)
+                // keeps prospecting rather than rejoining a crowded queue.
+                std::uint64_t chosenLoad = 0;
+                for (const Entity& other : entities_) {
+                    if (other.owner == player && other.id != actor.id &&
+                        other.type == EntityType::Worker && other.hitPoints > 0 &&
+                        ((other.order.type == OrderType::Gather &&
+                          other.order.target == chosenResource->id) ||
+                         other.assignedResourceNode == chosenResource->id)) {
+                        ++chosenLoad;
+                    }
+                }
+                if (chosenLoad >= 2 && chosenMemory == nullptr &&
+                    actor.order.type == OrderType::None && Prospect()) {
                     continue;
                 }
                 command.type = CommandType::Gather;
-                command.target = nearestResource->id;
+                command.target = chosenResource->id;
+                commands.push_back(command);
+                continue;
+            }
+            if (chosenMemory != nullptr) {
+                command.type = CommandType::Move;
+                command.target = 0;
+                command.position = chosenMemory->position;
                 commands.push_back(command);
                 continue;
             }

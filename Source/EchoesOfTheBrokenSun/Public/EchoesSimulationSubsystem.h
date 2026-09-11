@@ -402,6 +402,7 @@ public:
     static constexpr uint8 LocalPlayerId = 0;
     static constexpr uint8 OpponentPlayerId = 1;
     uint16 TrainingPracticeTargetBit = 0;
+    bool bLoggedOpponentWellDoctrine = false;
 
     /** Stable campaign identity shared by terrain and checkpoint bindings. */
     [[nodiscard]] static bool GetMissionIdForOperation(EEchoesOperationMode Mode, EEchoesCampaignMissionId& OutMissionId);

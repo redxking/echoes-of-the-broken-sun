@@ -17654,9 +17654,29 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
             *PlayerView,
             AiPersonality);
     }
+    EEchoesCampaignMissionId DoctrineMission{};
+    const bool bAuthoredOperation =
+        GetMissionIdForOperation(SelectedOperation, DoctrineMission);
     for (const echoes::sim::Command& Command : Commands)
     {
         if (!echoes::sim::Simulation::IsExecutableCommandTick(Command.executeTick)) continue;
+        // TBR-SCP-012 (option B, owner 2026-09-11): opponent doctrine inside
+        // authored campaign operations. First bounded rule: every campaign
+        // Well decision belongs to the player's recorded narrative choice
+        // (SPEC-MSN-*), so the opponent planner's Future Well commits are
+        // withheld there. Skirmish and the readiness drill are untouched:
+        // there the opponent contests the Well as REL-AI-031 asks.
+        if (bAuthoredOperation && Command.type == echoes::sim::CommandType::FutureWell)
+        {
+            if (!bLoggedOpponentWellDoctrine)
+            {
+                UE_LOG(LogEchoes, Display,
+                    TEXT("[ECHOES_AI_WELL_DOCTRINE] operation=%s mission=%u actor=%u well=%u withheld=true reason=authored-operation"),
+                    *GetOperationLabel(), static_cast<uint8>(DoctrineMission), Command.actor, Command.target);
+                bLoggedOpponentWellDoctrine = true;
+            }
+            continue;
+        }
         std::string Rejection;
         if (Simulation->QueueCommand(Command, &Rejection))
         {
