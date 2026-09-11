@@ -8729,13 +8729,47 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 commands.push_back(command);
                 continue;
             }
+            // SPEC-DOC-005 / SIM-033: during the Adaptive opening posture the
+            // seat defends what it holds and does not roam. This scan used to
+            // accept any visible hostile at any distance and ran before the
+            // posture check below, so a gatherer's sight of a foundation
+            // twenty tiles away marched the whole force out mid-posture
+            // (Mission 04 Reshape, 2026-09-11). While the posture holds, a
+            // hostile is a threat only inside the posture's own nine-tile
+            // radius around the Core or beside an owned structure.
+            const bool adaptiveOpeningPosture =
+                personality == AiPersonality::Adaptive &&
+                commandCore != nullptr &&
+                currentTick_ < kAdaptiveOpeningPostureTicks;
+            const std::uint64_t holdDistance =
+                static_cast<std::uint64_t>(9 * kFixedScale) * (9 * kFixedScale);
+            const auto ThreatensHeldGround = [&](const Entity& hostile) {
+                if (!adaptiveOpeningPosture) {
+                    return true;
+                }
+                if (DistanceSquaredRaw(hostile.position, commandCore->position) <=
+                    holdDistance) {
+                    return true;
+                }
+                constexpr std::uint64_t kStructureGuardRaw = 3 * kFixedScale;
+                for (const Entity& held : entities_) {
+                    if (held.owner == player && held.hitPoints > 0 &&
+                        IsBuildingType(held.type) &&
+                        DistanceSquaredRaw(hostile.position, held.position) <=
+                            kStructureGuardRaw * kStructureGuardRaw) {
+                        return true;
+                    }
+                }
+                return false;
+            };
             const Entity* nearestEnemy = nullptr;
             std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
             for (const Entity& candidate : entities_) {
                 if (!config_.IsHostile(player, candidate.owner) ||
                     candidate.hitPoints <= 0 ||
                     IsProtectedCommandCore(candidate) ||
-                    !IsEntityVisibleTo(player, candidate.id)) {
+                    !IsEntityVisibleTo(player, candidate.id) ||
+                    !ThreatensHeldGround(candidate)) {
                     continue;
                 }
                 const std::uint64_t distance =
@@ -8771,10 +8805,6 @@ std::vector<Command> Simulation::GenerateAiCommands(
                     nearestSignatureDistance = distance;
                 }
             }
-            const bool adaptiveOpeningPosture =
-                personality == AiPersonality::Adaptive &&
-                commandCore != nullptr &&
-                currentTick_ < kAdaptiveOpeningPostureTicks;
             if (nearestSignature != nullptr && !adaptiveOpeningPosture) {
                 command.type = CommandType::AttackMove;
                 command.position = nearestSignature->approximatePosition;
@@ -8784,9 +8814,6 @@ std::vector<Command> Simulation::GenerateAiCommands(
             if (adaptiveOpeningPosture) {
                 const std::uint64_t distanceToCore =
                     DistanceSquaredRaw(actor.position, commandCore->position);
-                const std::uint64_t holdDistance =
-                    static_cast<std::uint64_t>(9 * kFixedScale) *
-                    (9 * kFixedScale);
                 command.type = distanceToCore > holdDistance
                                    ? CommandType::Move
                                    : CommandType::Hold;

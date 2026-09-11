@@ -1933,6 +1933,55 @@ void TestAiPlannerLeavesWellCaptureAlone() {
     }));
 }
 
+void TestAdaptiveOpeningPostureBoundsAttackReach() {
+    // SPEC-DOC-005 / SIM-033: for its first 6000 ticks an Adaptive seat
+    // defends visible threats near what it holds and does not roam. The
+    // nearest-visible-hostile attack scan ran before that posture check with
+    // no distance bound, so a gatherer's sight of a hostile foundation twenty
+    // tiles from the Core marched the whole force out (Mission 04 Reshape).
+    Simulation sim({64, 64, 20, 0x504f5354555245ULL});
+    AddTwoPlayers(sim, {500, 60}, {500, 60});
+    const EntityId core = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(10, 10));
+    const EntityId defender = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(12, 12));
+    const EntityId observer = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(28, 28));
+    const EntityId farHostile = sim.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier, Vec2::FromTiles(30, 30));
+    REQUIRE(core != 0 && defender != 0 && observer != 0 && farHostile != 0);
+    sim.Step();
+    // kAdaptiveOpeningPostureTicks (Simulation.cpp) is 6000; a fresh match is inside it.
+    REQUIRE(sim.CurrentTick() < 6000);
+    REQUIRE(sim.IsEntityVisibleTo(0, farHostile));
+    const std::vector<Command> posture =
+        sim.GenerateAiCommands(0, AiPersonality::Adaptive);
+    // A hostile twenty-eight tiles from the Core, seen only through a worker,
+    // does not pull the defender out of position.
+    REQUIRE(std::none_of(posture.begin(), posture.end(), [&](const Command& command) {
+        return command.actor == defender && command.type == CommandType::Attack;
+    }));
+    const auto held = std::find_if(posture.begin(), posture.end(), [&](const Command& command) {
+        return command.actor == defender;
+    });
+    REQUIRE(held != posture.end());
+    REQUIRE(held->type == CommandType::Hold || held->type == CommandType::Move);
+    // A hostile inside the nine-tile radius is still a threat and is engaged.
+    const EntityId nearHostile = sim.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier, Vec2::FromTiles(15, 14));
+    REQUIRE(nearHostile != 0);
+    sim.Step();
+    REQUIRE(sim.IsEntityVisibleTo(0, nearHostile));
+    const std::vector<Command> defence =
+        sim.GenerateAiCommands(0, AiPersonality::Adaptive);
+    const auto engage = std::find_if(defence.begin(), defence.end(), [&](const Command& command) {
+        return command.actor == defender && command.type == CommandType::Attack;
+    });
+    REQUIRE(engage != defence.end());
+    REQUIRE(engage->target == nearHostile);
+}
+
 void TestFogAndNonCheatingAi() {
     static_assert(!std::is_default_constructible_v<PlayerView>);
     Simulation simulation({32, 32, 20, 5});
@@ -10567,6 +10616,7 @@ int main(int argc, char** argv) {
         {"mobile entity limit and reservations", TestMobileEntityLimitAndReservations},
         {"worker reach measures to the footprint", TestWorkerReachMeasuresToTheFootprint},
         {"AI planner leaves a Well capture alone", TestAiPlannerLeavesWellCaptureAlone},
+        {"Adaptive opening posture bounds attack reach", TestAdaptiveOpeningPostureBoundsAttackReach},
         {"fog and non-cheating AI", TestFogAndNonCheatingAi},
         {"four-player visibility snapshot and outcome",
          TestFourPlayerVisibilitySnapshotAndOutcome},
