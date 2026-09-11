@@ -136,9 +136,9 @@ def main() -> int:
 
 ## 2. Requirement Crosswalk & Qualification
 
-- **Terminal integrity:** {terminal_matches}/{total_matches} runs reached an authoritative SimCore outcome. The remaining {actionable_stalls} runs are excluded from win-rate claims.
-- **Rules scope:** `{report.get('rules_source', 'unknown')}` archetypes, digest `{report.get('rules_archetype_checksum', 'unknown')}`. A report whose rules_source is not `content-data` measured `DefaultSimulationRules` rather than the ruleset the game builds, and none of its numbers may be quoted.
-- **Map scope:** The native harness uses `TournamentSymmetric{report.get('map_grid_tiles', '?')}`, which matches the shipping grid size but not the terrain, resources or spawns of the three shipping skirmish maps.
+- **Terminal integrity:** {terminal_matches}/{data.get('total_matches', 0)} runs reached an authoritative SimCore outcome. The remaining {actionable_stalls} runs are excluded from win-rate claims.
+- **Rules scope:** `{data.get('rules_source', 'unknown')}` archetypes, digest `{data.get('rules_archetype_checksum', 'unknown')}`. A report whose rules_source is not `content-data` measured `DefaultSimulationRules` rather than the ruleset the game builds, and none of its numbers may be quoted.
+- **Map scope:** The native harness uses `TournamentSymmetric{data.get('map_grid_tiles', '?')}`, which matches the shipping grid size but not the terrain, resources or spawns of the three shipping skirmish maps.
 - **Replay scope:** Duplicate execution {'matched' if determinism.get('passed') else 'diverged'}. This is deterministic rerun evidence, not full replay-path qualification.
 - **Competence scope:** {battery.get('implemented_checks', 0)}/{battery.get('required_checks', 4)} required checks are implemented. Focus fire, reconnaissance, and saturation remain unproven here.
 - **Revision:** Diagnostic generated from commit `{git_commit}`. A commit label does not qualify incomplete evidence.

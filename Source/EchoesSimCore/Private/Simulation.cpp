@@ -9509,7 +9509,41 @@ std::vector<Command> Simulation::GenerateAiCommands(
                     }
                 }
             }
+            // A wounded unit cannot heal: only a Meridian worker repairs a
+            // unit, and only inside its own network. So a seat with no
+            // population headroom held its whole wounded garrison at the Core
+            // for the rest of the match while the other seat did the same,
+            // and neither could train a replacement because the wounded held
+            // the population (balance matrix 4: every Meridian mirror and
+            // every Kharuun-vs-Meridian seed stalled with both armies parked
+            // at home). When no replacement can be trained and nothing
+            // hostile is in reach of home, the garrison is the army and
+            // returns to the fight.
+            bool garrisonIsTheArmy = false;
+            if (commandCore != nullptr) {
+                constexpr std::int64_t kHomeRadiusRaw = 3 * kFixedScale;
+                constexpr std::uint64_t kHomeThreatRadiusRaw = 9 * kFixedScale;
+                if (DistanceSquaredRaw(actor.position, commandCore->position) <=
+                        static_cast<std::uint64_t>(kHomeRadiusRaw) * kHomeRadiusRaw &&
+                    PopulationCapacity(player) - PopulationUsed(player) < 3) {
+                    bool hostileNearHome = false;
+                    for (const Entity& candidate : entities_) {
+                        if (!config_.IsHostile(player, candidate.owner) ||
+                            candidate.hitPoints <= 0 ||
+                            !IsEntityVisibleTo(player, candidate.id)) {
+                            continue;
+                        }
+                        if (DistanceSquaredRaw(actor.position, candidate.position) <=
+                            kHomeThreatRadiusRaw * kHomeThreatRadiusRaw) {
+                            hostileNearHome = true;
+                            break;
+                        }
+                    }
+                    garrisonIsTheArmy = !hostileNearHome;
+                }
+            }
             const bool shouldRetreat =
+                !garrisonIsTheArmy &&
                 commandCore != nullptr && actor.maxHitPoints > 0 &&
                 static_cast<std::int64_t>(actor.hitPoints) * 100 <=
                     static_cast<std::int64_t>(actor.maxHitPoints) *

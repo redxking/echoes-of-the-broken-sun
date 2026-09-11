@@ -5552,6 +5552,16 @@ view; that seed now ends in Corefall before tick 9,000. The same fixation fits `
 where the player commits the Well and the opponent never finishes the Core. `test_sim-15.log` 148/148 in
 all three configurations on the schema-34 tree. Matrix re-run and Unreal suite pending.
 
+**The garrison that never fought again (same day).** After the Well fix the dominant stall reason was
+"commands fail to convert into corefall": a probe of one such seed (151845016028068, Kharuun vs Meridian)
+found both armies alive, wounded, parked at their own Cores on Hold with no order, both seats at their
+population ceiling. Retreat was health-triggered and had no way back, and nothing heals a unit (only a
+Meridian worker repairs one, and only inside its network), so the wounded held the population that a
+replacement would have needed and neither seat could ever attack again. A wounded unit that is already
+home, with no hostile within nine tiles of it and no population headroom for a replacement, now rejoins
+the fight; the existing retreat contract (withdraw when hurt in the field) is unchanged and its native
+test still passes. `test_sim-16.log` 150/150 in all three configurations. Matrix re-run pending.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
