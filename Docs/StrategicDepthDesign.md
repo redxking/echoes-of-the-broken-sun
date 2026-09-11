@@ -99,7 +99,11 @@ Keep `REL-ECO-011`'s accounting; change the ceiling and add a curve:
   computed from the army on the field, so it lands when a unit arrives and lifts when one dies; admitted
   production keeps its quoted cost. The HUD Logistics cell reads "(+N committed)" in warning tone. It is a
   soft cap, not a wall, and it is the same for all factions.
-- **Dawn is only from Wells** (`REL-ECO-009`, unchanged). Every faction's power spike costs Dawn (Prismatic
+- **Dawn is only from Wells** (`REL-ECO-009`, unchanged). **Measured consequence, 2026-09-11:** since every
+  combat unit costs Dawn and the shipping maps author one Well each, the seat that loses the Well can buy
+  exactly one fighter from its 30-Dawn start and none thereafter, while a Preserve holder earns ~990 Dawn
+  (about 33 fighters) in a 17-minute match. That makes the Well a Dawn monopoly rather than a situational
+  choice, which strains `SPEC-WEL-002` and `REL-WEL-018`. Owner decision `TBR-STR-008`. Every faction's power spike costs Dawn (Prismatic
   Targeting, molt, reconciliation, Relay burst, cover, research). So the *tempo* decision is the Well
   decision, and no faction can buy tempo with Matter alone.
 

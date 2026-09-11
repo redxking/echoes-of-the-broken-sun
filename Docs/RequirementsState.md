@@ -56,7 +56,43 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
 | `TBR-STR-006` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `TBR-STR-007` | OPEN | SRC | — | 737038c | 2026-09-11 | Read with the Dawn economy: combat units all cost Dawn, Dawn comes only from Wells plus a 30-Dawn start, so a Well-less seat fields one fighter; BAL-STR-2 granted units outright |
+| `TBR-STR-008` | OPEN | SRC | — | 44b071c | 2026-09-11 | Owner decision: a Well-less seat buys 1 fighter total while a Preserve holder earns ~33 in 17 minutes; strains SPEC-WEL-002 / REL-WEL-018 neutrality |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## The Well is a Dawn monopoly, and that strains Well neutrality — TBR-STR-008, 2026-09-11, 23:20Z
+
+Raised by this lane while validating the owner's premise ("every strategic choice has a cost, and no Well
+protocol is an automatic win"). It follows from the Defeat arithmetic above, sized against the authored
+numbers:
+
+| Seat state | Dawn available | Fighters it can buy |
+|---|---|---|
+| Holds a Preserved Well, 20,000-tick match (~17 min) | 990 | ~33 Riftstalkers / 49 Lancers |
+| Holds a Preserved Well, 36,000 ticks (~30 min) | 1,800 | ~60 / 90 |
+| Harvests once | 500, then the Well is gone | 16 / 25 |
+| Never holds the Well | 30 (starting reserve) | **1** |
+
+Every combat unit costs Dawn and `REL-ECO-009` restricts Dawn to Well interactions plus the authored start,
+so on the shipping one-Well maps (`SPEC-SKM-011..013` each author a single Well) the seat that loses the
+Well cannot replace a single loss for the rest of the match. `SPEC-WEL-002` and `REL-WEL-018` promise that
+each protocol is "situationally rational" with "explicit, readable opponent counterplay" and that no
+protocol is an automatic-win button. A monopoly on the only source of army does not read that way: the
+choice is not *which* protocol serves this situation but *whether you hold the Well at all*, and the loser
+of that contest has no counterplay left to read.
+
+This is a design question for the owner, not a defect, and not something this lane should resolve by
+tuning: it touches the premise, the three protocols, map authoring and AI doctrine at once.
+
+* **TBR-STR-008 — Dawn scarcity versus Well neutrality.** OPEN, owner decision. Options: (A) accept it and
+  say so plainly — the Well *is* the game, protocols are a second-order choice, and `SPEC-WEL-002`'s
+  "no automatic win" wording is narrowed to mean "no instant victory" rather than "no decisive advantage";
+  (B) give every seat a small Dawn trickle independent of Wells (a base income or a structure), so losing
+  the Well is a severe disadvantage rather than an army embargo, at the cost of weakening what makes Dawn
+  precious in the fiction; (C) author more than one Well on competitive maps so the contest is plural and
+  a loser can re-enter, which is a map change rather than a rules change; (D) lower Dawn costs on basic
+  line units so matter alone sustains a minimum army, reserving Dawn for the faction powers it was
+  designed for. Recommendation: C for the shipping skirmish maps plus A's honesty in the wording, with D
+  considered only if playtests show a Well-less seat cannot fight back at all. Not decided by this lane.
 
 ## CompleteSkirmishDefeat: the opponent cannot buy an army without a Well — 2026-09-11, 23:15Z
 
@@ -6360,3 +6396,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T22:48Z — `REL-AI-006` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-6.json; commit bd2f471; Cohesion is now the blocking slice: piecemeal commitment leaves every mirror unresolved once defenders return fire
 - 2026-09-11T23:17Z — `REL-AI-006` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-7.json; commit b06254b; Threshold-based massing measured: 114 of 1000 matches changed, zero conversions, branch never fires when saturated; needs muster point and synchronised release
 - 2026-09-11T23:22Z — `TBR-STR-007` → **OPEN**; class SRC; evidence —; commit 737038c; Read with the Dawn economy: combat units all cost Dawn, Dawn comes only from Wells plus a 30-Dawn start, so a Well-less seat fields one fighter; BAL-STR-2 granted units outright
+- 2026-09-11T23:23Z — `TBR-STR-008` → **OPEN**; class SRC; evidence —; commit 44b071c; Owner decision: a Well-less seat buys 1 fighter total while a Preserve holder earns ~33 in 17 minutes; strains SPEC-WEL-002 / REL-WEL-018 neutrality
