@@ -37,7 +37,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-UI-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
 | `SPEC-BAL-009` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | BAL-STR-1 passes its 1.3x bar with role bodies; control 7/60 |
-| `SPEC-BAL-011` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a2f2449 | 2026-09-11 | Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150 |
+| `SPEC-BAL-011` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar | 46f1c14 | 2026-09-11 | BAL-STR-3 native blind 30/30, scouted 0/30, flat 0/30; Glass Scar wiring verified in Unreal 138/139 |
 | `SPEC-CMB-007` | BLOCKED | SRC | — | df85574 | 2026-09-11 | Narrowed 2026-09-11: Hold acquires as specified (interaction range adds footprints); the defect is idle units never acquiring or firing. D3 lane owns the fix, replay schema 36 |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
@@ -55,6 +55,39 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
 | `TBR-STR-006` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## Combined Unreal verdict at d846a3b, with the D3 lane's idle fire in the tree — 2026-09-11, 22:30Z
+
+`BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-combined`: 135/139, no "Failed to find"
+asset errors. Build tree = commit `d846a3b` (this lane's Glass Scar wiring, role bodies, bands, schema 35)
+plus the D3 lane's **uncommitted** idle return fire (`kIdleDefensiveFireReplayVersion` = 36 in the tree).
+
+**Attribution by comparison.** Across the four suites tonight:
+
+| Test | s35 | bands | glassscar | combined |
+|---|---|---|---|---|
+| `AI.GuardEscortSemantics` | ok | ok | ok | FAIL |
+| `Gameplay.FactionResearch` | ok | ok | ok | FAIL |
+| `Presentation.DestructionVFX` | ok | ok | ok | FAIL |
+| `Gameplay.CompleteSkirmishDefeat` | FAIL | FAIL | FAIL | FAIL |
+
+The three new failures appear only in the run whose tree carried idle return fire, and none of this lane's
+committed work changed between `automation-glassscar` and `automation-combined` except documents. They are
+consequences of that change, for the D3 lane to absorb with schema 36: `GuardEscortSemantics` fails on
+"S2: the besieger is still untouched at the end" (the passivity the change removes by design, a third
+fixture alongside `TestBallisticCoverAndTrackingRegression` and `TestExploredTerrainAndPermanentObjectMemory`);
+`FactionResearch` fails on "Current replay version is 35", this lane's deliberate literal pin doing its job
+against an unannounced bump, which moves to 36 inside that lane's schema 36 commit so the reason stays with
+the change; `DestructionVFX` fails with a null hostile destruction view and no bounded lethal pressure,
+which reads like the target dying differently once it returns fire, and needs that lane's eye.
+
+**CompleteSkirmishDefeat is nobody's regression and finally has a diagnostic.**
+`[ECHOES_ORDINARY_DEFEAT_STALLED] tick=90000 localCoreHp=1062 openingOpponentCombat=4 wellOrder=true
+grantedOutcome=false boostedDamage=false`. It failed in all four suites, including builds carrying none of
+this lane's rules, so it is independent of firing lanes, role bodies, bands and the Glass Scar wiring. The
+opponent never finishes a Core still at 1,062 HP after 90,000 ticks with four opening combat units: the
+gap is the opponent's killing power, not the tick budget, and the provisional 90,000 (from `d51459e`'s
+sibling commit) should not be read as a fix. It deserves its own slice in the AI lane.
 
 ## Regression: GuardEscortSemantics fails on the combined tree — 2026-09-11, 22:23Z
 
@@ -6033,3 +6066,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T22:07Z — `SPEC-INFO-004` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-bands; commit 82a728d; Height-band sight inert-safe: native 150/150, Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); Glass Scar wiring pending
 - 2026-09-11T22:18Z — `SPEC-CMB-007` → **BLOCKED**; class SRC; evidence —; commit df85574; Narrowed 2026-09-11: Hold acquires as specified (interaction range adds footprints); the defect is idle units never acquiring or firing. D3 lane owns the fix, replay schema 36
 - 2026-09-11T22:18Z — `TBR-STR-002` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar; commit df85574; Glass Scar rows 30-34 wired as low ground; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); runtime proof that a crossing unit is blind to the rim
+- 2026-09-11T22:31Z — `SPEC-BAL-011` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar; commit 46f1c14; BAL-STR-3 native blind 30/30, scouted 0/30, flat 0/30; Glass Scar wiring verified in Unreal 138/139
