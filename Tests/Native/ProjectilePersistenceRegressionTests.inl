@@ -142,7 +142,15 @@ void TestBallisticCoverAndTrackingRegression() {
         [](const Entity& e) { return e.temporaryMineralCover; });
     REQUIRE(found != sim.Entities().end());
     const EntityId cover = found->id;
-    REQUIRE(sim.Projectiles().size() == 1);
+    // Count the attacker's own shot. Under schema 36 the attacked soldier is
+    // idle and returns fire (SPEC-STANCE-002), so the total is no longer one;
+    // what this test pins is the attacker's projectile meeting the cover.
+    const auto ProjectilesFrom = [&](const Simulation& s, EntityId shooter) {
+        return std::count_if(
+            s.Projectiles().begin(), s.Projectiles().end(),
+            [shooter](const Projectile& p) { return p.source == shooter; });
+    };
+    REQUIRE(ProjectilesFrom(sim, attacker) == 1);
     std::string error;
     auto restored = Simulation::LoadSnapshot(sim.SaveSnapshot(), &error);
     REQUIRE(restored.has_value());
@@ -166,7 +174,13 @@ void TestBallisticCoverAndTrackingRegression() {
     move.position = Vec2::FromTiles(10, 12);
     REQUIRE(tracking.QueueCommand(move));
     tracking.Step();
-    REQUIRE(tracking.Projectiles().size() == 1);
-    REQUIRE(tracking.Projectiles().front().destination == tracking.FindEntity(mover)->position);
-    REQUIRE(tracking.Projectiles().front().destination != Vec2::FromTiles(10, 6));
+    // Same here: the mover returns fire while it is still idle, so select the
+    // shooter's projectile rather than the first in the list.
+    REQUIRE(ProjectilesFrom(tracking, shooter) == 1);
+    const auto shooterShot = std::find_if(
+        tracking.Projectiles().begin(), tracking.Projectiles().end(),
+        [shooter](const Projectile& p) { return p.source == shooter; });
+    REQUIRE(shooterShot != tracking.Projectiles().end());
+    REQUIRE(shooterShot->destination == tracking.FindEntity(mover)->position);
+    REQUIRE(shooterShot->destination != Vec2::FromTiles(10, 6));
 }

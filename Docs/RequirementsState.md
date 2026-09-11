@@ -38,13 +38,13 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
 | `SPEC-BAL-009` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | BAL-STR-1 passes its 1.3x bar with role bodies; control 7/60 |
 | `SPEC-BAL-011` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar | 46f1c14 | 2026-09-11 | BAL-STR-3 native blind 30/30, scouted 0/30, flat 0/30; Glass Scar wiring verified in Unreal 138/139 |
-| `SPEC-CMB-007` | BLOCKED | SRC | — | df85574 | 2026-09-11 | Narrowed 2026-09-11: Hold acquires as specified (interaction range adds footprints); the defect is idle units never acquiring or firing. D3 lane owns the fix, replay schema 36 |
+| `SPEC-CMB-007` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-22.log | e925a75 | 2026-09-11 | Idle entities acquire and return fire under schema 36; return-fire scope only, full hierarchy deferred with the Stop stand-down stance |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `SPEC-INFO-004` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-bands | 82a728d | 2026-09-11 | Height-band sight inert-safe: native 150/150, Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); Glass Scar wiring pending |
 | `SPEC-RES-003` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s34 | 3c3e836 | 2026-09-11 | Schema 34 slot release: native stall test passes and fails with the rule off; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `SPEC-RES-006` | AWAITING HUMAN ACCEPTANCE | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | SPEC-RES-006.INSPECT: click shows remaining Matter; exhausted stub 30%/80% and minimap mark; FieldHudAuthority green; rendered chain did not stage it |
-| `SPEC-STANCE-002` | BLOCKED | SRC | — | 8750287 | 2026-09-11 | Defensive default does not answer threats in weapon range; idle defenders inflicted no damage in scratch probes |
+| `SPEC-STANCE-002` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-22.log | e925a75 | 2026-09-11 | Defensive default answers attackers in weapon range; the 400 cm pursuit is not built |
 | `SPEC-TUT-008` | AGENT VERIFIED | PKG-REND | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/readiness-review-8 | 46d841c | 2026-09-11 | All ten readiness lessons earnable; lessons 6-10 each committed in a rendered practice run (readiness review driver); practice-mode gate and staging defects repaired; owner play open |
 | `SPEC-UI-008` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged |
 | `TBR-SCP-012` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-17 | 34ca1a0 | 2026-09-11 | First bounded rule landed: opponent Future Well commands withheld in authored campaign operations (bridge, ECHOES_AI_WELL_DOCTRINE); per-mission doctrine remains D7 |
@@ -5720,6 +5720,29 @@ home, with no hostile within nine tiles of it and no population headroom for a r
 the fight; the existing retreat contract (withdraw when hurt in the field) is unchanged and its native
 test still passes. `test_sim-16.log` 150/150 in all three configurations. Matrix re-run pending.
 
+**Idle units defend themselves (schema 36, SPEC-STANCE-002 / SPEC-CMB-007).** The strategy-validation
+lane reported that units do not acquire threats at weapon range; reproduced natively here
+(`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-18..22`): six idle defenders lost 6-0 to ten attackers and inflicted no damage at all,
+while the same six on Hold hurt four. Cause: the tick loop's order switch has no case for
+`OrderType::None`, so an idle unit never acquires anything. Two parts of that lane's report did not
+reproduce: Hold acquires at weapon range plus both footprint half-extents (that is why it measured 7.4
+tiles against a 6.5-tile weapon, wider rather than later, and the number moved when role bodies grew the
+bodies), and attack-moving defenders did fight here, killing five of ten, so they were dying on the
+approach rather than failing to acquire. Fixed as `kIdleDefensiveFireReplayVersion = 36` with the usual
+legacy flag, so older recordings keep silent idle units. Scope is return fire only: an idle unit shoots
+back at something already attacking its own seat. The full SPEC-CMB-007 hierarchy was built first and
+broke seven native contracts, because the simulation stores "ordered to Stop" and "has no orders" as the
+same state, so idle units shot passive things (a molting Warform, a Cairnback cover, a mobile Waystone)
+that those tests require alive. Giving Stop its own stand-down stance needs a new entity field and a
+snapshot bump; recorded here as the follow-up rather than smuggled in. Two fixtures changed with the
+behaviour: the ballistic cover regression now counts the attacker's own projectile (the attacked soldier
+returns fire, so the total is no longer one), and the terrain-memory test clears the defending soldier
+with three heavies before demolishing the Barracks. That second one is worth stating plainly: a Kharuun
+soldier deals 25 a shot against a Meridian heavy's 10, so a lone demolisher dies at about tick 100 and the
+old fixture only passed because the defect kept the defender silent. Every balance sweep that measured
+defence before this carries the same distortion. `test_sim-22.log` 150/150 in all three configurations.
+Unreal suite and a matrix re-run are pending.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
@@ -6067,3 +6090,5 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T22:18Z — `SPEC-CMB-007` → **BLOCKED**; class SRC; evidence —; commit df85574; Narrowed 2026-09-11: Hold acquires as specified (interaction range adds footprints); the defect is idle units never acquiring or firing. D3 lane owns the fix, replay schema 36
 - 2026-09-11T22:18Z — `TBR-STR-002` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar; commit df85574; Glass Scar rows 30-34 wired as low ground; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); runtime proof that a crossing unit is blind to the rim
 - 2026-09-11T22:31Z — `SPEC-BAL-011` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar; commit 46f1c14; BAL-STR-3 native blind 30/30, scouted 0/30, flat 0/30; Glass Scar wiring verified in Unreal 138/139
+- 2026-09-11T22:32Z — `SPEC-CMB-007` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-22.log; commit e925a75; Idle entities acquire and return fire under schema 36; return-fire scope only, full hierarchy deferred with the Stop stand-down stance
+- 2026-09-11T22:32Z — `SPEC-STANCE-002` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-22.log; commit e925a75; Defensive default answers attackers in weapon range; the 400 cm pursuit is not built

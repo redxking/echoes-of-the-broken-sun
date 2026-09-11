@@ -90,7 +90,19 @@ inline constexpr std::uint32_t kUnreachableSlotReleaseReplayVersion = 34;
 // chokepoint sets the width of a fight. The footprint still governs terrain
 // clearance and which unit yields. Older recordings keep footprint spacing.
 inline constexpr std::uint32_t kRoleBodyReplayVersion = 35;
-inline constexpr std::uint32_t kReplayVersion = kRoleBodyReplayVersion;
+// Schema 36 (2026-09-11, SPEC-STANCE-002 / SPEC-CMB-007): Defensive is the
+// default stance, so an entity with no order answers threats inside its own
+// weapon range without moving. The tick loop had no idle branch at all: a
+// unit that was never given an order, or was told to Stop, stood and died
+// without firing a shot (six idle defenders lost 6-0 to ten attackers and
+// inflicted no damage at all, while the same defenders on Hold killed four).
+// Acquisition follows SPEC-CMB-007's hierarchy: an attacker already firing on
+// this seat's entities, then mobile armed combatants, then armed structures,
+// then unarmed workers, ties by lowest remaining health and then by id.
+// Pursuit stays at zero here; SPEC-STANCE-002's 400 cm chase is not built.
+// Older recordings keep the silent idle units they were made with.
+inline constexpr std::uint32_t kIdleDefensiveFireReplayVersion = 36;
+inline constexpr std::uint32_t kReplayVersion = kIdleDefensiveFireReplayVersion;
 // SPEC-UNIT-003/REL-FAC-005 fixed-step commitments, independent of render rate.
 inline constexpr Tick kBulwarkDeployTicks = 20;
 inline constexpr Tick kBulwarkPackTicks = 15;
@@ -1718,6 +1730,8 @@ private:
     void ProcessDeliver(Entity& worker);
     void ProcessBuild(Entity& worker);
     void ProcessRepair(Entity& worker);
+    void ProcessIdleDefensiveFire(Entity& defender,
+                                  std::vector<PendingDamage>& pendingDamage);
     void ProcessAttack(Entity& attacker,
                        std::vector<PendingDamage>& pendingDamage);
     void ProcessAttackMove(
@@ -1821,6 +1835,7 @@ private:
     bool legacyFiringLaneReplaySemantics_ = false;
     bool legacyUnreachableSlotReplaySemantics_ = false;
     bool legacyRoleBodyReplaySemantics_ = false;
+    bool legacyIdleDefensiveFireSemantics_ = false;
     bool legacyBulwarkReplaySemantics_ = false;
     bool legacyConstructionAssistReplaySemantics_ = false;
     void UpdateProjectiles();

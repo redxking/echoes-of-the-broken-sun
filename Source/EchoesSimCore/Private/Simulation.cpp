@@ -6537,6 +6537,60 @@ void Simulation::ProcessAttackMove(
     }
 }
 
+void Simulation::ProcessIdleDefensiveFire(
+    Entity& defender,
+    std::vector<PendingDamage>& pendingDamage) {
+    if (defender.attackDamage <= 0 || defender.attackCooldownTicks != 0 ||
+        IsBuilding(defender.type)) {
+        return;
+    }
+    const Entity* best = nullptr;
+    std::int32_t bestTier = 4;
+    for (const Entity& candidate : entities_) {
+        if (!config_.IsHostile(defender.owner, candidate.owner) ||
+            candidate.hitPoints <= 0 || IsProtectedCommandCore(candidate) ||
+            !IsEntityVisibleTo(defender.owner, candidate.id) ||
+            !InInteractionRange(defender, candidate, defender.attackRangeRaw) ||
+            !HasLineOfFire(defender, candidate)) {
+            continue;
+        }
+        // SPEC-CMB-007 tier 1 only: an attacker already firing on this seat.
+        // The full hierarchy (any mobile armed combatant, then armed
+        // structures, then workers) is deliberately not applied to an idle
+        // unit: the simulation records "ordered to Stop" and "has no orders"
+        // as the same state, so firing on passive targets would make Stop
+        // unable to mean cease fire, and it broke seven native contracts that
+        // stop an attacker beside a molting Warform, a Cairnback cover and a
+        // mobile Waystone. Returning fire needs no such distinction. Giving
+        // Stop its own stance needs entity state and a snapshot bump; it is
+        // recorded as the follow-up, not smuggled in here.
+        const Entity* candidateTarget =
+            candidate.order.target != 0 ? FindEntity(candidate.order.target)
+                                        : nullptr;
+        const bool firingOnUs =
+            (candidate.order.type == OrderType::Attack ||
+             candidate.order.type == OrderType::AttackMove ||
+             candidate.order.type == OrderType::Hold) &&
+            candidateTarget != nullptr &&
+            candidateTarget->owner == defender.owner;
+        if (!firingOnUs) {
+            continue;
+        }
+        const std::int32_t tier = 0;
+        if (best == nullptr || tier < bestTier ||
+            (tier == bestTier &&
+             (candidate.hitPoints < best->hitPoints ||
+              (candidate.hitPoints == best->hitPoints &&
+               candidate.id < best->id)))) {
+            best = &candidate;
+            bestTier = tier;
+        }
+    }
+    if (best != nullptr) {
+        TryFireAt(defender, *best, pendingDamage);
+    }
+}
+
 void Simulation::ProcessHold(
     Entity& attacker,
     std::vector<PendingDamage>& pendingDamage) {
@@ -7101,6 +7155,13 @@ void Simulation::ProcessEntityOrders() {
         }
         switch (entity.order.type) {
             case OrderType::None:
+                // SPEC-STANCE-002: Defensive is the default stance, so an
+                // entity with no order still answers what comes inside its
+                // weapon range. It does not move (SPEC-STANCE-002's 400 cm
+                // pursuit is not built here).
+                if (!legacyIdleDefensiveFireSemantics_) {
+                    ProcessIdleDefensiveFire(entity, pendingDamage);
+                }
                 break;
             case OrderType::Move:
                 if (ShouldPackAtDestination(entity) ||
@@ -11863,6 +11924,7 @@ void Simulation::CaptureReplayBaseline() {
     legacyFiringLaneReplaySemantics_ = false;
     legacyUnreachableSlotReplaySemantics_ = false;
     legacyRoleBodyReplaySemantics_ = false;
+    legacyIdleDefensiveFireSemantics_ = false;
     replayForfeitingPlayer_ = kNeutralPlayer;
 }
 
@@ -11913,6 +11975,8 @@ bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
         prefix.version < kUnreachableSlotReleaseReplayVersion;
     restored.legacyRoleBodyReplaySemantics_ =
         prefix.version < kRoleBodyReplayVersion;
+    restored.legacyIdleDefensiveFireSemantics_ =
+        prefix.version < kIdleDefensiveFireReplayVersion;
     restored.ResolveAegisPower();
     if (replayed->StateChecksum() != restored.StateChecksum()) {
         SetError(error, "replay prefix state does not match restored state");
@@ -11997,6 +12061,8 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
         replay.version < kUnreachableSlotReleaseReplayVersion;
     simulation->legacyRoleBodyReplaySemantics_ =
         replay.version < kRoleBodyReplayVersion;
+    simulation->legacyIdleDefensiveFireSemantics_ =
+        replay.version < kIdleDefensiveFireReplayVersion;
     // Loading a save applies current network rules. Playback must restore the
     // original rules before its first checksum, including zero-tick records.
     simulation->ResolveAegisPower();

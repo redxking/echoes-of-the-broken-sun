@@ -6692,10 +6692,46 @@ void TestExploredTerrainAndPermanentObjectMemory() {
         0, Faction::MeridianCompact, EntityType::HeavyUnit,
         Vec2::FromTiles(15, 16));
     REQUIRE(breaker != 0);
-    Command demolish = MakeCommand(
-        simulation.CurrentTick(), 0, 3, CommandType::Attack, breaker);
-    demolish.target = enemyBarracks;
-    REQUIRE(simulation.QueueCommand(demolish));
+    // Under schema 36 an idle unit returns fire (SPEC-STANCE-002), so the
+    // Kharuun soldier beside the Barracks shoots the demolisher for as long
+    // as it stands there. This section is about a watched object's memory
+    // being cleared when it dies, not about out-trading a garrison, so the
+    // defender is cleared first and the building demolished afterwards.
+    // One heavy cannot do it: the Kharuun soldier deals 25 a shot against the
+    // heavy's 10, so a lone demolisher dies at about tick 100 with the
+    // defender still standing. It only used to win because idle units never
+    // fired. Three heavies clear the defender, then break the building.
+    const EntityId breakerB = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::HeavyUnit,
+        Vec2::FromTiles(15, 15));
+    const EntityId breakerC = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::HeavyUnit,
+        Vec2::FromTiles(15, 17));
+    REQUIRE(breakerB != 0 && breakerC != 0);
+    std::uint64_t demolitionSequence = 4;
+    for (const EntityId hammer : {breaker, breakerB, breakerC}) {
+        Command clearDefender = MakeCommand(
+            simulation.CurrentTick(), 0, demolitionSequence++,
+            CommandType::Attack, hammer);
+        clearDefender.target = enemySoldier;
+        REQUIRE(simulation.QueueCommand(clearDefender));
+    }
+    for (Tick guard = 0;
+         guard < 4000 && simulation.FindEntity(enemySoldier) != nullptr;
+         ++guard) {
+        simulation.Step();
+    }
+    REQUIRE(simulation.FindEntity(enemySoldier) == nullptr);
+    for (const EntityId hammer : {breaker, breakerB, breakerC}) {
+        if (simulation.FindEntity(hammer) == nullptr) {
+            continue;
+        }
+        Command demolish = MakeCommand(
+            simulation.CurrentTick(), 0, demolitionSequence++,
+            CommandType::Attack, hammer);
+        demolish.target = enemyBarracks;
+        REQUIRE(simulation.QueueCommand(demolish));
+    }
     for (Tick guard = 0;
          guard < 4000 && simulation.FindEntity(enemyBarracks) != nullptr;
          ++guard) {
