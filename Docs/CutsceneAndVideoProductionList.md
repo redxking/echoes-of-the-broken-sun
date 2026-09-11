@@ -17,6 +17,13 @@ This inventory was checked against the working tree on 2026-09-07 (main, base co
 
 In-game cutscenes must use Unreal Level Sequencer and registered game assets, not pre-rendered video playback (`REL-CIN-001`). Promotional videos are separate captured deliverables. The inventory summarizes required content. The detailed briefs below reproduce existing mission shot descriptions and spoken lines, then add explicitly proposed camera, edit and sound treatments. These proposals do not change canon or establish owner acceptance.
 
+## Quality target and cinematic direction
+
+**Quality Bar (Owner Directive, 2026-09-11):** The visual storytelling, directing, and production values for all cinematics—both promotional videos and in-game cutscenes—must meet the quality standard of **Blizzard's World of Warcraft cinematics**. 
+- Pre-rendered promotional videos and world prologues should match the epic, high-fidelity narrative scale of WoW expansion cinematics.
+- In-game mission cutscenes should match the standard of WoW's modern high-quality in-engine story cutscenes (expert camera work, dramatic lighting, and fluid character animation).
+- While WoW is the quality and directorial target, we must strictly preserve the *Echoes of the Broken Sun* original IP, art style, and lore. Use this benchmark to establish the ambition of the camera work, emotional weight, and pacing, never as permission to copy Blizzard's IP.
+
 ## Front door
 
 | ID | Item | Content and purpose | Timing / basis |
