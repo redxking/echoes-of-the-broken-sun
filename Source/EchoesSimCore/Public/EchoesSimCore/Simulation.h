@@ -62,7 +62,12 @@ inline constexpr std::uint32_t kGroundOccupancyReplayVersion = 30;
 // ground between two footprints) searches outward over exactly passable tile
 // centres for the nearest field-reachable tile instead of standing still.
 inline constexpr std::uint32_t kMaskedCorridorReplayVersion = 31;
-inline constexpr std::uint32_t kReplayVersion = kMaskedCorridorReplayVersion;
+// Schema 32 (owner ruling 2026-09-11, REL-FAC-002.PROD): a Meridian Array
+// Foundry may stand outside the power network but neither starts nor advances
+// unit production until a network node reaches it. Older recordings keep the
+// ungated production they were made with.
+inline constexpr std::uint32_t kPoweredProductionReplayVersion = 32;
+inline constexpr std::uint32_t kReplayVersion = kPoweredProductionReplayVersion;
 // SPEC-UNIT-003/REL-FAC-005 fixed-step commitments, independent of render rate.
 inline constexpr Tick kBulwarkDeployTicks = 20;
 inline constexpr Tick kBulwarkPackTicks = 15;
@@ -327,6 +332,10 @@ enum class ProductionResult : std::uint8_t {
     // kMobileEntityLimit. Distinct from CapacityReached so the player is told
     // which limit binds.
     MobileEntityLimitReached = 10,
+    // REL-FAC-002.PROD: a completed Meridian Foundry outside the power
+    // network. Distinct from ProducerIncomplete so the player is told to
+    // extend a Power Link chain rather than to wait for construction.
+    ProducerUnpowered = 11,
 };
 
 enum class ProductionStartBlockReason : std::uint8_t {
@@ -341,6 +350,7 @@ enum class ProductionStartBlockReason : std::uint8_t {
     QueueFull = 8,
     UnsupportedUnit = 9,
     MobileEntityLimit = 10,
+    Unpowered = 11,
 };
 
 enum class ResearchResult : std::uint8_t {
@@ -980,6 +990,9 @@ struct ProducerQueueState final {
     bool pausedForSpawn = false;
     bool spawnBlockedAlert = false;
     bool rallyAlert = false;
+    // REL-FAC-002.PROD: the producer stands outside its power network, so the
+    // active item holds its progress and waiting items do not start.
+    bool unpowered = false;
     std::vector<ProductionQueueItem> waiting{};
     std::vector<Order> rallyRoute{};
 
@@ -998,6 +1011,11 @@ public:
     // Transient only: this observation never enters snapshots or checksums.
     [[nodiscard]] bool UsesBulwarkCommitmentRules() const {
         return usesBulwarkCommitmentRules_;
+    }
+    // REL-FAC-002.PROD: current rules gate Meridian Foundry production on
+    // network power; false only while replaying a pre-schema-32 recording.
+    [[nodiscard]] bool ProductionRequiresNetworkPower() const {
+        return productionRequiresNetworkPower_;
     }
     [[nodiscard]] const PlayerState& Player() const { return player_; }
     [[nodiscard]] std::uint64_t DecisionSeed() const { return decisionSeed_; }
@@ -1050,6 +1068,18 @@ public:
     [[nodiscard]] Terrain TerrainAt(std::int32_t tileX,
                                     std::int32_t tileY) const;
     [[nodiscard]] bool IsPositionPassable(Vec2 position) const;
+    /** Configured cost of a unit this player's faction produces. Presentation
+     *  reads it so a command tile can carry the price; transient only. */
+    [[nodiscard]] ResourcePool ProductionCost(EntityType unitType) const;
+    /** Configured cost of a structure this player's faction places. */
+    [[nodiscard]] ResourcePool BuildCost(EntityType structureType) const;
+    /** Why a Produce order at this producer would be refused or would wait,
+     *  judged from this scoped view alone. Busy means the producer accepts a
+     *  queued item. Never reports EntityCapacity: the view carries no entity
+     *  registry. Presentation only; admission stays with the simulation. */
+    [[nodiscard]] ProductionStartBlockReason ProductionStartBlockReasonFor(
+        EntityId producer,
+        EntityType unitType) const;
 
 private:
     friend class Simulation;
@@ -1058,6 +1088,7 @@ private:
     SimulationConfig config_{};
     Tick currentTick_ = 0;
     bool usesBulwarkCommitmentRules_ = true;
+    bool productionRequiresNetworkPower_ = true;
     PlayerState player_{};
     std::uint64_t decisionSeed_ = 0;
     std::int32_t populationUsed_ = 0;
@@ -1551,6 +1582,9 @@ private:
         const Entity& entity) const;
     [[nodiscard]] bool IsAegisPost(const Entity& entity) const;
     [[nodiscard]] bool IsAegisNetworkPowered(const Entity& aegis) const;
+    // REL-FAC-002.PROD: a completed Meridian Foundry produces only while a
+    // network node reaches it. Every other producer is always powered.
+    [[nodiscard]] bool IsProducerPowered(const Entity& producer) const;
     [[nodiscard]] bool IsPositionInMeridianNetwork(PlayerId player,
                                                    Vec2 position) const;
     [[nodiscard]] bool IsProtectedCommandCore(const Entity& entity) const;
@@ -1723,6 +1757,7 @@ private:
     bool legacyLinkReplaySemantics_ = false;
     bool legacyOpenGroundReplaySemantics_ = false;
     bool legacyMaskedCorridorReplaySemantics_ = false;
+    bool legacyPoweredProductionReplaySemantics_ = false;
     bool legacyBulwarkReplaySemantics_ = false;
     bool legacyConstructionAssistReplaySemantics_ = false;
     void UpdateProjectiles();

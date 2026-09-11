@@ -48,6 +48,13 @@ public:
         float InScale);
     void SetPresentationLabel(UTextBlock* Label) { PresentationLabel = Label; }
     UTextBlock* GetPresentationLabel() const { return PresentationLabel; }
+    /** Command-card tiles carry the binding in a small corner readout instead
+     * of a second label line, so a hotkey never changes the tile height. */
+    void SetPresentationHotkey(UTextBlock* Label) { HotkeyLabel = Label; }
+    UTextBlock* GetPresentationHotkey() const { return HotkeyLabel; }
+    /** Console controls show their label only and carry the detail in the
+     * tooltip, so a queue's four controls fit one non-scrolling row. */
+    void SetCompactPresentation(bool bInCompact) { bCompactPresentation = bInCompact; }
     bool Activate();
     [[nodiscard]] EEchoesFieldHudAction GetAction() const { return Action; }
     [[nodiscard]] int32 GetArgument() const { return Argument; }
@@ -71,7 +78,9 @@ private:
     bool bHighContrast = false;
     bool bPointerHovered = false;
     bool bKeyboardFocused = false;
+    bool bCompactPresentation = false;
     UPROPERTY(Transient) TObjectPtr<UTextBlock> PresentationLabel;
+    UPROPERTY(Transient) TObjectPtr<UTextBlock> HotkeyLabel;
 };
 
 UCLASS(NotBlueprintable)
@@ -124,6 +133,9 @@ public:
     /** Full resource telemetry hit target when the semantic monitor action is available. */
     UEchoesFieldHudActionButton* GetResourceActionButton() const { return ResourceActionButton; }
     void SetSelectionTelemetry(const FEchoesFieldHudSelectionView& Selection);
+    /** A production cancellation review replaces the entity telemetry: the
+     * refund facts and Back/Confirm must fit the card without scrolling. */
+    void SetTelemetrySuppressed(bool bSuppressed);
     int32 GetHealthReadoutCount() const { return HealthBars.Num(); }
     UProgressBar* GetHealthReadout(int32 Index) const { return HealthBars.IsValidIndex(Index) ? HealthBars[Index].Get() : nullptr; }
     [[nodiscard]] EEchoesFieldHudSection GetSection() const { return Section; }
@@ -157,6 +169,7 @@ protected:
 
 private:
     void RebuildContent();
+    void RefreshSectionTooltip();
     bool CanRefreshInPlace(
         const TArray<FText>& InLines,
         const TArray<FEchoesFieldHudControl>& InControls,
@@ -170,6 +183,7 @@ private:
     bool bHighContrast = false;
     float Scale = 1.0f;
     bool bHasEndpoint = false;
+    bool bTelemetrySuppressed = false;
     FText EndpointText;
     FEchoesFieldHudResourceView ResourceTelemetry;
     UPROPERTY(Transient) TArray<TObjectPtr<UTextBlock>> ResourceLabels;
@@ -356,6 +370,8 @@ public:
     [[nodiscard]] FVector2D ResolveConsolePixels() const;
     /** The confined layout for this frame, in the space above. */
     [[nodiscard]] struct FEchoesHudLayout ResolveConsoleLayout() const;
+    /** View.HudScale grown by this surface's DPI (FEchoesHudLayout::EffectiveScale). */
+    [[nodiscard]] float EffectiveHudScale() const;
     UEchoesFieldHudWidget(const FObjectInitializer& ObjectInitializer);
     void Configure(AEchoesPlayerController* InController);
     void SetView(const FEchoesFieldHudView& InView);

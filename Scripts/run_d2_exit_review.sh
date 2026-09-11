@@ -61,7 +61,7 @@ mkdir -p "$evidence_dir" "$captures" "$scope_root/SaveGames" "$scope_root/UserDi
 # that flag would have avoided.
 "$editor" "$project" /Engine/Maps/Entry \
   -game -nop4 -nosplash -nosound \
-  -windowed -ResX=1280 -ResY=720 -ForceRes \
+  -windowed -ResX="${ECHOES_D2_EXIT_REVIEW_RESX:-1280}" -ResY="${ECHOES_D2_EXIT_REVIEW_RESY:-720}" -ForceRes \
   -UserDir="$scope_root/UserDir" \
   -EchoesSaveGameDirectory="$scope_root/SaveGames" \
   -EchoesD2ExitReview \

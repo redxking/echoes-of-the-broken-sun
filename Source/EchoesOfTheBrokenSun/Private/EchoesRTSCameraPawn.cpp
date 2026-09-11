@@ -788,12 +788,26 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
             MouseX >= 0.0f && MouseY >= 0.0f &&
             MouseX < ViewportWidth && MouseY < ViewportHeight)
         {
+            // The battlefield ends where the bottom console begins (owner
+            // direction, 2026-09-11): the downward edge zone sits just above
+            // the console's top edge, and a pointer anywhere on the console
+            // or another HUD panel pans nothing. Without this the only way
+            // to scroll down was to park the pointer on the command card.
+            const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
+                FVector2D(ViewportWidth, ViewportHeight),
+                Settings ? Settings->GetHudScale() : 1.0f,
+                EchoesController != nullptr && !EchoesController->GetStatusMessage().IsEmpty());
+            const FVector2D Point(MouseX, MouseY);
+            const bool bOnChrome = Layout.IsPointerOnChrome(Point);
+            const float BattlefieldBottom = Layout.bBottomBarVisible
+                ? static_cast<float>(Layout.BottomBar.Min.Y)
+                : static_cast<float>(ViewportHeight);
             const bool bMouseInsideHorizontalEdges =
                 MouseX > EdgePanPixels &&
                 MouseX < static_cast<float>(ViewportWidth) - EdgePanPixels;
             const bool bMouseInsideVerticalEdges =
                 MouseY > EdgePanPixels &&
-                MouseY < static_cast<float>(ViewportHeight) - EdgePanPixels;
+                MouseY < BattlefieldBottom - EdgePanPixels;
             if (!bEdgePanArmed)
             {
                 // Do not let a pointer parked at an edge during application launch
@@ -801,22 +815,28 @@ void AEchoesRTSCameraPawn::Tick(float DeltaSeconds)
                 bEdgePanArmed =
                     bMouseInsideHorizontalEdges && bMouseInsideVerticalEdges;
             }
-            else if (MouseX <= EdgePanPixels)
+            else if (bOnChrome)
             {
-                EdgeInput.Y = -1.0f;
+                // Inside the HUD: no edge input in either axis.
             }
-            else if (MouseX >= static_cast<float>(ViewportWidth) - EdgePanPixels)
+            else
             {
-                EdgeInput.Y = 1.0f;
-            }
-            if (bEdgePanArmed && MouseY <= EdgePanPixels)
-            {
-                EdgeInput.X = 1.0f;
-            }
-            else if (bEdgePanArmed &&
-                     MouseY >= static_cast<float>(ViewportHeight) - EdgePanPixels)
-            {
-                EdgeInput.X = -1.0f;
+                if (MouseX <= EdgePanPixels)
+                {
+                    EdgeInput.Y = -1.0f;
+                }
+                else if (MouseX >= static_cast<float>(ViewportWidth) - EdgePanPixels)
+                {
+                    EdgeInput.Y = 1.0f;
+                }
+                if (MouseY <= EdgePanPixels)
+                {
+                    EdgeInput.X = 1.0f;
+                }
+                else if (MouseY >= BattlefieldBottom - EdgePanPixels)
+                {
+                    EdgeInput.X = -1.0f;
+                }
             }
         }
     }

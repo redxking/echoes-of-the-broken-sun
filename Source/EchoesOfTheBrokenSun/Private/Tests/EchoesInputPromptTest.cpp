@@ -47,6 +47,29 @@ bool FEchoesInputPromptTest::RunTest(const FString& Parameters)
         Multiple.Contains(Expected) && Multiple.Contains(EKeys::L.GetDisplayName().ToString()) && Multiple.Contains(TEXT(" / ")));
     TestTrue(TEXT("No command has no invented input hint"),
         FEchoesInputPrompt::Command(EEchoesCommandDeckAction::None).IsEmpty());
+    // Owner finding 2026-09-11: ";" and "'" printed as "Semicolon" and
+    // "Apostrophe" across the tile corners. The glyph form keeps the symbol;
+    // the long form stays for prose.
+    {
+        TArray<FInputActionKeyMapping> Current;
+        Settings->GetActionMappingByName(Name, Current);
+        for (const auto& M : Current) Settings->RemoveActionMapping(M, false);
+        Settings->AddActionMapping(FInputActionKeyMapping(Name, EKeys::Semicolon), false);
+        TestEqual(TEXT("Prose keeps the key's long name"),
+            FEchoesInputPrompt::Command(EEchoesCommandDeckAction::AttackMove).ToString(),
+            EKeys::Semicolon.GetDisplayName().ToString());
+        TestEqual(TEXT("A tile corner shows the punctuation symbol"),
+            FEchoesInputPrompt::CommandGlyph(EEchoesCommandDeckAction::AttackMove).ToString(),
+            FString(TEXT(";")));
+        Settings->AddActionMapping(FInputActionKeyMapping(Name, EKeys::Apostrophe, true), false);
+        const FString Glyphs = FEchoesInputPrompt::CommandGlyph(EEchoesCommandDeckAction::AttackMove).ToString();
+        TestTrue(TEXT("Glyph alternatives keep modifiers and symbols"),
+            Glyphs.Contains(TEXT(";")) && Glyphs.Contains(TEXT("Shift+'")) && Glyphs.Contains(TEXT(" / ")));
+        TestTrue(TEXT("Letters are already short"),
+            FEchoesInputPrompt::Glyph(EKeys::K, false, false, false, false).ToString() == TEXT("K"));
+        TestTrue(TEXT("No command has no invented glyph either"),
+            FEchoesInputPrompt::CommandGlyph(EEchoesCommandDeckAction::None).IsEmpty());
+    }
     // This test never saves mappings or rebuilds a player's active keymap.
     return true;
 }

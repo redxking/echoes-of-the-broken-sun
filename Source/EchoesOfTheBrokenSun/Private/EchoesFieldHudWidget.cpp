@@ -8,6 +8,7 @@
 #include "Engine/Font.h"
 #include "Components/ProgressBar.h"
 #include "Components/SizeBox.h"
+#include "Components/SizeBoxSlot.h"
 #include "Brushes/SlateColorBrush.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
 
@@ -20,6 +21,10 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
+#include "Components/ScaleBox.h"
+#include "Components/ScaleBoxSlot.h"
 #include "Components/ScrollBox.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
@@ -138,6 +143,79 @@ void ConfigureText(
         bReadout, FMath::Clamp(FMath::RoundToInt(BaseSize * Scale), 10, 36)));
 }
 
+/** One rounded, outlined panel frame for every console section. Both the
+ * rebuild and the in-place refresh paths must apply the same brush: the
+ * refresh path used to tint an already-coloured brush with the panel colour a
+ * second time, which darkened refreshed panels against rebuilt ones. */
+void ApplyPanelFrame(
+    UBorder* Border,
+    EEchoesFieldHudSection Section,
+    bool bHighContrast,
+    float Scale)
+{
+    if (Border == nullptr)
+    {
+        return;
+    }
+    const bool bWarningEdge = Section == EEchoesFieldHudSection::Objectives ||
+        Section == EEchoesFieldHudSection::Status ||
+        Section == EEchoesFieldHudSection::ResourceLedger;
+    Border->SetBrush(FSlateRoundedBoxBrush(
+        PanelColor(bHighContrast),
+        4.0f * Scale,
+        bWarningEdge ? ToneColor(EEchoesFieldHudTone::Warning, bHighContrast)
+                     : AccentColor(bHighContrast),
+        1.5f * Scale));
+    Border->SetBrushColor(FLinearColor::White);
+}
+
+bool IsCompactSection(EEchoesFieldHudSection Section)
+{
+    return Section == EEchoesFieldHudSection::Status ||
+        Section == EEchoesFieldHudSection::Subtitle ||
+        Section == EEchoesFieldHudSection::ResourceLedger;
+}
+
+/** Console text sizes, in points before the section scale.
+ *
+ * The bottom console is 252 units tall at 100% and the command card inside it
+ * is 224. At the previous 18-point body size the card's two context lines and
+ * the selection card's role line filled those panels before their controls
+ * were reached, and the 3x3 command grid scrolled out of sight
+ * (d2-exit-review-20260911T1120Z-schema31, captures 05 and 10). These sizes
+ * keep every panel's controls on screen at 100% on a 720-line surface. */
+int32 TitleFontSize(EEchoesFieldHudSection Section)
+{
+    return IsCompactSection(Section) || Section == EEchoesFieldHudSection::CommandCard
+        ? 12
+        : 14;
+}
+
+int32 LineFontSize(EEchoesFieldHudSection Section)
+{
+    if (IsCompactSection(Section))
+    {
+        return 18;
+    }
+    return Section == EEchoesFieldHudSection::CommandCard ? 12 : 16;
+}
+
+FLinearColor LineColor(EEchoesFieldHudSection Section, bool bHighContrast)
+{
+    return Section == EEchoesFieldHudSection::CommandCard
+        ? ToneColor(EEchoesFieldHudTone::Muted, bHighContrast)
+        : TextColor(bHighContrast);
+}
+
+/** Console panels that never scroll: their lines are single-line with an
+ * ellipsis and the full text travels in the panel tooltip. */
+bool IsNoWrapSection(EEchoesFieldHudSection Section)
+{
+    return Section == EEchoesFieldHudSection::CommandCard ||
+        Section == EEchoesFieldHudSection::Selection ||
+        Section == EEchoesFieldHudSection::Objectives;
+}
+
 FText JoinedLine(const FEchoesFieldHudLine& Line)
 {
     if (Line.Label.IsEmpty())
@@ -160,14 +238,73 @@ FText JoinedLine(const FEchoesFieldHudLine& Line)
  * thing is selected; a mixed selection keeps the per-entry vitals readable and
  * shows purpose alone, which is the part that still identifies each entry.
  */
+/**
+ * A deposit's stock line, or a unit's order and damage. The model carries no
+ * armor value, so none is printed: the owner's 2026-09-11 play test read
+ * "ARMOR 0" on every unit and rightly called it wrong.
+ */
+FText SelectionVitals(const FEchoesFieldHudSelectionEntry& Entry)
+{
+    if (Entry.bDeposit)
+    {
+        if (Entry.ResourceRemaining < 0)
+        {
+            return NSLOCTEXT("EchoesFieldHud", "DepositStockUnknown", "MATTER  STOCK UNKNOWN");
+        }
+        if (Entry.ResourceRemaining == 0)
+        {
+            return NSLOCTEXT("EchoesFieldHud", "DepositStockExhausted", "MATTER  EXHAUSTED");
+        }
+        return FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "DepositStockRemaining", "MATTER  {0} REMAINING"),
+            FText::AsNumber(Entry.ResourceRemaining));
+    }
+    if (Entry.Damage > 0)
+    {
+        return FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "SelectionVitals", "{0}   DAMAGE {1}"),
+            Entry.Order, Entry.Damage);
+    }
+    return Entry.Order;
+}
+
+/** First line of a selection entry: name, count and health, or a deposit's stock. */
+FText SelectionHeadline(const FEchoesFieldHudSelectionEntry& Entry)
+{
+    if (Entry.bDeposit)
+    {
+        const FText Stock = Entry.ResourceRemaining < 0
+            ? NSLOCTEXT("EchoesFieldHud", "DepositHeadlineUnknown", "STOCK UNKNOWN")
+            : Entry.ResourceRemaining == 0
+                ? NSLOCTEXT("EchoesFieldHud", "DepositHeadlineExhausted", "EXHAUSTED")
+                : FText::Format(
+                    NSLOCTEXT("EchoesFieldHud", "DepositHeadlineRemaining", "{0} MATTER REMAINING"),
+                    FText::AsNumber(Entry.ResourceRemaining));
+        return FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "DepositHeadline", "{0}     {1}"), Entry.Name, Stock);
+    }
+    return FText::Format(NSLOCTEXT("EchoesFieldHud", "HealthTelemetry", "{0}  ×{1}     HEALTH {2}/{3}"),
+        Entry.Name, Entry.Count, Entry.HitPoints, Entry.MaxHitPoints);
+}
+
+/** Fill of the entry's track: health, or a deposit's stock against the standard 1,500 (SPEC-RES-003). */
+float SelectionFill(const FEchoesFieldHudSelectionEntry& Entry)
+{
+    if (Entry.bDeposit)
+    {
+        if (Entry.ResourceRemaining <= 0) return 0.f;
+        return FMath::Clamp(static_cast<float>(Entry.ResourceRemaining) /
+            static_cast<float>(FMath::Max(1500, Entry.ResourceRemaining)), 0.f, 1.f);
+    }
+    return Entry.MaxHitPoints > 0
+        ? FMath::Clamp(static_cast<float>(Entry.HitPoints) / Entry.MaxHitPoints, 0.f, 1.f) : 0.f;
+}
+
 FText SelectionDetails(
     const FEchoesFieldHudSelectionEntry& Entry,
     const bool bSingleSelection)
 {
-    FText Summary = FText::Format(
-        NSLOCTEXT("EchoesFieldHud", "SelectionVitals",
-            "{0}   ARMOR {1}   DAMAGE {2}"),
-        Entry.Order, Entry.Armor, Entry.Damage);
+    FText Summary = SelectionVitals(Entry);
     if (!Entry.Role.IsEmpty())
     {
         Summary = FText::Format(
@@ -223,6 +360,48 @@ FText SelectionDetails(
     if (!Entry.Faction.IsEmpty())
         Summary = FText::Format(NSLOCTEXT("EchoesFieldHud", "SelectionFaction", "{0}  ·  {1}"), Entry.Faction, Summary);
     return Summary;
+}
+
+/** The lines of a selection entry that fit the non-scrolling card: identity,
+ * vitals and (for a lone, non-producing selection) purpose. The full
+ * SelectionDetails answer stays reachable through the card's tooltip. */
+FText SelectionCompact(
+    const FEchoesFieldHudSelectionEntry& Entry,
+    const bool bSingleSelection,
+    const bool bBrief)
+{
+    TArray<FText> Identity;
+    if (!Entry.Faction.IsEmpty()) Identity.Add(Entry.Faction);
+    if (!Entry.Role.IsEmpty())
+    {
+        Identity.Add(FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "CompactRole", "ROLE  {0}"), Entry.Role));
+    }
+    TArray<FText> Rows;
+    if (!Identity.IsEmpty())
+    {
+        Rows.Add(FText::Join(FText::FromString(TEXT("  ·  ")), Identity));
+    }
+    FText Vitals = SelectionVitals(Entry);
+    if (Entry.CargoCapacity > 0)
+    {
+        Vitals = FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "CompactCargo", "{0}   CARGO {1}/{2}"),
+            Vitals, Entry.Cargo, Entry.CargoCapacity);
+    }
+    if (!Entry.Production.IsEmpty())
+    {
+        Vitals = FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "CompactProduction", "{0}   PRODUCTION {1} {2}%"),
+            Vitals, Entry.Production, Entry.ProductionPercent);
+    }
+    Rows.Add(Vitals);
+    if (bSingleSelection && !bBrief && !Entry.Purpose.IsEmpty())
+    {
+        Rows.Add(FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "CompactPurpose", "PURPOSE  {0}"), Entry.Purpose));
+    }
+    return FText::Join(FText::FromString(TEXT("\n")), Rows);
 }
 
 void DrawLine(
@@ -396,13 +575,69 @@ void UEchoesFieldHudActionButton::Configure(
     // whole readout, so ordinary fixed button padding would overflow at 80%
     // and 100%, and pressed padding would shift the telemetry while clicking.
     const bool bResourceMonitor = Action == EEchoesFieldHudAction::OpenResourceMonitor;
-    Style.NormalPadding = bResourceMonitor ? FMargin(0) : FMargin(6, 5);
-    Style.PressedPadding = bResourceMonitor ? FMargin(0) : FMargin(6, 6, 6, 4);
+    // A command tile budgets its height from the 224-unit card: three rows of
+    // glyph, one label line and the tile chrome must fit above the context
+    // line, so its padding scales with the text rather than staying fixed.
+    const bool bCommandTile = HotkeyLabel != nullptr;
+    const bool bScaledPadding = bCommandTile || bCompactPresentation;
+    Style.NormalPadding = bResourceMonitor ? FMargin(0)
+        : bScaledPadding ? FMargin(4.0f * InScale, 3.0f * InScale) : FMargin(6, 5);
+    Style.PressedPadding = bResourceMonitor ? FMargin(0)
+        : bScaledPadding ? FMargin(4.0f * InScale, 4.0f * InScale, 4.0f * InScale, 2.0f * InScale)
+        : FMargin(6, 6, 6, 4);
     SetStyle(Style);
     RefreshKeyboardPresentation();
 
     UTextBlock* Label = PresentationLabel ? PresentationLabel.Get() : Cast<UTextBlock>(GetContent());
-    if (Label)
+    if (bCommandTile)
+    {
+        // A produce or build tile carries its price under its name so the
+        // player never has to press it to learn what it costs; a tile with a
+        // structural reason it cannot act reads muted.
+        const FText TileLabel = InControl.Cost.IsEmpty()
+            ? InControl.Label
+            : FText::Format(
+                NSLOCTEXT("EchoesFieldHud", "ControlLabelCost", "{0}\n{1}"),
+                InControl.Label, InControl.Cost);
+        ConfigureText(Label, TileLabel, InControl.Cost.IsEmpty() ? 10 : 9, InScale,
+            InControl.bEnabled ? TextColor(bHighContrast)
+                               : ToneColor(EEchoesFieldHudTone::Muted, bHighContrast));
+        const FText Corner = InControl.Glyph.IsEmpty() ? InControl.Detail : InControl.Glyph;
+        ConfigureText(HotkeyLabel, Corner, 9, InScale,
+            ToneColor(EEchoesFieldHudTone::Muted, bHighContrast), true);
+        HotkeyLabel->SetAutoWrapText(false);
+        HotkeyLabel->SetVisibility(Corner.IsEmpty()
+            ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+        // The full command, its binding, its price and why it cannot start
+        // stay reachable on hover; the tile itself carries what fits its cell.
+        TArray<FText> Tooltip;
+        Tooltip.Add(InControl.Detail.IsEmpty()
+            ? InControl.Label
+            : FText::Format(
+                NSLOCTEXT("EchoesFieldHud", "ControlTooltip", "{0}  [{1}]"),
+                InControl.Label, InControl.Detail));
+        if (!InControl.Cost.IsEmpty())
+        {
+            Tooltip.Add(FText::Format(
+                NSLOCTEXT("EchoesFieldHud", "ControlTooltipCost", "Cost {0}"), InControl.Cost));
+        }
+        if (!InControl.Availability.IsEmpty())
+        {
+            Tooltip.Add(InControl.Availability);
+        }
+        SetToolTipText(FText::Join(FText::FromString(TEXT("\n")), Tooltip));
+    }
+    else if (bCompactPresentation && Label)
+    {
+        ConfigureText(Label, InControl.Label, 10, InScale, TextColor(bHighContrast));
+        Label->SetJustification(ETextJustify::Center);
+        SetToolTipText(InControl.Detail.IsEmpty()
+            ? InControl.Label
+            : FText::Format(
+                NSLOCTEXT("EchoesFieldHud", "ControlWithDetail", "{0}\n{1}"),
+                InControl.Label, InControl.Detail));
+    }
+    else if (Label)
     {
         FText Text = InControl.Detail.IsEmpty()
             ? InControl.Label
@@ -410,7 +645,7 @@ void UEchoesFieldHudActionButton::Configure(
                 NSLOCTEXT("EchoesFieldHud", "ControlWithDetail", "{0}\n{1}"),
                 InControl.Label,
                 InControl.Detail);
-        ConfigureText(Label, Text, 18, InScale, TextColor(bHighContrast));
+        ConfigureText(Label, Text, 14, InScale, TextColor(bHighContrast));
     }
 }
 
@@ -469,14 +704,26 @@ void UEchoesFieldHudActionButton::HandleLostFocus()
 void UEchoesFieldHudActionButton::RefreshKeyboardPresentation()
 {
     FButtonStyle Style = GetStyle();
-    const FLinearColor Resting = bFocusedPresentation
-        ? FLinearColor(.055f,.11f,.13f,1) : FLinearColor(.035f,.047f,.052f,1);
-    const FLinearColor Edge = bKeyboardFocused
-        ? (bHighContrast ? FLinearColor::Yellow : FLinearColor(.95f,.68f,.25f,1))
-        : bFocusedPresentation ? AccentColor(bHighContrast) : FLinearColor(.16f,.25f,.27f,1);
-    Style.Normal = FSlateRoundedBoxBrush(bKeyboardFocused
-        ? FLinearColor(.13f,.105f,.055f,1) : Resting, 1.f, Edge,
-        bKeyboardFocused ? 2.f : 1.f);
+    
+    // Updated button styling to match HTML mockup aesthetics
+    const FLinearColor RestingFill = bFocusedPresentation
+        ? FLinearColor(0.08f, 0.78f, 0.92f, 0.2f) // Cyan tint when focused presentation
+        : FLinearColor(0.08f, 0.12f, 0.16f, 0.8f); // rgba(20, 30, 40, 0.8)
+
+    const FLinearColor RestingEdge = bKeyboardFocused
+        ? (bHighContrast ? FLinearColor::Yellow : FLinearColor(0.96f, 0.69f, 0.25f, 1.0f)) // Amber
+        : (bFocusedPresentation ? AccentColor(bHighContrast) : FLinearColor(0.9f, 0.92f, 0.91f, 0.2f));
+
+    Style.Normal = FSlateRoundedBoxBrush(
+        bKeyboardFocused ? FLinearColor(0.96f, 0.69f, 0.25f, 0.3f) : RestingFill,
+        2.0f, // Border radius matching mockup
+        RestingEdge,
+        bKeyboardFocused ? 2.0f : 1.0f
+    );
+    
+    // Hovered and Pressed keep the dark fills Configure gave them: a
+    // translucent cyan or amber fill reads as a light tint against the
+    // ceramic label (contrast below 4.5:1, REL-ACC readable-state rule).
     SetStyle(Style);
 }
 
@@ -583,21 +830,30 @@ void UEchoesFieldHudSectionWidget::SetContent(
         return;
     }
 
-    const bool bCompact = Section == EEchoesFieldHudSection::Status ||
-        Section == EEchoesFieldHudSection::Subtitle ||
-        Section == EEchoesFieldHudSection::ResourceLedger;
+    const bool bCompact = IsCompactSection(Section);
     RootBorder->SetPadding(bCompact
         ? FMargin(8.0f * Scale, 4.0f * Scale)
-        : FMargin(10.0f * Scale));
-    RootBorder->SetBrushColor(PanelColor(bHighContrast));
+        : Section == EEchoesFieldHudSection::CommandCard ? FMargin(6.0f * Scale)
+                                                          : FMargin(8.0f * Scale));
+    ApplyPanelFrame(RootBorder, Section, bHighContrast, Scale);
     if (TitleText != nullptr)
     {
-        ConfigureText(TitleText, Title, bCompact ? 14 : 16, Scale,
+        ConfigureText(TitleText, Title, TitleFontSize(Section), Scale,
             AccentColor(bHighContrast));
     }
     for (int32 Index = 0; Index < Lines.Num(); ++Index)
     {
-        ConfigureText(LineTexts[Index], Lines[Index], 18, Scale, TextColor(bHighContrast));
+        ConfigureText(LineTexts[Index], Lines[Index], LineFontSize(Section), Scale,
+            LineColor(Section, bHighContrast));
+        if (IsNoWrapSection(Section))
+        {
+            LineTexts[Index]->SetAutoWrapText(false);
+            LineTexts[Index]->SetTextOverflowPolicy(ETextOverflowPolicy::Ellipsis);
+        }
+    }
+    if (IsNoWrapSection(Section))
+    {
+        RefreshSectionTooltip();
     }
     for (int32 Index = 0; Index < Controls.Num(); ++Index)
     {
@@ -665,36 +921,60 @@ void UEchoesFieldHudSectionWidget::SetSelectionTelemetry(const FEchoesFieldHudSe
         bRebuild = SelectionEntries[I].EntityId != Selection.Entries[I].EntityId;
     SelectionEntries = Selection.Entries;
     if (bRebuild && RootBorder) RebuildContent();
+    const bool bBrief = !Lines.IsEmpty() || !Controls.IsEmpty();
     for (int32 I = 0; I < SelectionEntries.Num() && I < HealthBars.Num(); ++I)
     {
         const auto& Entry = SelectionEntries[I];
-        TelemetryDetails[I]->SetText(
-            SelectionDetails(Entry, SelectionEntries.Num() == 1));
-        TelemetryLabels[I]->SetText(FText::Format(NSLOCTEXT("EchoesFieldHud", "HealthTelemetry", "{0}  ×{1}     HEALTH {2}/{3}"),
-            Entry.Name, Entry.Count, Entry.HitPoints, Entry.MaxHitPoints));
-        HealthBars[I]->SetPercent(Entry.MaxHitPoints > 0
-            ? FMath::Clamp(static_cast<float>(Entry.HitPoints) / Entry.MaxHitPoints, 0.f, 1.f) : 0.f);
+        if (TelemetryDetails.IsValidIndex(I) && TelemetryDetails[I] != nullptr)
+        {
+            TelemetryDetails[I]->SetText(
+                SelectionCompact(Entry, SelectionEntries.Num() == 1, bBrief));
+        }
+        TelemetryLabels[I]->SetText(SelectionHeadline(Entry));
+        HealthBars[I]->SetPercent(SelectionFill(Entry));
         HealthBars[I]->SetFillColorAndOpacity(AccentColor(bHighContrast));
     }
+}
+
+void UEchoesFieldHudSectionWidget::SetTelemetrySuppressed(bool bSuppressed)
+{
+    if (bTelemetrySuppressed == bSuppressed)
+    {
+        return;
+    }
+    bTelemetrySuppressed = bSuppressed;
+    if (RootBorder != nullptr)
+    {
+        RebuildContent();
+    }
+}
+
+void UEchoesFieldHudSectionWidget::RefreshSectionTooltip()
+{
+    TArray<FText> Parts;
+    if (Section == EEchoesFieldHudSection::CommandCard && !Title.IsEmpty())
+    {
+        Parts.Add(Title);
+    }
+    if (Section == EEchoesFieldHudSection::Selection && !bTelemetrySuppressed)
+    {
+        for (const FEchoesFieldHudSelectionEntry& Entry : SelectionEntries)
+        {
+            Parts.Add(FText::Format(
+                NSLOCTEXT("EchoesFieldHud", "TooltipEntry", "{0}\n{1}"),
+                SelectionHeadline(Entry),
+                SelectionDetails(Entry, SelectionEntries.Num() == 1)));
+        }
+    }
+    Parts.Append(Lines);
+    SetToolTipText(FText::Join(FText::FromString(TEXT("\n\n")), Parts));
 }
 
 int32 UEchoesFieldHudSectionWidget::NativePaint(const FPaintArgs& Args, const FGeometry& Geometry,
     const FSlateRect& Clip, FSlateWindowElementList& Elements, int32 Layer,
     const FWidgetStyle& Style, bool bEnabled) const
 {
-    const int32 Base = Super::NativePaint(Args, Geometry, Clip, Elements, Layer, Style, bEnabled);
-    const FVector2D Size = Geometry.GetLocalSize();
-    if (Size.X < 20 || Size.Y < 10) return Base;
-    const float Cut = FMath::Min(10.f * Scale, static_cast<float>(Size.Y / 4));
-    const FLinearColor Edge = bHighContrast ? FLinearColor::White : FLinearColor(.13f,.30f,.33f,1);
-    TArray<FVector2D> Frame{{1,Cut},{Cut,1},{Size.X-2,1},{Size.X-2,Size.Y-Cut},
-        {Size.X-Cut,Size.Y-2},{1,Size.Y-2},{1,Cut}};
-    FSlateDrawElement::MakeLines(Elements, Base + 1, Geometry.ToPaintGeometry(), Frame,
-        ESlateDrawEffect::None, Edge, true, 1.f);
-    DrawLine(Elements, Base + 1, Geometry, {{Cut+5,1}, {FMath::Min(Size.X-5.,80.*Scale),1}},
-        Section == EEchoesFieldHudSection::Objectives || Section == EEchoesFieldHudSection::Status
-            ? FLinearColor(.85f,.55f,.18f,1) : AccentColor(bHighContrast), 2.f);
-    return Base + 1;
+    return Super::NativePaint(Args, Geometry, Clip, Elements, Layer, Style, bEnabled);
 }
 
 void UEchoesFieldHudSectionWidget::RebuildContent()
@@ -708,9 +988,16 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
         RootBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass());
         WidgetTree->RootWidget = RootBorder;
     }
-    const bool bCompact = Section == EEchoesFieldHudSection::Status ||
-        Section == EEchoesFieldHudSection::Subtitle ||
-        Section == EEchoesFieldHudSection::ResourceLedger;
+    const bool bCompact = IsCompactSection(Section);
+    // The command card never scrolls: its 3x3 grid is the control surface and
+    // must stay on screen whatever the context lines say. Overflowing context
+    // is clipped by the panel and reachable through the panel tooltip.
+    const bool bCommandCard = Section == EEchoesFieldHudSection::CommandCard;
+    // Owner direction 2026-09-11: nothing in the field console scrolls. The
+    // selection card and objective header show what fits, single-line with an
+    // ellipsis, and carry the full text in their tooltip.
+    const bool bConsoleCard = IsNoWrapSection(Section);
+    const bool bSelectionCard = Section == EEchoesFieldHudSection::Selection;
     // Keep an in-progress direct-connect edit alive when a semantic refresh
     // changes the surrounding status lines or action shape. Rebuilding the
     // panel must not replace the editor with a fresh copy of the last
@@ -723,7 +1010,7 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
 
     ContentBox = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass());
-    if (bCompact)
+    if (bCompact || bConsoleCard)
     {
         ContentScroll = nullptr;
         RootBorder->SetContent(ContentBox);
@@ -742,19 +1029,22 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
 
     RootBorder->SetPadding(bCompact
         ? FMargin(8.0f * Scale, 4.0f * Scale)
-        : FMargin(10.0f * Scale));
-    RootBorder->SetBrushColor(PanelColor(bHighContrast));
-    RootBorder->SetClipping(Section == EEchoesFieldHudSection::ResourceLedger
+        : bCommandCard ? FMargin(6.0f * Scale) : FMargin(8.0f * Scale));
+    ApplyPanelFrame(RootBorder, Section, bHighContrast, Scale);
+    RootBorder->SetClipping(Section == EEchoesFieldHudSection::ResourceLedger || bConsoleCard
         ? EWidgetClipping::ClipToBounds : EWidgetClipping::Inherit);
     RootBorder->SetVisibility(ESlateVisibility::Visible);
     TitleText = nullptr;
-    if (Section != EEchoesFieldHudSection::Status && Section != EEchoesFieldHudSection::ResourceLedger)
+    // The command card spends its height on the 3x3 grid and two context
+    // lines; its name travels in the tooltip instead of a title row.
+    if (Section != EEchoesFieldHudSection::Status && Section != EEchoesFieldHudSection::ResourceLedger &&
+        !bCommandCard)
     {
         TitleText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
-        ConfigureText(TitleText, Title, bCompact ? 14 : 16, Scale,
+        ConfigureText(TitleText, Title, TitleFontSize(Section), Scale,
             AccentColor(bHighContrast));
         ContentBox->AddChildToVerticalBox(TitleText)->SetPadding(
-            FMargin(0, 0, 0, bCompact ? 2.0f * Scale : 5.0f));
+            FMargin(0, 0, 0, bCompact ? 2.0f * Scale : 3.0f * Scale));
     }
 
     ResourceLabels.Reset();
@@ -765,7 +1055,23 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
     if (Section == EEchoesFieldHudSection::ResourceLedger)
     {
         UHorizontalBox* ResourceRow = WidgetTree->ConstructWidget<UHorizontalBox>();
-        ContentBox->AddChildToVerticalBox(ResourceRow);
+        // The row is one line of label+value columns sized to their text.
+        // Equal shares let "LOGISTICS 39/42" draw over the ARMY column at
+        // 1280 wide (REL-UI-004.FAIL), and stacking label over value costs
+        // more height than the 96-unit ledger has with these faces. A
+        // down-only scale box keeps the row inside the ledger at the upper
+        // accessibility scale without touching the declared font sizes.
+        UScaleBox* ResourceFit = WidgetTree->ConstructWidget<UScaleBox>();
+        ResourceFit->SetStretch(EStretch::ScaleToFit);
+        ResourceFit->SetStretchDirection(EStretchDirection::DownOnly);
+        ResourceFit->SetContent(ResourceRow);
+        if (auto* FitSlot = Cast<UScaleBoxSlot>(ResourceRow->Slot))
+        {
+            FitSlot->SetHorizontalAlignment(HAlign_Left);
+            FitSlot->SetVerticalAlignment(VAlign_Top);
+        }
+        auto* FitRowSlot = ContentBox->AddChildToVerticalBox(ResourceFit);
+        FitRowSlot->SetHorizontalAlignment(HAlign_Fill);
         // SPEC-RES-008 / DeliveryPlan section 8: the army count and its
         // reservations sit beside Logistics so a player can tell which of
         // the two limits is binding.
@@ -776,19 +1082,29 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
             NSLOCTEXT("EchoesFieldHud", "ArmyLabel", "ARMY")};
         for (int32 Index = 0; Index < static_cast<int32>(UE_ARRAY_COUNT(Labels)); ++Index)
         {
+            // Label over value, four equal columns. Side-by-side label and
+            // value in equal shares let "LOGISTICS 39/42" draw over the ARMY
+            // column at 1280 wide (REL-UI-004.FAIL): a horizontal box never
+            // clips a child that outgrows its share. Stacked, a column's
+            // widest word is a nine-letter label, which fits a quarter of the
+            // ledger at every scale the accessibility range allows.
             UHorizontalBox* Column = WidgetTree->ConstructWidget<UHorizontalBox>();
             auto* ColumnSlot = ResourceRow->AddChildToHorizontalBox(Column);
-            ColumnSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-            ColumnSlot->SetPadding(FMargin(2 * Scale, 0));
+            ColumnSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
+            ColumnSlot->SetPadding(FMargin(0, 0, Index == 3 ? 0 : 12 * Scale, 0));
             UTextBlock* Label = WidgetTree->ConstructWidget<UTextBlock>();
             ConfigureText(Label, Labels[Index], 14, Scale,
                 Index == 0 ? AccentColor(bHighContrast) : Index == 1
                     ? ToneColor(EEchoesFieldHudTone::Warning, bHighContrast) : TextColor(bHighContrast));
-            Column->AddChildToHorizontalBox(Label)->SetPadding(FMargin(0, 0, 3 * Scale, 0));
+            Label->SetAutoWrapText(false);
+            auto* LabelSlot = Column->AddChildToHorizontalBox(Label);
+            LabelSlot->SetPadding(FMargin(0, 0, 3 * Scale, 0));
+            LabelSlot->SetVerticalAlignment(VAlign_Bottom);
             ResourceLabels.Add(Label);
             UTextBlock* Value = WidgetTree->ConstructWidget<UTextBlock>();
             ConfigureText(Value, FText::GetEmpty(), 18, Scale, TextColor(bHighContrast), true);
-            Column->AddChildToHorizontalBox(Value);
+            Value->SetAutoWrapText(false);
+            Column->AddChildToHorizontalBox(Value)->SetVerticalAlignment(VAlign_Bottom);
             ResourceValues.Add(Value);
         }
         ResourceIdentityText = WidgetTree->ConstructWidget<UTextBlock>();
@@ -829,12 +1145,19 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
     TelemetryLabels.Reset();
     TelemetryDetails.Reset();
     HealthBars.Reset();
-    for (const auto& Entry : SelectionEntries)
+    // A producer's queue and controls share the card with its vitals, so its
+    // purpose line yields; a mixed selection shows two entries' vitals and
+    // counts the rest, with every entry's full answer in the tooltip.
+    const bool bBriefEntries = !Lines.IsEmpty() || !Controls.IsEmpty();
+    constexpr int32 MaxVisibleEntries = 2;
+    const int32 VisibleEntries = bTelemetrySuppressed ? 0
+        : FMath::Min(SelectionEntries.Num(), MaxVisibleEntries);
+    for (int32 EntryIndex = 0; EntryIndex < VisibleEntries; ++EntryIndex)
     {
+        const auto& Entry = SelectionEntries[EntryIndex];
         UTextBlock* Readout = WidgetTree->ConstructWidget<UTextBlock>();
-        ConfigureText(Readout, FText::Format(NSLOCTEXT("EchoesFieldHud", "HealthTelemetry", "{0}  ×{1}     HEALTH {2}/{3}"),
-            Entry.Name, Entry.Count, Entry.HitPoints, Entry.MaxHitPoints), 18, Scale, TextColor(bHighContrast));
-        ContentBox->AddChildToVerticalBox(Readout)->SetPadding(FMargin(0, 2, 0, 4));
+        ConfigureText(Readout, SelectionHeadline(Entry), 15, Scale, TextColor(bHighContrast));
+        ContentBox->AddChildToVerticalBox(Readout)->SetPadding(FMargin(0, 0, 0, 2 * Scale));
         TelemetryLabels.Add(Readout);
         UProgressBar* Health = WidgetTree->ConstructWidget<UProgressBar>();
         Health->SetVisibility(ESlateVisibility::HitTestInvisible);
@@ -843,26 +1166,62 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
         TrackStyle.FillImage = FSlateColorBrush(FLinearColor::White);
         Health->SetWidgetStyle(TrackStyle);
         Health->SetBorderPadding(FVector2D::ZeroVector);
-        Health->SetPercent(Entry.MaxHitPoints > 0 ? FMath::Clamp(static_cast<float>(Entry.HitPoints) / Entry.MaxHitPoints, 0.f, 1.f) : 0.f);
+        Health->SetPercent(SelectionFill(Entry));
         Health->SetFillColorAndOpacity(AccentColor(bHighContrast));
         USizeBox* Track = WidgetTree->ConstructWidget<USizeBox>();
         Track->SetHeightOverride(5.f * Scale);
         Track->SetContent(Health);
-        ContentBox->AddChildToVerticalBox(Track)->SetPadding(FMargin(0, 0, 0, 9 * Scale));
+        ContentBox->AddChildToVerticalBox(Track)->SetPadding(FMargin(0, 0, 0, 4 * Scale));
         HealthBars.Add(Health);
         UTextBlock* Detail = WidgetTree->ConstructWidget<UTextBlock>();
-        ConfigureText(Detail, SelectionDetails(Entry, SelectionEntries.Num() == 1),
-            16, Scale, TextColor(bHighContrast));
-        ContentBox->AddChildToVerticalBox(Detail)->SetPadding(FMargin(0, 0, 0, 10 * Scale));
+        if (SelectionEntries.Num() == 1)
+        {
+            ConfigureText(Detail, SelectionCompact(Entry, true, bBriefEntries),
+                13, Scale, TextColor(bHighContrast));
+            Detail->SetAutoWrapText(false);
+            Detail->SetTextOverflowPolicy(ETextOverflowPolicy::Ellipsis);
+            ContentBox->AddChildToVerticalBox(Detail)->SetPadding(FMargin(0, 0, 0, 4 * Scale));
+        }
+        else
+        {
+            Detail->SetVisibility(ESlateVisibility::Collapsed);
+        }
         TelemetryDetails.Add(Detail);
     }
-
-    for (const FText& Line : Lines)
+    if (SelectionEntries.Num() > VisibleEntries && !bTelemetrySuppressed)
     {
-        UTextBlock* Text = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
-        ConfigureText(Text, Line, 18, Scale, TextColor(bHighContrast));
-        ContentBox->AddChildToVerticalBox(Text)->SetPadding(FMargin(0, 1));
-        LineTexts.Add(Text);
+        UTextBlock* More = WidgetTree->ConstructWidget<UTextBlock>();
+        ConfigureText(More, FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "SelectionMore", "+{0} more selected"),
+            SelectionEntries.Num() - VisibleEntries),
+            13, Scale, ToneColor(EEchoesFieldHudTone::Muted, bHighContrast));
+        ContentBox->AddChildToVerticalBox(More)->SetPadding(FMargin(0, 0, 0, 3 * Scale));
+    }
+
+    const auto AddLines = [this]()
+    {
+        for (const FText& Line : Lines)
+        {
+            UTextBlock* Text = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
+            ConfigureText(Text, Line, LineFontSize(Section), Scale,
+                LineColor(Section, bHighContrast));
+            if (IsNoWrapSection(Section))
+            {
+                // One line each; the panel tooltip carries the full sentence,
+                // so a long state never pushes the controls out of the card.
+                Text->SetAutoWrapText(false);
+                Text->SetTextOverflowPolicy(ETextOverflowPolicy::Ellipsis);
+            }
+            ContentBox->AddChildToVerticalBox(Text)->SetPadding(FMargin(0, 1));
+            LineTexts.Add(Text);
+        }
+    };
+    // The command card is a control surface first: its grid precedes the
+    // formation and ability context, which previously sat above it and, at
+    // 18 points, filled the 224-unit card before the first button was reached.
+    if (!bCommandCard)
+    {
+        AddLines();
     }
 
     if (bHasEndpoint)
@@ -877,14 +1236,15 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
     }
 
     UUniformGridPanel* Grid = nullptr;
-    if (!Controls.IsEmpty() && Section != EEchoesFieldHudSection::ResourceLedger)
+    if ((!Controls.IsEmpty() || bCommandCard) && Section != EEchoesFieldHudSection::ResourceLedger)
     {
         Grid = WidgetTree->ConstructWidget<UUniformGridPanel>(
             UUniformGridPanel::StaticClass());
-        Grid->SetSlotPadding(FMargin(3.0f));
-        ContentBox->AddChildToVerticalBox(Grid)->SetPadding(FMargin(0, 6, 0, 0));
+        Grid->SetSlotPadding(FMargin(bConsoleCard ? 2.0f * Scale : 3.0f));
+        ContentBox->AddChildToVerticalBox(Grid)->SetPadding(FMargin(0, bConsoleCard ? 2.0f * Scale : 6.0f, 0, 0));
     }
-    const int32 Columns = Section == EEchoesFieldHudSection::CommandCard ? 3 : 2;
+    const bool bCompactControls = bConsoleCard && !bCommandCard;
+    const int32 Columns = bCommandCard ? 3 : bCompactControls ? 4 : 2;
     for (int32 Index = 0;
          Section != EEchoesFieldHudSection::ResourceLedger && Index < Controls.Num();
          ++Index)
@@ -896,25 +1256,101 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
         UTextBlock* Label = WidgetTree->ConstructWidget<UTextBlock>(
             UTextBlock::StaticClass());
         Button->SetPresentationLabel(Label);
-        if (Section == EEchoesFieldHudSection::CommandCard)
+        if (bCommandCard)
         {
+            // Tile: glyph with the binding in its upper-right corner, one
+            // centred label line beneath. Nothing in the tile varies in
+            // height with the command, so all nine cells share one row size.
             UVerticalBox* Tile = WidgetTree->ConstructWidget<UVerticalBox>();
+            UOverlay* IconRow = WidgetTree->ConstructWidget<UOverlay>();
             UEchoesHudGlyph* Glyph = WidgetTree->ConstructWidget<UEchoesHudGlyph>();
             Glyph->SetControl(Control, bHighContrast);
             USizeBox* IconBox = WidgetTree->ConstructWidget<USizeBox>();
-            IconBox->SetHeightOverride(42.f * Scale);
+            IconBox->SetHeightOverride(14.f * Scale);
             IconBox->SetContent(Glyph);
-            Tile->AddChildToVerticalBox(IconBox);
+            auto* IconSlot = IconRow->AddChildToOverlay(IconBox);
+            IconSlot->SetHorizontalAlignment(HAlign_Fill);
+            IconSlot->SetVerticalAlignment(VAlign_Fill);
+            UTextBlock* Hotkey = WidgetTree->ConstructWidget<UTextBlock>();
+            auto* HotkeySlot = IconRow->AddChildToOverlay(Hotkey);
+            // The corner text spans the tile and clips to it: "Semicolon" and
+            // "Apostrophe" once ran across three tiles as one word.
+            HotkeySlot->SetHorizontalAlignment(HAlign_Fill);
+            HotkeySlot->SetVerticalAlignment(VAlign_Top);
+            Hotkey->SetJustification(ETextJustify::Right);
+            Hotkey->SetClipping(EWidgetClipping::ClipToBounds);
+            Hotkey->SetTextOverflowPolicy(ETextOverflowPolicy::Ellipsis);
+            Button->SetPresentationHotkey(Hotkey);
+            Tile->AddChildToVerticalBox(IconRow);
             Label->SetJustification(ETextJustify::Center);
-            Tile->AddChildToVerticalBox(Label)->SetPadding(FMargin(2, 3, 2, 2));
+            // Two label lines at most, in a fixed box: "DEPLOY BARRIER" wraps
+            // where "STOP" does not, and a row that grew with the longest label
+            // pushed the third row and the context line out of the card.
+            USizeBox* LabelBox = WidgetTree->ConstructWidget<USizeBox>();
+            LabelBox->SetHeightOverride(32.f * Scale);
+            LabelBox->SetClipping(EWidgetClipping::ClipToBounds);
+            LabelBox->SetContent(Label);
+            if (auto* LabelSlot = Cast<USizeBoxSlot>(Label->Slot))
+            {
+                LabelSlot->SetVerticalAlignment(VAlign_Center);
+                LabelSlot->SetHorizontalAlignment(HAlign_Fill);
+            }
+            Tile->AddChildToVerticalBox(LabelBox)->SetPadding(FMargin(1, 1.0f * Scale, 1, 0));
             Button->SetContent(Tile);
+        }
+        else if (bCompactControls)
+        {
+            // Console controls: label-only in a fixed two-line box, four to a
+            // row, so a producer's queue controls fit beneath its queue.
+            USizeBox* LabelBox = WidgetTree->ConstructWidget<USizeBox>();
+            LabelBox->SetHeightOverride(26.f * Scale);
+            LabelBox->SetClipping(EWidgetClipping::ClipToBounds);
+            LabelBox->SetContent(Label);
+            if (auto* LabelSlot = Cast<USizeBoxSlot>(Label->Slot))
+            {
+                LabelSlot->SetVerticalAlignment(VAlign_Center);
+                LabelSlot->SetHorizontalAlignment(HAlign_Fill);
+            }
+            Button->SetCompactPresentation(true);
+            Button->SetContent(LabelBox);
         }
         else Button->SetContent(Label);
         if (UButtonSlot* ContentSlot = Cast<UButtonSlot>(Button->GetContent()->Slot))
             ContentSlot->SetHorizontalAlignment(HAlign_Fill);
         Button->Configure(Owner.Get(), Control, bHighContrast, Scale);
-        Grid->AddChildToUniformGrid(Button, Index / Columns, Index % Columns);
+        UUniformGridSlot* CellSlot = Grid->AddChildToUniformGrid(Button, Index / Columns, Index % Columns);
+        // A uniform cell aligns its child top-left by default; a tile that
+        // does not fill its cell leaves the pointer target smaller than the
+        // drawn grid and the empty cells beside it as slivers.
+        CellSlot->SetHorizontalAlignment(HAlign_Fill);
+        CellSlot->SetVerticalAlignment(VAlign_Fill);
         ActionButtons.Add(Button);
+    }
+    if (bCommandCard)
+    {
+        // REL-UI-025: the card is a rigid 3x3 grid. Cells without a legal
+        // command keep their place as inert outlines so the grid never
+        // reshapes between selections and every row is always on screen.
+        constexpr int32 DeckCells = 9;
+        for (int32 Index = Controls.Num(); Index < DeckCells; ++Index)
+        {
+            UBorder* Empty = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass());
+            Empty->SetBrush(FSlateRoundedBoxBrush(
+                FLinearColor(0.02f, 0.03f, 0.035f, 0.35f), 2.0f,
+                bHighContrast ? FLinearColor(0.35f, 0.35f, 0.35f, 1.0f)
+                              : FLinearColor(0.16f, 0.25f, 0.27f, 0.6f),
+                1.0f));
+            Empty->SetBrushColor(FLinearColor::White);
+            Empty->SetVisibility(ESlateVisibility::HitTestInvisible);
+            UUniformGridSlot* EmptySlot = Grid->AddChildToUniformGrid(Empty, Index / Columns, Index % Columns);
+            EmptySlot->SetHorizontalAlignment(HAlign_Fill);
+            EmptySlot->SetVerticalAlignment(VAlign_Fill);
+        }
+        AddLines();
+    }
+    if (bConsoleCard)
+    {
+        RefreshSectionTooltip();
     }
 }
 
@@ -1172,12 +1608,17 @@ int32 UEchoesFieldHudMinimapWidget::NativePaint(
         }
         else if (Marker.bResource)
         {
+            // An exhausted deposit stays on the map as a muted mark: the
+            // place is still terrain, there is just nothing left to dig.
+            const FLinearColor ResourceColor = Marker.bExhausted
+                ? FLinearColor(0.34f, 0.36f, 0.37f, 0.75f) : Color;
+            const float Thickness = Marker.bExhausted ? 1.0f : 1.5f;
             DrawLine(OutDrawElements, BaseLayer + 4, AllottedGeometry,
                 {Point + FVector2D(-Radius, 0), Point + FVector2D(Radius, 0)},
-                Color, 1.5f);
+                ResourceColor, Thickness);
             DrawLine(OutDrawElements, BaseLayer + 4, AllottedGeometry,
                 {Point + FVector2D(0, -Radius), Point + FVector2D(0, Radius)},
-                Color, 1.5f);
+                ResourceColor, Thickness);
         }
         else if (Marker.bFriendly)
         {
@@ -1576,17 +2017,27 @@ void UEchoesFieldHudContactWidget::SetContact(
         RebuildContent();
         return;
     }
-    RootBorder->SetBrushColor(PanelColor(bHighContrast));
+    
+    // Update border outline color dynamically based on state
+    const FLinearColor EdgeColor = Contact.bClampedToScreenEdge
+        ? FLinearColor(0.96f, 0.69f, 0.25f, 1.0f) // Amber when off-screen
+        : AccentColor(bHighContrast); // Cyan when on-screen
+        
+    RootBorder->SetBrush(FSlateRoundedBoxBrush(
+        PanelColor(bHighContrast),
+        2.0f * Scale,
+        EdgeColor,
+        1.5f * Scale
+    ));
+    RootBorder->SetBrushColor(FLinearColor::White);
+
     const FText Label = Contact.SecondaryLabel.IsEmpty()
         ? Contact.PrimaryLabel
         : FText::Format(
             NSLOCTEXT("EchoesFieldHud", "ContactLabel", "{0}\n{1}"),
             Contact.PrimaryLabel,
             Contact.SecondaryLabel);
-    ConfigureText(ContactText, Label, 11, Scale,
-        Contact.bClampedToScreenEdge
-            ? FLinearColor(0.96f, 0.68f, 0.18f, 1.0f)
-            : AccentColor(bHighContrast));
+    ConfigureText(ContactText, Label, 11, Scale, EdgeColor);
 }
 
 void UEchoesFieldHudContactWidget::RebuildContent()
@@ -1597,7 +2048,19 @@ void UEchoesFieldHudContactWidget::RebuildContent()
     }
     RootBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass());
     RootBorder->SetPadding(FMargin(6.0f));
-    RootBorder->SetBrushColor(PanelColor(bHighContrast));
+    
+    // Modernize Contact Widget border
+    const FLinearColor EdgeColor = Contact.bClampedToScreenEdge
+        ? FLinearColor(0.96f, 0.69f, 0.25f, 1.0f) // Amber when off-screen
+        : AccentColor(bHighContrast); // Cyan when on-screen
+        
+    RootBorder->SetBrush(FSlateRoundedBoxBrush(
+        PanelColor(bHighContrast),
+        2.0f * Scale,
+        EdgeColor,
+        1.5f * Scale
+    ));
+    RootBorder->SetBrushColor(FLinearColor::White); // Let brush dictate color
     RootBorder->SetVisibility(ESlateVisibility::HitTestInvisible);
     ContactText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
     RootBorder->SetContent(ContactText);
@@ -2075,8 +2538,11 @@ void UEchoesFieldHudWidget::ApplyView()
     // of "KHARUUN ASSEMBLIES" and the "/18" of its logistics count to its own
     // ClipToBounds. Dividing here keeps the rendered pixel size of the text in
     // fixed proportion to the panel that has to hold it, at every resolution.
+    // The console's physical scale also grows with the DPI curve above 1080
+    // lines (FEchoesHudLayout::EffectiveScale), so the same division yields
+    // text that keeps pace with the panels on a 1440 or Retina surface.
     const float SectionDpi = FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this));
-    const float Scale = EchoesHudSectionScale(View.HudScale / SectionDpi);
+    const float Scale = EchoesHudSectionScale(EffectiveHudScale() / SectionDpi);
     const bool bBattlefield =
         View.Surface == EEchoesFieldHudSurface::Battlefield ||
         View.Surface == EEchoesFieldHudSurface::Replay;
@@ -2139,12 +2605,13 @@ void UEchoesFieldHudWidget::ApplyView()
         }
         else
         {
-            Lines.Add(NSLOCTEXT(
-                "EchoesFieldHud", "ProductionQueueHeading", "PRODUCTION QUEUE"));
+            // One line per queue entry (SPEC-HUD-005): the card does not
+            // scroll, and the full investment/logistics breakdown remains in
+            // the card tooltip and the cancellation review.
             if (View.Production.Items.IsEmpty())
             {
                 Lines.Add(NSLOCTEXT(
-                    "EchoesFieldHud", "ProductionQueueEmpty", "ACTIVE  NONE"));
+                    "EchoesFieldHud", "ProductionQueueEmpty", "QUEUE  EMPTY"));
             }
             for (const FEchoesFieldHudProductionItem& Item : View.Production.Items)
             {
@@ -2154,7 +2621,7 @@ void UEchoesFieldHudWidget::ApplyView()
                         NSLOCTEXT(
                             "EchoesFieldHud",
                             "ProductionActiveItem",
-                            "ACTIVE  {0}  {1}%\nINVESTED  {2} Matter / {3} Dawn\nLOGISTICS  {4} RESERVED"),
+                            "ACTIVE  {0}  {1}%   ·   {2} Matter / {3} Dawn invested   ·   Logistics {4} reserved"),
                         Item.Unit,
                         FText::AsNumber(Item.ProgressPercent),
                         FText::AsNumber(Item.InvestedMatter),
@@ -2167,7 +2634,7 @@ void UEchoesFieldHudWidget::ApplyView()
                         NSLOCTEXT(
                             "EchoesFieldHud",
                             "ProductionWaitingItem",
-                            "WAITING {0}  {1}\nUNPAID COST  {2} Matter / {3} Dawn\nLOGISTICS  {4} ON START"),
+                            "WAITING {0}  {1}   ·   {2} Matter / {3} Dawn on start   ·   Logistics {4}"),
                         FText::AsNumber(Item.Slot),
                         Item.Unit,
                         FText::AsNumber(Item.ConfiguredMatter),
@@ -2194,22 +2661,44 @@ void UEchoesFieldHudWidget::ApplyView()
                 Lines.Add(NSLOCTEXT(
                     "EchoesFieldHud", "ProductionSpawnBlocked", "[SPAWN BLOCKED] Clear the emergence area."));
             }
+            if (View.Production.bUnpowered)
+            {
+                // REL-FAC-002.PROD: the queue holds until a node reaches it.
+                Lines.Add(NSLOCTEXT(
+                    "EchoesFieldHud", "ProductionUnpowered", "[UNPOWERED] Extend a Power Link chain from your Anchor."));
+            }
         }
     }
     Panel = GetSection(EEchoesFieldHudSection::Selection);
+    // The cancellation review takes the whole card: its heading becomes the
+    // card title and the entity telemetry yields to the refund facts.
+    const bool bCancellationReview = View.Production.bVisible &&
+        View.Production.Cancellation.bVisible;
+    if (bCancellationReview && !Lines.IsEmpty())
+    {
+        Lines.RemoveAt(0);
+    }
+    Panel->SetTelemetrySuppressed(bCancellationReview);
     Panel->SetSelectionTelemetry(View.Selection);
-    Panel->SetContent(NSLOCTEXT("EchoesFieldHud", "Selection", "SELECTION"),
+    Panel->SetContent(bCancellationReview
+        ? NSLOCTEXT("EchoesFieldHud", "ProductionCancellationHeading", "CANCEL PRODUCTION?")
+        : NSLOCTEXT("EchoesFieldHud", "Selection", "SELECTION"),
         Lines, View.Production.Controls, View.bHighContrast, Scale);
     Panel->SetVisibility(bBattlefield && View.Selection.bVisible
         ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 
     Panel = GetSection(EEchoesFieldHudSection::CommandCard);
-    Lines = View.Commands.Formation.IsEmpty()
-        ? TArray<FText>{}
-        : TArray<FText>{FText::Format(
-            NSLOCTEXT("EchoesFieldHud", "Formation", "FORMATION  {0}"),
-            View.Commands.Formation)};
+    // Ability states first: the card holds two context lines under its grid,
+    // and a Relay or Barrier state is the one a player acts on. Every line
+    // stays in the card tooltip.
+    Lines.Reset();
     if (!View.Commands.AbilityStatus.IsEmpty()) Lines.Add(View.Commands.AbilityStatus);
+    if (!View.Commands.Formation.IsEmpty())
+    {
+        Lines.Add(FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "Formation", "FORMATION  {0}"),
+            View.Commands.Formation));
+    }
     auto CommandControls = View.Commands.Controls;
     for (auto& Control : CommandControls)
     {
@@ -2652,10 +3141,16 @@ FVector2D UEchoesFieldHudWidget::ResolveConsolePixels() const
     return Local * Dpi;
 }
 
+float UEchoesFieldHudWidget::EffectiveHudScale() const
+{
+    return FEchoesHudLayout::EffectiveScale(View.HudScale,
+        FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this)));
+}
+
 FEchoesHudLayout UEchoesFieldHudWidget::ResolveConsoleLayout() const
 {
     return FEchoesHudLayout::Build(
-        ResolveConsolePixels(), View.HudScale, !View.Status.IsEmpty());
+        ResolveConsolePixels(), EffectiveHudScale(), !View.Status.IsEmpty());
 }
 
 void UEchoesFieldHudWidget::ApplyConsoleLayout(const FVector2D& ViewportPixels)
@@ -2664,7 +3159,7 @@ void UEchoesFieldHudWidget::ApplyConsoleLayout(const FVector2D& ViewportPixels)
     // Convert the shared physical-pixel contract exactly once for UMG DPI.
     const float Dpi = FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this));
     const FEchoesHudLayout Layout = FEchoesHudLayout::Build(
-        ViewportPixels, View.HudScale, !View.Status.IsEmpty());
+        ViewportPixels, EffectiveHudScale(), !View.Status.IsEmpty());
     const bool bField = View.Surface == EEchoesFieldHudSurface::Battlefield ||
         View.Surface == EEchoesFieldHudSurface::Replay;
     const auto Place = [Dpi, bField](UWidget* Widget, const FBox2D& Rect, bool bVisible)
@@ -2755,7 +3250,7 @@ int32 UEchoesFieldHudWidget::NativePaint(
     {
         const FVector2D Size = AllottedGeometry.GetLocalSize();
         const float Scale = FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this));
-        const FEchoesHudLayout Layout = FEchoesHudLayout::Build(Size * Scale, View.HudScale, !View.Status.IsEmpty());
+        const FEchoesHudLayout Layout = FEchoesHudLayout::Build(Size * Scale, EffectiveHudScale(), !View.Status.IsEmpty());
         OutDrawElements.PushClip(FSlateClippingZone(AllottedGeometry.ToPaintGeometry(
             FVector2D(Size.X, Layout.BottomBar.Min.Y / Scale), FSlateLayoutTransform())));
         const auto Line = [&](const FVector& A, const FVector& B, const FLinearColor& Color)
@@ -3056,7 +3551,7 @@ int32 UEchoesFieldHudWidget::NativePaint(
         const float BannerWidth = FMath::Clamp(LocalSize.X * 0.52f, 460.0f, 680.0f);
         const float BannerHeight = 52.0f;
         const float Dpi = FMath::Max(0.01f, UWidgetLayoutLibrary::GetViewportScale(this));
-        const FEchoesHudLayout Layout = FEchoesHudLayout::Build(LocalSize * Dpi, View.HudScale, true);
+        const FEchoesHudLayout Layout = FEchoesHudLayout::Build(LocalSize * Dpi, EffectiveHudScale(), true);
         const FVector2D BannerPos((LocalSize.X - BannerWidth) * 0.5f, Layout.StatusPanel.Min.Y / Dpi);
 
         // Dark high-contrast background

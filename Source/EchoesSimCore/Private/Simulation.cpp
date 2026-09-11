@@ -783,6 +783,27 @@ constexpr std::int32_t kScarredMovementPercent = 85;
     return PlacementResult::Valid;
 }
 
+// REL-FAC-002.PROD: whether an owned operational network node reaches a
+// position, judged from the scoped view. The opponent sites its Foundry where
+// it will produce; the view carries the same networkOperational flags the
+// simulation resolved, never a private answer.
+[[nodiscard]] bool IsViewPositionInMeridianNetwork(const PlayerView& view,
+                                                   Vec2 position) {
+    const std::int64_t radius =
+        view.Config().rules.poweredAegis.connectionRadiusRaw;
+    const std::uint64_t radiusSquared =
+        static_cast<std::uint64_t>(radius * radius);
+    for (const Entity& node : view.Entities()) {
+        if (node.owner == view.Player().id && node.completed &&
+            node.hitPoints > 0 && node.faction == Faction::MeridianCompact &&
+            node.networkOperational &&
+            DistanceSquaredRawFor(position, node.position) <= radiusSquared) {
+            return true;
+        }
+    }
+    return false;
+}
+
 [[nodiscard]] ProductionResult ValidateViewProduction(
     const PlayerView& view,
     EntityId producer,
@@ -794,6 +815,12 @@ constexpr std::int32_t kScarredMovementPercent = 85;
     }
     if (!building->completed) {
         return ProductionResult::ProducerIncomplete;
+    }
+    if (view.ProductionRequiresNetworkPower() &&
+        building->faction == Faction::MeridianCompact &&
+        building->type == EntityType::Barracks &&
+        !building->networkOperational) {
+        return ProductionResult::ProducerUnpowered;
     }
     if (view.Player().activeResearch != ResearchType::None &&
         view.Player().researchProducer == producer) {
@@ -2248,6 +2275,19 @@ bool Simulation::IsAegisNetworkPowered(const Entity& aegis) const {
         });
 }
 
+bool Simulation::IsProducerPowered(const Entity& producer) const {
+    // REL-FAC-002.PROD (owner ruling 2026-09-11): only a Meridian Foundry is
+    // gated, and only under current rules; recordings older than schema 32
+    // and legacy Link semantics keep the ungated production they were made
+    // with so retained replays still reproduce.
+    if (legacyLinkReplaySemantics_ || legacyPoweredProductionReplaySemantics_ ||
+        producer.faction != Faction::MeridianCompact ||
+        producer.type != EntityType::Barracks) {
+        return true;
+    }
+    return producer.networkOperational;
+}
+
 bool Simulation::IsPositionInMeridianNetwork(PlayerId player,
                                              Vec2 position) const {
     if (legacyLinkReplaySemantics_) {
@@ -2520,6 +2560,9 @@ ProductionResult Simulation::ValidateProduction(PlayerId player,
     if (!building->completed) {
         return ProductionResult::ProducerIncomplete;
     }
+    if (!IsProducerPowered(*building)) {
+        return ProductionResult::ProducerUnpowered;
+    }
     if (playerState->activeResearch != ResearchType::None &&
         playerState->researchProducer == producer) {
         return ProductionResult::ProducerBusy;
@@ -2597,6 +2640,9 @@ ProductionStartBlockReason Simulation::ProductionStartBlockReasonFor(
     if (!supported) {
         return ProductionStartBlockReason::UnsupportedUnit;
     }
+    if (!IsProducerPowered(*building)) {
+        return ProductionStartBlockReason::Unpowered;
+    }
     if (playerState->activeResearch != ResearchType::None &&
         playerState->researchProducer == producer) {
         return ProductionStartBlockReason::Busy;
@@ -2670,6 +2716,7 @@ std::optional<ProducerQueueState> Simulation::ProducerQueueStateFor(
     state.pausedForSpawn = building->productionPausedForSpawn;
     state.spawnBlockedAlert = building->productionSpawnBlockedAlert;
     state.rallyAlert = building->rallyRouteAlert;
+    state.unpowered = !IsProducerPowered(*building);
     state.waiting = building->productionQueue;
     state.rallyRoute = building->rallyRoute;
     return state;
@@ -4679,7 +4726,8 @@ std::optional<Vec2> Simulation::FindProductionSpawnPosition(
 
 bool Simulation::TryActivateNextProduction(Entity& producer) {
     if (producer.productionRequired > 0 || producer.productionQueue.empty() ||
-        producer.hitPoints <= 0 || !producer.completed) {
+        producer.hitPoints <= 0 || !producer.completed ||
+        !IsProducerPowered(producer)) {
         return false;
     }
     PlayerState* player = MutablePlayer(producer.owner);
@@ -6688,7 +6736,10 @@ void Simulation::ProcessProduction() {
         if (producer->productionRequired <= 0) {
             continue;
         }
-        if (!producer->productionPausedForSpawn) {
+        // REL-FAC-002.PROD: an unpowered Foundry holds its progress and
+        // keeps the item; reconnecting resumes it where it stopped.
+        if (!producer->productionPausedForSpawn &&
+            IsProducerPowered(*producer)) {
             producer->productionProgress = std::min(
                 producer->productionRequired,
                 SaturatingAdd(producer->productionProgress, 1));
@@ -7832,6 +7883,78 @@ bool PlayerView::IsPositionPassable(Vec2 position) const {
     return tile < tiles_.size() && tiles_[tile].passable;
 }
 
+ResourcePool PlayerView::ProductionCost(EntityType unitType) const {
+    return ProductionCostFor(config_.rules, player_.faction, unitType);
+}
+
+ResourcePool PlayerView::BuildCost(EntityType structureType) const {
+    return BuildCostFor(config_.rules, player_.faction, structureType);
+}
+
+ProductionStartBlockReason PlayerView::ProductionStartBlockReasonFor(
+    EntityId producer,
+    EntityType unitType) const {
+    // Mirrors Simulation::ProductionStartBlockReasonFor over the scoped copy,
+    // in the same order, so the deck and the refusal name the same reason.
+    const Entity* building = FindViewEntity(*this, producer);
+    if (building == nullptr || building->owner != player_.id ||
+        building->hitPoints <= 0) {
+        return ProductionStartBlockReason::InvalidProducer;
+    }
+    if (!building->completed) {
+        return ProductionStartBlockReason::ProducerIncomplete;
+    }
+    const bool supported =
+        (building->type == EntityType::CommandCore &&
+         unitType == EntityType::Worker) ||
+        (building->type == EntityType::Barracks &&
+         IsBarracksUnitType(unitType));
+    if (!supported) {
+        return ProductionStartBlockReason::UnsupportedUnit;
+    }
+    if (productionRequiresNetworkPower_ &&
+        building->faction == Faction::MeridianCompact &&
+        building->type == EntityType::Barracks &&
+        !building->networkOperational) {
+        return ProductionStartBlockReason::Unpowered;
+    }
+    if (player_.activeResearch != ResearchType::None &&
+        player_.researchProducer == producer) {
+        return ProductionStartBlockReason::Busy;
+    }
+    if (building->productionRequired > 0 ||
+        !building->productionQueue.empty()) {
+        return building->productionQueue.size() >= Entity::kMaxProductionQueue
+                   ? ProductionStartBlockReason::QueueFull
+                   : ProductionStartBlockReason::Busy;
+    }
+    const ResourcePool cost = ProductionCost(unitType);
+    if (player_.resources.material < cost.material) {
+        return ProductionStartBlockReason::InsufficientMatter;
+    }
+    if (player_.resources.dawnshards < cost.dawnshards) {
+        return ProductionStartBlockReason::InsufficientDawn;
+    }
+    std::int32_t committedPopulation = populationUsed_;
+    for (const Entity& entity : entities_) {
+        if (entity.owner == player_.id && entity.productionRequired > 0) {
+            committedPopulation = SaturatingAdd(
+                committedPopulation, entity.productionLogisticsCost);
+        }
+    }
+    if (SaturatingAdd(
+            committedPopulation,
+            PopulationCostFor(config_.rules, player_.faction, unitType)) >
+        populationCapacity_) {
+        return ProductionStartBlockReason::LogisticsCapacity;
+    }
+    if (IsMobileEntityType(unitType) &&
+        mobileEntityCount_ + mobileEntityReservations_ >= kMobileEntityLimit) {
+        return ProductionStartBlockReason::MobileEntityLimit;
+    }
+    return ProductionStartBlockReason::None;
+}
+
 Visibility Simulation::VisibilityAt(PlayerId player, Vec2 position) const {
     if (player >= players_.size() || !players_[player].active ||
         !IsInsideMap(position)) {
@@ -7866,6 +7989,8 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
     view.config_.randomSeed = 0;
     view.currentTick_ = currentTick_;
     view.usesBulwarkCommitmentRules_ = !legacyBulwarkReplaySemantics_;
+    view.productionRequiresNetworkPower_ =
+        !legacyLinkReplaySemantics_ && !legacyPoweredProductionReplaySemantics_;
     view.player_ = *playerState;
     view.decisionSeed_ = config_.randomSeed;
     view.populationUsed_ = PopulationUsed(player);
@@ -8320,6 +8445,14 @@ std::vector<Command> Simulation::GenerateAiCommands(
                         if (VisibilityAt(player, candidate) != Visibility::Visible ||
                             ValidatePlacement(player, expansionType, candidate) !=
                                 PlacementResult::Valid) {
+                            continue;
+                        }
+                        // REL-FAC-002.PROD: a Meridian Foundry outside the
+                        // network would never produce; site it in reach.
+                        if (expansionType == EntityType::Barracks &&
+                            playerState->faction == Faction::MeridianCompact &&
+                            view.ProductionRequiresNetworkPower() &&
+                            !IsViewPositionInMeridianNetwork(view, candidate)) {
                             continue;
                         }
                         expansionPosition = candidate;
@@ -11118,6 +11251,7 @@ void Simulation::CaptureReplayBaseline() {
     legacyConstructionAssistReplaySemantics_ = false;
     legacyOpenGroundReplaySemantics_ = false;
     legacyMaskedCorridorReplaySemantics_ = false;
+    legacyPoweredProductionReplaySemantics_ = false;
     replayForfeitingPlayer_ = kNeutralPlayer;
 }
 
@@ -11160,6 +11294,8 @@ bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
         prefix.version < kGroundOccupancyReplayVersion;
     restored.legacyMaskedCorridorReplaySemantics_ =
         prefix.version < kMaskedCorridorReplayVersion;
+    restored.legacyPoweredProductionReplaySemantics_ =
+        prefix.version < kPoweredProductionReplayVersion;
     restored.ResolveAegisPower();
     if (replayed->StateChecksum() != restored.StateChecksum()) {
         SetError(error, "replay prefix state does not match restored state");
@@ -11242,6 +11378,8 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
         replay.version < kGroundOccupancyReplayVersion;
     simulation->legacyMaskedCorridorReplaySemantics_ =
         replay.version < kMaskedCorridorReplayVersion;
+    simulation->legacyPoweredProductionReplaySemantics_ =
+        replay.version < kPoweredProductionReplayVersion;
     // Loading a save applies current network rules. Playback must restore the
     // original rules before its first checksum, including zero-tick records.
     simulation->ResolveAegisPower();

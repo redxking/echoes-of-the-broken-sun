@@ -11,4 +11,11 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesInputPrompt final
     static FText Action(FName Name);
     static FText Axis(FName Name);
     static FText Command(EEchoesCommandDeckAction Action);
+    /**
+     * Chord with the key's short name (";" rather than "Semicolon") for the
+     * corner of a command tile, where the long name of a punctuation key ran
+     * into the neighbouring tile. Modifier prefixes are unchanged.
+     */
+    static FText Glyph(const FKey& Key, bool bShift, bool bCtrl, bool bAlt, bool bCmd);
+    static FText CommandGlyph(EEchoesCommandDeckAction Action);
 };

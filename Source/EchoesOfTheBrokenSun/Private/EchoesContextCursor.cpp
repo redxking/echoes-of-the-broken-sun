@@ -50,16 +50,16 @@ FEchoesContextCursorStyle FEchoesContextCursorModel::Style(
     {
         case EEchoesContextCursor::FriendlySelection:
             return {TEXT("FriendlyBrackets"), Pale,
-                    FLinearColor(0.12f, 0.86f, 0.92f, 1.0f)};
+                    FLinearColor(0.08f, 0.78f, 0.92f, 1.0f)}; // Meridian Cyan
         case EEchoesContextCursor::EnemyAttack:
             return {TEXT("AttackDiamond"), Pale,
-                    FLinearColor(1.0f, 0.24f, 0.18f, 1.0f)};
+                    FLinearColor(0.94f, 0.30f, 0.32f, 1.0f)}; // Danger Red
         case EEchoesContextCursor::Gather:
             return {TEXT("GatherPickaxe"), Pale,
-                    FLinearColor(0.98f, 0.72f, 0.20f, 1.0f)};
+                    FLinearColor(0.96f, 0.69f, 0.25f, 1.0f)}; // Broken-Sun Amber
         case EEchoesContextCursor::Build:
             return {TEXT("BuildBlueprint"), Pale,
-                    FLinearColor(0.18f, 0.72f, 1.0f, 1.0f)};
+                    FLinearColor(0.08f, 0.78f, 0.92f, 1.0f)}; // Meridian Cyan
         case EEchoesContextCursor::Invalid:
             return {TEXT("InvalidCross"), Pale,
                     FLinearColor(1.0f, 0.20f, 0.16f, 1.0f)};

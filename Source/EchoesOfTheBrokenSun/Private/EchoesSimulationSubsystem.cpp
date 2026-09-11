@@ -23,6 +23,7 @@
 #include "EchoesPlayerController.h"
 #include "EchoesPointerCombatGuardReview.h"
 #include "EchoesPresentationAudioSubsystem.h"
+#include "EchoesProductionReasonText.h"
 #include "EchoesSkirmishSetup.h"
 #include "EchoesTerrainView.h"
 #include "EchoesWeatherView.h"
@@ -18849,6 +18850,42 @@ echoes::sim::Tick UEchoesSimulationSubsystem::ResolvePlayerExecuteTick(
     return CurrentTick + DelayTicks;
 }
 
+namespace
+{
+/**
+ * Funding refusal that names the unit, its price, the player's holding, the
+ * short resource and where it comes from. The catalog names the roster unit;
+ * the simulation's rules price it and describe the Future Well yields.
+ */
+FString FundingRefusalText(
+    const UWorld* World,
+    const echoes::sim::Simulation& SimulationValue,
+    echoes::sim::PlayerId Player,
+    echoes::sim::Faction FactionValue,
+    echoes::sim::EntityType Type,
+    const echoes::sim::ResourcePool& Cost,
+    echoes::sim::ProductionStartBlockReason Reason)
+{
+    const UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+    const UEchoesContentSubsystem* Content = GameInstance != nullptr
+        ? GameInstance->GetSubsystem<UEchoesContentSubsystem>() : nullptr;
+    const FEchoesContentCatalog* Catalog =
+        Content != nullptr && Content->IsReady() ? &Content->GetCatalog() : nullptr;
+    FString Name = FEchoesProductionReasonText::UnitName(FactionValue, Type, Catalog);
+    if (Name.IsEmpty())
+    {
+        Name = TEXT("THE SELECTED UNIT");
+    }
+    const echoes::sim::PlayerState* PlayerState = SimulationValue.FindPlayer(Player);
+    const echoes::sim::ResourcePool Held =
+        PlayerState != nullptr ? PlayerState->resources : echoes::sim::ResourcePool{};
+    return FEchoesProductionReasonText::FundingRefusal(
+        Reason, Name, Cost, Held,
+        SimulationValue.Config().rules.futureWell,
+        SimulationValue.Config().ticksPerSecond);
+}
+}
+
 bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
     echoes::sim::CommandType CommandType,
     const echoes::sim::Entity& Actor,
@@ -19603,10 +19640,11 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
             if (Player == nullptr || Player->resources.material < Cost.material ||
                 Player->resources.dawnshards < Cost.dawnshards)
             {
-                OutFeedback = FString::Printf(
-                    TEXT("[INSUFFICIENT_RESOURCES] Requires %d Matter and %d Dawnshards."),
-                    Cost.material,
-                    Cost.dawnshards);
+                OutFeedback = FundingRefusalText(
+                    GetWorld(), *Simulation, LocalPlayerId, Actor.faction, BuildType, Cost,
+                    Player != nullptr && Player->resources.material < Cost.material
+                        ? echoes::sim::ProductionStartBlockReason::InsufficientMatter
+                        : echoes::sim::ProductionStartBlockReason::InsufficientDawn);
                 return false;
             }
             return true;
@@ -19629,6 +19667,11 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                 case echoes::sim::ProductionResult::ProducerIncomplete:
                     OutFeedback = TEXT("[PRODUCER_INCOMPLETE] Construction must finish before production.");
                     break;
+                case echoes::sim::ProductionResult::ProducerUnpowered:
+                    // REL-FAC-002.PROD (owner ruling 2026-09-11): built away
+                    // from power is allowed; producing there is not.
+                    OutFeedback = TEXT("[PRODUCER_UNPOWERED] This Array Foundry is outside the power network. Extend a Power Link chain from your Anchor to reach it before it can produce.");
+                    break;
                 case echoes::sim::ProductionResult::ProducerBusy:
                     OutFeedback = TEXT("[PRODUCER_BUSY] This structure already has an active production order.");
                     break;
@@ -19636,7 +19679,14 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                     OutFeedback = TEXT("[UNIT_UNSUPPORTED] Command Cores produce workers; Barracks produce soldiers.");
                     break;
                 case echoes::sim::ProductionResult::InsufficientResources:
-                    OutFeedback = TEXT("[INSUFFICIENT_RESOURCES] The selected unit cannot be funded.");
+                    // The owner's D2 play test read "cannot be funded" with
+                    // 1,580 Matter in hand; the refusal now names the short
+                    // resource, the price, the holding and the source.
+                    OutFeedback = FundingRefusalText(
+                        GetWorld(), *Simulation, LocalPlayerId, Actor.faction, BuildType,
+                        Simulation->ProductionCost(Actor.faction, BuildType),
+                        Simulation->ProductionStartBlockReasonFor(
+                            LocalPlayerId, Actor.id, BuildType));
                     break;
                 case echoes::sim::ProductionResult::CapacityReached:
                     OutFeedback = TEXT("[LOGISTICS_CAPACITY] Build a drop-off before adding more units.");

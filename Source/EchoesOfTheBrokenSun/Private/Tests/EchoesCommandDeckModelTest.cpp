@@ -54,6 +54,13 @@ bool FEchoesCommandDeckModelTest::RunTest(const FString& Parameters)
 
     Profile = {};
     Profile.StructureCount = 1;
+    TestTrue(TEXT("A static structure such as a Power Link offers no STOP tile (owner finding 2026-09-11)"),
+        FEchoesCommandDeckModel::BuildActionEntries(Profile).IsEmpty());
+    TestFalse(TEXT("A static structure's action text advertises no STOP"),
+        FEchoesCommandDeckModel::BuildPrimaryActions(Profile).Contains(TEXT("STOP")));
+
+    Profile = {};
+    Profile.StructureCount = 1;
     Profile.bCanCancelSelectedConstruction = true;
     const auto CancellationEntries = FEchoesCommandDeckModel::BuildActionEntries(Profile);
     TestTrue(TEXT("Only a selected unfinished structure exposes cancellation"),

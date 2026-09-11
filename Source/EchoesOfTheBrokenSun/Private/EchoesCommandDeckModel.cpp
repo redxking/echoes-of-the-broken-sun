@@ -55,6 +55,11 @@ FString FEchoesCommandDeckModel::BuildPrimaryActions(
     {
         return TEXT("[E] LINE UNIT    [;] HEAVY    ['] SCOUT    [F2] TECHNOLOGY");
     }
+    if (Profile.StructureCount > 0)
+    {
+        // Power Links and Aegis Posts act on their own; nothing to press.
+        return TEXT("");
+    }
     return TEXT("[RMB] CONTEXT / MOVE    [X] STOP");
 }
 

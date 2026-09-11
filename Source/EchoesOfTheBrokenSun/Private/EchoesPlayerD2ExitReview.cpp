@@ -702,7 +702,10 @@ void AEchoesPlayerController::RunD2ExitReviewStage(float DeltaTime)
             int32 TileY = 0;
             if (!FindPlacement(
                     *View, Builder->id, BuildType, CoreTileX, CoreTileY,
-                    BuildType == EntityType::Dropoff, Position, TileX, TileY))
+                    // REL-FAC-002.PROD: a Foundry outside the network would
+                    // never train the army this chain needs.
+                    BuildType == EntityType::Dropoff || BuildType == EntityType::Barracks,
+                    Position, TileX, TileY))
             {
                 continue;
             }

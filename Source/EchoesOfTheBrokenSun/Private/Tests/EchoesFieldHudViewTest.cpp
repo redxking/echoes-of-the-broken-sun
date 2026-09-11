@@ -2,6 +2,7 @@
 // Author: Angelis Pseftis
 
 #include "EchoesFieldHudView.h"
+#include "EchoesProductionReasonText.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -729,6 +730,161 @@ bool FEchoesFieldHudViewTest::RunTest(const FString& Parameters)
     auto ReplayedRelay = Simulation::ReplayToEnd(RelaySimulation.ExportReplay(), &RelayError);
     TestTrue(TEXT("Relay presentation leaves deterministic replay unchanged"), ReplayedRelay.has_value() &&
         ReplayedRelay->StateChecksum() == RelaySimulation.StateChecksum());
+
+    // Owner play test 2026-09-11: the deck read "LINE UNIT / HEAVY / SCOUT"
+    // with no price, and every refusal said only "cannot be funded". The
+    // deck now names the roster unit, prices it from the view's rules and
+    // says why it cannot start; a busy producer with queue room stays live.
+    {
+        FEchoesCommandDeckProfile Deck;
+        Deck.bHasBarracks = true;
+        Deck.StructureCount = 1;
+        FEchoesFieldHudCommandView Commands;
+        FEchoesFieldHudModel::BuildCommandControls(
+            Deck, FEchoesFieldHudModel::DeckPresentation(*Player, {LocalProducer}, nullptr), Commands);
+        const FEchoesFieldHudControl* Lancer = Commands.Controls.FindByPredicate(
+            [](const FEchoesFieldHudControl& Control)
+            {
+                return Control.Argument == static_cast<int32>(EEchoesCommandDeckAction::ProduceSoldier);
+            });
+        if (TestNotNull(TEXT("Foundry deck offers the line unit"), Lancer))
+        {
+            TestEqual(TEXT("Produce tile names the roster unit, not a role word"),
+                Lancer->Label.ToString(), FString(TEXT("LANCER")));
+            TestEqual(TEXT("Produce tile carries the configured price"),
+                Lancer->Cost.ToString(),
+                FEchoesProductionReasonText::TileCost(Player->ProductionCost(EntityType::Soldier)).ToString());
+            TestTrue(TEXT("A busy producer with queue room reads as available"),
+                Lancer->Availability.IsEmpty() && Lancer->bEnabled);
+            TestFalse(TEXT("Produce tile keeps a binding for the corner"), Lancer->Glyph.IsEmpty());
+        }
+        TestTrue(TEXT("A deck with tiles is visible"), Commands.bVisible);
+
+        FEchoesCommandDeckProfile Static;
+        Static.StructureCount = 1;
+        FEchoesFieldHudCommandView StaticCommands;
+        FEchoesFieldHudModel::BuildCommandControls(
+            Static, FEchoesFieldHudModel::DeckPresentation(*Player, {}, nullptr), StaticCommands);
+        TestTrue(TEXT("A Power Link selection shows no deck and no STOP (owner finding 2026-09-11)"),
+            StaticCommands.Controls.IsEmpty() && !StaticCommands.bVisible);
+    }
+    {
+        // An unfunded seat: the tile says which resource is short and stays
+        // pressable so the refusal can explain; a clicked deposit becomes a
+        // card entry carrying its stock, without armor anywhere.
+        SimulationConfig BrokeConfig;
+        BrokeConfig.mapWidthTiles = 16;
+        BrokeConfig.mapHeightTiles = 16;
+        Simulation Broke(BrokeConfig);
+        TestTrue(TEXT("Unfunded seat is admitted"),
+            Broke.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+        const EntityId BrokeCore = Broke.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::CommandCore, Vec2::FromTiles(2, 2));
+        const EntityId BrokeFoundry = Broke.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Barracks, Vec2::FromTiles(5, 2));
+        const EntityId Deposit = Broke.SpawnResourceNode(Vec2::FromTiles(2, 5), 900);
+        // A deposit is never spawned empty; it is mined out in play. Drain it.
+        const EntityId Exhausted = Broke.SpawnResourceNode(Vec2::FromTiles(5, 5), 1);
+        TestTrue(TEXT("Unfunded fixture exists"),
+            BrokeCore != 0 && BrokeFoundry != 0 && Deposit != 0 && Exhausted != 0);
+        if (Exhausted != 0)
+        {
+            Broke.MutableEntityForTesting(Exhausted)->resourceRemaining = 0;
+        }
+        const std::optional<PlayerView> BrokeView = Broke.CreatePlayerView(0);
+        if (TestTrue(TEXT("Unfunded scoped view materializes"), BrokeView.has_value()))
+        {
+            FEchoesCommandDeckProfile Deck;
+            Deck.bHasCommandCore = true;
+            Deck.bHasBarracks = true;
+            Deck.StructureCount = 2;
+            FEchoesFieldHudCommandView Commands;
+            FEchoesFieldHudModel::BuildCommandControls(Deck,
+                FEchoesFieldHudModel::DeckPresentation(*BrokeView, {BrokeCore, BrokeFoundry}, nullptr),
+                Commands);
+            const FEchoesFieldHudControl* Surveyor = Commands.Controls.FindByPredicate(
+                [](const FEchoesFieldHudControl& Control)
+                {
+                    return Control.Argument == static_cast<int32>(EEchoesCommandDeckAction::ProduceWorker);
+                });
+            if (TestNotNull(TEXT("Core deck offers the worker"), Surveyor))
+            {
+                TestEqual(TEXT("Worker tile names the Surveyor"),
+                    Surveyor->Label.ToString(), FString(TEXT("SURVEYOR")));
+                TestEqual(TEXT("Unfunded tile names the short resource"),
+                    Surveyor->Availability.ToString(),
+                    FEchoesProductionReasonText::Availability(
+                        ProductionStartBlockReason::InsufficientMatter).ToString());
+                TestTrue(TEXT("A resource shortfall keeps the tile pressable"), Surveyor->bEnabled);
+            }
+
+            // REL-FAC-002.PROD (owner ruling 2026-09-11): a Foundry built away
+            // from power keeps a live tile that says why it cannot produce.
+            const EntityId DarkFoundry = Broke.SpawnEntity(
+                0, Faction::MeridianCompact, EntityType::Barracks, Vec2::FromTiles(13, 13));
+            TestTrue(TEXT("Unpowered fixture exists"), DarkFoundry != 0);
+            Broke.Step();
+            const std::optional<PlayerView> DarkView = Broke.CreatePlayerView(0);
+            if (TestTrue(TEXT("Unpowered scoped view materializes"), DarkView.has_value()))
+            {
+                TestTrue(TEXT("The far Foundry is outside the network"),
+                    DarkView->ProductionStartBlockReasonFor(DarkFoundry, EntityType::Soldier) ==
+                        ProductionStartBlockReason::Unpowered);
+                FEchoesCommandDeckProfile DarkDeck;
+                DarkDeck.bHasBarracks = true;
+                DarkDeck.StructureCount = 1;
+                FEchoesFieldHudCommandView DarkCommands;
+                FEchoesFieldHudModel::BuildCommandControls(DarkDeck,
+                    FEchoesFieldHudModel::DeckPresentation(*DarkView, {DarkFoundry}, nullptr),
+                    DarkCommands);
+                const FEchoesFieldHudControl* DarkLancer = DarkCommands.Controls.FindByPredicate(
+                    [](const FEchoesFieldHudControl& Control)
+                    {
+                        return Control.Argument == static_cast<int32>(EEchoesCommandDeckAction::ProduceSoldier);
+                    });
+                if (TestNotNull(TEXT("Unpowered Foundry deck still offers the line unit"), DarkLancer))
+                {
+                    TestEqual(TEXT("Unpowered tile names the power gate"),
+                        DarkLancer->Availability.ToString(),
+                        FEchoesProductionReasonText::Availability(
+                            ProductionStartBlockReason::Unpowered).ToString());
+                    TestTrue(TEXT("Unpowered tile stays pressable so the refusal explains"),
+                        DarkLancer->bEnabled);
+                }
+                const FEchoesFieldHudView DarkCard =
+                    FEchoesFieldHudModel::BuildPlayerScoped(*DarkView, {DarkFoundry}, false);
+                TestTrue(TEXT("Unpowered Foundry queue view flags the outage"),
+                    DarkCard.Production.bVisible && DarkCard.Production.bUnpowered);
+                const FEchoesFieldHudSelectionEntry* DarkEntry = DarkCard.Selection.Entries.FindByPredicate(
+                    [DarkFoundry](const FEchoesFieldHudSelectionEntry& Entry) { return Entry.EntityId == DarkFoundry; });
+                TestTrue(TEXT("Unpowered Foundry card says it produces only while connected"),
+                    DarkEntry != nullptr && DarkEntry->Purpose.ToString().Contains(TEXT("Disconnected")) &&
+                        DarkEntry->Purpose.ToString().Contains(TEXT("only while connected")));
+            }
+
+            const FEchoesFieldHudView Inspected =
+                FEchoesFieldHudModel::BuildPlayerScoped(*BrokeView, {Deposit, Exhausted}, false);
+            if (TestEqual(TEXT("Both visible deposits become card entries"),
+                    Inspected.Selection.Entries.Num(), 2))
+            {
+                const FEchoesFieldHudSelectionEntry& Stocked = Inspected.Selection.Entries[0];
+                TestTrue(TEXT("A deposit entry carries its known stock"),
+                    Stocked.bDeposit && Stocked.ResourceRemaining == 900 && !Stocked.bOwned);
+                TestFalse(TEXT("A deposit entry explains itself"), Stocked.Purpose.IsEmpty());
+                const FEchoesFieldHudSelectionEntry& Dry = Inspected.Selection.Entries[1];
+                TestTrue(TEXT("An exhausted deposit entry reads zero, not unknown"),
+                    Dry.bDeposit && Dry.ResourceRemaining == 0);
+            }
+            const FEchoesFieldHudMapMarker* DryMarker = Inspected.Minimap.Markers.FindByPredicate(
+                [Exhausted](const FEchoesFieldHudMapMarker& Marker) { return Marker.EntityId == Exhausted; });
+            const FEchoesFieldHudMapMarker* StockedMarker = Inspected.Minimap.Markers.FindByPredicate(
+                [Deposit](const FEchoesFieldHudMapMarker& Marker) { return Marker.EntityId == Deposit; });
+            TestTrue(TEXT("An exhausted deposit stays on the minimap, marked exhausted"),
+                DryMarker != nullptr && DryMarker->bResource && DryMarker->bExhausted);
+            TestTrue(TEXT("A stocked deposit is not marked exhausted"),
+                StockedMarker != nullptr && StockedMarker->bResource && !StockedMarker->bExhausted);
+        }
+    }
 
     return true;
 }

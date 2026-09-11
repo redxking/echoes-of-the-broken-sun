@@ -29,6 +29,18 @@ struct FEchoesHudLayout final
     // clipped the whole console away, so the space travels with the rects.
     FVector2D ViewSize = FVector2D::ZeroVector;
 
+    /** The console's physical scale on a given surface: the accessibility
+     * HUD scale grown by the viewport DPI curve above 1080 lines, so a 1440 or
+     * Retina surface does not draw the 720-line console at 720-line pixel
+     * size (REL-UI-013). Below 1080 lines the curve is not applied: the
+     * 720-line profile is authored at 1.0 and is the minimum. Every consumer
+     * of a layout at runtime (widget, camera pawn, controller) must pass this
+     * value, never the raw setting, or their rects disagree. */
+    [[nodiscard]] static float EffectiveScale(float HudScale, float ViewportDpi)
+    {
+        return FMath::Clamp(HudScale * FMath::Max(1.0f, ViewportDpi), 0.8f, 1.5f);
+    }
+
     [[nodiscard]] static FEchoesHudLayout Build(
         const FVector2D& ViewportSize,
         float HudScale,
@@ -44,21 +56,25 @@ struct FEchoesHudLayout final
         // Keep the console below the battlefield. Accessibility scaling grows
         // its height, but never consumes more than the lower half of the view.
         // The console must still fit what it carries. The selection card needs
-        // 96 units of text at scale, the objective header takes 90, and three
-        // gaps of 14 sit between and around them. Shrinking below that sum left
+        // 96 units of text at scale, the objective header takes 92 (a 14-point
+        // title over two 16-point lines with its padding), and three gaps of
+        // 14 sit between and around them. The console panels do not scroll
+        // (owner direction, 2026-09-11): 272 gives the selection card 142
+        // units at 100%, which holds a unit's vitals and role or a producer's
+        // queue and its controls without a scroll bar. Shrinking below that sum left
         // the centre panel too short for a single selected unit at 150% on a
         // 720-line display. The lower-half ceiling still wins over the floor.
         const float SelectionTextHeight = 96.0f * Scale;
-        const float HeaderTextHeight = 90.0f * Scale;
+        const float HeaderTextHeight = 92.0f * Scale;
         const float MinBarHeight = SelectionTextHeight + HeaderTextHeight + 3.0f * Gap;
         const float BarHeight = FMath::Clamp(
-            FMath::Min(252.0f * Scale, Height * 0.38f),
+            FMath::Min(272.0f * Scale, Height * 0.38f),
             FMath::Min(MinBarHeight, Height * 0.5f),
             Height * 0.5f);
         const float Top = Height - BarHeight;
         const float InnerTop = Top + Gap;
         const float InnerBottom = Height - Gap;
-        const float HeaderHeight = 90.0f * Scale;
+        const float HeaderHeight = 92.0f * Scale;
         const float MapSize = FMath::Max(1.0f, BarHeight - 2 * Gap);
         const float LeftWidth = FMath::Max(220.0f, MapSize);
         const float DeckWidth = FMath::Min(360.0f * Scale, Width * 0.32f);
@@ -94,8 +110,11 @@ struct FEchoesHudLayout final
         // The ledger clips to its own bounds, so a height equal to the sum of
         // its rows cuts the glyph tips off the first and last of them. An
         // 18-point value row over two 14-point context rows measures about 84
-        // units with no padding at all; 104 keeps the border off the text at
-        // every scale in the accessibility range.
+        // units with no padding at all; 104 kept the border off the text at
+        // every scale in the accessibility range. With the labels stacked
+        // over their values the ledger needs 89 at 100%, and 96 leaves the
+        // deployment frame the 140-unit silhouette room it needs above the
+        // 272-unit console (EchoesOrthographicCameraTest).
         // The ledger's headroom belongs to the edge it already reserves, not to the
         // battlefield below it. KeyboardTargetPoint halves StatusPanel.Min.Y to place
         // the deployment framing centre, and the framed headquarters' silhouette
@@ -104,7 +123,7 @@ struct FEchoesHudLayout final
         // 104*Scale height is unchanged.
         constexpr float ResourceTop = 2.0f;
         Layout.ResourcePanel = FBox2D(FVector2D(ResourceRight - ResourceWidth, ResourceTop),
-            FVector2D(ResourceRight, ResourceTop + 104.0f * Scale));
+            FVector2D(ResourceRight, ResourceTop + 96.0f * Scale));
         Layout.MinimapPanel = FBox2D(FVector2D(Gap, InnerBottom - MapSize),
             FVector2D(Gap + MapSize, InnerBottom));
         Layout.ObjectivePanel = FBox2D(FVector2D(CenterLeft, InnerTop),

@@ -19,15 +19,16 @@ int32 UEchoesHudGlyph::NativePaint(const FPaintArgs& Args, const FGeometry& Geom
     const FVector2D Size = Geometry.GetLocalSize();
     const float Unit = FMath::Min(Size.X, Size.Y) / 32.f;
     const FVector2D Origin = (Size - FVector2D(32 * Unit)) * .5f;
-    const FLinearColor Color = !bEnabled ? FLinearColor(.32f,.35f,.36f,1)
-        : bContrast ? FLinearColor::White : FLinearColor(.58f,.83f,.86f,1);
+    const FLinearColor Color = !bEnabled ? FLinearColor(0.32f, 0.35f, 0.36f, 1.0f)
+        : bContrast ? FLinearColor::White : FLinearColor(0.08f, 0.78f, 0.92f, 1.0f); // Meridian Cyan
     const auto Line = [&](std::initializer_list<FVector2D> Points)
     {
         TArray<FVector2D> Path;
         for (const auto& Point : Points) Path.Add(Origin + Point * Unit);
+        // Increased line thickness to 2.5f for bolder, legible geometric glyphs
         FSlateDrawElement::MakeLines(Elements, Base + 1, Geometry.ToPaintGeometry(), Path,
             bEnabled ? ESlateDrawEffect::None : ESlateDrawEffect::DisabledEffect,
-            Color * Style.GetColorAndOpacityTint(), true, 1.6f);
+            Color * Style.GetColorAndOpacityTint(), true, 2.5f);
     };
     const auto Box = [&](float X, float Y, float W, float H)
     { Line({{X,Y},{X+W,Y},{X+W,Y+H},{X,Y+H},{X,Y}}); };

@@ -18,6 +18,23 @@ Read state at the exact requirement/build/evidence boundary. Dated entries overr
 only for the IDs and scope they name. A family summary is a navigation aid, not proof that every child
 has its required evidence. Preserve historical claims while recording any missing or conflicting support.
 
+## Current state by ID
+
+Machine-maintained by `Scripts/record_state.py`; read it with `Scripts/req.py state <ID>`. One row per
+requirement, the newest verdict wins, and every change also lands as a dated line in the
+[structured state journal](#structured-state-journal). Rows use the [state vocabulary](#state-vocabulary);
+owner-only values are written only on the owner's recorded instruction. IDs without a row keep the record
+defaults and any dated entry below. This table is a view of decisions, not a new authority.
+
+| ID | State | Class | Evidence | Commit | Date | Note |
+|---|---|---|---|---|---|---|
+| `REL-ECO-010` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | [INSUFFICIENT_DAWN]/[INSUFFICIENT_MATTER] refusals name unit, price, holding and source; Gameplay.ProductionRefusalText |
+| `REL-FAC-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | REL-FAC-002.PROD authored and implemented: Foundry produces only while network-powered; replay schema 32; native+Unreal+rendered green; uncommitted |
+| `REL-UI-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
+| `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
+| `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
+| `SPEC-RES-006` | AWAITING HUMAN ACCEPTANCE | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | SPEC-RES-006.INSPECT: click shows remaining Matter; exhausted stub 30%/80% and minimap mark; FieldHudAuthority green; rendered chain did not stage it |
+
 ## Recoverable display-setting changes — 2026-09-09
 
 **Engineering state: AGENT VERIFIED at the source, engine-test, and agent-rendered window
@@ -5015,3 +5032,153 @@ Also observed in the frame: the guidance panel left of the card shows text clipp
 Status: D2 stays the first unfinished package; these five are the next repairs; fix records follow
 below as they land.
 
+
+## D2 owner play-test findings repaired — 2026-09-11
+
+Owner order: repair the five findings of "D2 owner play test — FAILED, 2026-09-11" and return the
+chain. Controlling IDs: REL-FAC-002 (new `.PROD` ruling), REL-FAC-003/004, SPEC-BLD-004, SPEC-UI-008.F15,
+SPEC-HUD-004, DEMO-UI-007, REL-UI-002, REL-UI-003, SPEC-RES-006 (new `.INSPECT` ruling), SPEC-BLD-001,
+REL-ECO-010.AUTH, SPEC-CMB-002, SPEC-VAL-003. Evidence root:
+`BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z` (build.log, build-2.log, build-3.log,
+test_sim-A/B/C.log, automation-A, automation-B, automation-C). Rendered review: `BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720` (agent-driven, Glass Scar, 1280×720). Evidence classes:
+native tests, Unreal automation and agent-driven rendered review only; no physical input, no package,
+no owner acceptance.
+
+**Finding 1 — production without power (owner ruling authored as REL-FAC-002.PROD).** Simulation:
+`Simulation::IsProducerPowered` gates a completed Meridian Foundry on `networkOperational`;
+`ValidateProduction` returns the new `ProductionResult::ProducerUnpowered`, `ProductionStartBlockReasonFor`
+(simulation and scoped view) the new `ProductionStartBlockReason::Unpowered`, `TryActivateNextProduction`
+refuses to start a waiting item, `ProcessProduction` holds the active item's progress, and
+`ProducerQueueState.unpowered` reports it. Reconnection resumes from the held progress the next tick.
+Replay schema 32 (`kPoweredProductionReplayVersion`) carries the gate; `legacyPoweredProductionReplaySemantics_`
+keeps schema 31 and older recordings ungated, and `PlayerView::ProductionRequiresNetworkPower()` tells
+presentation and the opponent which rules apply. The opponent planner sites a Meridian Foundry only where an
+operational node reaches it (`IsViewPositionInMeridianNetwork`), and the D2 review driver requires a
+connected site for the Foundry as it already did for the Link. Presentation: `[PRODUCER_UNPOWERED]` refusal
+naming the Power Link remedy; deck tile availability "Unpowered: extend a Power Link" (tile stays pressable);
+selection card "Produces units only while connected"; queue line `[UNPOWERED] Extend a Power Link chain
+from your Anchor.` Native: "Meridian Foundry produces only while powered" (refusal, held progress, no refund,
+resume, snapshot round-trip, schema stamp); three older fixtures that had an unpowered Foundry were sited
+inside the Anchor's reach with their intent unchanged. Not done: a distinct mesh/material state for an
+unpowered Foundry on the field (SPEC-UI-008.F15 completed-but-unpowered look); the HUD ring, card and
+queue carry the state today.
+
+**Finding 2 — deck names, costs, hotkeys, disabled reasons.** `FEchoesProductionReasonText` (new) names
+the roster unit from the catalog (LANCER, BULWARK TEAM, SKIFF, SURVEYOR), prices tiles "85M 20D", and words
+availability; `FEchoesFieldHudModel::DeckPresentation` prices and judges every produce/build tile from the
+scoped view (`PlayerView::ProductionCost/BuildCost/ProductionStartBlockReasonFor`, new, native-tested to
+match the simulation); `FEchoesInputPrompt::Glyph/CommandGlyph` print ";" and "'" instead of "Semicolon"
+and "Apostrophe". A static structure (Power Link, Aegis Post) no longer offers a meaningless STOP tile.
+REL-UI-002.AUTH slot positions still wait on TBR-UX-001.
+
+**Finding 3 — deposit stock and exhausted state (SPEC-RES-006.INSPECT).** A click on a visible deposit
+inspects it (`AEchoesPlayerController::InspectDeposit`): the selection card entry carries `ResourceRemaining`
+and a purpose line, the status line reads "Matter deposit: N Matter remaining." / "exhausted", the deck
+keeps reading the owned selection, and any owned selection clears the inspection. Minimap markers carry
+`bExhausted`; the field stub keeps 30% height and 80% footprint at zero stock (was 6%/65%).
+
+**Finding 4 — refusal names the missing resource and its source.** Produce and Build funding refusals now
+read `[INSUFFICIENT_DAWN] LANCER costs 85 Matter / 20 Dawn; you hold 1,580 Matter / 0 Dawn. Dawn comes
+from a Future Well: Harvest yields N at once; Preserve yields N every N s.` (Matter: Surveyors and deposits).
+`Echoes.Runtime.Gameplay.ProductionRefusalText` (new) covers the wording.
+
+**Finding 5 — ARMOR 0.** The inspector's Armor field is removed (SPEC-CMB-002 has no armor statistic);
+Damage remains the archetype's attack damage.
+
+**Verification.** Native `test_sim-C.log`: 143/143 in optimized, debug and sanitized configurations
+(`test_sim-B.log` shows the three fixture failures the gate exposed before they were re-sited).
+Unreal: `build-3.log` and `build-4.log` Result Succeeded (UE 5.8, EchoesOfTheBrokenSunEditor Mac Development). `automation-C/index.json` 139/139, 0 warnings, save-isolation guard passed (`automation-B` 137/139 on the previous build: the research test's replay-version pin at 31 and the new `Presentation.FieldHudAuthority` fixture that spawned a deposit at zero stock, which the simulation refuses; both were test-side corrections). Rendered: `review-1280x720` PASSED 15/15 on the automation-C build (victory at tick 4939, 179 s, peak army 30, no stall, no assist); capture 07 shows the deck as ARRAY FOUNDRY 180M 30D / POWER LINK 90M 10D / AEGIS POST 130M 30D with letter bindings in the corners and no "Semicolon"/"Apostrophe"; capture 09 shows the `[ARMY_LIMIT]` refusal in full and a grouped Lancer selection. The driver sited its Foundry in network reach as the new rule requires and trained to the limit through it. The unpowered-Foundry, deposit-inspection and Dawn-shortfall texts are proven by the native and Unreal suites; the rendered chain did not stage them (the driver never builds outside the network and never runs out of Dawn), so their on-screen appearance awaits the owner's play.
+
+## Field console rebuilt as a non-scrolling instrument — 2026-09-11
+
+Owner order: "Analyze what work was done on the HUD and GUI. It clearly did not work. Find the issue
+and fix it so that the HUD/GUI is fully completed", then mid-task: "the user should not have to scroll;
+when the cursor gets to the edge of the GUI area at the bottom it should scroll down unless the mouse
+is in the GUI/HUD area." Controlling IDs: SPEC-UI-007, SPEC-HUD-001/003/004, REL-UI-002, REL-UI-003,
+REL-UI-004.FAIL, REL-UI-013, REL-UI-025, DeliveryPlan §8 (overflow is a release defect).
+Evidence root: `BuildArtifacts/Evidence/hud-console-20260911T135529Z` (identity.txt, build-01…09.log,
+automation-01…04, review-1280x720{,-b,-c,-d,-e}, review-2560x1440{,-b}). Engineering states below are
+automation and agent-driven rendered review only; no physical input, no package, no owner acceptance.
+
+**What was wrong (read from the retained captures of `d2-exit-review-20260911T1120Z-schema31`, not
+from the dirty diff).** The uncommitted HUD work found in the checkout (`EchoesFieldHudWidget.cpp`,
+`EchoesHudGlyph.cpp`, `EchoesContextCursor.cpp`, `EchoesResultChart.cpp`, dated 08:30–09:09) was a
+restyle: rounded panel brushes, palette constants, thicker glyph strokes. It changed no geometry, so
+the defects the owner saw stayed: (1) the resource ledger drew "LOGISTICS 39/42" over "ARMY 30/30"
+because four equal-share columns cannot hold an 18-point value beside a nine-letter label at 1280 wide
+(REL-UI-004.FAIL); (2) the command card put two 18-point context lines above its grid, so on the
+224-unit card the 3×3 grid scrolled out of sight and only "FORMATION … / EXTEND RELAY …" text showed
+(REL-UI-002, REL-UI-025, SPEC-HUD-004 — the deck the owner could not see); tile labels at 18 points
+("BARRACKSDROPOFF") overran their cells; (3) the selection card's role and vitals were cut by the
+panel bottom and needed a scroll bar; (4) the restyle's refresh path tinted the rounded brush with the
+panel colour a second time and its translucent hover/pressed fills failed the 4.5:1 label contrast the
+widget test enforces. Separately, at 2560×1440 the console was drawn at 720-line pixel size (the layout
+is in physical pixels and never consulted the DPI curve), so on a large surface the instrument was tiny.
+
+**Repairs (this session's paths: `EchoesFieldHudWidget.cpp/.h`, `EchoesHudLayout.h`,
+`EchoesGameUserSettings.cpp/.h`, `EchoesRTSCameraPawn.cpp`, `EchoesFieldHudWidgetTest.cpp`,
+`Scripts/run_d2_exit_review.sh`).**
+- Ledger: one row of label+value columns sized to their text inside a down-only scale box, so the row
+  can never draw over a neighbour nor outgrow the ledger at 150% (the stacked label-over-value
+  alternative was measured and rejected: these faces' line heights put the summary line 15 units below
+  a 104-unit ledger). Ledger height 104→96 so the deployment frame keeps its silhouette room above the
+  taller console (`Camera.OrthographicFraming`).
+- Command card: rigid 3×3 grid (REL-UI-025) of fixed-height tiles — 14-unit glyph with the binding in
+  the corner, a 32-unit two-line label box — cells without a legal command are inert outlines; the
+  grid precedes the context lines; no title row; no scroll; context lines single-line with ellipsis and
+  the full text in the card tooltip. Hover/pressed keep the dark fills (contrast restored).
+- Selection card and objective header: no scroll (owner direction). Objective header 90→92 units
+  (title plus two objective lines). Console bar 252→272 units so the selection card (142 units at 100%)
+  holds title, name×count HEALTH, health track, faction·role, vitals and one purpose line, or a
+  producer's one-line-per-item queue with its controls in a four-column compact row; a mixed
+  selection shows two entries and "+N more selected"; the cancellation review takes the card with its
+  heading as the title. Full SPEC-HUD-003 guidance (strong use, limitation, counterplay) and the full
+  queue breakdown live in the card tooltip. Console text: titles 14/12, body 16/13/12 points.
+- Camera: the downward edge-pan zone is the strip above the console's top edge, and a pointer anywhere
+  on HUD chrome pans nothing (`EchoesRTSCameraPawn.cpp`, `FEchoesHudLayout::IsPointerOnChrome`).
+- Scale: `FEchoesHudLayout::EffectiveScale(HudScale, DPI)` = HudScale × max(1, DPI curve), clamped to
+  the accessibility range; `UEchoesGameUserSettings::ResolveHudScale(WorldContext)` is the one value
+  the widget, pawn and controller pass to `Build`. 720/900/1080 lines are unchanged (1.0); 1440 draws
+  at 1.333, 2160 at the 1.5 ceiling. Text divides by the same DPI so it keeps pace with the panels.
+- Review script accepts `ECHOES_D2_EXIT_REVIEW_RESX/RESY` for the REL-UI-013 matrix.
+
+**Concurrent lane.** The session "Usage reset at 7pm EST" implemented the owner play-test findings
+2–5 in `EchoesFieldHudView.cpp/.h`, `EchoesCommandDeckModel.*`, `EchoesInputPrompt.*`,
+`EchoesSimulationSubsystem.cpp`, `EchoesPlayerSelection.cpp`, `EchoesEntityView.cpp`, `Simulation.*`
+during this work (tile names from the catalog, `85M 20D` prices, `;`/`'` glyphs, deposit stock,
+funding refusal naming the short resource, ARMOR removed) and adapted the tile Configure and
+SelectionVitals in the widget to carry them; this record claims none of that. Ownership was declared by
+session message; the two one-line `ResolveHudScale` changes in its files (controller keyboard target,
+view-model keyboard target) were requested from it and are the only remaining scale consumers on the
+raw setting.
+
+**Verification.** `build-09.log` Result Succeeded on the combined tree. `automation-04/index.json`
+138/139: every HUD/layout/camera test passes (`UI.FieldHudWidget`, `Camera.OrthographicFraming`,
+`Accessibility.GameUserSettings`, `Input.PointerSurfaceCoverage`, `UI.CommandDeckModel`); the one
+failure is the other lane's new `Presentation.FieldHudAuthority` (deck-tile visibility, unfunded
+fixture, two deposits, exhausted minimap marker) and was reported to it. Rendered: `review-1280x720-e`
+PASSED 15/15 on the combined build (captures 05/07/09/10 show the ledger without overlap, the full 3×3
+grid with names and prices, the selection card with role and vitals and no scroll bar, two objective
+lines); `review-2560x1440-b` on the same build is recorded below when complete. Earlier runs on this
+session's intermediate builds (`-a`…`-d`, `review-2560x1440`) all PASSED 15/15 and are retained as the
+attempts that shaped the layout. `EchoesFieldHudWidgetTest` expectations changed with the design: tile
+labels are 10 points (15 at 150%, the 10-point floor at 80%).
+
+**Not done / limits.** REL-UI-002.AUTH slot positions (Move/Stop/Hold/Attack/Patrol/Stance, QWE/ASD/ZXC)
+are not assigned: the deck model's order and bindings stand until TBR-UX-001 is decided. A Bulwark
+selection yields three context lines and the third (formation) is clipped; the tooltip carries it. A
+mixed selection lists per-entity entries (the view model does not yet group by type, REL-UI-003.AUTH).
+Tutorial captions in the objective header beyond two lines are clipped with the tooltip as fallback.
+Middle-drag and minimap pointer paths were not re-exercised by physical input. Edge-pan at the console
+edge is source-verified and covered by the layout tests only; no rendered pointer trace was taken.
+Owner acceptance of SPEC-UI-007 / REL-UI-025 remains open.
+
+## Structured state journal
+
+Append-only, written by `Scripts/record_state.py`. Each line: timestamp, IDs, state, class,
+evidence, commit, note. Dated narrative sections above remain the place for reasoning.
+- 2026-09-11T16:05Z — `REL-FAC-002` → **AWAITING HUMAN ACCEPTANCE**; class PKG-REND; evidence BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z; commit ec62a5a; REL-FAC-002.PROD authored and implemented: Foundry produces only while network-powered; replay schema 32; native+Unreal+rendered green; uncommitted
+- 2026-09-11T16:05Z — `SPEC-RES-006` → **AWAITING HUMAN ACCEPTANCE**; class PKG-AUTO; evidence BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z; commit ec62a5a; SPEC-RES-006.INSPECT: click shows remaining Matter; exhausted stub 30%/80% and minimap mark; FieldHudAuthority green; rendered chain did not stage it
+- 2026-09-11T16:05Z — `SPEC-HUD-004`, `REL-UI-002` → **AWAITING HUMAN ACCEPTANCE**; class PKG-REND; evidence BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720; commit ec62a5a; Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001
+- 2026-09-11T16:05Z — `REL-ECO-010` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C; commit ec62a5a; [INSUFFICIENT_DAWN]/[INSUFFICIENT_MATTER] refusals name unit, price, holding and source; Gameplay.ProductionRefusalText
+- 2026-09-11T16:05Z — `REL-UI-003` → **IMPLEMENTED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C; commit ec62a5a; ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open)

@@ -4912,6 +4912,12 @@ void TestPoweredAegisNetworkAndCounterplay() {
 void TestFactionResearchProgressionAndPersistence() {
     Simulation simulation({32, 32, 20, 91});
     AddTwoPlayers(simulation, {1000, 500}, {1000, 500});
+    // REL-FAC-002.PROD: the Foundry produces only inside a powered network,
+    // so the fixture roots one with an Anchor in reach.
+    const EntityId meridianAnchor = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(10, 10));
+    REQUIRE(meridianAnchor != 0);
     const EntityId meridianFoundry = simulation.SpawnEntity(
         0, Faction::MeridianCompact, EntityType::Barracks,
         Vec2::FromTiles(5, 5));
@@ -6625,6 +6631,197 @@ void TestStructureFootprintsBlockMovementAndPathing() {
 // MoveTowards found no waypoint from the half-tile gap between the Core and a
 // supply node. Same pocket, a deposit to reach, and the requirement that the
 // worker leaves within five ticks and extracts.
+void TestPlayerViewProductionAnswersMatchSimulation() {
+    // The command deck prices its tiles and explains refusals from the scoped
+    // view; those answers must be the simulation's own, resource by resource.
+    Simulation probe({32, 32, 20, 0x5056494557ULL});
+    const ResourcePool surveyor =
+        probe.ProductionCost(Faction::MeridianCompact, EntityType::Worker);
+    const ResourcePool lancer =
+        probe.ProductionCost(Faction::MeridianCompact, EntityType::Soldier);
+    REQUIRE(lancer.material > surveyor.material);
+    Simulation sim({32, 32, 20, 0x5056494557ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, surveyor));
+    const EntityId core = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore, Vec2::FromTiles(8, 8));
+    const EntityId foundry = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks, Vec2::FromTiles(12, 8));
+    REQUIRE(core != 0 && foundry != 0);
+    sim.Step();
+    const std::optional<PlayerView> view = sim.CreatePlayerView(0);
+    REQUIRE(view.has_value());
+    for (EntityType unit : {EntityType::Worker, EntityType::Soldier,
+                            EntityType::HeavyUnit, EntityType::ScoutUnit}) {
+        REQUIRE(view->ProductionCost(unit) ==
+                sim.ProductionCost(Faction::MeridianCompact, unit));
+        for (EntityId producer : {core, foundry}) {
+            REQUIRE(view->ProductionStartBlockReasonFor(producer, unit) ==
+                    sim.ProductionStartBlockReasonFor(0, producer, unit));
+        }
+    }
+    for (EntityType structure : {EntityType::Barracks, EntityType::Dropoff,
+                                 EntityType::UtilityStructure}) {
+        REQUIRE(view->BuildCost(structure) ==
+                sim.BuildCost(Faction::MeridianCompact, structure));
+    }
+    // Exactly one Surveyor's worth of Matter: the Core can start, the Foundry
+    // cannot, and the view names Matter rather than a generic shortfall.
+    REQUIRE(view->ProductionStartBlockReasonFor(core, EntityType::Worker) ==
+            ProductionStartBlockReason::None);
+    REQUIRE(view->ProductionStartBlockReasonFor(foundry, EntityType::Soldier) ==
+            ProductionStartBlockReason::InsufficientMatter);
+    REQUIRE(view->ProductionStartBlockReasonFor(foundry, EntityType::Worker) ==
+            ProductionStartBlockReason::UnsupportedUnit);
+    REQUIRE(view->ProductionStartBlockReasonFor(core, EntityType::Soldier) ==
+            ProductionStartBlockReason::UnsupportedUnit);
+    REQUIRE(view->ProductionStartBlockReasonFor(9999, EntityType::Worker) ==
+            ProductionStartBlockReason::InvalidProducer);
+}
+
+// REL-FAC-002.PROD (owner ruling 2026-09-11): a Meridian Foundry may be
+// built away from power but neither starts nor advances production until a
+// network node reaches it; reconnecting resumes it where it stopped. Refusals
+// name the unpowered state, the scoped view agrees, and the recording replays.
+void TestMeridianFoundryProducesOnlyWhilePowered() {
+    SimulationConfig config{48, 48, 20, 0x504f574552ULL};
+    config.rules.poweredAegis.connectionRadiusRaw = 8 * kFixedScale;
+    Simulation sim(config);
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{5000, 500}));
+    REQUIRE(sim.AddPlayer(1, Faction::KharuunAssemblies, ResourcePool{1000, 100}));
+    const EntityId core = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore, Vec2::FromTiles(6, 6));
+    const EntityId nearFoundry = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks, Vec2::FromTiles(12, 6));
+    const EntityId farFoundry = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks, Vec2::FromTiles(26, 6));
+    const EntityId enemyCore = sim.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::CommandCore, Vec2::FromTiles(40, 40));
+    REQUIRE(core != 0 && nearFoundry != 0 && farFoundry != 0 && enemyCore != 0);
+    sim.CaptureReplayBaseline();
+    sim.Step();
+    REQUIRE(sim.FindEntity(nearFoundry)->networkOperational);
+    REQUIRE(!sim.FindEntity(farFoundry)->networkOperational);
+
+    // Built away from power: allowed to exist, refused to produce, and the
+    // refusal is the unpowered one rather than "incomplete" or "unfunded".
+    REQUIRE(sim.ValidateProduction(0, nearFoundry, EntityType::Soldier) ==
+            ProductionResult::Valid);
+    REQUIRE(sim.ValidateProduction(0, farFoundry, EntityType::Soldier) ==
+            ProductionResult::ProducerUnpowered);
+    REQUIRE(sim.ProductionStartBlockReasonFor(0, farFoundry, EntityType::Soldier) ==
+            ProductionStartBlockReason::Unpowered);
+    REQUIRE(sim.ProductionStartBlockReasonFor(0, nearFoundry, EntityType::Soldier) ==
+            ProductionStartBlockReason::None);
+    // A Core never needs power to train Surveyors.
+    REQUIRE(sim.ValidateProduction(0, core, EntityType::Worker) ==
+            ProductionResult::Valid);
+    {
+        const std::optional<PlayerView> view = sim.CreatePlayerView(0);
+        REQUIRE(view.has_value());
+        REQUIRE(view->ProductionRequiresNetworkPower());
+        REQUIRE(view->ProductionStartBlockReasonFor(farFoundry, EntityType::Soldier) ==
+                ProductionStartBlockReason::Unpowered);
+        REQUIRE(view->ProductionStartBlockReasonFor(nearFoundry, EntityType::Soldier) ==
+                ProductionStartBlockReason::None);
+        bool farQueueSeen = false;
+        for (const ProducerQueueState& queue : view->ProducerQueues()) {
+            if (queue.producer == farFoundry) {
+                farQueueSeen = true;
+                REQUIRE(queue.unpowered);
+            } else if (queue.producer == nearFoundry) {
+                REQUIRE(!queue.unpowered);
+            }
+        }
+        REQUIRE(farQueueSeen);
+    }
+    Command refused = MakeCommand(
+        sim.CurrentTick(), 0, 1, CommandType::Produce, farFoundry);
+    refused.buildType = EntityType::Soldier;
+    REQUIRE(sim.QueueCommand(refused));
+    const ResourcePool beforeRefusal = sim.FindPlayer(0)->resources;
+    sim.Step();
+    REQUIRE(sim.FindEntity(farFoundry)->productionRequired == 0);
+    REQUIRE(sim.FindEntity(farFoundry)->productionQueue.empty());
+    REQUIRE(sim.FindPlayer(0)->resources == beforeRefusal);
+
+    // A chain of Links reaches the far Foundry: it now accepts and advances.
+    const EntityId link = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Dropoff, Vec2::FromTiles(19, 6));
+    REQUIRE(link != 0);
+    sim.Step();
+    REQUIRE(sim.FindEntity(farFoundry)->networkOperational);
+    REQUIRE(sim.ValidateProduction(0, farFoundry, EntityType::Soldier) ==
+            ProductionResult::Valid);
+    Command order = MakeCommand(
+        sim.CurrentTick(), 0, 2, CommandType::Produce, farFoundry);
+    order.buildType = EntityType::Soldier;
+    REQUIRE(sim.QueueCommand(order));
+    Command queued = MakeCommand(
+        sim.CurrentTick(), 0, 3, CommandType::Produce, farFoundry);
+    queued.buildType = EntityType::Soldier;
+    REQUIRE(sim.QueueCommand(queued));
+    sim.Step(10);
+    const Entity* far = sim.FindEntity(farFoundry);
+    REQUIRE(far->productionRequired > 0);
+    REQUIRE(far->productionProgress == 10);
+    REQUIRE(far->productionQueue.size() == 1);
+
+    // Severing the chain holds progress and the waiting item; no refund, no
+    // loss. Money for the waiting item is untouched because it never started.
+    sim.MutableEntityForTesting(link)->hitPoints = 0;
+    const ResourcePool heldWhileDark = sim.FindPlayer(0)->resources;
+    sim.Step(30);
+    far = sim.FindEntity(farFoundry);
+    REQUIRE(!far->networkOperational);
+    REQUIRE(far->productionRequired > 0);
+    REQUIRE(far->productionProgress == 10);
+    REQUIRE(far->productionQueue.size() == 1);
+    REQUIRE(sim.FindPlayer(0)->resources == heldWhileDark);
+    REQUIRE(sim.ValidateProduction(0, farFoundry, EntityType::Soldier) ==
+            ProductionResult::ProducerUnpowered);
+    // The near Foundry keeps working through the far one's outage.
+    Command nearOrder = MakeCommand(
+        sim.CurrentTick(), 0, 4, CommandType::Produce, nearFoundry);
+    nearOrder.buildType = EntityType::Soldier;
+    REQUIRE(sim.QueueCommand(nearOrder));
+    sim.Step(5);
+    REQUIRE(sim.FindEntity(nearFoundry)->productionProgress == 5);
+
+    // Reconnecting resumes from the held progress and lets the waiting item
+    // start once the active one completes.
+    const EntityId newLink = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Dropoff, Vec2::FromTiles(19, 9));
+    REQUIRE(newLink != 0);
+    sim.Step(1);
+    REQUIRE(sim.FindEntity(farFoundry)->networkOperational);
+    const std::int32_t resumedFrom = sim.FindEntity(farFoundry)->productionProgress;
+    REQUIRE(resumedFrom >= 10 && resumedFrom <= 11);
+    sim.Step(5);
+    far = sim.FindEntity(farFoundry);
+    REQUIRE(far->productionProgress == resumedFrom + 5);
+    const std::int32_t required = far->productionRequired;
+    sim.Step(static_cast<Tick>(required) + 2);
+    far = sim.FindEntity(farFoundry);
+    REQUIRE(far->productionQueue.empty());
+    REQUIRE(far->productionRequired > 0);
+
+    // The save round-trips the held-and-resumed state; a fresh recording is
+    // stamped with the schema that carries the gate. (Direct spawns and the
+    // test-only link kill are not commands, so this run is not replayed.)
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(sim.SaveSnapshot(), &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->StateChecksum() == sim.StateChecksum());
+    restored->Step(20);
+    sim.Step(20);
+    REQUIRE(restored->StateChecksum() == sim.StateChecksum());
+    const ReplayRecord replay = sim.ExportReplay();
+    REQUIRE(replay.version == kReplayVersion);
+    REQUIRE(replay.version == kPoweredProductionReplayVersion);
+}
+
 void TestMaskedCorridorGatherOrderStillMoves() {
     const Vec2 pocket = Vec2::FromRaw(9883, 7281);
     Simulation gather({32, 32, 20, 0x474154484552ULL});
@@ -7995,7 +8192,8 @@ void TestProductionAndResearchQueues() {
     // Build Barracks with worker
     Command build = MakeCommand(0, 0, 1, CommandType::Build, worker);
     build.buildType = EntityType::Barracks;
-    build.position = Vec2::FromTiles(15, 15);
+    // Within the Anchor's 8-tile power reach (REL-FAC-002.PROD).
+    build.position = Vec2::FromTiles(11, 5);
     REQUIRE(sim.QueueCommand(build));
     sim.Step(160);
 
@@ -9423,7 +9621,7 @@ void TestFutureWellProtocolExecutionAndTelegraphs() {
     const EntityId core = late.SpawnEntity(0, Faction::MeridianCompact,
         EntityType::CommandCore, Vec2::FromTiles(2, 2));
     const EntityId barracks = late.SpawnEntity(0, Faction::MeridianCompact,
-        EntityType::Barracks, Vec2::FromTiles(3, 10));
+        EntityType::Barracks, Vec2::FromTiles(3, 9));  // in the Anchor's power reach
     REQUIRE(core != 0 && barracks != 0);
     attempt.actor = lateWorker; attempt.target = lateWell;
     REQUIRE(late.QueueCommand(attempt));
@@ -10962,6 +11160,8 @@ int main(int argc, char** argv) {
          TestStructureFootprintsBlockMovementAndPathing},
         {"allied crowd reaches distinct tiles without overlap",
          TestAlliedCrowdReachesDistinctTilesWithoutOverlap},
+        {"player view production answers match simulation", TestPlayerViewProductionAnswersMatchSimulation},
+        {"Meridian Foundry produces only while powered", TestMeridianFoundryProducesOnlyWhilePowered},
         {"masked corridor gather order still moves", TestMaskedCorridorGatherOrderStillMoves},
         {"masked corridor mover still leaves", TestMaskedCorridorMoverStillLeaves},
         {"authentic schema29 zero-tick network replay",

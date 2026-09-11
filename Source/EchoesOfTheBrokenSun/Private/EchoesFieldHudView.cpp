@@ -4,6 +4,7 @@
 #include "EchoesFieldHudView.h"
 #include "EchoesHudLayout.h"
 #include "EchoesInputPrompt.h"
+#include "EchoesProductionReasonText.h"
 
 #include "EchoesCampaignRewards.h"
 #include "EchoesCinematicSubsystem.h"
@@ -224,7 +225,8 @@ void AddMarker(
     EntityType Type,
     Vec2 Position,
     PlayerId Viewer,
-    bool bRemembered)
+    bool bRemembered,
+    int32 ResourceRemaining = -1)
 {
     FEchoesFieldHudMapMarker Marker;
     Marker.EntityId = Id;
@@ -236,6 +238,7 @@ void AddMarker(
     Marker.bFriendly = Owner == Viewer;
     Marker.bRemembered = bRemembered;
     Marker.bResource = Type == EntityType::ResourceNode;
+    Marker.bExhausted = Marker.bResource && ResourceRemaining == 0;
     Marker.bFutureWell = Type == EntityType::FutureWell;
     Minimap.Markers.Add(MoveTemp(Marker));
 }
@@ -297,7 +300,8 @@ void BuildPlayerMinimap(const PlayerView& PlayerView, FEchoesFieldHudMinimapView
     for (const Entity& Entity : PlayerView.Entities())
     {
         AddMarker(Out, Entity.id, Entity.owner, Entity.faction, Entity.type,
-                  Entity.position, PlayerView.Player().id, false);
+                  Entity.position, PlayerView.Player().id, false,
+                  Entity.resourceRemaining);
     }
     for (const RememberedObject& Memory : PlayerView.RememberedObjects())
     {
@@ -436,6 +440,12 @@ void AddNetworkFeedback(const PlayerView& Scoped, const TArray<uint32>& Selected
             const FString State = !E->completed ? TEXT("Under construction") :
                 E->networkOperational ? TEXT("Connected to Anchor") : TEXT("Disconnected — extend a chain from your Anchor");
             FString Benefits = TEXT("Extends the network; enables Aegis weapons and Surveyor repairs in range.");
+            if (E->type == EntityType::Barracks)
+            {
+                // REL-FAC-002.PROD: the Foundry may stand outside the network
+                // but produces only while a node reaches it.
+                Benefits = TEXT("Produces units only while connected; an unpowered Foundry holds its queue. Extends the network in range.");
+            }
             if (E->type == EntityType::Dropoff)
             {
                 const int32 Capacity = Scoped.Config().rules.archetypes[static_cast<int32>(E->faction)][static_cast<int32>(E->type)].populationCapacity;
@@ -525,6 +535,18 @@ void AddSelectionEntry(
     Entry.Cargo = Entity.cargo;
     Entry.CargoCapacity = Entity.cargoCapacity;
     Entry.Damage = Entity.attackDamage;
+    if (Entity.type == EntityType::ResourceNode)
+    {
+        // SPEC-RES-006.INSPECT: a clicked deposit answers with its stock. The
+        // visible deposit's stock is public economy information (SPEC-RES-003).
+        Entry.bDeposit = true;
+        Entry.ResourceRemaining = Entity.resourceRemaining;
+        Entry.Purpose = Entity.resourceRemaining == 0
+            ? LOCTEXT("DepositExhaustedPurpose",
+                "Exhausted. Nothing more can be extracted here; the host rock stays as terrain. Order Surveyors to another known deposit.")
+            : LOCTEXT("DepositPurpose",
+                "Matter deposit. One Surveyor extracts at a time and the rest queue beside it; extracted Matter counts when delivered to a connected Power Link or Anchor.");
+    }
     if (Entity.productionRequired > 0)
     {
         Entry.Production = EntityName(Entity.productionType);
@@ -728,6 +750,7 @@ void BuildProductionQueue(
     Out.bVisible = true;
     Out.ProducerId = ProducerId;
     Out.bSpawnBlocked = Queue->spawnBlockedAlert;
+    Out.bUnpowered = Queue->unpowered;
     Out.bRallyNeedsAttention = Queue->rallyAlert;
     Out.RallyWaypointCount = static_cast<int32>(Queue->rallyRoute.size());
 
@@ -1178,23 +1201,58 @@ void BuildTechnology(
     Out.Controls.Add(MoveTemp(Close));
 }
 
-void BuildCommandControls(
-    const FEchoesCommandDeckProfile& Profile,
-    FEchoesFieldHudCommandView& Out)
+/** The roster slot a produce or build tile stands for; unset for orders. */
+TOptional<EntityType> DeckEntityType(EEchoesCommandDeckAction Action)
 {
-    Out.bVisible = Profile.WorkerCount + Profile.CombatCount +
-        Profile.StructureCount + Profile.OtherCount > 0;
-    for (const FEchoesCommandDeckActionEntry& Entry :
-         FEchoesCommandDeckModel::BuildActionEntries(Profile))
+    switch (Action)
     {
-        FEchoesFieldHudControl Control;
-        Control.Label = Text(Entry.Label);
-        Control.Detail = FEchoesInputPrompt::Command(Entry.Action);
-        Control.Action = EEchoesFieldHudAction::CommandDeck;
-        Control.Argument = static_cast<int32>(Entry.Action);
-        Control.bPrimary = Entry.bRequiresCursorTarget;
-        Out.Controls.Add(MoveTemp(Control));
+        case EEchoesCommandDeckAction::ProduceWorker: return EntityType::Worker;
+        case EEchoesCommandDeckAction::ProduceSoldier: return EntityType::Soldier;
+        case EEchoesCommandDeckAction::ProduceHeavy: return EntityType::HeavyUnit;
+        case EEchoesCommandDeckAction::ProduceScout: return EntityType::ScoutUnit;
+        case EEchoesCommandDeckAction::BuildBarracks: return EntityType::Barracks;
+        case EEchoesCommandDeckAction::BuildDropoff: return EntityType::Dropoff;
+        case EEchoesCommandDeckAction::BuildUtility: return EntityType::UtilityStructure;
+        default: return {};
     }
+}
+
+bool IsProduceAction(EEchoesCommandDeckAction Action)
+{
+    return Action == EEchoesCommandDeckAction::ProduceWorker ||
+        Action == EEchoesCommandDeckAction::ProduceSoldier ||
+        Action == EEchoesCommandDeckAction::ProduceHeavy ||
+        Action == EEchoesCommandDeckAction::ProduceScout;
+}
+
+/** Lower ranks are closer to "available": the reason a player can act on first. */
+int32 BlockReasonRank(echoes::sim::ProductionStartBlockReason Reason)
+{
+    using echoes::sim::ProductionStartBlockReason;
+    switch (Reason)
+    {
+        case ProductionStartBlockReason::None: return 0;
+        case ProductionStartBlockReason::Busy: return 1;
+        case ProductionStartBlockReason::QueueFull: return 2;
+        case ProductionStartBlockReason::InsufficientMatter: return 3;
+        case ProductionStartBlockReason::InsufficientDawn: return 4;
+        case ProductionStartBlockReason::LogisticsCapacity: return 5;
+        case ProductionStartBlockReason::MobileEntityLimit: return 6;
+        case ProductionStartBlockReason::Unpowered: return 7;
+        case ProductionStartBlockReason::EntityCapacity: return 8;
+        case ProductionStartBlockReason::ProducerIncomplete: return 9;
+        case ProductionStartBlockReason::UnsupportedUnit: return 10;
+        case ProductionStartBlockReason::InvalidProducer: return 11;
+    }
+    return 11;
+}
+
+bool ProducerAccepts(EntityType Producer, EntityType Unit)
+{
+    return (Producer == EntityType::CommandCore && Unit == EntityType::Worker) ||
+        (Producer == EntityType::Barracks &&
+         (Unit == EntityType::Soldier || Unit == EntityType::HeavyUnit ||
+          Unit == EntityType::ScoutUnit));
 }
 
 FEchoesCommandDeckProfile BuildNetworkCommandProfile(
@@ -1645,6 +1703,117 @@ FEchoesFieldHudView FEchoesFieldHudModel::BuildPlayerScoped(
     return View;
 }
 
+FEchoesCommandDeckPresentation FEchoesFieldHudModel::DeckPresentation(
+    const PlayerView& PlayerView,
+    const TArray<uint32>& SelectedEntityIds,
+    const FEchoesContentCatalog* Catalog)
+{
+    FEchoesCommandDeckPresentation Presentation;
+    Presentation.Catalog = Catalog;
+    Presentation.FactionValue = PlayerView.Player().faction;
+    const echoes::sim::PlayerView* Source = &PlayerView;
+    Presentation.CostFor = [Source](EntityType Type) -> TOptional<echoes::sim::ResourcePool>
+    {
+        switch (Type)
+        {
+            case EntityType::Worker:
+            case EntityType::Soldier:
+            case EntityType::HeavyUnit:
+            case EntityType::ScoutUnit:
+                return Source->ProductionCost(Type);
+            case EntityType::Barracks:
+            case EntityType::Dropoff:
+            case EntityType::UtilityStructure:
+                return Source->BuildCost(Type);
+            default:
+                return {};
+        }
+    };
+    const TArray<uint32> Selected = SelectedEntityIds;
+    Presentation.BlockReasonFor = [Source, Selected](EntityType Type)
+    {
+        using echoes::sim::ProductionStartBlockReason;
+        // One producer that can start or queue the unit makes the tile live;
+        // otherwise the most actionable refusal among the producers is shown.
+        ProductionStartBlockReason Best = ProductionStartBlockReason::InvalidProducer;
+        for (uint32 Id : Selected)
+        {
+            const Entity* Producer = FindVisibleEntity(*Source, Id);
+            if (Producer == nullptr || Producer->owner != Source->Player().id ||
+                !ProducerAccepts(Producer->type, Type))
+            {
+                continue;
+            }
+            const ProductionStartBlockReason Reason =
+                Source->ProductionStartBlockReasonFor(Id, Type);
+            if (Reason == ProductionStartBlockReason::None ||
+                Reason == ProductionStartBlockReason::Busy)
+            {
+                return Reason;
+            }
+            if (BlockReasonRank(Reason) < BlockReasonRank(Best))
+            {
+                Best = Reason;
+            }
+        }
+        return Best;
+    };
+    return Presentation;
+}
+
+void FEchoesFieldHudModel::BuildCommandControls(
+    const FEchoesCommandDeckProfile& Profile,
+    const FEchoesCommandDeckPresentation& Presentation,
+    FEchoesFieldHudCommandView& Out)
+{
+    Out.bVisible = Profile.WorkerCount + Profile.CombatCount +
+        Profile.StructureCount + Profile.OtherCount > 0;
+    for (const FEchoesCommandDeckActionEntry& Entry :
+         FEchoesCommandDeckModel::BuildActionEntries(Profile))
+    {
+        FEchoesFieldHudControl Control;
+        Control.Label = Text(Entry.Label);
+        Control.Detail = FEchoesInputPrompt::Command(Entry.Action);
+        Control.Glyph = FEchoesInputPrompt::CommandGlyph(Entry.Action);
+        Control.Action = EEchoesFieldHudAction::CommandDeck;
+        Control.Argument = static_cast<int32>(Entry.Action);
+        Control.bPrimary = Entry.bRequiresCursorTarget;
+        if (const TOptional<EntityType> Type = DeckEntityType(Entry.Action); Type.IsSet())
+        {
+            // The tile names the roster unit the player will meet on the field
+            // ("LANCER"), not a role word ("LINE UNIT") the owner could not
+            // place; the deck model keeps its role words for callers without
+            // a faction.
+            const FString Name = FEchoesProductionReasonText::UnitName(
+                Presentation.FactionValue, Type.GetValue(), Presentation.Catalog);
+            if (!Name.IsEmpty())
+            {
+                Control.Label = Text(Name);
+            }
+            if (Presentation.CostFor)
+            {
+                if (const TOptional<echoes::sim::ResourcePool> Cost =
+                        Presentation.CostFor(Type.GetValue()); Cost.IsSet())
+                {
+                    Control.Cost = FEchoesProductionReasonText::TileCost(Cost.GetValue());
+                }
+            }
+            if (IsProduceAction(Entry.Action) && Presentation.BlockReasonFor)
+            {
+                const echoes::sim::ProductionStartBlockReason Reason =
+                    Presentation.BlockReasonFor(Type.GetValue());
+                Control.Availability = FEchoesProductionReasonText::Availability(Reason);
+                Control.bEnabled = !FEchoesProductionReasonText::IsStructural(Reason);
+            }
+        }
+        Out.Controls.Add(MoveTemp(Control));
+    }
+    // A selection with nothing to press (a Power Link, an Aegis Post) shows
+    // no command card at all rather than an empty grid; abilities added by
+    // the field HUD model before this call keep the card up.
+    Out.bVisible = Out.bVisible && !Out.Controls.IsEmpty();
+}
+
 FEchoesFieldHudView FEchoesFieldHudModel::BuildNetworkScoped(
     const echoes::sim::net::ScopedViewKeyframe& Keyframe,
     const TArray<uint32>& SelectedEntityIds,
@@ -1692,9 +1861,33 @@ FEchoesFieldHudView FEchoesFieldHudModel::BuildNetworkScoped(
         View.Selection.Entries.Add(MoveTemp(Entry));
     }
     View.Selection.bVisible = !View.Selection.Entries.IsEmpty();
-    BuildCommandControls(
-        BuildNetworkCommandProfile(Keyframe, SelectedEntityIds),
-        View.Commands);
+    {
+        // A keyframe carries no rules; the authored catalog prices the tiles
+        // and names them. No producer state is scoped, so no availability.
+        FEchoesCommandDeckPresentation Presentation;
+        Presentation.Catalog = Catalog;
+        Presentation.FactionValue = Keyframe.faction;
+        if (Catalog != nullptr)
+        {
+            const Faction NetworkFaction = Keyframe.faction;
+            Presentation.CostFor = [Catalog, NetworkFaction](EntityType Type)
+                -> TOptional<echoes::sim::ResourcePool>
+            {
+                if (const FEchoesUnitContent* Unit = Catalog->FindUnit(NetworkFaction, Type))
+                {
+                    return echoes::sim::ResourcePool{Unit->MatterCost, Unit->DawnCost};
+                }
+                if (const FEchoesBuildingContent* Building = Catalog->FindBuilding(NetworkFaction, Type))
+                {
+                    return echoes::sim::ResourcePool{Building->MatterCost, Building->DawnCost};
+                }
+                return {};
+            };
+        }
+        BuildCommandControls(
+            BuildNetworkCommandProfile(Keyframe, SelectedEntityIds),
+            Presentation, View.Commands);
+    }
     // Online protocol compatibility requires the current commitment mechanics.
     AddBulwarkFeedback(Keyframe.player, Keyframe.simulationTick, 0.0, true,
         SelectedEntityIds, [&Keyframe](uint32 Id) { return FindScopedEntity(Keyframe, Id); }, View);
@@ -1996,6 +2189,13 @@ bool FEchoesFieldHudModel::Build(
 
     const bool bReconnect = Controller.IsOpponentReconnectGraceActive();
     const TArray<uint32>& Selected = Controller.GetSelectedEntityIds();
+    // SPEC-RES-006.INSPECT: a clicked deposit joins the selection card and the
+    // status line only; the command deck keeps reading the owned selection.
+    TArray<uint32> CardSelection = Selected;
+    if (const uint32 Inspected = Controller.GetInspectedEntityId(); Inspected != 0)
+    {
+        CardSelection.AddUnique(Inspected);
+    }
     if (Bridge.IsReplayPlaybackActive())
     {
         const FEchoesReplayPlaybackState Playback = Bridge.GetReplayPlaybackState();
@@ -2027,6 +2227,9 @@ bool FEchoesFieldHudModel::Build(
         return true;
     }
 
+    // The live scoped view outlives its branch: the command deck prices its
+    // tiles and judges availability from it after the view is assembled.
+    std::optional<PlayerView> LivePlayer;
     if (Controller.IsActiveOnlineNetworkMatch())
     {
         const echoes::sim::net::ScopedViewKeyframe* Keyframe = Controller.GetNetworkScopedView();
@@ -2035,20 +2238,22 @@ bool FEchoesFieldHudModel::Build(
             OutError = TEXT("[FIELD_HUD_NETWORK_SOURCE_MISSING] No validated scoped keyframe is available.");
             return false;
         }
-        OutView = BuildNetworkScoped(*Keyframe, Selected, Catalog);
+        OutView = BuildNetworkScoped(*Keyframe, CardSelection, Catalog);
     }
     else
     {
         const Simulation* SimulationValue = Bridge.GetSimulation();
-        const std::optional<PlayerView> Player = SimulationValue != nullptr
-            ? SimulationValue->CreatePlayerView(UEchoesSimulationSubsystem::LocalPlayerId)
-            : std::optional<PlayerView>{};
+        if (SimulationValue != nullptr)
+        {
+            LivePlayer = SimulationValue->CreatePlayerView(UEchoesSimulationSubsystem::LocalPlayerId);
+        }
+        const std::optional<PlayerView>& Player = LivePlayer;
         if (!Player.has_value())
         {
             OutError = TEXT("[FIELD_HUD_PLAYER_VIEW_MISSING] No live scoped player view is available.");
             return false;
         }
-        OutView = BuildPlayerScoped(*Player, Selected, false, Catalog);
+        OutView = BuildPlayerScoped(*Player, CardSelection, false, Catalog);
         if (Controller.IsBuildPlacementActive())
         {
             // Existing live coverage stays visible while choosing a site. Invalid
@@ -2075,7 +2280,11 @@ bool FEchoesFieldHudModel::Build(
     if (OutView.Authority == EEchoesFieldHudAuthority::LivePlayerView)
     {
         BuildCommandControls(
-            Controller.BuildCommandDeckProfile(), OutView.Commands);
+            Controller.BuildCommandDeckProfile(),
+            LivePlayer.has_value()
+                ? DeckPresentation(*LivePlayer, Selected, Catalog)
+                : FEchoesCommandDeckPresentation{},
+            OutView.Commands);
     }
     if (const auto Subgroup = Controller.GetActiveSelectionSubgroupType(); Subgroup.IsSet())
     {

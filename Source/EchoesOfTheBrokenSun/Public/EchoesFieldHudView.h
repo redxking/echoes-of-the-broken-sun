@@ -98,6 +98,14 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudControl final
     bool bEnabled = true;
     bool bFocused = false;
     bool bPrimary = false;
+    // Deck-tile facts follow the positional fields so brace initializers of
+    // the seven above keep compiling.
+    /** Compact binding for a tile corner (";" rather than "Semicolon"); empty when Detail suffices. */
+    FText Glyph;
+    /** "85M 20D" on a produce or build tile; empty for other controls. */
+    FText Cost;
+    /** Why this order cannot start right now; empty when it can start or queue. */
+    FText Availability;
 };
 
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudLine final
@@ -174,11 +182,14 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudSelectionEntry final
     int32 Cargo = 0;
     int32 CargoCapacity = 0;
     int32 Damage = 0;
-    int32 Armor = 0;
     FText Production;
     int32 ProductionPercent = 0;
     bool bOwned = false;
     bool bStructure = false;
+    /** A Matter deposit under inspection: stock replaces health and order. */
+    bool bDeposit = false;
+    /** Known remaining Matter of a deposit; -1 when the scoped source carries no stock. */
+    int32 ResourceRemaining = -1;
 };
 
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudSelectionView final
@@ -233,6 +244,8 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudProductionView final
     bool bVisible = false;
     uint32 ProducerId = 0;
     bool bSpawnBlocked = false;
+    /** REL-FAC-002.PROD: the producer is outside its power network; progress holds. */
+    bool bUnpowered = false;
     bool bRallyNeedsAttention = false;
     int32 RallyWaypointCount = 0;
     TArray<FEchoesFieldHudProductionItem> Items;
@@ -292,6 +305,8 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudMapMarker final
     bool bFriendly = false;
     bool bRemembered = false;
     bool bResource = false;
+    /** An observed deposit at zero stock: still drawn, muted (SPEC-RES-006). */
+    bool bExhausted = false;
     bool bFutureWell = false;
     bool bTelegraphed = false;
     uint64 TelegraphRemainingTicks = 0;
@@ -482,6 +497,21 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudView final
     FEchoesFieldHudOnlineView Online;
 };
 
+/**
+ * What a command deck needs beyond the selection profile: the roster names,
+ * the price of each produce or build tile, and why a unit cannot start now.
+ * The callables read a source the caller keeps alive for the build call.
+ */
+struct ECHOESOFTHEBROKENSUN_API FEchoesCommandDeckPresentation final
+{
+    const FEchoesContentCatalog* Catalog = nullptr;
+    echoes::sim::Faction FactionValue = echoes::sim::Faction::MeridianCompact;
+    /** Cost of a produced unit or placed structure; unset when the source has no rules. */
+    TFunction<TOptional<echoes::sim::ResourcePool>(echoes::sim::EntityType)> CostFor;
+    /** Best block reason across the selected compatible producers; unbound when the source cannot judge. */
+    TFunction<echoes::sim::ProductionStartBlockReason(echoes::sim::EntityType)> BlockReasonFor;
+};
+
 struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudBuildContext final
 {
     const AEchoesPlayerController* Controller = nullptr;
@@ -558,6 +588,22 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudModel final
     [[nodiscard]] static FEchoesFieldHudView BuildReplayObserver(
         const echoes::sim::Simulation& ReplaySimulation,
         const FEchoesContentCatalog* Catalog = nullptr);
+
+    /**
+     * Deck facts from a scoped player view: faction names through the catalog,
+     * prices from the view's rules, and per-unit block reasons judged over the
+     * selected owned producers. The view must outlive the BuildCommandControls
+     * call that consumes the result.
+     */
+    [[nodiscard]] static FEchoesCommandDeckPresentation DeckPresentation(
+        const echoes::sim::PlayerView& PlayerView,
+        const TArray<uint32>& SelectedEntityIds,
+        const FEchoesContentCatalog* Catalog);
+    /** Deck tiles for a selection profile; a produce or build tile carries name, cost and availability. */
+    static void BuildCommandControls(
+        const FEchoesCommandDeckProfile& Profile,
+        const FEchoesCommandDeckPresentation& Presentation,
+        FEchoesFieldHudCommandView& Out);
 
     /**
      * SPEC-HUD-003 guidance for a faction roster slot. Returns empty fields for

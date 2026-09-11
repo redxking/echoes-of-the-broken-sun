@@ -79,7 +79,6 @@ FEchoesFieldHudView BattlefieldView(float Scale)
     Selection.HitPoints = 82;
     Selection.MaxHitPoints = 100;
     Selection.Damage = 12;
-    Selection.Armor = 3;
     Selection.bOwned = true;
     View.Selection.Entries.Add(Selection);
 
@@ -289,6 +288,13 @@ bool FEchoesFieldHudWidgetTest::RunTest(const FString& Parameters)
     UEchoesFieldHudSectionWidget* SelectionPanel =
         Widget->GetSection(EEchoesFieldHudSection::Selection);
     TestEqual(TEXT("Selection has one health track per authoritative entry"), SelectionPanel->GetHealthReadoutCount(), 1);
+    {
+        // Owner finding 2026-09-11: every unit read "ARMOR 0". The model has
+        // no armor value, so the card prints none and keeps the damage it has.
+        const FString SelectionTooltip = SelectionPanel->GetToolTipText().ToString();
+        TestFalse(TEXT("Selection card prints no armor figure"), SelectionTooltip.Contains(TEXT("ARMOR")));
+        TestTrue(TEXT("Selection card keeps the unit's damage"), SelectionTooltip.Contains(TEXT("DAMAGE 12")));
+    }
     UProgressBar* HealthTrack = SelectionPanel->GetHealthReadout(0);
     if (!TestNotNull(TEXT("Selection health telemetry exists"), HealthTrack)) return false;
     TestEqual(TEXT("Health fill consumes actual selected health"), HealthTrack->GetPercent(), .82f);
@@ -383,8 +389,9 @@ bool FEchoesFieldHudWidgetTest::RunTest(const FString& Parameters)
         for (const FSlateBrush* Brush : {&FirstCommand->GetStyle().Normal, &FirstCommand->GetStyle().Hovered, &FirstCommand->GetStyle().Pressed})
             TestTrue(TEXT("Enabled command states retain readable ceramic-label contrast"),
                 (TextLuminance + .05f) / (Luminance(Brush->TintColor.GetSpecifiedColor()) + .05f) >= 4.5f);
+        // 10-point tile labels at 0.8 scale clamp to the 10-point floor.
         TestEqual(TEXT("Command labels honor the lower HUD scale"),
-            FirstCommandLabel->GetFont().Size, 14.0f);
+            FirstCommandLabel->GetFont().Size, 10.0f);
     }
 
     UEchoesFieldHudSectionWidget* ObjectivePanel =
@@ -453,8 +460,10 @@ bool FEchoesFieldHudWidgetTest::RunTest(const FString& Parameters)
         : nullptr;
     if (FirstCommandLabel != nullptr)
     {
+        // Command tiles carry a 10-point label so three rows fit the card;
+        // 1.5 is the upper accessibility scale.
         TestEqual(TEXT("Command labels honor the upper HUD scale"),
-            FirstCommandLabel->GetFont().Size, 27.0f);
+            FirstCommandLabel->GetFont().Size, 15.0f);
     }
     Widget->ApplyConsoleLayout(FVector2D(1280, 720));
     SlateWidget->SlatePrepass(1.0f);

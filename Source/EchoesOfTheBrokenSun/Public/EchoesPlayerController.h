@@ -450,6 +450,13 @@ public:
     {
         return ArmedDeckAction;
     }
+    /**
+     * SPEC-RES-006.INSPECT: the visible Matter deposit the player clicked to
+     * read its stock, or 0. Inspection is not selection: the deposit joins the
+     * selection card and the status line but never the command deck, and any
+     * change of the owned selection clears it.
+     */
+    [[nodiscard]] uint32 GetInspectedEntityId() const { return InspectedEntityId; }
     [[nodiscard]] FString GetLocalFactionLabel() const;
     [[nodiscard]] FString GetOpponentFactionLabel() const;
     [[nodiscard]] bool IsMissionBriefingVisible() const
@@ -963,6 +970,7 @@ private:
         int32 UnitCount);
 
     void SelectAtCursor(bool bAdditive);
+    void InspectDeposit(const class AEchoesEntityView& View);
     void SelectInScreenRectangle(bool bAdditive);
     void SetEntitySelected(uint32 EntityId, bool bSelected);
     void ClearSelection();
@@ -1004,6 +1012,7 @@ private:
     FString CommandLabel(echoes::sim::CommandType CommandType) const;
 
     TArray<uint32> SelectedEntityIds;
+    uint32 InspectedEntityId = 0;
     TArray<uint32> ControlGroups[10];
     int32 ActiveSelectionSubgroupIndex = INDEX_NONE;
     double LastControlGroupRecallRealTime[10]{};

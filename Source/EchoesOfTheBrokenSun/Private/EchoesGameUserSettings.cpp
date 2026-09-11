@@ -1,6 +1,8 @@
 #include "EchoesGameUserSettings.h"
 
 #include "Engine/Engine.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "EchoesHudLayout.h"
 
 namespace
 {
@@ -74,6 +76,15 @@ void UEchoesGameUserSettings::ValidateSettings()
     DialogueVolume = ClampVolume(DialogueVolume);
     InterfaceVolume = ClampVolume(InterfaceVolume);
     AmbienceVolume = ClampVolume(AmbienceVolume);
+}
+
+float UEchoesGameUserSettings::ResolveHudScale(const UObject* WorldContextObject)
+{
+    const UEchoesGameUserSettings* Settings = Get();
+    const float HudScale = Settings != nullptr ? Settings->GetHudScale() : 1.0f;
+    const float Dpi = WorldContextObject != nullptr
+        ? UWidgetLayoutLibrary::GetViewportScale(WorldContextObject) : 1.0f;
+    return FEchoesHudLayout::EffectiveScale(HudScale, Dpi);
 }
 
 float UEchoesGameUserSettings::GetHudScale() const

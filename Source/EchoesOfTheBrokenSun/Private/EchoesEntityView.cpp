@@ -1869,16 +1869,19 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
 
     // SPEC-RES-006: the authored mesh already contains seven clustered spires.
     // Absolute stock drives size, so load/reacquisition cannot refill the look.
-    // Keep the broad host-rock footprint recognizable after exhaustion.
+    // Keep the broad host-rock footprint recognizable after exhaustion: the
+    // owner's 2026-09-11 play test found a mined-out deposit "doesn't show
+    // anything" at a 6% height floor, so the stub keeps 30% of its height and
+    // 80% of its footprint while the exhausted tint and dead emissive say why.
     if (State.type == echoes::sim::EntityType::ResourceNode)
     {
         // Negative stock is a network-presentation unknown, not exhaustion.
         // Keep the ordinary landmark until the scoped wire carries quantity.
         const float StockFraction = State.resourceRemaining < 0 ? 1.0f : FMath::Clamp(
             static_cast<float>(State.resourceRemaining) / 1500.0f, 0.0f, 1.0f);
-        const float HeightFraction = FMath::Lerp(0.06f, 1.0f, StockFraction);
-        BodyScale.X *= FMath::Lerp(0.65f, 1.0f, StockFraction);
-        BodyScale.Y *= FMath::Lerp(0.65f, 1.0f, StockFraction);
+        const float HeightFraction = FMath::Lerp(0.30f, 1.0f, StockFraction);
+        BodyScale.X *= FMath::Lerp(0.80f, 1.0f, StockFraction);
+        BodyScale.Y *= FMath::Lerp(0.80f, 1.0f, StockFraction);
         BodyScale.Z *= HeightFraction;
         BodyOffset.Z *= HeightFraction;
     }

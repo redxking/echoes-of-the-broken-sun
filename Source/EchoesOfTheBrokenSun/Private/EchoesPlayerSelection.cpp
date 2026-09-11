@@ -292,7 +292,12 @@ void AEchoesPlayerController::SelectAtCursor(bool bAdditive)
         if (!bAdditive)
         {
             ClearSelection();
-            if (View == nullptr && HitResult.bBlockingHit)
+            if (View != nullptr &&
+                View->GetEntityType() == echoes::sim::EntityType::ResourceNode)
+            {
+                InspectDeposit(*View);
+            }
+            else if (View == nullptr && HitResult.bBlockingHit)
             {
                 ObserveTutorialSelection(0, true);
                 ObserveTutorialSelectionEvent(
@@ -307,6 +312,8 @@ void AEchoesPlayerController::SelectAtCursor(bool bAdditive)
     {
         ClearSelection();
     }
+    // An owned selection replaces any deposit under inspection.
+    InspectedEntityId = 0;
 
     if (bAdditive && SelectedEntityIds.Contains(EntityId))
     {
@@ -340,6 +347,47 @@ void AEchoesPlayerController::SelectAtCursor(bool bAdditive)
         EntityId,
         SelectedEntityIds.Num(),
         bAdditive ? TEXT("true") : TEXT("false"));
+}
+
+void AEchoesPlayerController::InspectDeposit(const AEchoesEntityView& View)
+{
+    // SPEC-RES-006.INSPECT (owner ruling 2026-09-11): a click on a visible
+    // deposit answers "how much is left" without selecting it. The stock is
+    // read from the local simulation; a network client sees only what its
+    // scoped keyframe carries, which is no stock today.
+    InspectedEntityId = View.GetEntityId();
+    int32 Remaining = -1;
+    if (GetNetMode() != NM_Client)
+    {
+        const UEchoesSimulationSubsystem* Bridge =
+            GetWorld() != nullptr
+                ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>()
+                : nullptr;
+        const echoes::sim::Entity* Deposit =
+            Bridge != nullptr ? Bridge->FindEntity(InspectedEntityId) : nullptr;
+        if (Deposit != nullptr &&
+            Deposit->type == echoes::sim::EntityType::ResourceNode)
+        {
+            Remaining = Deposit->resourceRemaining;
+        }
+    }
+    SetStatusMessage(
+        Remaining < 0
+            ? FString(TEXT("Matter deposit: stock unknown from here."))
+            : Remaining == 0
+                ? FString(TEXT("Matter deposit: exhausted. Send Surveyors to another known deposit."))
+                : FString::Printf(
+                    TEXT("Matter deposit: %s Matter remaining."),
+                    *FText::AsNumber(Remaining).ToString()),
+        4.0f);
+    UE_LOG(
+        LogEchoes,
+        Display,
+        TEXT("[ECHOES_POINTER_INSPECTION] screen=(%.1f,%.1f) entity=%u remaining=%d"),
+        LastPointerScreenPosition.X,
+        LastPointerScreenPosition.Y,
+        InspectedEntityId,
+        Remaining);
 }
 
 void AEchoesPlayerController::SelectInScreenRectangle(bool bAdditive)

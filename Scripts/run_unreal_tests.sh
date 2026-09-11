@@ -214,6 +214,8 @@ expected_tests=(
   "Echoes.Runtime.UI.OnlineLocalMenuShellRoutes"
   "Echoes.Runtime.UI.ResourceMonitorShellRoutes"
   "Echoes.Runtime.UI.SelectionGuidanceCoverage"
+  # Owner play test 2026-09-11: refusals name the unit, price, holding and short resource.
+  "Echoes.Runtime.Gameplay.ProductionRefusalText"
 )
 
 num_expected="${#expected_tests[@]}"

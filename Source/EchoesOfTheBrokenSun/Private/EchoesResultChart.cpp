@@ -34,13 +34,13 @@ public:
             FSlateDrawElement::MakeLines(Elements, Layer, Geometry.ToPaintGeometry(), Points,
                 ESlateDrawEffect::None, Color, true, Thickness);
         };
-        Line({Origin, Origin + FVector2D(0, Plot.Y), Origin + Plot}, FLinearColor(.7f,.75f,.8f), 1.5f);
-        const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", 12);
+        Line({Origin, Origin + FVector2D(0, Plot.Y), Origin + Plot}, FLinearColor(0.2f, 0.3f, 0.35f, 0.8f), 2.0f);
+        const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Mono", 12); // IBM Plex Mono for readouts
         const auto Text = [&](FVector2D At, const FString& Value)
         {
             FSlateDrawElement::MakeText(Elements, Layer + 1,
                 Geometry.ToPaintGeometry(FVector2D(100, 20), FSlateLayoutTransform(At)),
-                Value, Font, ESlateDrawEffect::None, FLinearColor::White);
+                Value, Font, ESlateDrawEffect::None, FLinearColor(0.86f, 0.90f, 0.87f, 1.0f)); // Ceramic White
         };
         Text(FVector2D(0, Origin.Y), FString::Printf(TEXT("%.0f"), MaxY));
         Text(FVector2D(28, Origin.Y + Plot.Y - 12), TEXT("0"));

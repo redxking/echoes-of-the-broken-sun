@@ -21,6 +21,9 @@ public:
     virtual void ValidateSettings() override;
 
     [[nodiscard]] float GetHudScale() const;
+    /** GetHudScale grown by the viewport DPI curve (FEchoesHudLayout::EffectiveScale);
+     * the one value runtime layout consumers pass to FEchoesHudLayout::Build. */
+    [[nodiscard]] static float ResolveHudScale(const UObject* WorldContextObject);
     void SetHudScale(float NewScale);
     [[nodiscard]] bool IsHighContrastHudEnabled() const;
     void SetHighContrastHudEnabled(bool bEnabled);

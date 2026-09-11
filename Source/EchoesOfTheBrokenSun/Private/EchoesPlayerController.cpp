@@ -10245,6 +10245,7 @@ void AEchoesPlayerController::ClearSelection()
         SetEntitySelected(EntityId, false);
     }
     SelectedEntityIds.Reset();
+    InspectedEntityId = 0;
     ActiveSelectionSubgroupIndex = INDEX_NONE;
     // An armed deck order is meaningless without a selection, so losing the
     // selection disarms it. Every scenario end, restart, load, match finish,

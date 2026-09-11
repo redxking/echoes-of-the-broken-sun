@@ -148,7 +148,10 @@ struct FEchoesCommandDeckModel final
             Add(EEchoesCommandDeckAction::ToggleTechnology,
                 TEXT("TECHNOLOGY"), TEXT("F2"), false);
         }
-        if (Entries.IsEmpty())
+        // A static structure takes no orders: a Power Link or an Aegis Post
+        // offered a STOP tile that meant nothing (owner finding 2026-09-11).
+        // Stop stays the safe fallback only where something can be stopped.
+        if (Entries.IsEmpty() && Profile.StructureCount == 0)
         {
             Add(EEchoesCommandDeckAction::Stop, TEXT("STOP"), TEXT("X"), false);
         }
