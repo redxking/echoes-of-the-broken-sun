@@ -30,7 +30,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 |---|---|---|---|---|---|---|
 | `REL-AI-006` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-7.json | b06254b | 2026-09-11 | Threshold-based massing measured: 114 of 1000 matches changed, zero conversions, branch never fires when saturated; needs muster point and synchronised release |
 | `REL-AI-022` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-2.json | 34ca1a0 | 2026-09-11 | Content-rules matrix 778/1000 terminal after the deposit-expansion planner; Meridian dominant, Kharuun never beats it; numbers diagnostic only (synthetic map, Adaptive only, concurrent lanes change) |
-| `REL-AI-031` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-2.json | 34ca1a0 | 2026-09-11 | Expand to known resources implemented (spread, waiting re-send, remembered deposits, frontier prospecting near the Anchor, fair view only); convert-advantage and Choir economy stalls remain |
+| `REL-AI-031` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-well-contest | b62f426 | 2026-09-11 | Opponent contests a Well claimed by another player; CompleteSkirmishDefeat finishes at tick 9824 after failing in every suite |
 | `REL-ECO-010` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | [INSUFFICIENT_DAWN]/[INSUFFICIENT_MATTER] refusals name unit, price, holding and source; Gameplay.ProductionRefusalText |
 | `REL-ECO-011` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Ceiling 120 and committed band implemented (schema 33); native committed-band test; HUD label compiled natively, editor rerun owed |
 | `REL-FAC-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | REL-FAC-002.PROD authored and implemented: Foundry produces only while network-powered; replay schema 32; native+Unreal+rendered green; uncommitted |
@@ -6083,6 +6083,22 @@ times in this run (evidence `BuildArtifacts/Evidence/d3-meridian-20260911T161144
 skirmish. The slice this needs is in the planner: a seat with no Dawn income and a known Well must treat
 that as the strategic emergency it is and go contest it (REL-AI-031 expansion, REL-AI-024 economy).
 
+**CompleteSkirmishDefeat passes: the match ends at tick 9,824.** With the claimed-Well fix (0a976b9) the
+test that failed in every suite tonight now succeeds, and `Gameplay.CompleteSkirmish` passes beside it
+(`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-well-contest`; match ends outcome=2 at tick 9,824, and the companion
+match at 2,630). It had failed across replay schemas 33 to 36, the planner stall fix, the Well-target fix,
+idle return fire, cohesion, firing lanes, role bodies, height bands and a tick budget raised from 60,000 to
+90,000. None of those was the cause. The cause was that the opponent's planner could not see a Well another
+player had claimed, so on a map with one Well it lost access to Dawn for the whole match and, since every
+combat unit costs Dawn and only workers do not, it banked matter and trained workers for ever. Finishing at
+9,824 ticks also means the provisional 90,000-tick budget in `EchoesFullMatchTest` can return to 60,000;
+that comment belongs to the strategy-validation lane and it asked for a finishing tick before changing it.
+Two notes for the follow-up. The remedy implemented is capture (a worker takes the Preserve Well); the
+cheaper play the rules allow, parking any unit inside the zone to stop the holder's income immediately
+through `IsFutureWellContested`, is not implemented and remains available if capture proves fragile. And
+the diagnostic now also records the tick the opponent's Dawn first rises above its opening reserve, which
+separates "never contested" from "contested too late to matter" on future runs.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
@@ -6440,3 +6456,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T23:17Z — `REL-AI-006` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-7.json; commit b06254b; Threshold-based massing measured: 114 of 1000 matches changed, zero conversions, branch never fires when saturated; needs muster point and synchronised release
 - 2026-09-11T23:22Z — `TBR-STR-007` → **OPEN**; class SRC; evidence —; commit 737038c; Read with the Dawn economy: combat units all cost Dawn, Dawn comes only from Wells plus a 30-Dawn start, so a Well-less seat fields one fighter; BAL-STR-2 granted units outright
 - 2026-09-11T23:23Z — `TBR-STR-008` → **OPEN**; class SRC; evidence —; commit 44b071c; Owner decision: a Well-less seat buys 1 fighter total while a Preserve holder earns ~33 in 17 minutes; strains SPEC-WEL-002 / REL-WEL-018 neutrality
+- 2026-09-11T23:37Z — `REL-AI-031` → **IMPLEMENTED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-well-contest; commit b62f426; Opponent contests a Well claimed by another player; CompleteSkirmishDefeat finishes at tick 9824 after failing in every suite

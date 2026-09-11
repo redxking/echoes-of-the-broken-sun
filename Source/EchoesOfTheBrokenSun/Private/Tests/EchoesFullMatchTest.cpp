@@ -1096,6 +1096,17 @@ bool FEchoesFullMatchDefeatTest::RunTest(const FString& Parameters)
 
     bool bWellOrderIssued = false;
     bool bLocalCoreDamaged = false;
+    // Separate "never contested the Well" from "contested too late to matter":
+    // Dawn is obtainable only through a Future Well, so the first tick the
+    // opponent's reserve rises above its start is the tick it reached one.
+    const echoes::sim::PlayerState* OpeningOpponentState =
+        Bridge->GetSimulation()->FindPlayer(
+            UEchoesSimulationSubsystem::OpponentPlayerId);
+    const int32 OpeningOpponentDawn =
+        OpeningOpponentState != nullptr
+            ? OpeningOpponentState->resources.dawnshards
+            : 0;
+    int64 FirstOpponentDawnGainTick = -1;
     int32 InitialLocalCoreHitPoints =
         Bridge->FindEntity(LocalCore)->hitPoints;
     // Provisional 90,000 (2026-09-11). This test finished at tick 53,086 in
@@ -1135,6 +1146,17 @@ bool FEchoesFullMatchDefeatTest::RunTest(const FString& Parameters)
         const echoes::sim::Entity* Core = Current->FindEntity(LocalCore);
         bLocalCoreDamaged |= Core != nullptr &&
             Core->hitPoints < InitialLocalCoreHitPoints;
+        if (FirstOpponentDawnGainTick < 0)
+        {
+            const echoes::sim::PlayerState* OpponentNow = Current->FindPlayer(
+                UEchoesSimulationSubsystem::OpponentPlayerId);
+            if (OpponentNow != nullptr &&
+                OpponentNow->resources.dawnshards > OpeningOpponentDawn)
+            {
+                FirstOpponentDawnGainTick =
+                    static_cast<int64>(Current->CurrentTick());
+            }
+        }
         Bridge->Tick(0.05f);
     }
 
@@ -1178,7 +1200,7 @@ bool FEchoesFullMatchDefeatTest::RunTest(const FString& Parameters)
             Bridge->GetSimulation()->FindPlayer(
                 UEchoesSimulationSubsystem::OpponentPlayerId);
         AddError(FString::Printf(
-            TEXT("[ECHOES_ORDINARY_DEFEAT_STALLED] tick=%llu localCoreHp=%d openingOpponentCombat=%d wellOrder=%s grantedOutcome=false boostedDamage=false endOpponentCombat=%d endOpponentWorkers=%d endOpponentProducers=%d endOpponentMatter=%d endOpponentDawn=%d"),
+            TEXT("[ECHOES_ORDINARY_DEFEAT_STALLED] tick=%llu localCoreHp=%d openingOpponentCombat=%d wellOrder=%s grantedOutcome=false boostedDamage=false endOpponentCombat=%d endOpponentWorkers=%d endOpponentProducers=%d endOpponentMatter=%d endOpponentDawn=%d firstOpponentDawnGainTick=%lld"),
             static_cast<unsigned long long>(
                 Bridge->GetSimulation()->CurrentTick()),
             RemainingLocalCore != nullptr ? RemainingLocalCore->hitPoints : 0,
@@ -1188,7 +1210,8 @@ bool FEchoesFullMatchDefeatTest::RunTest(const FString& Parameters)
             OpponentWorkers,
             OpponentProducers,
             OpponentState != nullptr ? OpponentState->resources.material : -1,
-            OpponentState != nullptr ? OpponentState->resources.dawnshards : -1));
+            OpponentState != nullptr ? OpponentState->resources.dawnshards : -1,
+            static_cast<long long>(FirstOpponentDawnGainTick)));
     }
     TestTrue(TEXT("Standard opponent begins with an ordinary combat cohort"),
              !InitialOpponentCombatUnits.IsEmpty());
