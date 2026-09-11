@@ -410,6 +410,12 @@ Prepared ground beats equal numbers every time and the chokepoint holds to about
 the break point, which confirms TBR-STR-006 as the next package. Beating larger forces than 1.3x is the job
 of Rule D (powered Aegis, faced Bulwarks, cover) and Rule B (height bands), measured by BAL-STR-2 and 3.
 
+**Role bodies landed (schema 35, commit 4155bdd).** Moving units are spaced by role body radius (worker
+30, line 40, heavy 55, scout 30 cm); resting pairs tolerate half that so a settled group does not drift;
+deployed Bulwarks are never pushed. BAL-STR-1 at 13 against 10: defender 60/60, schema-32 control (no lanes,
+no bodies) 7/60. Next: Rule B as height bands, then BAL-STR-2 (blind rush into prepared ground) and
+BAL-STR-3 (height bands with and without a scout).
+
 **Open question on the defeat test.** `CompleteSkirmishDefeat` failed while an AI posture gate from the
 other lane was live, so whether firing lanes slow the opponent's assault is not yet measured. The budget
 was raised provisionally from 60,000 to 90,000 ticks; it returns to 60,000 if the clean run finishes
