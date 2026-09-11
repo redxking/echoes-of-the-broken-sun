@@ -221,6 +221,29 @@ bool FEchoesOrderQueueTest::RunTest(const FString& Parameters)
     Entity* ReplayMover = Replay->MutableEntityForTesting(MoverId);
     if (TestNotNull(TEXT("Replay fixture recreates the mover"), ReplayMover))
     {
+        // Re-run the exact same validation loop from the first run to ensure
+        // the Simulation's mutable pathFieldCache_ reaches the exact same state
+        // before we evaluate MoveTowards string-pulling.
+        TArray<Vec2> DummyLegs;
+        for (int32 Ring = 3; Ring <= 12 && DummyLegs.Num() < 3; ++Ring)
+        {
+            for (int32 Dir = 0; Dir < 4 && DummyLegs.Num() < 3; ++Dir)
+            {
+                const Vec2 Candidate{Origin.x + echoes::sim::Fixed::FromInt(Ring * Dirs[Dir][0]),
+                                     Origin.y + echoes::sim::Fixed::FromInt(Ring * Dirs[Dir][1])};
+                if (Replay->ValidateMoveOrder(UEchoesSimulationSubsystem::LocalPlayerId,
+                                           MoverId, Candidate)
+                    != echoes::sim::CommandResolutionOutcome::Applied) continue;
+                if (!Replay->IsPositionPassableFor(0, Candidate)) continue;
+                if (Candidate.x.FloorToInt() == Origin.x.FloorToInt() &&
+                    Candidate.y.FloorToInt() == Origin.y.FloorToInt()) continue;
+                bool bDistinct = true;
+                for (const Vec2& Taken : DummyLegs)
+                    if (Taken.x == Candidate.x && Taken.y == Candidate.y) bDistinct = false;
+                if (bDistinct) DummyLegs.Add(Candidate);
+            }
+        }
+
         ReplayMover->order = {};
         ReplayMover->orderQueue.clear();
         TestTrue(TEXT("Replay mover restarts at the first run's origin"),
