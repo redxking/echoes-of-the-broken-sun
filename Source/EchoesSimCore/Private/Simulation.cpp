@@ -9793,6 +9793,43 @@ std::vector<Command> Simulation::GenerateAiCommands(
             continue;
         }
         if (IsBarracksUnitType(actor.type)) {
+            // REL-AI-006 cohesion: commit a force, not a trickle. A unit was
+            // marched the moment it left the Foundry, so it reached the enemy
+            // alone and died alone. Once defenders returned fire (schema 36)
+            // every evenly matched seat in the balance matrix ground to a halt
+            // without a Corefall: 557 of 1,000, with all three mirrors and
+            // Kharuun-versus-Meridian at zero. A unit now waits at home until
+            // the seat has a force worth committing, then they go together.
+            // Two valves keep it from waiting forever: a unit joins a wave
+            // that is already out without any threshold, and a seat that
+            // cannot train another fighter commits what it has.
+            std::int32_t fitStrikeUnits = 0;
+            std::int32_t committedStrikeUnits = 0;
+            for (const Entity& mate : entities_) {
+                if (mate.owner != player || mate.hitPoints <= 0 ||
+                    !IsBarracksUnitType(mate.type) || mate.id == scoutActor) {
+                    continue;
+                }
+                if (mate.maxHitPoints > 0 &&
+                    static_cast<std::int64_t>(mate.hitPoints) * 100 <=
+                        static_cast<std::int64_t>(mate.maxHitPoints) *
+                            retreatHealthPercent) {
+                    continue;
+                }
+                ++fitStrikeUnits;
+                if (mate.order.type == OrderType::AttackMove) {
+                    ++committedStrikeUnits;
+                }
+            }
+            constexpr std::int32_t kStrikeForceSize = 4;
+            const bool canStillReinforce =
+                PopulationCapacity(player) - PopulationUsed(player) >= 3;
+            if (committedStrikeUnits == 0 &&
+                fitStrikeUnits < kStrikeForceSize && canStillReinforce) {
+                command.type = CommandType::Hold;
+                commands.push_back(command);
+                continue;
+            }
             Vec2 marchTarget{};
             // A structure this seat can see right now is the best march target
             // it has. The march consulted remembered objects only, and a
