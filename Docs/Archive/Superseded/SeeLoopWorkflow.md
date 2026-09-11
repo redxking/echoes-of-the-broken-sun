@@ -3,7 +3,7 @@
 **Author and owner:** Angelis Pseftis
 **Standing:** retired procedure record. Creates no current workflow, capability, or evidence class.
 **Retired:** 2026-09-09
-**Authority:** [Project/AGENTS.md](../AGENTS.md) and [Docs/README.md](README.md).
+**Authority:** [Project/AGENTS.md](../../../AGENTS.md) and [Docs/README.md](../../README.md).
 
 ## What replaces it
 
@@ -14,7 +14,7 @@
 | Real mouse and keyboard interaction on the running game | `echoes-mouse-keyboard-playtest` and `echoes-gui-control-readiness` |
 | Evidence sufficiency for a gate claim | `echoes-evidence-gate-review` |
 
-Select them through [AgentSkillRouting.md](AgentSkillRouting.md). The `unreal-mcp` server in
+Select them through [AgentSkillRouting.md](../../AgentSkillRouting.md). The `unreal-mcp` server in
 `.mcp.json` remains available for editor inspection; it was never the retired part.
 
 ## Why it was retired
@@ -26,11 +26,11 @@ visual verdicts. Two facts ended it:
   reauthenticated, or supplied with secrets, and that unavailable Vision or audio capture never be
   reported as a pass.
 - **It never produced a single analysis.** Every recorded attempt failed authentication against
-  Google's API — see [ProjectLedger.md](Archive/ProjectLedger.md) and the dated entries in
-  [RequirementsState.md](RequirementsState.md). Frames were captured; no verdict was ever returned.
+  Google's API — see [ProjectLedger.md](../ProjectLedger.md) and the dated entries in
+  [RequirementsState.md](../../RequirementsState.md). Frames were captured; no verdict was ever returned.
 
 The retired design also assigned standing roles to named third-party assistants. Model-specific lane
-assignments do not establish current permissions under [AGENTS.md](../AGENTS.md), and no automated
+assignments do not establish current permissions under [AGENTS.md](../../../AGENTS.md), and no automated
 visual verdict substitutes for rendered inspection or owner acceptance.
 
 ## What was removed

@@ -70,10 +70,11 @@ substitute for M01's packaged journey, integrated visual/audio review or human a
 
 | Retained file | Treatment |
 |---|---|
-| [MovementAndBalanceRequirements.md](MovementAndBalanceRequirements.md) | Historical owner input merged into the master. Follow current `SPEC-MOV-*`, `SPEC-CTL-*`, and `SPEC-BAL-*` bodies. |
-| [SpecGapReport.md](SpecGapReport.md) | Dated 2026-09-02 assessment of an earlier baseline, not a current defect list or acceptance record. |
-| [SeeLoopWorkflow.md](SeeLoopWorkflow.md) | Retired 2026-09-09. The Gemini Vision See Loop left scope on 2026-09-06 and never returned an analysis; its scripts and server registration were removed. Successors are named in the record. |
-| [GeminiContinuationHandoff.md](Prompts/GeminiContinuationHandoff.md) | Spent 2026-09-06 one-shot handoff, retained as history. Do not open a session from it; its owner decisions stand. |
+| Files below moved to `Archive/Superseded/` on 2026-09-11 | Retired guidance leaves `Docs/` so it is not opened by mistake; content and history unchanged. |
+| [MovementAndBalanceRequirements.md](Archive/Superseded/MovementAndBalanceRequirements.md) | Historical owner input merged into the master. Follow current `SPEC-MOV-*`, `SPEC-CTL-*`, and `SPEC-BAL-*` bodies. |
+| [SpecGapReport.md](Archive/Superseded/SpecGapReport.md) | Dated 2026-09-02 assessment of an earlier baseline, not a current defect list or acceptance record. |
+| [SeeLoopWorkflow.md](Archive/Superseded/SeeLoopWorkflow.md) | Retired 2026-09-09. The Gemini Vision See Loop left scope on 2026-09-06 and never returned an analysis; its scripts and server registration were removed. Successors are named in the record; the retired `echoes-see-loop-visual-testing` skill was removed on 2026-09-11 and visual qualification routes to `echoes-realtime-visual-review`. |
+| [GeminiContinuationHandoff.md](Archive/Superseded/GeminiContinuationHandoff.md) | Spent 2026-09-06 one-shot handoff, retained as history. Do not open a session from it; its owner decisions stand. |
 | [DemoReleaseDirective.md](Archive/Superseded/DemoReleaseDirective.md) | Superseded release scope; original evidence and decisions retained as history. |
 | [DemoReadinessRequirements.md](Archive/Superseded/DemoReadinessRequirements.md) | Retired `DEMO-*` snapshot. Bodies and lifecycle moved to the master pair. |
 | [InitialReleaseRequirements.md](Archive/Superseded/InitialReleaseRequirements.md) | Retired `REL-*` snapshot. Bodies and lifecycle moved to the master pair. |

@@ -4,8 +4,8 @@
 **Standing:** historical assessment of 2026-09-02, retained for traceability.
 
 The observations below apply to that inspected baseline. They are not a current defect list and were not
-re-executed in the 2026-09-04 documentation audit. Use [Requirements.md](Requirements.md),
-[RequirementsState.md](RequirementsState.md), and current source/evidence before acting on a finding.
+re-executed in the 2026-09-04 documentation audit. Use [Requirements.md](../../Requirements.md),
+[RequirementsState.md](../../RequirementsState.md), and current source/evidence before acting on a finding.
 
 **Prepared for Angelis Pseftis. Read-only assessment. No builds, no editor, no test runs.**
 

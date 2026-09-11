@@ -164,5 +164,6 @@ LocalCache/
 !GEMINI.md
 !.mcp.json
 !.claude/skills
+!.claude/settings.json
 !.agents/skills
 !.opencode/skills/

@@ -2,7 +2,7 @@
 
 **Author and owner:** Angelis Pseftis
 
-Follow [Requirements.md](Requirements.md) and [RequirementsState.md](RequirementsState.md) for current
+Follow [Requirements.md](../../Requirements.md) and [RequirementsState.md](../../RequirementsState.md) for current
 requirements and outcomes. The owner wording and original numbering below are retained as historical input.
 
 **Status: SUPERSEDED — MERGED INTO `Requirements.md` ON 2026-09-03.**

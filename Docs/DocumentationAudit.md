@@ -245,7 +245,7 @@ integrated by the coordinator or the worker assigned exclusively to the skill di
 | [Docs/GameCompletionDirective.md](GameCompletionDirective.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |
 | [Docs/MapConcepts.md](MapConcepts.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |
 | [Docs/MapTechnicalBlueprint.md](MapTechnicalBlueprint.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |
-| [Docs/MovementAndBalanceRequirements.md](MovementAndBalanceRequirements.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |
+| [Docs/MovementAndBalanceRequirements.md](Archive/Superseded/MovementAndBalanceRequirements.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |
 | [Docs/NarrativeCoherenceReview.md](NarrativeCoherenceReview.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |
 | [Docs/OpeningAndTutorialScript.md](OpeningAndTutorialScript.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |
 | [Docs/Prompts/AgentProjectBrief.md](Prompts/AgentProjectBrief.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |
@@ -255,7 +255,7 @@ integrated by the coordinator or the worker assigned exclusively to the skill di
 | [Docs/README.md](README.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |
 | [Docs/Requirements.md](Requirements.md) | Governance references synchronized; five owner-directed records added; old semantic conflicts retained explicitly. |
 | [Docs/RequirementsState.md](RequirementsState.md) | Stale summaries corrected; original history preserved; new OPEN records and audit findings appended. |
-| [Docs/SpecGapReport.md](SpecGapReport.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |
+| [Docs/SpecGapReport.md](Archive/Superseded/SpecGapReport.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |
 | [Docs/WorldMapWorkLog.md](WorldMapWorkLog.md) | Read; retained under active production ownership. Concurrent updates preserved. |
 | [README.md](../README.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |
 | [SECURITY.md](../SECURITY.md) | Authority, current/history boundary, applicable requirements and stale guidance reviewed; updated in place. |

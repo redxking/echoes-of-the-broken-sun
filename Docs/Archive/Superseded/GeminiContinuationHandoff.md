@@ -7,13 +7,13 @@
 
 This handoff was written for a Gemini continuation that never took the work. Development continued on
 `main` without it, and the Gemini Vision capability it assumes was removed from scope on the day it was
-written — see [SeeLoopWorkflow.md](../SeeLoopWorkflow.md).
+written — see [SeeLoopWorkflow.md](SeeLoopWorkflow.md).
 
 Everything below describes the state of the checkout on 2026-09-06: a pinned base commit, evidence
 directories from that date, process identifiers, and specialists whose work was already stopped. None of
-it is current. To start work now, use [AgentProjectBrief.md](AgentProjectBrief.md) with
-[GameDevelopmentWorkflow.md](GameDevelopmentWorkflow.md), and take current state from
-[DeliveryPlan.md](../DeliveryPlan.md) and [RequirementsState.md](../RequirementsState.md).
+it is current. To start work now, use [AgentProjectBrief.md](../../Prompts/AgentProjectBrief.md) with
+[GameDevelopmentWorkflow.md](../../Prompts/GameDevelopmentWorkflow.md), and take current state from
+[DeliveryPlan.md](../../DeliveryPlan.md) and [RequirementsState.md](../../RequirementsState.md).
 
 The owner decisions recorded under "Latest owner decisions" below remain owner decisions and are not
 withdrawn by this closure; the Gemini Vision entry among them is the one that retired the See Loop.
@@ -31,7 +31,7 @@ Read these existing authoritative files first:
 
 - `AGENTS.md`, `Docs/README.md`, `Docs/AgentSkillRouting.md`.
 - `Docs/Requirements.md` (normative), `Docs/RequirementsState.md` (evidence and owner decisions), `Docs/DeliveryPlan.md` (existing sequence).
-- [GameDevelopmentWorkflow.md](GameDevelopmentWorkflow.md), [P0P4CodeReviewPrompt.md](P0P4CodeReviewPrompt.md).
+- [GameDevelopmentWorkflow.md](../../Prompts/GameDevelopmentWorkflow.md), [P0P4CodeReviewPrompt.md](../../Prompts/P0P4CodeReviewPrompt.md).
 - `Docs/OpeningAndTutorialScript.md`, `Docs/Archive/DevelopmentBible.md` and relevant architecture references through the authority map.
 - Applicable canonical skills under `.opencode/skills/`, especially session control, heavy-run coordination, Unreal runtime integration, input controls, tutorial and GUI readiness. Discover exact names from the routing map.
 

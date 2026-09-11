@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-11 15:38 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-11 15:43 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `27aaf68` (upstream `27aaf68`); 501 dirty paths, of which non-asset: `AGENTS.md`, `Docs/DeliveryPlan.md`, `Docs/README.md`, `Docs/Requirements.md`, `Docs/RequirementsState.md`, `Scripts/run_d2_exit_review.sh`, `Source/EchoesOfTheBrokenSun/Private/EchoesCommandDeckModel.cpp`, `Source/EchoesOfTheBrokenSun/Private/EchoesContextCursor.cpp`.
+- Branch `main` at `8ca5633` (upstream `27aaf68`); 417 dirty paths, of which non-asset: `AGENTS.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Prompts/GeminiContinuationHandoff.md -> Docs/Archive/Superseded/GeminiContinuationHandoff.md`, `Docs/MovementAndBalanceRequirements.md -> Docs/Archive/Superseded/MovementAndBalanceRequirements.md`, `Docs/SeeLoopWorkflow.md -> Docs/Archive/Superseded/SeeLoopWorkflow.md`, `Docs/SpecGapReport.md -> Docs/Archive/Superseded/SpecGapReport.md`, `Docs/DeliveryPlan.md`, `Docs/DocumentationAudit.md`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
