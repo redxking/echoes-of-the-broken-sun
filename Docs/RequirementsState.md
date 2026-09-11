@@ -71,10 +71,16 @@ alone against the restored budget: **passes**, ending at tick **13,265** with `o
 `BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-budget`, with `index.json` confirmed
 present before quoting.
 
-**Finishing tick varies with the tree, which is worth knowing.** The D3 lane measured 9,824 on its own
-build; this build measures 13,265 with that lane's planner fixes plus this lane's committed schema 33-35
-work (firing lanes, role bodies, height bands, Glass Scar low ground), all of which change how a fight
-resolves. Both are comfortably inside 60,000. A future raise should quote the tree it was measured on.
+**Finishing tick varies with the tree, and this measurement's tree was dirty.** The D3 lane measured 9,824
+on its own build; this build measures 13,265. The difference is not only the committed schema 33-35 work
+(firing lanes, role bodies, height bands, Glass Scar low ground): `git status` at the time of the run shows
+`Source/EchoesSimCore/Private/Simulation.cpp` modified with four uncommitted hunks, all inside
+`GenerateAiCommands`, implementing the D3 lane's retreat fix (a unit nearer the enemy than its own Core no
+longer walks home, and orders already being carried out are not re-issued). A build compiles the working
+tree, so 13,265 was measured *with* that unlanded fix present, and it changes exactly the behaviour that
+sets match length. The verdict stands — the test passes well inside 60,000 either way, and the retreat fix
+can only shorten matches — but the number is provenance-tagged rather than clean, and 60,000 keeps room for
+a tree without it. A future raise should quote both the commit and the dirty list, not just the tick.
 
 That closes the last task this lane owned. Remaining open items belong to the D3 lane (the unimplemented
 denial play, `REL-AI-006` muster with a synchronised release, and retreat oscillation in the harness) or to
