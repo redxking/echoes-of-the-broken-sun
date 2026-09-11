@@ -56,6 +56,21 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-006` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
+## Attribution correction: 4155bdd also carries the D3 lane's Well-target fix — 2026-09-11
+
+Commit 4155bdd ("Role bodies ... schema 35") contains three hunks in `Simulation::GenerateAiCommands` that
+are the D3 lane's work, not this lane's: an AI army takes a Future Well as a target only when no other
+hostile is visible (a captured Well has 100,000 HP and parked a whole army on it while an undefended Core
+stood eight tiles away). They were uncommitted in the shared tree when I staged, and my pre-commit
+ownership check classified hunks by keyword instead of by enclosing function, so it passed them as mine.
+The other lane has seen the commit and asked that it not be split out; history is left as it is and the
+attribution stands here. Method changed: hunk ownership is now read from `git diff -U0` function headers,
+not keyword matching.
+
+This also answers the lane's question about `CompleteSkirmishDefeat`: the schema 35 suite
+(`automation-s35`, built 21:46Z from HEAD 3c3e836, which contains 4155bdd) already carried the Well-target
+fix, and the test still failed with no `ECHOES_MATCH_FINISHED` line. The Well fixation is not its cause.
+
 ## Unreal suite on schema 35 role bodies (4155bdd + 3c3e836) — 2026-09-11, 21:55Z
 
 `BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35`: editor build green, 138/139, no
