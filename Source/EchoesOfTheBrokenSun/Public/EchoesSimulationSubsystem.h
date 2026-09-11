@@ -401,6 +401,7 @@ public:
     FEchoesFixedStepObserved OnFixedStepObserved;
     static constexpr uint8 LocalPlayerId = 0;
     static constexpr uint8 OpponentPlayerId = 1;
+    uint16 TrainingPracticeTargetBit = 0;
 
     /** Stable campaign identity shared by terrain and checkpoint bindings. */
     [[nodiscard]] static bool GetMissionIdForOperation(EEchoesOperationMode Mode, EEchoesCampaignMissionId& OutMissionId);
@@ -413,6 +414,15 @@ public:
 
     /** Creates the bounded runtime-only technical-prototype scenario. */
     bool StartPrototypeScenario();
+    /**
+     * SPEC-TUT-008 practice: a standalone run of one lesson starts from the
+     * earlier lessons' outcome. For a target past the Link lesson the drill
+     * spawns the connected Power Link that lesson builds (capacity for the
+     * Foundry lesson's Lancer). 0 clears it. Part of the training checkpoint
+     * identity so a save from one staging never loads into another.
+     */
+    void SetTrainingPracticeTarget(uint16 LessonBit);
+    [[nodiscard]] uint16 GetTrainingPracticeTarget() const { return TrainingPracticeTargetBit; }
 
     /** Creates the opt-in 400-unit/four-team presentation scale scenario. */
     bool StartStressScenario();
@@ -574,7 +584,7 @@ public:
      * Soldiers to the east edge of the player's base; wave 2 sends the heavy
      * and the scout at the damaged Link. Training mode only.
      */
-    bool IssueTrainingProbe(int32 Wave, FString& OutFeedback);
+    bool IssueTrainingProbe(int32 Wave, TArray<uint32>& OutUnits, FString& OutFeedback);
 
     bool IssueConstructionAssistCommand(
         uint32 WorkerId,

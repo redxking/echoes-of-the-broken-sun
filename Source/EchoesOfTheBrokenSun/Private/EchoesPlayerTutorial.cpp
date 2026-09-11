@@ -839,12 +839,10 @@ void AEchoesPlayerController::TickTutorialObservation()
                 if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
                     Entity.type == echoes::sim::EntityType::Worker)
                     TutorialProbeProtectedWorkers.Add(Entity.id);
-                if (Entity.owner == UEchoesSimulationSubsystem::OpponentPlayerId &&
-                    Entity.type == echoes::sim::EntityType::Soldier)
-                    TutorialProbeUnits.Add(Entity.id);
             }
             FString ProbeFeedback;
-            if (TutorialProbeUnits.IsEmpty() || !Bridge->IssueTrainingProbe(1, ProbeFeedback))
+            // The lesson binds exactly the units the scripted contact ordered.
+            if (!Bridge->IssueTrainingProbe(1, TutorialProbeUnits, ProbeFeedback) || TutorialProbeUnits.IsEmpty())
             {
                 TutorialInstruction = LOCTEXT("ProbeStageUnavailable", "The contact staging is unavailable. Restart the readiness check from the title menu.");
                 return;
@@ -883,9 +881,10 @@ void AEchoesPlayerController::TickTutorialObservation()
         if (bWorkerLost)
         {
             // Loss offers diagnosis and a direct retry (DeliveryPlan §10.1):
-            // the lesson reopens on the next tick with whatever staged units remain.
-            TutorialActiveLessonBit = 0;
-            TutorialInstruction = LOCTEXT("ProbeWorkerLost", "Probe: a Surveyor was lost. The Bulwark's Guard order keeps it alive; the check repeats with the units that remain.");
+            // the attempt is over, the reason is named, and the readiness
+            // check restarts from the title with the same staging. Reopening
+            // here would re-issue the probe against a force already losing.
+            TutorialInstruction = LOCTEXT("ProbeWorkerLost", "Probe: a Surveyor was lost. Guard it with the Bulwark and meet the contact with the Lancers before it reaches the seams. Restart the readiness check from the title menu to try again.");
             return;
         }
         if (TutorialProbeAttackSequence == 0)
@@ -907,7 +906,8 @@ void AEchoesPlayerController::TickTutorialObservation()
         if (TutorialActiveLessonBit != 256)
         {
             FString ProbeFeedback;
-            if (!Bridge->IssueTrainingProbe(2, ProbeFeedback))
+            TArray<uint32> SecondWave;
+            if (!Bridge->IssueTrainingProbe(2, SecondWave, ProbeFeedback))
             {
                 TutorialInstruction = LOCTEXT("BoardStageUnavailable", "The second contact staging is unavailable. Restart the readiness check from the title menu.");
                 return;

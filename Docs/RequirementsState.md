@@ -35,7 +35,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `SPEC-RES-006` | AWAITING HUMAN ACCEPTANCE | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | SPEC-RES-006.INSPECT: click shows remaining Matter; exhausted stub 30%/80% and minimap mark; FieldHudAuthority green; rendered chain did not stage it |
-| `SPEC-TUT-008` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-4 | 8ee0af6 | 2026-09-11 | All ten readiness lessons wired and earnable (8-10 added 2026-09-11: scripted replay-safe probe, F1 alert jump, Well commit); no in-editor drive of 6-10 yet |
+| `SPEC-TUT-008` | AGENT VERIFIED | PKG-REND | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/readiness-review-8 | 46d841c | 2026-09-11 | All ten readiness lessons earnable; lessons 6-10 each committed in a rendered practice run (readiness review driver); practice-mode gate and staging defects repaired; owner play open |
 | `SPEC-UI-008` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
@@ -5037,6 +5037,49 @@ Status: D2 stays the first unfinished package; these five are the next repairs; 
 below as they land.
 
 
+## D3 Meridian slice — third slice: readiness lessons six to ten proven in play — 2026-09-11
+
+Owner order: "proceed." Controlling IDs: SPEC-TUT-008 chapters 2–6, SPEC-TUT-008.FLOW, SPEC-TUT-008.RECOVERY,
+DeliveryPlan §10.1. Evidence root: `BuildArtifacts/Evidence/d3-meridian-20260911T161144Z` — `readiness-review-8` (ReadinessReview.log, identity.txt,
+captures 00–32), build-14.log, automation-5. Classes: agent-driven in-process rendered review and Unreal
+automation; no physical input, no package, no owner acceptance.
+
+**Driver.** `Scripts/run_readiness_review.sh` launches the game with `-EchoesReadinessReview`
+(`EchoesPlayerReadinessReview.cpp`, non-shipping, same shape as the D2 exit driver). From the title it
+opens each of lessons six to ten as a practice target from Help, deploys the readiness drill, skips the
+M01 opening, performs the lesson through the controller's own hooks and the bridge, and proves it by the
+controller's practice commit (return to Help with "Practice complete: <lesson>"). One capture per stage.
+Build placement is issued through the bridge and reported through the controller's tutorial hooks, because
+`ConfirmBuildPlacement` traces the real pointer; the observers' provenance checks are unchanged.
+
+**Result.** `readiness-review-8`: PASSED, 33 stages, 97 s: Link (refused footprint at 19,10,
+acknowledgement, placement at 6,14, two-crew assist, completion, repair of the staged damaged Link, HUD
+inspection), Foundry (Lancer queued and fielded), Probe (one Riftstalker at 20,8, Bulwark Guard on the
+nearest Surveyor, Lancers attack-move onto the contact, probe broken, no Surveyor lost), Board (camera
+parked at 40,40, second contact at the damaged Link flagged off-screen, F1 jump lands within 600 cm),
+Well (Surveyor walks to the readiness Well, Preserve committed). Practice profile masks stay 0 as designed:
+practice never writes durable mastery.
+
+**Defects the driver found and this slice repaired (runs 1–7 retained as `readiness-review-1…7`).**
+- Practice of any lesson after Roster was unplayable: maintenance, context and tactical orders were gated
+  on the durable mastery mask (`GetTutorialProgressMask() & 2`), which a practice run never satisfies.
+  `GetTutorialGateMask()` treats every other implemented lesson as done during practice; the three
+  guards use it (SPEC-TUT-008.RECOVERY).
+- The Foundry lesson could not be practised alone: the staged force stands at Logistics 14/12 because
+  the damaged Link (6,17) is 8.06 tiles from the Anchor and unpowered. A practice target past the Link
+  lesson now spawns the connected Link at the Link footprint (6,14) — the earlier lesson's outcome — and
+  that staging joins the training checkpoint identity. M01 and the full-curriculum drill are unchanged.
+- The first probe was two Riftstalkers into the Surveyor cluster; a lost Surveyor reopened the lesson
+  and re-issued the probe against a force already losing. Wave 1 is one Riftstalker at 20,8 on the
+  Lancers' side; the lesson binds exactly the units the contact ordered; a Surveyor loss ends the attempt
+  with the reason and a restart, not a loop.
+- The driver itself: opening-cinematic skip, idempotent actions, commit checked before "lesson open".
+
+**Verification.** `build-14.log` Result Succeeded; `readiness-review-8` PASSED 33/33; `automation-5`: {AUTO5}.
+Limits: the driver reports placement through the tutorial hooks rather than the pointer path; the
+captures after each commit show the Help screen (the in-lesson captures precede them). REL-AI-022 is not
+advanced by a scripted probe.
+
 ## D3 Meridian slice — second slice: readiness lessons eight to ten — 2026-09-11
 
 Owner order: "proceed." Controlling IDs: SPEC-TUT-008 chapters 4–6, SPEC-TUT-008.FLOW, SPEC-UI-008.F25
@@ -5278,3 +5321,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T16:34Z — `SPEC-UI-008` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1; commit 7c86d61; F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged
 - 2026-09-11T16:34Z — `TBR-UX-001` → **OPEN**; class NONE; evidence —; commit 7c86d61; Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset
 - 2026-09-11T16:57Z — `SPEC-TUT-008` → **IMPLEMENTED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-4; commit 8ee0af6; All ten readiness lessons wired and earnable (8-10 added 2026-09-11: scripted replay-safe probe, F1 alert jump, Well commit); no in-editor drive of 6-10 yet
+- 2026-09-11T17:41Z — `SPEC-TUT-008` → **AGENT VERIFIED**; class PKG-REND; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/readiness-review-8; commit 46d841c; All ten readiness lessons earnable; lessons 6-10 each committed in a rendered practice run (readiness review driver); practice-mode gate and staging defects repaired; owner play open

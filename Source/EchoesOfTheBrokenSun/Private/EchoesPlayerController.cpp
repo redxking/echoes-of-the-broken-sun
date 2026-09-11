@@ -9141,6 +9141,10 @@ void AEchoesPlayerController::PlayerTick(float DeltaTime)
     {
         RunD2ExitReviewStage(DeltaTime);
     }
+    if (bReadinessReviewActive)
+    {
+        RunReadinessReviewStage(DeltaTime);
+    }
 #endif
     if (bSelectionButtonDown)
     {

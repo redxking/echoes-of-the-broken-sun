@@ -96,6 +96,20 @@ public:
     {
         return PlayerProfile.TutorialVerifiedMask | TutorialSkippedMask | TutorialSessionVerifiedMask;
     }
+    /**
+     * The mask the gameplay gates consult. A practice run of one lesson treats
+     * every other implemented lesson as done (the same view the observation
+     * tick uses); otherwise the durable progress. Gating orders on the durable
+     * mask alone locked every maintenance and context order out of practice
+     * for lessons two onward (readiness review, 2026-09-11).
+     */
+    [[nodiscard]] uint16 GetTutorialGateMask() const
+    {
+        const uint16 Target = TutorialPractice.TargetLessonBit();
+        return Target != 0
+            ? static_cast<uint16>(FEchoesTutorialPracticeState::ImplementedLessonMask & ~Target)
+            : GetTutorialProgressMask();
+    }
     [[nodiscard]] const FEchoesTutorialSurveyObservation& GetTutorialSurvey() const { return TutorialSurvey; }
     [[nodiscard]] const FEchoesTutorialSelectionObservation& GetTutorialSelection() const { return TutorialSelection; }
     [[nodiscard]] const FEchoesTutorialOrderObservation& GetTutorialOrders() const { return TutorialOrders; }
@@ -208,6 +222,14 @@ public:
      * execution and not human acceptance.
      */
     void StartD2ExitReview();
+    /**
+     * Bounded non-shipping driver for SPEC-TUT-008 lessons six to ten in a real
+     * rendered window: opens each lesson as a practice target from Help,
+     * deploys the readiness drill and performs the lesson through the
+     * controller's own hooks and the bridge, proving each by the controller's
+     * commit. Agent-driven; not physical input, not human acceptance.
+     */
+    void StartReadinessReview();
     void NotifyRuntimeFailure(const FString& FailureCode);
     void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
     void NotifyCampaignPrologueFinished(
@@ -882,6 +904,9 @@ private:
     void RunDisplayRevertReviewStage(float DeltaTime);
     void RunConcessionResultReviewStage(float DeltaTime);
     void RunD2ExitReviewStage(float DeltaTime);
+    void RunReadinessReviewStage(float DeltaTime);
+    void FinishReadinessReview(const TCHAR* Result, const FString& Detail);
+    void CaptureReadinessReview(const TCHAR* Stage);
     void FinishD2ExitReview(const TCHAR* Result, const FString& Detail);
     void CaptureD2ExitReview(const TCHAR* Stage);
     void AdvanceD2ExitReview(int32 NextStage, const TCHAR* StageName, const FString& Detail);
@@ -1050,6 +1075,17 @@ private:
     bool bDisplayRevertReviewActive = false;
     bool bConcessionResultReviewActive = false;
     bool bD2ExitReviewActive = false;
+    bool bReadinessReviewActive = false;
+    int32 ReadinessReviewStage = 0;
+    int32 ReadinessReviewLessonIndex = 0;
+    float ReadinessReviewStageElapsedSeconds = 0.0f;
+    float ReadinessReviewTotalElapsedSeconds = 0.0f;
+    int32 ReadinessReviewCaptureIndex = 0;
+    FString ReadinessReviewOutputDir;
+    FString ReadinessReviewStagesPassed;
+    uint32 ReadinessReviewWellWorkerId = 0;
+    bool bReadinessReviewActionIssued = false;
+    float ReadinessReviewNextRetrySeconds = 0.0f;
     int32 D2ExitReviewStage = 0;
     float D2ExitReviewStageElapsedSeconds = 0.0f;
     float D2ExitReviewTotalElapsedSeconds = 0.0f;

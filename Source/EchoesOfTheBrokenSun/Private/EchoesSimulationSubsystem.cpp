@@ -427,6 +427,10 @@ enum class EQuickSaveContainerRead : uint8
     return true;
 }
 
+// Mirror of UEchoesSimulationSubsystem::TrainingPracticeTargetBit for the
+// free identity builder below; set only through SetTrainingPracticeTarget.
+uint16 GTrainingPracticeTargetBit = 0;
+
 [[nodiscard]] bool BuildQuickSaveBranchIdentity(
     EEchoesOperationMode Operation,
     const FEchoesCampaignProgress& CampaignProgress,
@@ -446,7 +450,8 @@ enum class EQuickSaveContainerRead : uint8
             static_cast<uint8>(EEchoesCampaignMissionId::WhatTheLedgerKeeps),
             static_cast<uint8>(Faction::MeridianCompact),
             static_cast<uint8>(Faction::KharuunAssemblies),
-            6, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0};
+            6, 2, 1, static_cast<uint8>(GTrainingPracticeTargetBit > 32 ? 1 : 0),
+            0, 0, 0, 0, 0, 0, 0};
         for (int32 Index = 0; Index < 8; ++Index)
         {
             SetupBytes[10 + Index] = static_cast<uint8>(
@@ -4262,6 +4267,17 @@ bool UEchoesSimulationSubsystem::StartScenario(
                 // spawn below stands clear of both.
                 SpawnUnit(Owner, ForceFaction, EntityType::Barracks, 14, 10);
                 SpawnUnit(Owner, ForceFaction, EntityType::Dropoff, 6, 17);
+                if (SelectedOperation == EEchoesOperationMode::TrainingReadiness &&
+                    TrainingPracticeTargetBit > 32)
+                {
+                    // Practice of a lesson after the Link lesson starts from
+                    // that lesson's outcome: the connected Link at the marked
+                    // footprint, which also powers the damaged Link and lifts
+                    // Logistics above the staged force (14/12 otherwise).
+                    SpawnUnit(Owner, ForceFaction, EntityType::Dropoff,
+                        echoes::world::training_staging::kLinkBuildSite.x,
+                        echoes::world::training_staging::kLinkBuildSite.y);
+                }
                 SpawnUnit(Owner, ForceFaction, EntityType::Worker, 8, 13);
                 SpawnUnit(Owner, ForceFaction, EntityType::Worker, 11, 14);
                 SpawnUnit(Owner, ForceFaction, EntityType::Worker, 14, 13);
@@ -18305,9 +18321,16 @@ bool UEchoesSimulationSubsystem::IssueRepairCommand(
         OutFeedback);
 }
 
-bool UEchoesSimulationSubsystem::IssueTrainingProbe(int32 Wave, FString& OutFeedback)
+void UEchoesSimulationSubsystem::SetTrainingPracticeTarget(uint16 LessonBit)
+{
+    TrainingPracticeTargetBit = LessonBit;
+    GTrainingPracticeTargetBit = LessonBit;
+}
+
+bool UEchoesSimulationSubsystem::IssueTrainingProbe(int32 Wave, TArray<uint32>& OutUnits, FString& OutFeedback)
 {
     OutFeedback.Reset();
+    OutUnits.Reset();
     if (SelectedOperation != EEchoesOperationMode::TrainingReadiness || bReplayPlaybackActive ||
         !Simulation.IsValid() || !bScenarioReady ||
         Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
@@ -18315,8 +18338,11 @@ bool UEchoesSimulationSubsystem::IssueTrainingProbe(int32 Wave, FString& OutFeed
         OutFeedback = TEXT("[TRAINING_PROBE_UNAVAILABLE] The scripted contact runs only in the live readiness drill.");
         return false;
     }
+    // Wave 1 is one Riftstalker on the Lancers' side of the base, clear of the
+    // Surveyor cluster: a probe the taught response beats, not a raid.
+    const int32 WaveUnits = Wave <= 1 ? 1 : 2;
     const echoes::sim::Vec2 Destination = Wave <= 1
-        ? echoes::sim::Vec2::FromTiles(18, 13)
+        ? echoes::sim::Vec2::FromTiles(20, 8)
         : echoes::sim::Vec2::FromTiles(
               echoes::world::training_staging::kLinkRepairTargetSite.x,
               echoes::world::training_staging::kLinkRepairTargetSite.y);
@@ -18349,13 +18375,14 @@ bool UEchoesSimulationSubsystem::IssueTrainingProbe(int32 Wave, FString& OutFeed
         if (Simulation->QueueCommand(Command, &Rejection))
         {
             ++Queued;
+            OutUnits.Add(Entity.id);
         }
         else
         {
             UE_LOG(LogEchoes, Warning, TEXT("[ECHOES_TRAINING_PROBE_REJECTED] wave=%d actor=%u reason=%s"),
                 Wave, Entity.id, UTF8_TO_TCHAR(Rejection.c_str()));
         }
-        if (Queued >= 2) break;
+        if (Queued >= WaveUnits) break;
     }
     if (Queued == 0)
     {

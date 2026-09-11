@@ -812,6 +812,7 @@ void AEchoesPlayerController::HandleShellAction(EEchoesShellAction Action, int32
             return;
         }
         const bool bRestartTraining = Bridge->GetOperationMode() == EEchoesOperationMode::TrainingReadiness;
+        Bridge->SetTrainingPracticeTarget(PracticeBit);
         if (!Bridge->SelectOperationMode(EEchoesOperationMode::TrainingReadiness, Feedback)) { Fail(Feedback); return; }
         if (!(bRestartTraining ? Bridge->RestartPrototypeScenario() : Bridge->StartPrototypeScenario()))
         {

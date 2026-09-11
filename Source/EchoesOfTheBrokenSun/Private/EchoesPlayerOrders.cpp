@@ -192,7 +192,7 @@ void AEchoesPlayerController::IssueContextOrder(
         SetStatusMessage(TEXT("[SIM_NOT_READY] Orders cannot be issued."));
         return;
     }
-    if (bTutorialOperationAuthorized && (GetTutorialProgressMask() & 2) == 0)
+    if (bTutorialOperationAuthorized && (GetTutorialGateMask() & 2) == 0)
     {
         SetStatusMessage(TEXT("[TUTORIAL] Follow the active tutorial step before issuing orders."));
         return;

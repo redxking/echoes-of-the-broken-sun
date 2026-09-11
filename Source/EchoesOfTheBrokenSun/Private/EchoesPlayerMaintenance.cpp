@@ -62,7 +62,7 @@ bool AEchoesPlayerController::IssueSelectedWorkerMaintenance(uint32 TargetId, bo
 {
     using namespace echoes::sim;
     if (IsReplayInputActive() || IsModalOverlayVisible()) return false;
-    if (bTutorialOperationAuthorized && (GetTutorialProgressMask() & 2) == 0)
+    if (bTutorialOperationAuthorized && (GetTutorialGateMask() & 2) == 0)
     {
         SetStatusMessage(TEXT("Follow the active tutorial step before issuing orders."));
         return false;

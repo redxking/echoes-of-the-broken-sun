@@ -2254,6 +2254,12 @@ void AEchoesGameMode::BeginPlay()
         {
             Controller->StartD2ExitReview();
         }
+        if (FParse::Param(
+                FCommandLine::Get(),
+                TEXT("EchoesReadinessReview")))
+        {
+            Controller->StartReadinessReview();
+        }
         if ((FParse::Param(
                  FCommandLine::Get(),
                  TEXT("EchoesFutureWellArtReview")) ||
