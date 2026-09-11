@@ -36,7 +36,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-FAC-028` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z | 34ca1a0 | 2026-09-11 | Authored optic mesh generated via asset pipeline and integrated in C++ in place of placeholder cube |
 | `REL-UI-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
-| `SPEC-BAL-009` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a0e8c04 | 2026-09-11 | Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending |
+| `SPEC-BAL-009` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | BAL-STR-1 passes its 1.3x bar with role bodies; control 7/60 |
 | `SPEC-BAL-011` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a2f2449 | 2026-09-11 | Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150 |
 | `SPEC-CMB-007` | BLOCKED | SRC | — | 8750287 | 2026-09-11 | Defect 2026-09-11: Hold units acquire only at ~7.4 tiles with 6.5-tile weapons; idle and attack-moving units never fire. Firing lanes and faction data ruled out by controls. Blocks BAL-STR-2. |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
@@ -53,8 +53,19 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-003` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Owner delegation 2026-09-11; option A implemented |
 | `TBR-STR-004` | OPEN | NONE | — | 34ca1a0 | 2026-09-11 | Owner decision; design and recommendation in Docs/StrategicDepthDesign.md (2026-09-11) |
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
-| `TBR-STR-006` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a0e8c04 | 2026-09-11 | Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending |
+| `TBR-STR-006` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## Unreal suite on schema 35 role bodies (4155bdd + 3c3e836) — 2026-09-11, 21:55Z
+
+`BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35`: editor build green, 138/139, no
+"Failed to find" asset errors. The only failure is `Echoes.Runtime.Gameplay.CompleteSkirmishDefeat`, which
+again reaches no match end. Role bodies (TBR-STR-006) and the D3 lane's planner commit break nothing else
+in the Unreal suite. Both lanes' work now stands at 138/139 across schema 34 and 35.
+
+The Defeat failure is still unattributed. It predates role bodies, survived the planner-stall fix and the
+budget rise to 90,000 ticks, and the newly recorded acquisition defect (Hold units acquiring only near
+their own death, idle units never firing) is a plausible cause that belongs to the combat/AI lane.
 
 ## Defect: units do not acquire threats at weapon range — SPEC-CMB-007, SPEC-STANCE-001..003, 2026-09-11
 
@@ -5867,3 +5878,5 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T21:49Z — `SPEC-BAL-011` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a2f2449; Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150
 - 2026-09-11T21:54Z — `SPEC-CMB-007` → **BLOCKED**; class SRC; evidence —; commit 8750287; Defect 2026-09-11: Hold units acquire only at ~7.4 tiles with 6.5-tile weapons; idle and attack-moving units never fire. Firing lanes and faction data ruled out by controls. Blocks BAL-STR-2.
 - 2026-09-11T21:54Z — `SPEC-STANCE-002` → **BLOCKED**; class SRC; evidence —; commit 8750287; Defensive default does not answer threats in weapon range; idle defenders inflicted no damage in scratch probes
+- 2026-09-11T21:56Z — `TBR-STR-006` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35; commit c705496; Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat)
+- 2026-09-11T21:56Z — `SPEC-BAL-009` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35; commit c705496; BAL-STR-1 passes its 1.3x bar with role bodies; control 7/60
