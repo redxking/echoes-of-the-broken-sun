@@ -5858,6 +5858,22 @@ void Simulation::ReconcileHarvestReservations() {
             worker.harvestState = HarvestState::MovingToResource;
             continue;
         }
+        // SPEC-RES-003 (schema 34): the one slot is non-preemptive among
+        // workers that can reach it, not a claim a walled-off worker holds
+        // forever. A promoted holder out of reach with no route to the deposit
+        // (terrain and structures only, so passing units never trigger this)
+        // gives the slot and its ticket back and must walk in to queue again.
+        // Only the holder is checked: one per deposit, and only while it is
+        // away from the contact.
+        if (!legacyUnreachableSlotReplaySemantics_ && worker.harvestSlotHeld &&
+            !InInteractionRange(worker, *resource, kFixedScale / 2) &&
+            !FindNextPathWaypoint(worker.position, resource->position).has_value()) {
+            worker.harvestSlotHeld = false;
+            worker.harvestQueueTicket = 0;
+            worker.harvestTicks = 0;
+            worker.harvestState = HarvestState::MovingToResource;
+            continue;
+        }
         worker.harvestState = HarvestState::Harvesting;
         if (worker.harvestQueueTicket == 0) {
             worker.harvestQueueTicket = currentTick_ + 1;
@@ -11712,6 +11728,7 @@ void Simulation::CaptureReplayBaseline() {
     legacyMaskedCorridorReplaySemantics_ = false;
     legacyPoweredProductionReplaySemantics_ = false;
     legacyFiringLaneReplaySemantics_ = false;
+    legacyUnreachableSlotReplaySemantics_ = false;
     replayForfeitingPlayer_ = kNeutralPlayer;
 }
 
@@ -11758,6 +11775,8 @@ bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
         prefix.version < kPoweredProductionReplayVersion;
     restored.legacyFiringLaneReplaySemantics_ =
         prefix.version < kFiringLaneReplayVersion;
+    restored.legacyUnreachableSlotReplaySemantics_ =
+        prefix.version < kUnreachableSlotReleaseReplayVersion;
     restored.ResolveAegisPower();
     if (replayed->StateChecksum() != restored.StateChecksum()) {
         SetError(error, "replay prefix state does not match restored state");
@@ -11838,6 +11857,8 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
         replay.version < kPoweredProductionReplayVersion;
     simulation->legacyFiringLaneReplaySemantics_ =
         replay.version < kFiringLaneReplayVersion;
+    simulation->legacyUnreachableSlotReplaySemantics_ =
+        replay.version < kUnreachableSlotReleaseReplayVersion;
     // Loading a save applies current network rules. Playback must restore the
     // original rules before its first checksum, including zero-tick records.
     simulation->ResolveAegisPower();

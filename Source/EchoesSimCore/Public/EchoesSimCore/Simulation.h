@@ -77,7 +77,14 @@ inline constexpr std::uint32_t kPoweredProductionReplayVersion = 32;
 // 120 and the committed band (TBR-STR-003); older recordings keep 200 and no
 // band.
 inline constexpr std::uint32_t kFiringLaneReplayVersion = 33;
-inline constexpr std::uint32_t kReplayVersion = kFiringLaneReplayVersion;
+// Schema 34 (2026-09-11, SPEC-RES-003): a worker promoted to a deposit's one
+// extraction slot that is out of reach and has no path to the deposit (a
+// structure now walls its parking spot) releases the slot and its queue
+// ticket, so the next worker is promoted. Before this, one walled-off waiter
+// stalled the deposit for the rest of the match. Older recordings keep the
+// strictly non-preemptive slot they were made with.
+inline constexpr std::uint32_t kUnreachableSlotReleaseReplayVersion = 34;
+inline constexpr std::uint32_t kReplayVersion = kUnreachableSlotReleaseReplayVersion;
 // SPEC-UNIT-003/REL-FAC-005 fixed-step commitments, independent of render rate.
 inline constexpr Tick kBulwarkDeployTicks = 20;
 inline constexpr Tick kBulwarkPackTicks = 15;
@@ -1797,6 +1804,7 @@ private:
     bool legacyMaskedCorridorReplaySemantics_ = false;
     bool legacyPoweredProductionReplaySemantics_ = false;
     bool legacyFiringLaneReplaySemantics_ = false;
+    bool legacyUnreachableSlotReplaySemantics_ = false;
     bool legacyBulwarkReplaySemantics_ = false;
     bool legacyConstructionAssistReplaySemantics_ = false;
     void UpdateProjectiles();

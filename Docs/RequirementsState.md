@@ -39,6 +39,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `SPEC-BAL-009` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 native measurement harness; acceptance bar pending TBR-STR-006 |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
+| `SPEC-RES-003` | AGENT VERIFIED | SRC | — | 3a6a2be | 2026-09-11 | Schema 34: unreachable slot holder releases the extraction slot; native stall test passes and fails with the rule off; Unreal run pending |
 | `SPEC-RES-006` | AWAITING HUMAN ACCEPTANCE | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | SPEC-RES-006.INSPECT: click shows remaining Matter; exhausted stub 30%/80% and minimap mark; FieldHudAuthority green; rendered chain did not stage it |
 | `SPEC-TUT-008` | AGENT VERIFIED | PKG-REND | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/readiness-review-8 | 46d841c | 2026-09-11 | All ten readiness lessons earnable; lessons 6-10 each committed in a rendered practice run (readiness review driver); practice-mode gate and staging defects repaired; owner play open |
 | `SPEC-UI-008` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged |
@@ -50,6 +51,26 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
 | `TBR-STR-006` | OPEN | NONE | Docs/StrategicDepthDesign.md | 34ca1a0 | 2026-09-11 | Plan written (design section 7): separate body radius from terrain footprint, authored radii, separation on the spatial hash, schema 34; waits for the AI lane's slice to commit |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## Walled-off slot holder releases the extraction slot — SPEC-RES-003, schema 34, 2026-09-11
+
+Defect reported by the D3 planner lane while tracing its seat-0 stall: once a worker earns a queue ticket at
+a deposit, `ReconcileHarvestReservations` skips the reach check for it. Waiters keep their tickets while
+parked on the rings beside the deposit, so when the slot frees, the lowest-ticket waiter is promoted even
+if a structure has since walled its parking spot. It then holds the one slot forever and the deposit
+stops for the rest of the match. Fix: in the reservation pass, a slot holder that is out of reach and has
+no terrain-and-structure route to its deposit (`FindNextPathWaypoint`, which ignores mobile units, so
+passing workers cannot trigger it) releases the slot and its ticket; the next worker is promoted and the
+released worker must walk in to queue again. Only slot holders are checked, one per deposit and only
+while away from the contact, so the path query runs rarely. Replay schema 34
+(`kUnreachableSlotReleaseReplayVersion`) with a legacy flag wired into reset, prefix restore and replay
+begin; older recordings keep the strictly non-preemptive slot. Master SPEC-RES-003 amended with the new
+release case. `EchoesResearchTest` pin moved to 34.
+
+Evidence: native "unreachable slot holder releases" (two workers, a depot, the waiter's parking spot walled
+in by terrain after it parks; at least three more loads must come out) passes; the same test fails with
+the rule disabled in a scratch copy (`before - after >= 30`), so it detects the stall. Native 148/148.
+Unreal build and suite for schema 34 not yet run; the suite in flight is for 50dc165 + 3a6a2be.
 
 ## Uncommitted work swept into a stash and recovered — 2026-09-11, 20:30–20:40Z
 
@@ -5701,3 +5722,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T20:12Z — `REL-AI-022` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-2.json; commit 34ca1a0; Content-rules matrix 778/1000 terminal after the deposit-expansion planner; Meridian dominant, Kharuun never beats it; numbers diagnostic only (synthetic map, Adaptive only, concurrent lanes change)
 - 2026-09-11T20:12Z — `TBR-SCP-012` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-17; commit 34ca1a0; First bounded rule landed: opponent Future Well commands withheld in authored campaign operations (bridge, ECHOES_AI_WELL_DOCTRINE); per-mission doctrine remains D7
 - 2026-09-11T20:30Z — `TBR-STR-006` → **OPEN**; class NONE; evidence Docs/StrategicDepthDesign.md; commit 34ca1a0; Plan written (design section 7): separate body radius from terrain footprint, authored radii, separation on the spatial hash, schema 34; waits for the AI lane's slice to commit
+- 2026-09-11T21:24Z — `SPEC-RES-003` → **AGENT VERIFIED**; class SRC; evidence —; commit 3a6a2be; Schema 34: unreachable slot holder releases the extraction slot; native stall test passes and fails with the rule off; Unreal run pending

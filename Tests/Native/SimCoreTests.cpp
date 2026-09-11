@@ -1140,6 +1140,58 @@ void TestBlobVersusFrontage() {
     REQUIRE(lanes.attackerWins <= control.attackerWins);
 }
 
+// SPEC-RES-003 / schema 34: a waiter parked beside the deposit is walled in.
+// When the harvester leaves to deliver, the waiter is promoted to the one
+// slot but can never reach the deposit. Before schema 34 it held the slot
+// forever and the deposit stopped. Now it gives the slot back and the
+// reachable worker keeps mining.
+void TestUnreachableSlotHolderReleases() {
+    Simulation sim(SimulationConfig{48, 32, 20, 0x534c4f54ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    REQUIRE(sim.SpawnEntity(0, Faction::MeridianCompact, EntityType::CommandCore,
+                            Vec2::FromTiles(8, 8)) != 0);
+    const EntityId node = sim.SpawnResourceNode(Vec2::FromTiles(24, 16), 600);
+    const EntityId miner = sim.SpawnEntity(0, Faction::MeridianCompact,
+                                           EntityType::Worker, Vec2::FromTiles(24, 16));
+    const EntityId waiter = sim.SpawnEntity(0, Faction::MeridianCompact,
+                                            EntityType::Worker, Vec2::FromTiles(24, 16));
+    REQUIRE(node != 0 && miner != 0 && waiter != 0);
+    for (EntityId id : {miner, waiter}) {
+        sim.MutableEntityForTesting(id)->cargoCapacity = 10;
+    }
+    Command first = MakeCommand(sim.CurrentTick(), 0, 1, CommandType::Gather, miner);
+    first.target = node;
+    Command second = MakeCommand(sim.CurrentTick(), 0, 2, CommandType::Gather, waiter);
+    second.target = node;
+    REQUIRE(sim.QueueCommand(first));
+    REQUIRE(sim.QueueCommand(second));
+    sim.Step();
+    REQUIRE(sim.FindEntity(miner)->harvestSlotHeld);
+    REQUIRE(sim.FindEntity(waiter)->harvestQueueTicket != 0);
+    // Let the waiter walk to its parking spot, then wall it in.
+    sim.Step(12);
+    const Entity* parked = sim.FindEntity(waiter);
+    REQUIRE(parked != nullptr && !parked->harvestSlotHeld);
+    const std::int32_t px = parked->position.x.FloorToInt();
+    const std::int32_t py = parked->position.y.FloorToInt();
+    const Vec2 nodeAt = Vec2::FromTiles(24, 16);
+    int walled = 0;
+    for (std::int32_t dy = -1; dy <= 1; ++dy) {
+        for (std::int32_t dx = -1; dx <= 1; ++dx) {
+            if (dx == 0 && dy == 0) continue;
+            if (px + dx == nodeAt.x.FloorToInt() && py + dy == nodeAt.y.FloorToInt()) continue;
+            if (sim.SetTerrainTile(px + dx, py + dy, Terrain::Blocked)) ++walled;
+        }
+    }
+    REQUIRE(walled >= 7);
+    const std::int32_t before = sim.FindEntity(node)->resourceRemaining;
+    sim.Step(2000);
+    const std::int32_t after = sim.FindEntity(node)->resourceRemaining;
+    // Several more loads came out after the waiter was walled in.
+    REQUIRE(before - after >= 30);
+    REQUIRE(!sim.FindEntity(waiter)->harvestSlotHeld);
+}
+
 void TestCombatResolvesDeterministically() {
     Simulation simulation({20, 20, 20, 7});
     AddTwoPlayers(simulation, {0, 0}, {0, 0});
@@ -11241,6 +11293,7 @@ int main(int argc, char** argv) {
         {"firing lanes block friendly bodies", TestFiringLanesBlockFriendlyBodies},
         {"replay version range is supported", TestReplayVersionRangeIsSupported},
         {"committed band and ceiling", TestCommittedBandAndCeiling},
+        {"unreachable slot holder releases", TestUnreachableSlotHolderReleases},
         {"BAL-STR-1 blob versus frontage", TestBlobVersusFrontage},
         {"protected Command Core deterministic contract",
          TestProtectedCommandCoreContract},
