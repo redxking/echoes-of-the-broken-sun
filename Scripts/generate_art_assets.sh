@@ -188,7 +188,7 @@ if ! grep -Eq '\[ECHOES_PRESENTATION_VFX_READY\].*revision=selection-command-vfx
   exit 6
 fi
 
-if ! grep -Eq '\[ECHOES_ASH_CUT_READY\].*revision=ash-cut-production-v1.*uvChannels=2,2.*materials=4.*simpleCollision=1' "$log"; then
+if ! grep -Eq '\[ECHOES_ASH_CUT_READY\].*revision=ash-cut-production-v2.*uvChannels=2,2.*materials=4.*simpleCollision=1' "$log"; then
   print -u2 "The Ash Cut route-kit audit did not pass."
   print -u2 "Inspect: $log"
   exit 5
