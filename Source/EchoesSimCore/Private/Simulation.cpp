@@ -8559,6 +8559,38 @@ std::vector<Command> Simulation::GenerateAiCommands(
             const std::int32_t mapCenterY = config_.mapHeightTiles / 2;
             const std::int32_t signX = baseX < mapCenterX ? -1 : 1;
             const std::int32_t signY = baseY < mapCenterY ? -1 : 1;
+            // REL-FAC-016 / SPEC-RES-003: keep the mining line clear, as a
+            // player does. A Barracks placed with its footprint edge two
+            // tiles from the home deposit walled the deposit's approach; the
+            // worker holding its one extraction slot could not reach it and
+            // the seat's income was zero for the whole match (harness map,
+            // seat 0, 2026-09-11). Only deposits this seat knows of count.
+            std::vector<Vec2> knownDeposits;
+            for (const Entity& seen : view.Entities()) {
+                if (seen.type == EntityType::ResourceNode && seen.resourceRemaining > 0) {
+                    knownDeposits.push_back(seen.position);
+                }
+            }
+            for (const RememberedObject& memory : view.RememberedObjects()) {
+                if (memory.type == EntityType::ResourceNode) {
+                    knownDeposits.push_back(memory.position);
+                }
+            }
+            const std::int64_t siteHalfExtent =
+                FootprintHalfExtentFor(config_.rules, playerState->faction, expansionType);
+            const auto CrowdsDeposit = [&](Vec2 site) {
+                constexpr std::int64_t kMiningLaneClearRaw = 3 * kFixedScale;
+                for (const Vec2& deposit : knownDeposits) {
+                    const std::int64_t gap =
+                        std::max(Abs64(static_cast<std::int64_t>(deposit.x.Raw()) - site.x.Raw()),
+                                 Abs64(static_cast<std::int64_t>(deposit.y.Raw()) - site.y.Raw())) -
+                        siteHalfExtent;
+                    if (gap < kMiningLaneClearRaw) {
+                        return true;
+                    }
+                }
+                return false;
+            };
             bool foundPlacement = false;
             for (std::int32_t radius = 4; radius <= 10 && !foundPlacement;
                  ++radius) {
@@ -8576,6 +8608,7 @@ std::vector<Command> Simulation::GenerateAiCommands(
                         const Vec2 candidate =
                             Vec2::FromTiles(baseX + offsetX, baseY + offsetY);
                         if (VisibilityAt(player, candidate) != Visibility::Visible ||
+                            CrowdsDeposit(candidate) ||
                             ValidatePlacement(player, expansionType, candidate) !=
                                 PlacementResult::Valid) {
                             continue;

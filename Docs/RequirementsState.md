@@ -5357,6 +5357,19 @@ fallback, so the authored mesh is used when it lands.
 before engagement (judged with `PlayerView::FriendlyBodyBlockingLane`; the firing-lanes lane's
 `CompleteSkirmishDefeat` finding), REL-AI-031 convert-advantage pressure, and the REL-AI-024 Choir economy.
 
+**Seat-0 stall repaired (same day, after the pushed slice).** A native probe of the harness map showed
+seat 0 issuing 34 commands in 8,000 ticks and never passing ten workers while seat 1 grew normally. Two
+causes, both in the planner, both judged only from the seat's own view. First, the opponent sited its
+Barracks with the footprint edge two tiles from the home deposit; with the Dropoff beside it the deposit's
+approach was walled, the worker holding the one extraction slot could not reach it, and the queue behind
+it never moved (the simulation does not reclaim an unreachable slot; recorded for the simulation lane,
+not changed here). Build sites now keep three tiles between the footprint edge and any known deposit.
+Second, prospecting was capped at sixteen tiles from the Core, so a seat whose home ring was fully
+explored never looked again; when no frontier is left inside the ring it now takes the nearest frontier
+anywhere. Probe after both (20,000 ticks): the Meridian mirror is symmetric (18 workers each by tick
+2,000, 10 combat units each by 6,000) and seat 0 beats Kharuun by tick 12,000. `test_sim-14.log` 147/147
+in all three configurations on the schema-33 tree. Unreal suite and matrix re-run pending.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
