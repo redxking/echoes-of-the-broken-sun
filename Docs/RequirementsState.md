@@ -5452,6 +5452,18 @@ anywhere. Probe after both (20,000 ticks): the Meridian mirror is symmetric (18 
 2,000, 10 combat units each by 6,000) and seat 0 beats Kharuun by tick 12,000. `test_sim-14.log` 147/147
 in all three configurations on the schema-33 tree. Unreal suite and matrix re-run pending.
 
+**Victors stopped at the Well (same day).** `balance-matrix-3.json` (planner fix above, schema 33, before
+the slot-release rule): 705 of 1,000 Corefalls. Meridian vs Kharuun now finishes in every seed; the
+Meridian mirror stalls in every seed (both economies now healthy, neither converts); Choir in seat 0 stalls
+in 30 to 34 of 111 seeds per pairing with no commands, because Choir workers cost 5 Dawn and a Choir seat
+whose army and workers are lost has no Dawn to rebuild with (REL-AI-024). A probe of one such seed
+(151845016068096) found the common defect: the winning army picked the nearest visible hostile, which was
+the loser's captured Future Well (100,000 hit points), and attacked it for the rest of the match while the
+undefended Core stood eight tiles away. The army now targets a Well only when no other hostile is in
+view; that seed now ends in Corefall before tick 9,000. The same fixation fits `CompleteSkirmishDefeat`,
+where the player commits the Well and the opponent never finishes the Core. `test_sim-15.log` 148/148 in
+all three configurations on the schema-34 tree. Matrix re-run and Unreal suite pending.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
