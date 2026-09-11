@@ -4598,3 +4598,104 @@ rerun executed against, with the D3 command-deck change from `b0108c1` reverted 
 record and the plan's active state are committed immediately after it. Main has not been advanced;
 that fast-forward is the D2 handback and needs stating, not doing silently. Automation only: no
 packaged build, no rendered capture, no physical input, no owner acceptance.
+
+## D2 continuation, second slice — the seven remaining failures, 2026-09-11
+
+Owner order: "Push to main then continue working." Main was fast-forwarded to `68653ab` and pushed
+(`862d7b2..68653ab`); work continues on `main`. Five read-only investigations, each checked by two
+adversarial reviewers, root-caused the seven failures left by the first slice; all five causes were
+upheld and one proposed fix was narrowed on scope. Engineering states below are automation-only
+until the rerun recorded at the end of this entry; no owner acceptance is assigned.
+
+**`SPEC-SAV-003` / `SPEC-SAV-004` / `REL-SAV-010` — `Gameplay.FactionResearch` (fixture; repaired).**
+The test pinned the current replay version as the literal 29. Ground occupancy (`ab2877d`) advanced
+`kReplayVersion` to 30 and migrated every native pin to the symbol but touched no fixture under
+`Source/EchoesOfTheBrokenSun`; the same stale-pin defect had already recurred once (candidate 29,
+recorded above at the 27→28 advance). Research interruption itself is not version-gated. The pin is
+advanced to 30 as a literal, so the next unannounced bump fails here again, and a fixed-cutoff pin for
+`kMaintenanceReplayVersion == 29` (the construction-assist cutoff) is added. No coverage removed.
+
+**`SPEC-UI-007` / `REL-UI-004.FAIL` / `REL-UI-013.FAIL` — `Accessibility.GameUserSettings` (game;
+repaired).** `bdd2d8a` set the status band's bottom edge to `Top-2`, which is exactly where
+`ConfineToView` lands the console bar, so band and bar were coincident with zero clearance at every
+one of the 35 resolution/scale matrix points and the strict "above and clear" check failed. The
+bottom edge returns to `Top-8` (the authored 6-unit gap) while the `+6` deployment-framing floor on
+the top edge stays, so `Camera.OrthographicFraming` is unaffected; the band is `92*Scale-14` tall
+and its text is top-anchored, so only empty space below the text is lost. Presentation geometry only.
+
+**`SPEC-AI-002` / `SPEC-AI-004` / `REL-AI-002` — `AI.StandardLongRunCorefall` (game; repaired).**
+In the Soryn Choir-versus-Meridian endurance run neither seat ever earned Dawn because the planner
+defeated its own Future Well capture: a worker holding a `FutureWell` order matched the
+"well already targeted" check against itself, fell through to the Gather branch, and was re-tasked
+about 30 ticks after the order took effect, while capture needs 300 continuous ticks. A headless
+replay of the fixture showed 105–107 Well orders per seat and a capture meter that never passed a
+third of the way. One guard in `GenerateAiCommands` leaves a worker that already holds a Well order
+alone (the core clears it when the Well stops being capturable). Planner-only: `GenerateAiCommands`
+runs outside `Step`, replays store admitted commands, so retained replays and snapshots reproduce
+exactly; live AI command streams change. Native test `AI planner leaves a Well capture alone`.
+Follow-ups recorded, not done: conceding a Well frozen by hostile presence (`SPEC-AI-004/005`); the
+Choir planner spending 20 Dawn on identity reconciliation at tick 100 with no threat visible and then
+missing the tick-600 coherence charge (`REL-AI-024`); Attack versus Attack-Move beyond the
+`SPEC-CMD-015` chase radius; cross-seat worker standing-room interaction (`SPEC-MOV-006/008`).
+
+**`SPEC-MSN-012` / `SPEC-MSN-013` — `Campaign.FutureThatWon` and `Campaign.FreshJourney` M12
+(fixture; repaired).** The mission itself completed in the failing run (phase advance at tick 1913,
+finished at tick 6323); only the fixtures' arrival predicate failed. Both measured "witness has
+arrived" as a one-tile circle to the centre of the 2×2 public-interface structure at the readback
+site; once footprints became solid the witness halted beside the footprint, outside that circle, and
+the mission's own readback accepted it while the fixture waited out its 1,800-tick budget. Arrival is
+now measured to the nearest point of the interface footprint (the `InStructureReach` measure) in
+`PaceWitness` and `MoveM12Witness`, and, as the reviewer required, in `MoveM13Witness` for the two
+public-record legs of Mission 13; the Mission 13 assembly-witness legs keep the plain site circle
+because no structure stands there. No simulation change.
+
+**`SPEC-SAV-001` / `SPEC-SAV-003` / `SPEC-MSN-014` / `SPEC-MSN-015` — `Campaign.SeveralVoicesOneCommand`
+and `Campaign.TheBrokenSun` (fixture; repaired, scope narrowed by review).** Both tests build a
+synthetic schema-22 legacy fixture from a live schema-31 checkpoint and first prove that checkpoint is
+losslessly representable in schema 28. `a289ff5` gave the opponent an economy that keeps two waiting
+items behind each active production and expands with new sites; the campaign opponent runs that
+Adaptive skirmish doctrine in every non-skirmish operation, so at the checkpoint tick its Core and
+Barracks carried waiting production (Mission 15 also an unfinished Power Link), which schema 28 cannot
+hold, and the converter correctly refused. The converters and helpers are untouched. The adapter
+gains a test-scoped opponent-planner hold (`SetOpponentPlannerHeld`), checked beside the existing
+stress/network/training gates in `QueueOpponentCommands`, cleared on scenario start and stop, and
+issuing nothing while held — the simulation is not read or written. Each test arms it immediately
+after the mission starts, asserts at the checkpoint that no opponent entity is unfinished or holds a
+production queue (so the assumption is stated, not implied), and releases it right after the
+schema-28 projection so the rest of the mission runs against the shipped opponent.
+
+* **TBR-SCP-012 — Opponent doctrine inside authored campaign operations.** OPEN. The investigation
+  found that every non-skirmish operation drives the opponent with the Adaptive skirmish macro
+  economy (`EchoesSimulationSubsystem.cpp`, `QueueOpponentCommands`), including crisis missions
+  such as M14 and M15 whose contracts describe a bounded authored opposition. Options: (A) keep the
+  skirmish doctrine everywhere and let mission contracts absorb it; (B) give campaign operations a
+  bounded per-mission opponent doctrine derived from each `SPEC-MSN-*` contract; (C) disable the
+  macro economy in missions that stage their own opposition. Recommendation: B, resolved in D7 with
+  each mission's capability manifest. Until the owner chooses, the fixture hold above is the only
+  change; no mission behaviour is altered.
+
+**Verification, second slice.** `Scripts/test_sim.sh`: 138/138 native tests in all three
+configurations (`d2-foundation-20260911T0050Z/test_sim-08.log`). The new planner test first failed
+(`test_sim-05.log`) because a second path also re-tasked the capturing worker: the expansion
+builder selection took the lowest-id completed worker regardless of its order; it now excludes a
+worker holding a Well order, as it already excluded one holding a Build order. `test_sim-06.log` and
+`-07.log` are runs started before that edit had actually applied and are not evidence of anything.
+
+**Automation rerun 3** (`d2-foundation-20260911T0050Z/automation-03/index.json`, editor rebuilt at
+`build-04.log` Result Succeeded, 02:23–02:33 UTC): 138 tests, 135 passed, 3 failed. Cleared this
+slice: `Accessibility.GameUserSettings`, `AI.StandardLongRunCorefall`, `Gameplay.FactionResearch`,
+`Campaign.SeveralVoicesOneCommand`. The three that remain each advanced past the step that failed
+before and now stop deeper in their mission chains, all with a unit ordered to a mission site that it
+does not reach: `Campaign.FreshJourney` at "Mission 12 readback legitimately reveals the Future
+Well"; `Campaign.FutureThatWon` at "The verifier reaches the second recorded district readback"
+(`[M12_TACTICAL_FAILURE] context=convoy-witness tick=1664 verifier pos=(29,33) order=Move
+destination=(32,33)`); `Campaign.TheBrokenSun` at "Possible, Manifest, and Neme settle at their three
+command sites" (`[ECHOES_BROKEN_SUN_CONTRACT_FAILED] tick=6322 approach=false accord=false
+heavy=false`, detail: the heavy at tile 21,30 ordered to site 18,30 never arrives). These are
+mission-scripting arrival problems under solid footprints (`SPEC-MSN-012`, `SPEC-MSN-015`,
+`SPEC-MOV-006`); they are investigated next and belong to D6/D7 if they prove to be authored-site
+placement rather than a movement rule. Baseline for the day: 12 on main → 10 → 7 → 3, none added.
+
+**Commit identity, second slice.** Code `a37bacd` on `main`, documentation commit immediately after;
+both pushed to `origin/main` under the owner's "push to main then continue working" instruction.
+Automation only: no packaged build, no rendered capture, no physical input, no owner acceptance.
