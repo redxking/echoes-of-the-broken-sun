@@ -58,6 +58,31 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-007` | OPEN | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | c2437ed | 2026-09-11 | Owner decision: a powered Aegis only matters at parity (6/30); prepared ground as costed does not beat a blind rush |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
+## Three findings, one root: the opponent never masses — 2026-09-11, 22:50Z
+
+Noted from this lane because the D3 lane's matrix corroborates this lane's BAL-STR-2 result from the
+opposite direction, and the three open symptoms are now one cause.
+
+- **Matrix** (`balance-matrix-6.json`, that lane): 557/1,000 authoritative Corefalls after idle return fire,
+  down from 668, and every mirror stalls — Kharuun's mirror 111/111 finished before, 0/111 after; Meridian
+  0/112; Choir 2/111; Kharuun-vs-Meridian 0/111 — while every *uneven* cross-faction pairing still finishes
+  111/111.
+- **CompleteSkirmishDefeat**: the opponent cannot finish a Core sitting at 1,062 HP in 90,000 ticks, with
+  four opening combat units.
+- **BAL-STR-2** (this lane): prepared ground as costed does not beat a blind rush; a powered Aegis matters
+  only at parity (6/30).
+
+The common factor is that a force which arrives piecemeal cannot convert an advantage, and that once
+defenders shoot back, an even fight no longer resolves at all. Idle return fire did not cause this: it made
+a pre-existing weakness visible, which is the fix working. `REL-AI-006` cohesion (mass a strike force and
+commit it together) is the blocking slice, owned by the D3 lane and now IN PROGRESS.
+
+**Consequence for this lane's numbers.** BAL-STR-1 and BAL-STR-3 are unaffected and were re-measured after
+schema 36, because every unit in those harnesses carries an explicit order and commits together by
+construction. That is also their limitation: they measure the *rules* under ideal commitment, not what an AI
+achieves. Re-deriving them from AI matches is only meaningful after cohesion lands, and the matrix numbers
+remain diagnostic (one synthetic map, Adaptive only) in the meantime.
+
 ## Schema 36 verified in Unreal; the acquisition defect is closed — 2026-09-11, 22:45Z
 
 The D3 lane ran the full suite at `85eaf3c` plus its three fixture repairs: **139 passed, 1 failed**, and the
