@@ -59,6 +59,32 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-008` | OPEN | SRC | — | 44b071c | 2026-09-11 | Owner decision: a Well-less seat buys 1 fighter total while a Preserve holder earns ~33 in 17 minutes; strains SPEC-WEL-002 / REL-WEL-018 neutrality |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
+## Predictions on record before the D3 lane's Well-scan fix is measured — 2026-09-11, 23:30Z
+
+Written before the result so the record shows what was predicted, not only what happened. That lane found
+the mechanism for `CompleteSkirmishDefeat`: its planner's Well scan accepted only Wells whose protocol is
+still `Dormant`, so once the player committed Glass Scar's single Well the opponent could not see it as a
+target for the remaining 90,000 ticks. Its fix lets the scan consider an enemy-held Preserve Well, which
+restores authored behaviour rather than adding a rule: the Future Well command already accepts one, capture
+and contest share a radius, and `ApplyPreserveIncome` already pays only while uncontested. Unclaimed Wells
+keep priority; campaign doctrine is untouched. Committed with native 150/150; its verification run is in
+flight.
+
+**If the test now finishes:** the failure that ran through every Unreal suite tonight (schema 33 to 36, the
+planner stall fix, the Well-target fix, idle return fire, cohesion, and a budget raised to 90,000) is closed,
+and its cause was never any of those. This lane's provisional `DefeatTickBudget = 90000` comment in
+`EchoesFullMatchTest` then becomes actionable and should be set from the observed finishing tick, not
+guessed.
+
+**If it still stalls with opponent Dawn above zero:** this lane's Dawn arithmetic survives but that remedy
+does not, and the next question is conversion rather than access — whether a seat can turn Dawn into
+fighters fast enough to matter, given one Barracks and 30-Dawn units.
+
+**Number worth capturing either way:** the tick at which the opponent's Dawn first rises above zero. It
+separates "never contested" from "contested too late to matter", and it sizes `TBR-STR-008`: if a
+dispossessed seat can only re-enter the Dawn economy late in a match, the swing is worse than the raw
+per-interval arithmetic suggests.
+
 ## The Well is a Dawn monopoly, and that strains Well neutrality — TBR-STR-008, 2026-09-11, 23:20Z
 
 Raised by this lane while validating the owner's premise ("every strategic choice has a cost, and no Well
