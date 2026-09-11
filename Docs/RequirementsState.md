@@ -5004,7 +5004,14 @@ simulation state, not the HUD's affordances. Findings, in the owner's words and 
    Dawn shortfalls (REL-ECO-010.AUTH asks for [INSUFFICIENT DAWN]). The player had 0 Dawn and no
    statement of where Dawn comes from.
 
+5. "I see Armor and Damage but it's all 0; that can't be right." The selection inspector prints
+   `ARMOR {0}   DAMAGE {1}` for every selection. The simulation has no armor statistic at all
+   (SPEC-CMB-002: a single damage class, no armor multipliers), so the inspector's Armor field is never
+   assigned and always reads 0: a decorative false value (SPEC-VAL-003). Damage is the archetype's
+   attack damage, which is genuinely 0 for structures and workers, but the line does not say so.
+   REL-UI-003 asks for "damage/armor stats"; armor is inapplicable until the model gains one.
+
 Also observed in the frame: the guidance panel left of the card shows text clipped at its top line.
-Status: D2 stays the first unfinished package; these four are the next repairs; fix records follow
+Status: D2 stays the first unfinished package; these five are the next repairs; fix records follow
 below as they land.
 
