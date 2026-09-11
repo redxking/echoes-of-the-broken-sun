@@ -77,14 +77,14 @@ No fixed ending durations are specified. These require full scene treatment, sho
 
 ## Additional scene work to scope
 
-`SPEC-CIN-001` requires mission-critical scenes but does not enumerate a fixed additional set. Review the authored dialogue/event triggers for the following presentation work; these are proposed production packages, not newly mandated standalone cutscenes:
+`SPEC-CIN-001` requires mission-critical scenes. Following owner direction (2026-09-11), major mid-mission turning points and mission completions must be treated as **fully production professional-style cutscenes**, not just UI panels or short camera pans. Review the authored dialogue/event triggers for the following presentation work to scope their full cinematic production:
 
 | Package | Treatment to develop | Scope boundary |
 |---|---|---|
 | Tutorial deployment handoff | Brief in-engine transition from the prologue into Mara’s first camera-survey action. | May be the prologue’s final shot; preserve playable teaching. |
-| Readiness completion / engagement handoff | Mara’s readiness close, deployment context and return to player control. | Use the approved tutorial script and current journey requirements; no separate movie required. |
-| Mission-critical discoveries and commitments | Identify which authored reveals, witness events and irreversible choices need a short scene, camera emphasis or dialogue over gameplay. | Audit all fifteen mission triggers; avoid interrupting every routine objective or replaying a committed choice. |
-| Mission outcomes | State-aware success, failure and retry presentation. | Existing dialogue/result panels may suffice. Do not count thirty additional victory/defeat movies without a requirement. |
+| Readiness completion / engagement handoff | Mara’s readiness close, deployment context and return to player control. | Use the approved tutorial script and current journey requirements. |
+| Mission-critical discoveries and commitments | **Fully produced mid-mission cinematics** for major reveals, witness events, and irreversible choices (e.g., Future Well commitments). | Audit all fifteen mission triggers. These must be professional cutscenes that tell the story, not just a camera pan. Avoid interrupting minor routine objectives. |
+| Mission outcomes | **Fully produced victory/defeat cinematics** for each mission. | Replace basic dialogue/result panels with state-aware professional cutscenes for mission success and failure. These must reflect the actual surviving units and base state. |
 
 ## Promotional videos — recommendations
 
@@ -479,7 +479,7 @@ Send the following as one scene package. An ID or a local filepath by itself mea
 
 **Copyable instruction for the receiving AI:**
 
-> Treat the attached character and environment references as a continuity contract. Preserve the same individuals, faces, body proportions, costume construction, left/right marks, signature objects, faction forms and location geometry in every image and shot. Change only the pose, camera, light and state explicitly called for by this scene. Do not reinterpret the designs to suit a new visual style. Do not infer lore or physical character presence from a voice line. If a needed feature is absent from the references, identify it as unspecified and prepare a clearly marked proposed reference first; do not let it vary silently between shots. Return a short continuity comparison alongside the output.
+> Treat the attached character and environment references as a continuity contract. This is for a professional video game production. You must preserve the same individuals, faces, body proportions, costume construction, left/right marks, signature objects, faction forms, and location geometry in every image and shot so they match the concepts and models used in actual gameplay. Change only the pose, camera, light and state explicitly called for by this scene. Do not reinterpret the designs to suit a generic visual style, and do not let the quality drop below professional cinematic standards. Do not infer lore or physical character presence from a voice line. If a needed feature is absent from the references, identify it as unspecified and prepare a clearly marked proposed reference first; do not let it vary silently between shots. Return a short continuity comparison alongside the output.
 
 ### Selecting visual references before full video production
 
@@ -1569,17 +1569,17 @@ The older cinematic requirement summarizes Restoration as rebuilding the old sun
 
 **Proposed 12-second connective treatment.** Use only after the current readiness gates are satisfied. For 0–4 s hold a clean tactical view of the achieved training state. For 4–9 s provide the verified deployment destination/context in the real briefing layer; avoid a travel montage that invents distance or a new map. For 9–12 s begin the authorized transition into the target operation or hold at its deployment confirmation, according to the active journey flow. Use Mara's close from the tutorial source only when its enumerated skills still match the current curriculum; its text is **“Readiness check complete — survey, roster, routes, reserve, links, foundry, perimeter, board, and one Well you'll be thinking about tonight. The window opens now. This one is real.”** The spoken take will likely exceed the proposed camera edit: let the camera hold and extend timing naturally. Do not mark an incomplete lesson passed. Do not use the Glass Scar skirmish engagement frame as if it were M01's campaign contract.
 
-### Mission-critical inserts and outcomes — reusable production descriptions
+### Mission-critical cinematics and outcomes — reusable production descriptions
 
-These are short event-bound presentation templates, not additional approved mission events. Before assigning one, identify the exact mission, line IDs, state condition and registered site. An external AI without that state should create an unbound concept insert, not fabricate the record.
+These are fully produced professional-level cinematic templates for major mid-mission events and completions. Before assigning one, identify the exact mission, line IDs, state condition and registered site. An external AI without that state should create an unbound concept cinematic, not fabricate the record.
 
-**Discovery insert, proposed 6–10 s:** start from the player's current view, cut to a 55–70 mm detail of the actual discovered record or interface, and use a shallow push that ends with the evidence readable. Play its existing triggered line. Show what was observed without cutting to a culprit or unsupported historical flashback. Return to the exact playable state. The observation must already be authorized.
+**Discovery cinematic (10–15 s):** A fully produced scene starting from the player's current view, cutting to a professional cinematic sequence detailing the actual discovered record or interface. Use dynamic camera work that ends with the evidence readable. Play its existing triggered line. Show what was observed without cutting to a culprit or unsupported historical flashback.
 
-**Well commitment insert, proposed 6–12 s excerpt:** frame bowl, spire and the relevant ground feature together from a stable 40–50 mm oblique view. Harvest uses rising amber followed by permanent dark collapse; Preserve retains a stable spire and slow custody indication; Reshape manifests only the registered temporary feature with readable expiry indication. These are three mutually exclusive branch versions. Never accelerate the public gameplay telegraph or hide an opponent's opportunity to respond. Prefer dialogue and camera restraint during live play; any cinematic pause follows the actual control contract.
+**Well commitment cinematic (15–20 s):** A fully produced cinematic framing the bowl, spire and the relevant ground feature. Harvest uses rising amber followed by permanent dark collapse; Preserve retains a stable spire and slow custody indication; Reshape manifests only the registered temporary feature with readable expiry indication. These are three mutually exclusive branch versions. 
 
-**Witness/readback insert, proposed 6–10 s:** hold both independent sites in a 40–55 mm wide, preserving their different hardware and separation. Present the receipt cue only after the authoritative observation. No merging of cultures, consent animation or population-recovery image. Readable text comes from the live record.
+**Witness/readback cinematic (10–15 s):** A fully produced cinematic holding both independent sites, preserving their different hardware and separation. Present the receipt cue only after the authoritative observation. No merging of cultures, consent animation or population-recovery image. Readable text comes from the live record.
 
-**Mission result, proposed 5–8 s:** stable view of the actual surviving scene under the existing success/failure result layer, with the matching authored line and cue. Success does not rebuild destroyed objects; failure does not invent a character death. Keep retry/continue interactive. This is normally a presentation treatment, not another full cinematic.
+**Mission outcome cinematic (15–20 s):** A fully produced storytelling cinematic of the actual surviving scene with the matching authored line and cue. Success does not rebuild destroyed objects; failure does not invent a character death. This replaces simple UI dialogue panels to ensure professional-level storytelling at the conclusion of every major mission.
 
 ### Promotional-video editing briefs
 
