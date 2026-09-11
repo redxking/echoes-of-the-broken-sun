@@ -15,6 +15,7 @@
 #include <limits>
 #include <map>
 #include <optional>
+#include <utility>
 #include <span>
 #include <string>
 #include <vector>
@@ -57,7 +58,11 @@ inline constexpr std::uint32_t kMaintenanceReplayVersion = 29;
 // with entity footprints blocking movement. Anything older replays on the open
 // ground it was recorded on, so retained recordings still reproduce exactly.
 inline constexpr std::uint32_t kGroundOccupancyReplayVersion = 30;
-inline constexpr std::uint32_t kReplayVersion = kGroundOccupancyReplayVersion;
+// Schema 31: a mover whose own tile the route field masks on every side (open
+// ground between two footprints) searches outward over exactly passable tile
+// centres for the nearest field-reachable tile instead of standing still.
+inline constexpr std::uint32_t kMaskedCorridorReplayVersion = 31;
+inline constexpr std::uint32_t kReplayVersion = kMaskedCorridorReplayVersion;
 // SPEC-UNIT-003/REL-FAC-005 fixed-step commitments, independent of render rate.
 inline constexpr Tick kBulwarkDeployTicks = 20;
 inline constexpr Tick kBulwarkPackTicks = 15;
@@ -1506,6 +1511,13 @@ private:
     [[nodiscard]] bool IsTileKnownPassableTo(PlayerId player,
                                              std::int32_t tileX,
                                              std::int32_t tileY) const;
+    // Schema 31: a mover whose own tile is footprint-masked on every side may
+    // still stand on open ground between two footprints. Walks known open tile
+    // centres outward (radius 8, N/E/S/W) to the nearest tile the player knows
+    // as passable, so an order from such ground is judged from there.
+    [[nodiscard]] std::optional<std::pair<std::int32_t, std::int32_t>>
+    FindKnownMaskedGroundEscape(PlayerId player, std::int32_t startTileX,
+                                std::int32_t startTileY) const;
     [[nodiscard]] bool IsTileReachableInPlayerKnowledge(
         PlayerId player,
         std::int32_t startTileX,
@@ -1710,6 +1722,7 @@ private:
     bool legacyProductionReplaySemantics_ = false;
     bool legacyLinkReplaySemantics_ = false;
     bool legacyOpenGroundReplaySemantics_ = false;
+    bool legacyMaskedCorridorReplaySemantics_ = false;
     bool legacyBulwarkReplaySemantics_ = false;
     bool legacyConstructionAssistReplaySemantics_ = false;
     void UpdateProjectiles();

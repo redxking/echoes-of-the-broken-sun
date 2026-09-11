@@ -6620,6 +6620,155 @@ void TestStructureFootprintsBlockMovementAndPathing() {
     }
 }
 
+// The order that froze worker 41 in the D2 exit review was a Gather, which
+// passes no route gate: the worker took the order and then stood still because
+// MoveTowards found no waypoint from the half-tile gap between the Core and a
+// supply node. Same pocket, a deposit to reach, and the requirement that the
+// worker leaves within five ticks and extracts.
+void TestMaskedCorridorGatherOrderStillMoves() {
+    const Vec2 pocket = Vec2::FromRaw(9883, 7281);
+    Simulation gather({32, 32, 20, 0x474154484552ULL});
+    REQUIRE(gather.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    REQUIRE(gather.SpawnEntity(0, Faction::MeridianCompact, EntityType::CommandCore,
+                               Vec2::FromRaw(10240, 10240)) != 0);
+    REQUIRE(gather.SpawnEntity(0, Faction::MeridianCompact, EntityType::Dropoff,
+                               Vec2::FromRaw(9216, 6144)) != 0);
+    // Inside the Core's sight (eight tiles), so the Gather order is admitted;
+    // the route out of the pocket still runs east along the corridor first.
+    const EntityId deposit = gather.SpawnResourceNode(Vec2::FromTiles(16, 10), 500);
+    REQUIRE(deposit != 0);
+    const EntityId hauler = gather.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, pocket);
+    REQUIRE(hauler != 0);
+    gather.Step(20);
+    Command dig = MakeCommand(gather.CurrentTick(), 0, 1, CommandType::Gather, hauler);
+    dig.target = deposit;
+    REQUIRE(gather.QueueCommand(dig));
+    gather.Step();
+    const std::optional<CommandResolutionReceipt> digReceipt =
+        gather.FindCommandResolutionReceipt(0, 1);
+    REQUIRE(digReceipt.has_value());
+    REQUIRE(digReceipt->outcome == CommandResolutionOutcome::Applied);
+    REQUIRE(gather.FindEntity(hauler)->order.type == OrderType::Gather);
+    bool haulerMoved = false;
+    for (int tick = 0; tick < 5; ++tick) {
+        gather.Step();
+        if (gather.FindEntity(hauler)->position != pocket) {
+            haulerMoved = true;
+            break;
+        }
+    }
+    REQUIRE(haulerMoved);
+    bool extracted = false;
+    for (int tick = 0; tick < 900 && !extracted; ++tick) {
+        gather.Step();
+        extracted = gather.FindEntity(hauler)->cargo > 0;
+    }
+    REQUIRE(extracted);
+}
+
+// SPEC-MOV-006/008: a mover on exactly-passable ground that the route field
+// masks on every side must still leave. Observed in the D2 exit review
+// (2026-09-11): a Foundry placed one tile short of touching the Core leaves a
+// half-tile corridor between the two footprints. The step gate measures the
+// footprint boxes exactly, so a worker delivering to the Core may stand in
+// that corridor; the route field masks every tile a footprint touches, so
+// the corridor's whole tile row is off-route on both sides. With no line of
+// sight to its destination and no field-reachable neighbour, the worker was
+// left with no waypoint and stood still for the rest of the match.
+void TestMaskedCorridorMoverStillLeaves() {
+    Simulation sim({32, 32, 20, 0x434f52524944ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, ResourcePool{0, 0}));
+    // Core 5x5 at tile-corner (16,16): box [13.5,18.5) on both axes.
+    const EntityId core = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore, Vec2::FromTiles(16, 16));
+    REQUIRE(core != 0);
+    // Foundry 4x4 at (15,21): box x [13,17), y [19,23). Corridor y in [18.5,19).
+    const EntityId foundry = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks, Vec2::FromTiles(15, 21));
+    REQUIRE(foundry != 0);
+    REQUIRE(sim.FindEntity(foundry)->completed);
+    // The worker stands inside the corridor: outside both boxes, inside a tile
+    // row that both footprints touch.
+    const Vec2 start = Vec2::FromRaw(16 * kFixedScale + 800, 18 * kFixedScale + 700);
+    const EntityId worker = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, start);
+    REQUIRE(worker != 0);
+    REQUIRE(sim.FindEntity(worker)->position == start);
+    // Reveal the ground so the order is judged on known passability.
+    sim.Step(20);
+    // Destination behind the Foundry: the straight line crosses its box.
+    Command move = MakeCommand(sim.CurrentTick(), 0, 1, CommandType::Move, worker);
+    move.position = Vec2::FromTiles(8, 26);
+    REQUIRE(sim.QueueCommand(move));
+    sim.Step();
+    const std::optional<CommandResolutionReceipt> receipt =
+        sim.FindCommandResolutionReceipt(0, 1);
+    REQUIRE(receipt.has_value());
+    REQUIRE(receipt->outcome == CommandResolutionOutcome::Applied);
+
+    bool leftCorridor = false;
+    bool arrived = false;
+    for (int tick = 0; tick < 900; ++tick) {
+        sim.Step();
+        const Entity* unit = sim.FindEntity(worker);
+        REQUIRE(unit != nullptr);
+        REQUIRE(!PenetratesFootprint(sim, *sim.FindEntity(core), unit->position));
+        REQUIRE(!PenetratesFootprint(sim, *sim.FindEntity(foundry), unit->position));
+        const std::int64_t dx =
+            static_cast<std::int64_t>(unit->position.x.Raw()) - start.x.Raw();
+        const std::int64_t dy =
+            static_cast<std::int64_t>(unit->position.y.Raw()) - start.y.Raw();
+        if (dx * dx + dy * dy > static_cast<std::int64_t>(kFixedScale) * kFixedScale) {
+            leftCorridor = true;
+        }
+        if (unit->position == move.position) {
+            arrived = true;
+            break;
+        }
+    }
+    REQUIRE(leftCorridor);
+    REQUIRE(arrived);
+
+    // The observed case, to the raw coordinate: run 12 of the D2 exit review
+    // left worker 41 at (9883,7281), 113 raw below the first supply node
+    // (Dropoff at 9216,6144, half extent 1024) and 399 raw above the Core
+    // (10240,10240, half extent 2560). Its tile (9,7) and all four
+    // neighbours are footprint-masked; it stood there for the rest of the
+    // match holding a Build order.
+    Simulation gap({32, 32, 20, 0x474150ULL});
+    REQUIRE(gap.AddPlayer(0, Faction::MeridianCompact, ResourcePool{500, 50}));
+    REQUIRE(gap.SpawnEntity(0, Faction::MeridianCompact, EntityType::CommandCore,
+                            Vec2::FromRaw(10240, 10240)) != 0);
+    REQUIRE(gap.SpawnEntity(0, Faction::MeridianCompact, EntityType::Dropoff,
+                            Vec2::FromRaw(9216, 6144)) != 0);
+    const Vec2 pocket = Vec2::FromRaw(9883, 7281);
+    const EntityId frozen = gap.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, pocket);
+    REQUIRE(frozen != 0);
+    REQUIRE(gap.FindEntity(frozen)->position == pocket);
+    gap.Step(20);
+    Command out = MakeCommand(gap.CurrentTick(), 0, 1, CommandType::Move, frozen);
+    out.position = Vec2::FromTiles(16, 16);
+    REQUIRE(gap.QueueCommand(out));
+    gap.Step();
+    bool movedWithinFiveTicks = false;
+    for (int tick = 0; tick < 5; ++tick) {
+        gap.Step();
+        if (gap.FindEntity(frozen)->position != pocket) {
+            movedWithinFiveTicks = true;
+            break;
+        }
+    }
+    REQUIRE(movedWithinFiveTicks);
+    bool gapArrived = false;
+    for (int tick = 0; tick < 900 && !gapArrived; ++tick) {
+        gap.Step();
+        gapArrived = gap.FindEntity(frozen)->position == out.position;
+    }
+    REQUIRE(gapArrived);
+}
+
 // REL-AI-011/012/031: the opponent has to run an economy and an industry.
 // Its Matter income used to be exactly zero for a whole match, because the
 // planning pass re-issued Gather to workers that were already gathering and
@@ -10813,6 +10962,8 @@ int main(int argc, char** argv) {
          TestStructureFootprintsBlockMovementAndPathing},
         {"allied crowd reaches distinct tiles without overlap",
          TestAlliedCrowdReachesDistinctTilesWithoutOverlap},
+        {"masked corridor gather order still moves", TestMaskedCorridorGatherOrderStillMoves},
+        {"masked corridor mover still leaves", TestMaskedCorridorMoverStillLeaves},
         {"authentic schema29 zero-tick network replay",
          TestAuthenticSchema29ZeroTickNetworkReplay},
     };

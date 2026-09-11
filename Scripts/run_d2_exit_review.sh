@@ -66,6 +66,7 @@ mkdir -p "$evidence_dir" "$captures" "$scope_root/SaveGames" "$scope_root/UserDi
   -EchoesSaveGameDirectory="$scope_root/SaveGames" \
   -EchoesD2ExitReview \
   -EchoesD2ExitReviewOutputDir="$captures" \
+  ${=ECHOES_D2_EXIT_REVIEW_EXTRA_ARGS:-} \
   -AbsLog="$log" &
 editor_pid=$!
 

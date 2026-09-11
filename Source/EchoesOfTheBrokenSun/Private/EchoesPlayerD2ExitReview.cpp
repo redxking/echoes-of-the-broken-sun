@@ -52,6 +52,30 @@ constexpr float kCaptureDelaySeconds = 0.4f;
 bool GD2CapturePending = false;
 FString GD2CaptureName;
 
+// A queued player command applies on the next simulation tick, and the
+// controller ticks faster than the simulation. Between the two, a worker just
+// ordered to build still reads as idle; the gather line must leave it alone
+// or its Gather replaces the Build the moment both apply and the site is
+// orphaned. Runs 10-12 of the D2 exit review produced exactly that: one idle
+// worker was named builder four times and every site sat at 0/100 until a
+// second worker assisted.
+uint32 GD2PendingBuilderId = 0;
+float GD2PendingBuilderElapsed = -10.0f;
+
+// Stuck-unit detector for the training notes: an owned mobile unit that holds
+// a movement order (Gather while moving to its deposit, Build, Move) and has
+// not left a one-tile radius of where it stood twenty seconds ago is named
+// with its order and target. Displacement, not exact position: a unit arguing
+// with the route field on a tile boundary moves every tick and goes nowhere.
+struct FD2Seen { int32 RawX = 0; int32 RawY = 0; float SinceElapsed = 0.0f; };
+TMap<uint32, FD2Seen> GD2LastMoved;
+float GD2StuckNoteElapsed = -100.0f;
+
+// Diagnostic switch: -EchoesD2ExitReviewNaiveBuilder restores the builder
+// choice of runs 12-13 (nearest gatherer to the Core, no mobility proof) so a
+// stalled builder's trajectory can be read from the 5-second notes.
+bool GD2NaiveBuilder = false;
+
 enum class ED2Stage : int32
 {
     OpenModes = 0,
@@ -256,6 +280,27 @@ bool IsNearOwnedNetworkNode(const echoes::sim::Simulation& Sim, const Vec2& Posi
     return false;
 }
 
+// Who is building this site right now, and where they stand. Diagnostic text
+// for the training notes; it reads only public entity state.
+FString DescribeBuilders(const echoes::sim::Simulation& Sim, const Entity& Site)
+{
+    FString Out;
+    for (const Entity& W : Sim.Entities())
+    {
+        if (W.owner != kReviewSeat || W.type != EntityType::Worker || W.hitPoints <= 0) continue;
+        if (W.order.type != OrderType::Build || W.order.target != Site.id) continue;
+        const int64 DeltaX = static_cast<int64>(W.position.x.Raw()) - Site.position.x.Raw();
+        const int64 DeltaY = static_cast<int64>(W.position.y.Raw()) - Site.position.y.Raw();
+        Out += FString::Printf(
+            TEXT("b%u@%d,%d(raw %d,%d)dist=%.2f res=%u slot=%d cargo=%d queue=%d "),
+            W.id, W.position.x.Raw() / echoes::sim::kFixedScale, W.position.y.Raw() / echoes::sim::kFixedScale,
+            W.position.x.Raw(), W.position.y.Raw(),
+            FMath::Sqrt(static_cast<double>(DeltaX * DeltaX + DeltaY * DeltaY)) / echoes::sim::kFixedScale,
+            W.assignedResourceNode, W.harvestSlotHeld ? 1 : 0, W.cargo, static_cast<int32>(W.orderQueue.size()));
+    }
+    return Out.IsEmpty() ? TEXT("none") : Out;
+}
+
 FString JoinIds(const TArray<uint32>& Ids)
 {
     FString Out;
@@ -296,6 +341,11 @@ void AEchoesPlayerController::StartD2ExitReview()
     GD2WellRetryElapsed = -10.0f;
     GD2CapturePending = false;
     GD2CaptureName.Reset();
+    GD2PendingBuilderId = 0;
+    GD2PendingBuilderElapsed = -10.0f;
+    GD2LastMoved.Reset();
+    GD2StuckNoteElapsed = -100.0f;
+    GD2NaiveBuilder = FParse::Param(FCommandLine::Get(), TEXT("EchoesD2ExitReviewNaiveBuilder"));
     D2ExitReviewOutputDir.Reset();
     FParse::Value(FCommandLine::Get(), TEXT("EchoesD2ExitReviewOutputDir="), D2ExitReviewOutputDir);
     if (!D2ExitReviewOutputDir.IsEmpty())
@@ -791,7 +841,8 @@ void AEchoesPlayerController::RunD2ExitReviewStage(float DeltaTime)
             for (const Entity& E : Sim.Entities())
             {
                 if (E.owner == kReviewSeat && E.type == EntityType::Worker && E.completed &&
-                    E.hitPoints > 0 && E.order.type == OrderType::None && E.id != D2ExitReviewWellWorkerId)
+                    E.hitPoints > 0 && E.order.type == OrderType::None && E.id != D2ExitReviewWellWorkerId &&
+                    !(E.id == GD2PendingBuilderId && Elapsed - GD2PendingBuilderElapsed < 2.0f))
                 {
                     FString Feedback;
                     (void)SendToGather(*Bridge, Sim, E, PassLoad, Feedback);
@@ -847,6 +898,42 @@ void AEchoesPlayerController::RunD2ExitReviewStage(float DeltaTime)
             }
             return;
         }
+        // Stuck-unit detector (diagnostic only).
+        {
+            FString Stuck;
+            for (const Entity& E : Sim.Entities())
+            {
+                if (E.owner != kReviewSeat || E.hitPoints <= 0 || !E.completed) continue;
+                if (E.type != EntityType::Worker && !IsMobileCombatType(E.type)) continue;
+                FD2Seen& Seen = GD2LastMoved.FindOrAdd(E.id);
+                const int64 MovedX = static_cast<int64>(E.position.x.Raw()) - Seen.RawX;
+                const int64 MovedY = static_cast<int64>(E.position.y.Raw()) - Seen.RawY;
+                const int64 OneTile = echoes::sim::kFixedScale;
+                if (Seen.SinceElapsed == 0.0f || MovedX * MovedX + MovedY * MovedY > OneTile * OneTile)
+                {
+                    Seen.RawX = E.position.x.Raw();
+                    Seen.RawY = E.position.y.Raw();
+                    Seen.SinceElapsed = D2ExitReviewTotalElapsedSeconds;
+                    continue;
+                }
+                const bool bMovementOrder = E.order.type == OrderType::Build || E.order.type == OrderType::Move ||
+                    (E.order.type == OrderType::Gather && !E.harvestSlotHeld && E.cargo == 0);
+                if (bMovementOrder && D2ExitReviewTotalElapsedSeconds - Seen.SinceElapsed >= 20.0f)
+                {
+                    Stuck += FString::Printf(TEXT("%u:%s@%d,%d(raw %d,%d)->%u for %.0fs "), E.id,
+                        E.order.type == OrderType::Build ? TEXT("Build") : E.order.type == OrderType::Move ? TEXT("Move") : TEXT("Gather"),
+                        E.position.x.Raw() / echoes::sim::kFixedScale, E.position.y.Raw() / echoes::sim::kFixedScale,
+                        E.position.x.Raw(), E.position.y.Raw(), E.order.target,
+                        D2ExitReviewTotalElapsedSeconds - Seen.SinceElapsed);
+                }
+            }
+            if (!Stuck.IsEmpty() && (Elapsed - GD2StuckNoteElapsed >= 10.0f || Elapsed < GD2StuckNoteElapsed))
+            {
+                GD2StuckNoteElapsed = Elapsed;
+                UE_LOG(LogEchoes, Display, TEXT("[ECHOES_D2_EXIT_REVIEW_NOTE] stuckUnits %stick=%llu"), *Stuck,
+                    static_cast<unsigned long long>(Sim.CurrentTick()));
+            }
+        }
         // Logistics: the Core and each connected supply node (the Dropoff type
         // in this project) add capacity; production stops at the ceiling long
         // before the 30-entity limit. Raise it the way the player does, one
@@ -897,9 +984,9 @@ void AEchoesPlayerController::RunD2ExitReviewStage(float DeltaTime)
                 const bool bAssist = Helper != nullptr &&
                     Bridge->IssueConstructionAssistCommand(Helper->id, Site->id, Feedback);
                 UE_LOG(LogEchoes, Display,
-                    TEXT("[ECHOES_D2_EXIT_REVIEW_NOTE] siteStalled site=%u progress=%d/%d assist=%d helper=%u feedback=%s"),
-                    Site->id, Site->constructionProgress, Site->constructionRequired, bAssist ? 1 : 0,
-                    Helper != nullptr ? Helper->id : 0, *Feedback);
+                    TEXT("[ECHOES_D2_EXIT_REVIEW_NOTE] siteStalled site=%u progress=%d/%d builders=[%s] assist=%d helper=%u feedback=%s"),
+                    Site->id, Site->constructionProgress, Site->constructionRequired, *DescribeBuilders(Sim, *Site),
+                    bAssist ? 1 : 0, Helper != nullptr ? Helper->id : 0, *Feedback);
             }
             else if (Elapsed - WatchedSiteProgressElapsed >= 90.0f)
             {
@@ -914,10 +1001,22 @@ void AEchoesPlayerController::RunD2ExitReviewStage(float DeltaTime)
                 View->PopulationUsed() + 4 >= View->PopulationCapacity();
             if (View.has_value() && bNearCeiling && !bSiteUnderway && SupplyNodes < 6)
             {
+                // Prefer a worker that is provably mobile: one extracting at a
+                // deposit or carrying cargo has reached somewhere recently. A
+                // gatherer that never arrived would take the order and never
+                // move, which is what happened to worker 41 in runs 12 and 13.
                 const Entity* Builder = NearestEntity(Sim, Core->position, [this](const Entity& E) {
                     return E.owner == kReviewSeat && E.type == EntityType::Worker && E.completed &&
-                        E.id != D2ExitReviewWellWorkerId && E.order.type != OrderType::Build;
+                        E.id != D2ExitReviewWellWorkerId && E.order.type == OrderType::Gather &&
+                        (GD2NaiveBuilder || E.harvestSlotHeld || E.cargo > 0);
                 });
+                if (Builder == nullptr)
+                {
+                    Builder = NearestEntity(Sim, Core->position, [this](const Entity& E) {
+                        return E.owner == kReviewSeat && E.type == EntityType::Worker && E.completed &&
+                            E.id != D2ExitReviewWellWorkerId && E.order.type != OrderType::Build;
+                    });
+                }
                 Vec2 Position{};
                 int32 TileX = 0;
                 int32 TileY = 0;
@@ -932,11 +1031,16 @@ void AEchoesPlayerController::RunD2ExitReviewStage(float DeltaTime)
                     Select({Builder->id});
                     const bool bIssued = Bridge->IssueBuildCommand(
                         Builder->id, EntityType::Dropoff, Bridge->SimToWorld(Position), Feedback);
+                    if (bIssued)
+                    {
+                        GD2PendingBuilderId = Builder->id;
+                        GD2PendingBuilderElapsed = Elapsed;
+                    }
                     UE_LOG(
                         LogEchoes, Display,
-                        TEXT("[ECHOES_D2_EXIT_REVIEW_NOTE] supplyNode issued=%d builder=%u tile=%d,%d logistics=%d/%d nodes=%d feedback=%s"),
-                        bIssued ? 1 : 0, Builder->id, TileX, TileY, View->PopulationUsed(),
-                        View->PopulationCapacity(), SupplyNodes, *Feedback);
+                        TEXT("[ECHOES_D2_EXIT_REVIEW_NOTE] supplyNode issued=%d builder=%u builderOrder=%u tile=%d,%d logistics=%d/%d nodes=%d feedback=%s"),
+                        bIssued ? 1 : 0, Builder->id, static_cast<uint8>(Builder->order.type), TileX, TileY,
+                        View->PopulationUsed(), View->PopulationCapacity(), SupplyNodes, *Feedback);
                 }
             }
         }
@@ -985,7 +1089,12 @@ void AEchoesPlayerController::RunD2ExitReviewStage(float DeltaTime)
                 Select(Ready);
                 ProduceUnit(EntityType::Soldier);
             }
-            if (Elapsed - LastReasonLogElapsed >= 30.0f || Elapsed < LastReasonLogElapsed)
+            bool bOpenSite = false;
+            for (const Entity& E : Sim.Entities())
+            {
+                if (E.owner == kReviewSeat && E.hitPoints > 0 && IsStructureType(E.type) && !E.completed) { bOpenSite = true; break; }
+            }
+            if (Elapsed - LastReasonLogElapsed >= (bOpenSite ? 5.0f : 30.0f) || Elapsed < LastReasonLogElapsed)
             {
                 LastReasonLogElapsed = Elapsed;
                 FString Reasons;
@@ -1003,9 +1112,10 @@ void AEchoesPlayerController::RunD2ExitReviewStage(float DeltaTime)
                 {
                     if (E.owner == kReviewSeat && E.hitPoints > 0 && IsStructureType(E.type) && !E.completed)
                     {
-                        Sites += FString::Printf(TEXT("%u:%d/%d@%d,%d "), E.id, E.constructionProgress,
+                        Sites += FString::Printf(TEXT("%u:%d/%d@%d,%d(raw %d,%d) builders=[%s] "), E.id, E.constructionProgress,
                             E.constructionRequired, E.position.x.Raw() / echoes::sim::kFixedScale,
-                            E.position.y.Raw() / echoes::sim::kFixedScale);
+                            E.position.y.Raw() / echoes::sim::kFixedScale, E.position.x.Raw(), E.position.y.Raw(),
+                            *DescribeBuilders(Sim, E));
                     }
                 }
                 UE_LOG(

@@ -3314,14 +3314,92 @@ CommandResolutionOutcome Simulation::ValidateMoveOrder(PlayerId player,
             break;
         }
     }
+    std::int32_t routeStartX = startX;
+    std::int32_t routeStartY = startY;
     if (!hasOpenNeighbour) {
-        return CommandResolutionOutcome::RouteBlocked;
+        // Schema 31 (SPEC-MOV-006/008): the unit may stand on open ground the
+        // tile grid masks on every side, such as the half-tile gap between a
+        // Core and a supply node. Judge the route from the nearest tile it can
+        // reach across that ground; only truly enclosed ground is refused.
+        std::optional<std::pair<std::int32_t, std::int32_t>> escape{};
+        if (!legacyMaskedCorridorReplaySemantics_) {
+            escape = FindKnownMaskedGroundEscape(player, startX, startY);
+        }
+        if (!escape.has_value()) {
+            return CommandResolutionOutcome::RouteBlocked;
+        }
+        routeStartX = escape->first;
+        routeStartY = escape->second;
+        if (routeStartX == goalX && routeStartY == goalY) {
+            return CommandResolutionOutcome::Applied;
+        }
     }
-    if (!IsTileReachableInPlayerKnowledge(player, startX, startY, goalX,
-                                          goalY)) {
+    if (!IsTileReachableInPlayerKnowledge(player, routeStartX, routeStartY,
+                                          goalX, goalY)) {
         return CommandResolutionOutcome::NoPath;
     }
     return CommandResolutionOutcome::Applied;
+}
+
+std::optional<std::pair<std::int32_t, std::int32_t>>
+Simulation::FindKnownMaskedGroundEscape(PlayerId player,
+                                        std::int32_t startTileX,
+                                        std::int32_t startTileY) const {
+    // Player knowledge only (FOG-001): a tile the player currently sees is
+    // measured at its centre against terrain and the exact boxes of the
+    // structures standing in it, which that player can see; any other tile
+    // keeps the tile-level knowledge rule.
+    constexpr std::int32_t kEscapeRadiusTiles = 8;
+    const std::int32_t minX = std::max(0, startTileX - kEscapeRadiusTiles);
+    const std::int32_t maxX = std::min(config_.mapWidthTiles - 1, startTileX + kEscapeRadiusTiles);
+    const std::int32_t minY = std::max(0, startTileY - kEscapeRadiusTiles);
+    const std::int32_t maxY = std::min(config_.mapHeightTiles - 1, startTileY + kEscapeRadiusTiles);
+    const std::size_t spanX = static_cast<std::size_t>(maxX - minX + 1);
+    const std::size_t spanY = static_cast<std::size_t>(maxY - minY + 1);
+    std::vector<std::uint8_t> seen(spanX * spanY, 0);
+    const auto localIndex = [&](std::int32_t tileX, std::int32_t tileY) {
+        return static_cast<std::size_t>(tileY - minY) * spanX +
+               static_cast<std::size_t>(tileX - minX);
+    };
+    const auto centreKnownOpen = [&](std::int32_t tileX, std::int32_t tileY) {
+        const Vec2 corner = Vec2::FromTiles(tileX, tileY);
+        if (VisibilityAt(player, corner) != Visibility::Visible) {
+            return IsTileKnownPassableTo(player, tileX, tileY);
+        }
+        const Vec2 centre = Vec2::FromRaw(tileX * kFixedScale + kFixedScale / 2,
+                                          tileY * kFixedScale + kFixedScale / 2);
+        return IsGroundOpen(corner) && !IsStructureBlockedAt(centre);
+    };
+    constexpr std::array<std::array<std::int32_t, 2>, 4> directions{{
+        {{0, -1}}, {{1, 0}}, {{0, 1}}, {{-1, 0}},
+    }};
+    std::vector<std::pair<std::int32_t, std::int32_t>> queue{};
+    queue.reserve(spanX * spanY);
+    queue.emplace_back(startTileX, startTileY);
+    seen[localIndex(startTileX, startTileY)] = 1;
+    std::size_t head = 0;
+    while (head < queue.size()) {
+        const auto [currentX, currentY] = queue[head++];
+        for (const auto& direction : directions) {
+            const std::int32_t nextX = currentX + direction[0];
+            const std::int32_t nextY = currentY + direction[1];
+            if (nextX < minX || nextY < minY || nextX > maxX || nextY > maxY) {
+                continue;
+            }
+            const std::size_t local = localIndex(nextX, nextY);
+            if (seen[local] != 0) {
+                continue;
+            }
+            seen[local] = 1;
+            if (IsTileKnownPassableTo(player, nextX, nextY)) {
+                return std::make_pair(nextX, nextY);
+            }
+            if (centreKnownOpen(nextX, nextY)) {
+                queue.emplace_back(nextX, nextY);
+            }
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<Vec2> Simulation::FindNextPathWaypoint(
@@ -3517,6 +3595,79 @@ std::optional<Vec2> Simulation::FindNextPathWaypoint(
                 (bestDistance == kUnvisited || neighbour < bestDistance)) {
                 bestDistance = neighbour;
                 best = Vec2::FromTiles(nextX, nextY);
+            }
+        }
+        if (best.has_value() || legacyMaskedCorridorReplaySemantics_) {
+            return best;
+        }
+        // Schema 31 (SPEC-MOV-006/008): no neighbour is field-reachable either.
+        // The mover stands on open ground the field cannot see, such as the
+        // half-tile corridor between a Core and a Foundry placed one tile
+        // short of touching it: the step gate measures footprints exactly, so
+        // a hauler can stand there, while the field masks every tile either
+        // footprint touches, so the whole row is off-route on both sides.
+        // Walk the masked ground tile by tile, through tile centres that are
+        // exactly passable, to the nearest field-reachable tile, and take the
+        // first step of that walk. Bounded, 4-connected, fixed N/E/S/W order;
+        // a pure function of the state, so replay and network stay in step.
+        constexpr std::int32_t kEscapeRadiusTiles = 8;
+        const std::int32_t minX = std::max(0, startX - kEscapeRadiusTiles);
+        const std::int32_t maxX = std::min(config_.mapWidthTiles - 1, startX + kEscapeRadiusTiles);
+        const std::int32_t minY = std::max(0, startY - kEscapeRadiusTiles);
+        const std::int32_t maxY = std::min(config_.mapHeightTiles - 1, startY + kEscapeRadiusTiles);
+        const std::size_t spanX = static_cast<std::size_t>(maxX - minX + 1);
+        const std::size_t spanY = static_cast<std::size_t>(maxY - minY + 1);
+        std::vector<std::int32_t> parent(spanX * spanY, -1);
+        const auto localIndex = [&](std::int32_t tileX, std::int32_t tileY) {
+            return static_cast<std::size_t>(tileY - minY) * spanX +
+                   static_cast<std::size_t>(tileX - minX);
+        };
+        const auto centreOpen = [&](std::int32_t tileX, std::int32_t tileY) {
+            if ((TerrainAt(tileX, tileY) == Terrain::Blocked &&
+                 !IsReshapedOpen(tileX, tileY))) {
+                return false;
+            }
+            return !IsStructureBlockedAt(Vec2::FromRaw(
+                tileX * kFixedScale + kFixedScale / 2,
+                tileY * kFixedScale + kFixedScale / 2));
+        };
+        std::vector<std::pair<std::int32_t, std::int32_t>> queue{};
+        queue.reserve(spanX * spanY);
+        queue.emplace_back(startX, startY);
+        parent[localIndex(startX, startY)] = static_cast<std::int32_t>(localIndex(startX, startY));
+        std::size_t readHead = 0;
+        while (readHead < queue.size()) {
+            const auto [currentX, currentY] = queue[readHead++];
+            for (const auto& escape : escapes) {
+                const std::int32_t nextX = currentX + escape[0];
+                const std::int32_t nextY = currentY + escape[1];
+                if (nextX < minX || nextY < minY || nextX > maxX || nextY > maxY) {
+                    continue;
+                }
+                const std::size_t local = localIndex(nextX, nextY);
+                if (parent[local] != -1) {
+                    continue;
+                }
+                if (cached->second.distanceToGoal[tileIndex(nextX, nextY)] != kUnvisited) {
+                    // Field-reachable: retrace to the first step out of the start.
+                    std::int32_t stepX = nextX;
+                    std::int32_t stepY = nextY;
+                    std::int32_t backX = currentX;
+                    std::int32_t backY = currentY;
+                    while (!(backX == startX && backY == startY)) {
+                        stepX = backX;
+                        stepY = backY;
+                        const std::int32_t previous = parent[localIndex(backX, backY)];
+                        backX = minX + static_cast<std::int32_t>(previous % static_cast<std::int32_t>(spanX));
+                        backY = minY + static_cast<std::int32_t>(previous / static_cast<std::int32_t>(spanX));
+                    }
+                    return Vec2::FromTiles(stepX, stepY);
+                }
+                if (!centreOpen(nextX, nextY)) {
+                    continue;
+                }
+                parent[local] = static_cast<std::int32_t>(localIndex(currentX, currentY));
+                queue.emplace_back(nextX, nextY);
             }
         }
         return best;
@@ -10966,6 +11117,7 @@ void Simulation::CaptureReplayBaseline() {
     legacyBulwarkReplaySemantics_ = false;
     legacyConstructionAssistReplaySemantics_ = false;
     legacyOpenGroundReplaySemantics_ = false;
+    legacyMaskedCorridorReplaySemantics_ = false;
     replayForfeitingPlayer_ = kNeutralPlayer;
 }
 
@@ -11006,6 +11158,8 @@ bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
         prefix.version < kMaintenanceReplayVersion;
     restored.legacyOpenGroundReplaySemantics_ =
         prefix.version < kGroundOccupancyReplayVersion;
+    restored.legacyMaskedCorridorReplaySemantics_ =
+        prefix.version < kMaskedCorridorReplayVersion;
     restored.ResolveAegisPower();
     if (replayed->StateChecksum() != restored.StateChecksum()) {
         SetError(error, "replay prefix state does not match restored state");
@@ -11086,6 +11240,8 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
         replay.version < kMaintenanceReplayVersion;
     simulation->legacyOpenGroundReplaySemantics_ =
         replay.version < kGroundOccupancyReplayVersion;
+    simulation->legacyMaskedCorridorReplaySemantics_ =
+        replay.version < kMaskedCorridorReplayVersion;
     // Loading a save applies current network rules. Playback must restore the
     // original rules before its first checksum, including zero-tick records.
     simulation->ResolveAegisPower();
