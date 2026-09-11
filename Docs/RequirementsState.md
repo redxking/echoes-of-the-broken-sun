@@ -69,10 +69,25 @@ scratch reproduction of the test's own escort path under the real preset layout 
 crossing the banded rows, escort guarding) arrives at the identical tick with and without bands (t=336,
 escort at row 45.39 in both), so height bands do not affect that path.
 
-Reported to the D3 lane immediately rather than after the suite, with the suggestion to check the rejoin
-rule against Guard: a garrison unit that rejoins the fight may be leaving its guarded target, which is what
-the test asserts it must not do. Failing assertions follow when the report is written; a suite's report
-exists only once the run ends.
+**Corrected 22:30Z: not a regression, and not `df85574`.** The Unreal build compiles the *working tree*,
+not the commit, and the D3 lane's uncommitted idle-return-fire work was in the tree:
+`kIdleDefensiveFireReplayVersion` appears 0 times in the built commit `d846a3b` and twice in the working
+tree. Neither `df85574` nor `82a728d` adds a line touching `Guard`, `FindNearestVisibleEnemy` or
+`OrderType::None`. `EchoesGuardEscortSemanticsTest`'s S2 scenario asserts "order-less survivors never
+retaliate or move", "the besieger is never fired upon" and "a former guard takes point-blank fire after the
+loss" — exactly the passivity idle return fire removes by design. It is a third fixture consequence of that
+change, alongside `TestBallisticCoverAndTrackingRegression` and `TestExploredTerrainAndPermanentObjectMemory`,
+and belongs with it. This lane's earlier attribution to `df85574`, made by comparing commits and
+pass/fail history, was wrong and has been withdrawn to that lane.
+
+Two intermediate hypotheses from this lane are also withdrawn: that height bands affected the escort path
+(a scratch crossing arrives at an identical tick with and without bands), and that a rejoining garrison
+abandons its guarded target (a scratch escort holds 0.79 tiles from its VIP for 1,200 ticks with its Guard
+order intact, with a raider on a nearby Core).
+
+**Method note.** An Unreal verdict describes the tree that was built, not the commit named in the run
+record. While another lane holds uncommitted work, every suite result must name both, and a failure must be
+attributed against the tree's contents before any commit is blamed.
 
 ## Idle defensive fire: reproduced and owned by the D3 lane, schema 36 — 2026-09-11
 
