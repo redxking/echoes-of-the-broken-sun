@@ -5868,11 +5868,17 @@ its guarded unit is now an unarmed Surveyor rather than a Skiff, so "the besiege
 holds by construction and the six-tile response scan stays the subject; the survivors check now pins
 position as well as order, and "the besieger is still untouched at the end" became the besieger surviving
 its own point-blank exchange, because former guards returning fire is the schema working.
-`Presentation.DestructionVFX` needed no edit and passes once the behaviour is consistent. Evidence
-handling to correct: this run called `echoes_test_sandbox.py` directly instead of `run_unreal_tests.sh`,
-and the report directory (`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-schema36`) was empty afterwards, so the
-verdict above is quoted from the run's own summary and has no retained report; a re-run through the
-wrapper is owed for the evidence trail. `CompleteSkirmishDefeat` has now failed with a player that can
+`Presentation.DestructionVFX` needed no edit and passes once the behaviour is consistent. Evidence:
+`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-schema36` (140 tests, 139 passed), with the failure's own line
+`[ECHOES_ORDINARY_DEFEAT_STALLED] tick=90000 localCoreHp=1168 openingOpponentCombat=4 wellOrder=true`.
+The report went missing for half an hour and the reason is worth keeping, because both first guesses were
+wrong: the run called `echoes_test_sandbox.py` directly, and the missing artifacts were blamed first on
+the sandbox's write policy (it is deny-based on protected roots, so project writes are allowed) and then
+on absent `-ReportExportPath` / `-abslog` flags (both were passed). The actual cause was a doubled path in
+this lane's own command line, `"$PWD/$EV"` where `$EV` was already absolute: the editor wrote a complete
+report to `Project/Volumes/Seagate Game Archive/.../automation-schema36`, the run summarised its index
+from there, and the directory checked afterwards was a different empty one. The report has been moved
+into the evidence root and the stray tree deleted. `CompleteSkirmishDefeat` has now failed with a player that can
 shoot back, which rules out idle passivity as its cause; with the other lane's diagnostic (90,000 ticks,
 Core at 1,062, four opening combat units) it is the opponent's killing power and wants its own slice
 beside REL-AI-006 cohesion.
