@@ -8131,9 +8131,14 @@ std::vector<Command> Simulation::GenerateAiCommands(
         ResourceCovers(playerState->resources,
                        BuildCost(playerState->faction, expansionType))) {
         for (const Entity& candidate : entities_) {
+            // A worker holding a Well capture is not a builder candidate
+            // either: the capture needs continuous presence, and the
+            // lowest-id worker was pulled off the Well to found the next
+            // site (SPEC-AI-002/004).
             if (candidate.owner == player && candidate.completed &&
                 candidate.hitPoints > 0 && candidate.type == EntityType::Worker &&
                 candidate.order.type != OrderType::Build &&
+                candidate.order.type != OrderType::FutureWell &&
                 (expansionBuilder == 0 || candidate.id < expansionBuilder)) {
                 expansionBuilder = candidate.id;
             }
@@ -8412,6 +8417,15 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 if (targetSite != nullptr && !targetSite->completed && targetSite->hitPoints > 0) {
                     continue;
                 }
+            }
+            if (actor.order.type == OrderType::FutureWell) {
+                // Leave a worker that is already capturing a Well alone. Capture
+                // needs kFutureWellCaptureRequiredTicks of continuous zone
+                // presence, and the Gather/Deliver branches below replaced the
+                // order about 30 ticks after it took effect, so no AI seat ever
+                // captured a Well or earned Dawn (SPEC-AI-002/004). The core
+                // clears the order itself when the Well stops being capturable.
+                continue;
             }
             const Entity* incompleteSite = nullptr;
             for (const Entity& candidate : entities_) {

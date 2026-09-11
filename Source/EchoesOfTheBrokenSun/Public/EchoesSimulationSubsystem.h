@@ -684,6 +684,15 @@ public:
         return ScenarioAuthorityGeneration;
     }
     [[nodiscard]] bool IsStressScenario() const { return bStressScenario; }
+    /**
+     * Test-scoped hold on the adapter's opponent planner. While held,
+     * QueueOpponentCommands issues nothing; the simulation itself is untouched
+     * and the opponent's existing orders keep executing. Fixtures that take a
+     * legacy-schema checkpoint use it so the checkpointed state is theirs, not
+     * the live Adaptive doctrine's. Cleared on scenario start and stop.
+     */
+    void SetOpponentPlannerHeld(bool bHeld) { bOpponentPlannerHeld = bHeld; }
+    [[nodiscard]] bool IsOpponentPlannerHeld() const { return bOpponentPlannerHeld; }
     [[nodiscard]] bool IsSustainedStressScenario() const
     {
         return bSustainedStressScenario;
@@ -1227,6 +1236,7 @@ private:
     double ReplayTimeAccumulator = 0.0;
     FString ReplayPlaybackError;
     bool bStressScenario = false;
+    bool bOpponentPlannerHeld = false;
     bool bSustainedStressScenario = false;
     bool bSustainedStressFailed = false;
     bool bSustainedStressTimingReady = false;

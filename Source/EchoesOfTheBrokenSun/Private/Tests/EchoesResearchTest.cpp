@@ -27,12 +27,16 @@ bool FEchoesResearchTest::RunTest(const FString& Parameters)
     {
         return false;
     }
-    // Bulwark commitments advance current persistence; the Link cutoff remains
-    // fixed so old research/production histories retain their original rules.
+    // Ground occupancy (ab2877d) advanced current replay persistence to 30;
+    // the historical cutoffs stay fixed so old research/production histories
+    // retain their original rules. The current-version pin is a literal on
+    // purpose: an unannounced bump must fail here rather than pass silently.
     TestEqual(TEXT("Research interruption uses snapshot schema 31"),
               echoes::sim::kSnapshotVersion, 31U);
-    TestEqual(TEXT("Research interruption uses replay semantics 29"),
-              echoes::sim::kReplayVersion, 29U);
+    TestEqual(TEXT("Current replay version is 30 (ground occupancy)"),
+              echoes::sim::kReplayVersion, 30U);
+    TestEqual(TEXT("Construction-assist cutoff remains replay 29"),
+              echoes::sim::kMaintenanceReplayVersion, 29U);
     TestEqual(TEXT("Historical Bulwark commitment cutoff remains replay 28"),
               echoes::sim::kBulwarkCommitmentReplayVersion, 28U);
     TestEqual(TEXT("Legacy Link mechanics retain replay schema 27"),

@@ -118,12 +118,14 @@ struct FEchoesHudLayout final
         // scale grows the text on a 1280-wide surface, and 62 units held only
         // one of them: the second line was cut by the panel's own lower edge.
         // This band's top edge is the battlefield floor the camera frames against,
-        // so it may not rise into the deployment frame. Take the 6 units from the
-        // band's own gap above the bar -- ConfineToView already lands BottomBar at
-        // Top-2, so Top-2 is the bar's real top edge -- and keep the two-line height
-        // measured above (92*Scale - 8) intact at every accessibility scale.
+        // so it may not rise into the deployment frame (the +6 on Min.Y is that
+        // floor). Its bottom edge must stay clear of the console bar: ConfineToView
+        // lands BottomBar at Top-2, so a Max.Y of Top-2 touched the bar with zero
+        // clearance at every resolution and scale (SPEC-UI-007, REL-UI-004.FAIL).
+        // Top-8 keeps the authored 6-unit gap; the band is 92*Scale-14 tall and
+        // its text is top-anchored, so only empty space below the text is lost.
         Layout.StatusPanel = FBox2D(FVector2D(Edge, Top - 92.0f * Scale + 6.0f),
-            FVector2D(Width - Edge, Top - 2.0f));
+            FVector2D(Width - Edge, Top - 8.0f));
         Layout.bBottomBarVisible = Height >= 360;
         Layout.bMenuVisible = Layout.bBottomBarVisible &&
             Layout.MenuPanel.Max.X <= Width - Edge;

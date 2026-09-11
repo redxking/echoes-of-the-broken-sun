@@ -1896,6 +1896,43 @@ void TestWorkerReachMeasuresToTheFootprint() {
     REQUIRE(progressed);
 }
 
+void TestAiPlannerLeavesWellCaptureAlone() {
+    // SPEC-AI-002/004: a worker that holds a Future Well capture order must
+    // keep it. The planner re-tasked such a worker to Gather about 30 ticks
+    // after the order took effect, so the 300-tick capture never completed
+    // and no AI seat ever earned Dawn (StandardLongRunCorefall, soryn).
+    Simulation sim({32, 32, 20, 0x57454c4c48454c44ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, {500, 60}));
+    const EntityId core = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(5, 5));
+    const EntityId worker = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(9, 5));
+    const EntityId node = sim.SpawnResourceNode(Vec2::FromTiles(11, 5), 1500);
+    const EntityId well = sim.SpawnFutureWell(Vec2::FromTiles(9, 9));
+    REQUIRE(core != 0 && worker != 0 && node != 0 && well != 0);
+    sim.Step();
+    // Control: an idle worker is given work.
+    const std::vector<Command> idle =
+        sim.GenerateAiCommands(0, AiPersonality::Balanced);
+    REQUIRE(std::any_of(idle.begin(), idle.end(), [worker](const Command& command) {
+        return command.actor == worker;
+    }));
+    // A worker already capturing the Well is left alone.
+    Entity* capturing = sim.MutableEntityForTesting(worker);
+    REQUIRE(capturing != nullptr);
+    capturing->order = {};
+    capturing->order.type = OrderType::FutureWell;
+    capturing->order.target = well;
+    capturing->order.destination = Vec2::FromTiles(9, 9);
+    capturing->order.wellChoice = FutureWellChoice::Preserve;
+    const std::vector<Command> held =
+        sim.GenerateAiCommands(0, AiPersonality::Balanced);
+    REQUIRE(std::none_of(held.begin(), held.end(), [worker](const Command& command) {
+        return command.actor == worker;
+    }));
+}
+
 void TestFogAndNonCheatingAi() {
     static_assert(!std::is_default_constructible_v<PlayerView>);
     Simulation simulation({32, 32, 20, 5});
@@ -10529,6 +10566,7 @@ int main(int argc, char** argv) {
         {"production population and victory", TestProductionPopulationAndVictory},
         {"mobile entity limit and reservations", TestMobileEntityLimitAndReservations},
         {"worker reach measures to the footprint", TestWorkerReachMeasuresToTheFootprint},
+        {"AI planner leaves a Well capture alone", TestAiPlannerLeavesWellCaptureAlone},
         {"fog and non-cheating AI", TestFogAndNonCheatingAi},
         {"four-player visibility snapshot and outcome",
          TestFourPlayerVisibilitySnapshotAndOutcome},

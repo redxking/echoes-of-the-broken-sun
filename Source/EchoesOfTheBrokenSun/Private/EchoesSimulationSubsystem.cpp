@@ -5654,6 +5654,7 @@ bool UEchoesSimulationSubsystem::StartScenario(
         Simulation.Reset();
         bScenarioReady = false;
         bStressScenario = false;
+        bOpponentPlannerHeld = false;
         bSustainedStressScenario = false;
         return false;
     }
@@ -6337,6 +6338,7 @@ void UEchoesSimulationSubsystem::StopPrototypeScenario()
     bSimulationPaused = false;
     bMatchResultReported = false;
     bStressScenario = false;
+    bOpponentPlannerHeld = false;
 #if WITH_DEV_AUTOMATION_TESTS
     bAllowNextStressCheckpointForTesting = false;
 #endif
@@ -17538,7 +17540,7 @@ void UEchoesSimulationSubsystem::Tick(float DeltaTime)
 
 void UEchoesSimulationSubsystem::QueueOpponentCommands()
 {
-    if (bStressScenario || bNetworkHumanOpponent ||
+    if (bStressScenario || bNetworkHumanOpponent || bOpponentPlannerHeld ||
         SelectedOperation == EEchoesOperationMode::TrainingReadiness ||
         bPointerCombatGuardPresentationScenario ||
         !Simulation.IsValid())

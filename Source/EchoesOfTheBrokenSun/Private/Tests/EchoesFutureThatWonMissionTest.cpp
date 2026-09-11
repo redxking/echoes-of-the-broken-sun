@@ -172,6 +172,43 @@ bool FutureThatWonEntityWithinTiles(
         static_cast<int64>(RadiusTiles) * echoes::sim::kFixedScale;
     return DeltaX * DeltaX + DeltaY * DeltaY <= RadiusRaw * RadiusRaw;
 }
+
+// Arrival at a structure-hosted site is measured to the nearest point of the
+// structure's square footprint, the way Simulation::InStructureReach measures
+// a worker's reach. A one-tile circle to the centre of the 2x2 public
+// interface left the standing room beside its corners outside the circle, so
+// a witness that halted where the footprint stopped it never counted as
+// arrived while the mission itself had already accepted the readback.
+bool FutureThatWonEntityWithinReachOfStructure(
+    const UEchoesSimulationSubsystem* Bridge,
+    echoes::sim::EntityId EntityId,
+    echoes::sim::EntityId StructureId,
+    const echoes::sim::Vec2& Site,
+    int32 RadiusTiles)
+{
+    const echoes::sim::Entity* Current = Bridge->FindEntity(EntityId);
+    const echoes::sim::Entity* Structure = Bridge->FindEntity(StructureId);
+    const echoes::sim::Simulation* Simulation = Bridge->GetSimulation();
+    if (Current == nullptr || Current->hitPoints <= 0)
+    {
+        return false;
+    }
+    if (Structure == nullptr || Simulation == nullptr)
+    {
+        return FutureThatWonEntityWithinTiles(Bridge, EntityId, Site, RadiusTiles);
+    }
+    const int64 Half = Simulation->FootprintHalfExtentRaw(
+        Structure->faction, Structure->type);
+    const int64 ReachRaw =
+        static_cast<int64>(RadiusTiles) * echoes::sim::kFixedScale;
+    const int64 OffsetX = FMath::Max<int64>(0,
+        FMath::Abs(static_cast<int64>(Current->position.x.Raw()) -
+            Structure->position.x.Raw()) - Half);
+    const int64 OffsetY = FMath::Max<int64>(0,
+        FMath::Abs(static_cast<int64>(Current->position.y.Raw()) -
+            Structure->position.y.Raw()) - Half);
+    return OffsetX * OffsetX + OffsetY * OffsetY <= ReachRaw * ReachRaw;
+}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -936,7 +973,8 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             echoes::sim::EntityId WitnessId,
             int32 FirstGuardIndex,
             const Vec2& Goal,
-            int32 MaximumTicks)
+            int32 MaximumTicks,
+            echoes::sim::EntityId InterfaceId)
     {
         (void)FirstGuardIndex;
         constexpr int32 StepRaw = 2 * echoes::sim::kFixedScale;
@@ -992,8 +1030,8 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
                 Bridge->Tick(0.05f);
                 --RemainingTicks;
             }
-            if (FutureThatWonEntityWithinTiles(
-                    Bridge, WitnessId, Goal, 1))
+            if (FutureThatWonEntityWithinReachOfStructure(
+                    Bridge, WitnessId, InterfaceId, Goal, 1))
             {
                 return true;
             }
@@ -1048,13 +1086,13 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
                 const int64 DeltaY =
                     static_cast<int64>(Witness->position.y.Raw()) -
                     StepStart.y.Raw();
-                bStepComplete = FutureThatWonEntityWithinTiles(
-                    Bridge, WitnessId, Goal, 1) ||
+                bStepComplete = FutureThatWonEntityWithinReachOfStructure(
+                    Bridge, WitnessId, InterfaceId, Goal, 1) ||
                     DeltaX * DeltaX + DeltaY * DeltaY >=
                         static_cast<int64>(StepRaw) * StepRaw;
             }
-            if (FutureThatWonEntityWithinTiles(
-                    Bridge, WitnessId, Goal, 1))
+            if (FutureThatWonEntityWithinReachOfStructure(
+                    Bridge, WitnessId, InterfaceId, Goal, 1))
             {
                 continue;
             }
@@ -1133,14 +1171,16 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             Start.FutureWonOruunId,
             0,
             Plan.KharuunReadbackSite,
-            1800));
+            1800,
+            Start.FutureWonKharuunReadbackInterfaceId));
     TestTrue(
         TEXT("The verifier reaches the Meridian public readback"),
         PaceWitness(
             Start.FutureWonVerifierId,
             2,
             Plan.MeridianReadbackSite,
-            1800));
+            1800,
+            Start.FutureWonMeridianReadbackInterfaceId));
     TestTrue(
         TEXT("Two-person public readback opens recorded input verification"),
         TickUntil(
@@ -1327,14 +1367,16 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
             Start.FutureWonOruunId,
             0,
             Plan.FirstDistrictInputSite,
-            1800));
+            1800,
+            Start.FutureWonFirstDistrictInterfaceId));
     TestTrue(
         TEXT("The verifier reaches the second recorded district readback"),
         PaceWitness(
             Start.FutureWonVerifierId,
             2,
             Plan.SecondDistrictInputSite,
-            1800));
+            1800,
+            Start.FutureWonSecondDistrictInterfaceId));
     TestTrue(
         TEXT("Ordinary paired readback commits Mission 12"),
         TickUntil(

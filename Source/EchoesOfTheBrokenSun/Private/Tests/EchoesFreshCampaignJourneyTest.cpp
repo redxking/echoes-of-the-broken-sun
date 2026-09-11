@@ -89,6 +89,43 @@ bool IsAtSite(
         RadiusRaw * RadiusRaw;
 }
 
+// Arrival at a structure-hosted site, measured to the nearest point of the
+// structure's square footprint (the Simulation::InStructureReach measure).
+// A one-tile circle to the centre of a 2x2 public interface excluded the
+// standing room beside its corners, so a witness the footprint had stopped
+// never counted as arrived. StructureId 0 keeps the plain site circle.
+bool IsWithinReachOfStructure(
+    const UEchoesSimulationSubsystem* Bridge,
+    EntityId Entity,
+    EntityId StructureId,
+    const Vec2& Site,
+    int32 RadiusTiles = 1)
+{
+    const echoes::sim::Entity* Current = Bridge->FindEntity(Entity);
+    const echoes::sim::Entity* Structure =
+        StructureId != 0 ? Bridge->FindEntity(StructureId) : nullptr;
+    const echoes::sim::Simulation* Simulation = Bridge->GetSimulation();
+    if (Current == nullptr)
+    {
+        return false;
+    }
+    if (Structure == nullptr || Simulation == nullptr)
+    {
+        return IsAtSite(Bridge, Entity, Site, RadiusTiles);
+    }
+    const int64 Half = Simulation->FootprintHalfExtentRaw(
+        Structure->faction, Structure->type);
+    const int64 ReachRaw =
+        static_cast<int64>(RadiusTiles) * echoes::sim::kFixedScale;
+    const int64 OffsetX = FMath::Max<int64>(0,
+        FMath::Abs(static_cast<int64>(Current->position.x.Raw()) -
+            Structure->position.x.Raw()) - Half);
+    const int64 OffsetY = FMath::Max<int64>(0,
+        FMath::Abs(static_cast<int64>(Current->position.y.Raw()) -
+            Structure->position.y.Raw()) - Half);
+    return OffsetX * OffsetX + OffsetY * OffsetY <= ReachRaw * ReachRaw;
+}
+
 TArray<EntityId> FindOwnedEntities(
     const UEchoesSimulationSubsystem* Bridge,
     EntityType Type,
@@ -5594,7 +5631,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         // regrouping instead of leaving protected witnesses alone at a site.
         const auto MoveM12Witness = [
             Bridge, &M12GuardIds, &M12WardIds, &MaintainM12Guards,
-            &M12Failure, &Feedback](EntityId WardId, const Vec2& Goal)
+            &M12Failure, &Feedback](EntityId WardId, const Vec2& Goal,
+                                    EntityId InterfaceId)
         {
             bool bMoving = false;
             Vec2 LegStart;
@@ -5608,7 +5646,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 const Entity* Ward = Bridge->FindEntity(WardId);
                 if (Ward == nullptr)
                     return M12Failure(TEXT("convoy-ward-loss"));
-                if (IsAtSite(Bridge, WardId, Goal))
+                if (IsWithinReachOfStructure(Bridge, WardId, InterfaceId, Goal))
                 {
                     return Bridge->IssueCommand(CommandType::Stop, WardId, 0,
                         FVector::ZeroVector, FutureWellChoice::Dormant, Feedback);
@@ -5879,12 +5917,14 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             !Require(
                 MoveM12Witness(
                     M12Start.FutureWonOruunId,
-                    M12Plan.KharuunReadbackSite),
+                    M12Plan.KharuunReadbackSite,
+                    M12Start.FutureWonKharuunReadbackInterfaceId),
                 TEXT("Mission 12 Oruun accepts public readback")) ||
             !Require(
                 MoveM12Witness(
                     M12Start.FutureWonVerifierId,
-                    M12Plan.MeridianReadbackSite),
+                    M12Plan.MeridianReadbackSite,
+                    M12Start.FutureWonMeridianReadbackInterfaceId),
                 TEXT("Mission 12 verifier accepts public readback")) ||
             !Require(
                 TickM12(
@@ -6013,13 +6053,15 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 MoveM12Witness(
                     M12Start.FutureWonOruunId,
                     NearestPassableStand(
-                        M12Plan.FirstDistrictInputSite)),
+                        M12Plan.FirstDistrictInputSite),
+                    M12Start.FutureWonFirstDistrictInterfaceId),
                 TEXT("Mission 12 Oruun accepts the first readback")) ||
             !Require(
                 MoveM12Witness(
                     M12Start.FutureWonVerifierId,
                     NearestPassableStand(
-                        M12Plan.SecondDistrictInputSite)),
+                        M12Plan.SecondDistrictInputSite),
+                    M12Start.FutureWonSecondDistrictInterfaceId),
                 TEXT("Mission 12 verifier accepts the second readback")) ||
             !Require(
                 TickM12(
@@ -6148,7 +6190,8 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         };
         const auto MoveM13Witness = [
             Bridge, &M13GuardIds, &M13WardIds, &MaintainM13Guards,
-            &M13Failure, &Feedback](EntityId WardId, const Vec2& Goal)
+            &M13Failure, &Feedback](EntityId WardId, const Vec2& Goal,
+                                    EntityId InterfaceId)
         {
             bool bMoving = false;
             Vec2 LegStart;
@@ -6171,7 +6214,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 {
                     return M13Failure();
                 }
-                if (IsAtSite(Bridge, WardId, Goal))
+                if (IsWithinReachOfStructure(Bridge, WardId, InterfaceId, Goal))
                 {
                     return Bridge->IssueCommand(
                         CommandType::Stop,
@@ -6398,12 +6441,14 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             !Require(
                 MoveM13Witness(
                     M13Start.AssemblyOruunId,
-                    M13Plan.KharuunPublicRecordSite),
+                    M13Plan.KharuunPublicRecordSite,
+                    M13Start.AssemblyKharuunPublicRecordInterfaceId),
                 TEXT("Mission 13 Oruun accepts public-record readback")) ||
             !Require(
                 MoveM13Witness(
                     M13Start.AssemblyVerifierId,
-                    M13Plan.MeridianPublicRecordSite),
+                    M13Plan.MeridianPublicRecordSite,
+                    M13Start.AssemblyMeridianPublicRecordInterfaceId),
                 TEXT("Mission 13 verifier accepts public-record readback")) ||
             !Require(
                 TickM13(
@@ -6428,12 +6473,14 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
             !Require(
                 MoveM13Witness(
                     M13Start.AssemblyOruunId,
-                    M13Plan.KharuunAssemblyWitnessSite),
+                    M13Plan.KharuunAssemblyWitnessSite,
+                    0),
                 TEXT("Mission 13 Oruun accepts assembly observation")) ||
             !Require(
                 MoveM13Witness(
                     M13Start.AssemblyVerifierId,
-                    M13Plan.MeridianAssemblyWitnessSite),
+                    M13Plan.MeridianAssemblyWitnessSite,
+                    0),
                 TEXT("Mission 13 verifier accepts assembly observation")) ||
             !Require(
                 TickM13(

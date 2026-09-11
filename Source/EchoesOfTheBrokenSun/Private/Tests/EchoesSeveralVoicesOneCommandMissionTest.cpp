@@ -476,6 +476,10 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         WorldWrapper.ForwardErrorMessages(this);
         return false;
     }
+    // Hold the adapter's opponent planner until the legacy-schema fixture
+    // has been taken from a checkpoint this test controls (see the schema-28
+    // projection below); the simulation itself is untouched.
+    Bridge->SetOpponentPlannerHeld(true);
 
     const FEchoesSeveralVoicesOneCommandPlan Plan =
         Bridge->GetSeveralVoicesOneCommandPlan();
@@ -724,6 +728,32 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             (NativeLayout.Schema31AppendSize - 4) % 13 == 0 &&
             NativeLayout.PendingCommandOffset != INDEX_NONE &&
             NativeLayout.PendingCommandCount > 0U);
+    // The legacy-schema fixture below is built from this live checkpoint, and
+    // schema 28 carries neither waiting production nor unfinished sites. The
+    // opponent-planner hold armed at scenario start keeps the Adaptive
+    // doctrine from adding either; assert the state it relies on so a future
+    // opponent change fails here, readably, instead of as a converter refusal.
+    {
+        bool bOpponentStateRepresentable = true;
+        for (const echoes::sim::Entity& Entity : Bridge->GetSimulation()->Entities())
+        {
+            if (Entity.owner != UEchoesSimulationSubsystem::OpponentPlayerId)
+            {
+                continue;
+            }
+            if (!Entity.completed || !Entity.productionQueue.empty())
+            {
+                bOpponentStateRepresentable = false;
+                AddInfo(FString::Printf(
+                    TEXT("Opponent entity %u type=%d completed=%s waiting=%d"),
+                    Entity.id, static_cast<int32>(Entity.type),
+                    Entity.completed ? TEXT("true") : TEXT("false"),
+                    static_cast<int32>(Entity.productionQueue.size())));
+            }
+        }
+        TestTrue(TEXT("Mission 14 checkpoint carries no opponent production queue or unfinished site"),
+            bOpponentStateRepresentable);
+    }
     TArray<uint8> LosslessV28Projection = NativeCheckpoint;
     TestTrue(
         TEXT("Mission 14 production state is losslessly representable by schema 28"),
@@ -743,6 +773,9 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
                     NativeLayout.Schema30AppendSize +
                     NativeLayout.Schema31AppendSize +
                     static_cast<int32>(NativeLayout.PendingCommandCount));
+    // The projection is proven; the shipped opponent resumes for the rest of
+    // the mission so later assertions see the ordinary doctrine.
+    Bridge->SetOpponentPlannerHeld(false);
     // The schema-25 memory ledgers are measured against this mission's own map,
     // not taken on the inspector's word: four remembered-terrain grids of
     // exactly the live tile count, then one bounded object ledger per player.
