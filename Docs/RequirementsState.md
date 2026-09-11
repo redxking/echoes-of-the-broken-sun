@@ -40,7 +40,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `SPEC-BAL-009` | AGENT VERIFIED | SRC | — | 85eaf3c | 2026-09-11 | Re-measured on schema 36 (85eaf3c): unchanged, 60/60 vs 7/60 control; harness units all carry explicit orders so idle return fire does not apply |
 | `SPEC-BAL-011` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar | 46f1c14 | 2026-09-11 | BAL-STR-3 native blind 30/30, scouted 0/30, flat 0/30; Glass Scar wiring verified in Unreal 138/139 |
 | `SPEC-CMB-007` | AGENT VERIFIED | PKG-AUTO | — | 2bd56de | 2026-09-11 | Idle return fire (D3 lane, schema 36) fixes the acquisition defect; full Unreal suite 139 passed, only CompleteSkirmishDefeat failing |
-| `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
+| `SPEC-CMB-013` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-budget | d3a90de | 2026-09-11 | Strategic depth complete: firing lanes, committed band, role bodies, height bands and Glass Scar low ground verified; Defeat budget restored to 60,000 at a measured 13,265 |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `SPEC-INFO-004` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-bands | 82a728d | 2026-09-11 | Height-band sight inert-safe: native 150/150, Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); Glass Scar wiring pending |
 | `SPEC-RES-003` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s34 | 3c3e836 | 2026-09-11 | Schema 34 slot release: native stall test passes and fails with the rule off; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
@@ -58,6 +58,27 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-007` | OPEN | SRC | — | 737038c | 2026-09-11 | Read with the Dawn economy: combat units all cost Dawn, Dawn comes only from Wells plus a 30-Dawn start, so a Well-less seat fields one fighter; BAL-STR-2 granted units outright |
 | `TBR-STR-008` | OPEN | SRC | — | 44b071c | 2026-09-11 | Owner decision: a Well-less seat buys 1 fighter total while a Preserve holder earns ~33 in 17 minutes; strains SPEC-WEL-002 / REL-WEL-018 neutrality |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## DefeatTickBudget restored to 60,000 from a measured run — 2026-09-11, 23:50Z
+
+This lane raised `DefeatTickBudget` to 90,000 provisionally when the cause of the failure was unknown, and
+recorded it as provisional in the test itself. With the D3 lane's Well-scan fix the test finishes far inside
+the original budget, so it is restored to 60,000 and the comment now cites a measured tick instead of a
+guess, with a rule for any future raise: only from a measured finishing tick that needs the headroom.
+
+**Verified, not assumed.** Editor build green, then `Echoes.Runtime.Gameplay.CompleteSkirmishDefeat` run
+alone against the restored budget: **passes**, ending at tick **13,265** with `outcome=2`. Evidence
+`BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-budget`, with `index.json` confirmed
+present before quoting.
+
+**Finishing tick varies with the tree, which is worth knowing.** The D3 lane measured 9,824 on its own
+build; this build measures 13,265 with that lane's planner fixes plus this lane's committed schema 33-35
+work (firing lanes, role bodies, height bands, Glass Scar low ground), all of which change how a fight
+resolves. Both are comfortably inside 60,000. A future raise should quote the tree it was measured on.
+
+That closes the last task this lane owned. Remaining open items belong to the D3 lane (the unimplemented
+denial play, `REL-AI-006` muster with a synchronised release, and retreat oscillation in the harness) or to
+the owner (`TBR-STR-007`, `TBR-STR-008`, `stash@{0}`, and the outside agent operating on this tree).
 
 ## CompleteSkirmishDefeat passes: the cause was an opponent blind to a claimed Well — 2026-09-11, 23:40Z
 
@@ -6490,3 +6511,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T23:22Z — `TBR-STR-007` → **OPEN**; class SRC; evidence —; commit 737038c; Read with the Dawn economy: combat units all cost Dawn, Dawn comes only from Wells plus a 30-Dawn start, so a Well-less seat fields one fighter; BAL-STR-2 granted units outright
 - 2026-09-11T23:23Z — `TBR-STR-008` → **OPEN**; class SRC; evidence —; commit 44b071c; Owner decision: a Well-less seat buys 1 fighter total while a Preserve holder earns ~33 in 17 minutes; strains SPEC-WEL-002 / REL-WEL-018 neutrality
 - 2026-09-11T23:37Z — `REL-AI-031` → **IMPLEMENTED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-well-contest; commit b62f426; Opponent contests a Well claimed by another player; CompleteSkirmishDefeat finishes at tick 9824 after failing in every suite
+- 2026-09-11T23:45Z — `SPEC-CMB-013` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-budget; commit d3a90de; Strategic depth complete: firing lanes, committed band, role bodies, height bands and Glass Scar low ground verified; Defeat budget restored to 60,000 at a measured 13,265

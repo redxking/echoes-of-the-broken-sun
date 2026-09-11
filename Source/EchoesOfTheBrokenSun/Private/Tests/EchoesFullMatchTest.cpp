@@ -1109,14 +1109,14 @@ bool FEchoesFullMatchDefeatTest::RunTest(const FString& Parameters)
     int64 FirstOpponentDawnGainTick = -1;
     int32 InitialLocalCoreHitPoints =
         Bridge->FindEntity(LocalCore)->hitPoints;
-    // Provisional 90,000 (2026-09-11). This test finished at tick 53,086 in
-    // the last green run and has failed inside both 60,000 and 90,000 since.
-    // The cause is not attributed: firing lanes (SPEC-CMB-013), the committed
-    // band and an opponent posture gate all changed in that window, and a
-    // native Aegis-assault probe showed no lane effect. Return this to 60,000
-    // once a clean run finishes inside it (RequirementsState, "Committed band,
-    // lane body radius, and the first BAL-STR-1 measurement").
-    constexpr int32 DefeatTickBudget = 90000;
+    // 60,000 restored 2026-09-11 from a measured run, not a guess: with the
+    // planner able to target a Well another player holds, this test finishes at
+    // tick 9,824 (evidence automation-well-contest). The long failure was never
+    // the budget: the opponent could not see the claimed Well on a one-Well map
+    // where only workers are Dawn-free, so it banked matter and never bought an
+    // army (RequirementsState, "CompleteSkirmishDefeat passes"). Raise this only
+    // with a measured finishing tick that needs the headroom.
+    constexpr int32 DefeatTickBudget = 60000;
     for (int32 TickIndex = 0;
          TickIndex < DefeatTickBudget &&
          Bridge->GetMatchOutcome() == echoes::sim::MatchOutcome::Ongoing;
