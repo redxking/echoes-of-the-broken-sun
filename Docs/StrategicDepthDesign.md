@@ -416,6 +416,29 @@ deployed Bulwarks are never pushed. BAL-STR-1 at 13 against 10: defender 60/60, 
 no bodies) 7/60. Next: Rule B as height bands, then BAL-STR-2 (blind rush into prepared ground) and
 BAL-STR-3 (height bands with and without a scout).
 
+**Rule B as height bands — implementation plan (from the code, 2026-09-11).**
+
+- *Vision today* (`Simulation::UpdateVisibility`) marks every tile within a unit's vision radius as a disc,
+  with no line of sight at all; cliffs do not block sight. Uphill blindness is therefore the game's first
+  vision occlusion, and it is one rule inside the disc raster: skip a tile whose band is higher than the
+  band of the tile the viewer stands on. Downhill and level vision are unchanged.
+- *State.* A per-tile signed band (0 plain, −1 low ground, +1 high ground) stored beside `terrain_`, set by
+  a scenario through a `SetHeightBand` call, exposed on `PlayerView` for presentation. Terrain is saved as one
+  byte per tile at snapshot version 31; bands are a new saved field, so snapshot 32, with older snapshots
+  loading as all-plain. No replay gate is needed: recordings made before bands carry none and behave as
+  before.
+- *Glass Scar.* The live map is the hand-coded preset `ConfigureGlassScar` in the simulation subsystem, not
+  the compiled map pack (that binding is only called from two tests). Rows 30–34 across the full width
+  become low ground, matching the authored `scar-depth` regions: every crossing, including the two edge
+  corridors. A unit crossing sees only the crossing until it climbs out, while a defender on the rim sees
+  down into it.
+- *Fairness and presentation.* The opponent AI already plans from `PlayerView`, and the fog presentation
+  reads `VisibilityAt`, so both follow the rule without separate changes.
+- *Tests.* Native: a low-ground viewer cannot see an adjacent high tile, a high viewer sees down, a scout
+  standing on the high tile restores sight, and snapshot round-trip plus a version-31 load. Unreal: the Glass
+  Scar and full-match suites, which cross the scar. Balance: BAL-STR-3 (crossing blind against a rim
+  defender, with and without a scout on the rim).
+
 **Open question on the defeat test.** `CompleteSkirmishDefeat` failed while an AI posture gate from the
 other lane was live, so whether firing lanes slow the opponent's assault is not yet measured. The budget
 was raised provisionally from 60,000 to 90,000 ticks; it returns to 60,000 if the clean run finishes
