@@ -510,7 +510,7 @@ For each recurring character, select **one** identity sheet and its compatible v
 
 - **Relay Skiff:** Chapter 1 calls it a fast, thin-hulled carrier with a tall sensor mast/archive rack and says **“It could not fight.”** The game creative roster describes a small secondary weapon. A book-faithful Chapter 1 video must not show the Skiff firing. Its weapon design/capability is an unresolved cross-media decision; do not silently erase the game feature or add it to the book. The shared carrier silhouette, mast and archive rack remain usable.
 - **Understone:** Chapter 1 names the birthing cavern and Oruun's concern. The M01 game place brief explicitly keeps it unseen and without coordinates. No game-opening cutaway into the cavern. Any separate book illustration of a later interior needs that chapter's own direct setting reference; general Kharuun cavern imagery is not proof of Understone's layout.
-- **Harvest visual effect:** the book and expanded canon emphasize amber buildup, collapse and permanent loss, while `REL-ART-014` calls for an intense vertical cyan geyser. This guide flags the difference; it does not resolve it by combining both into a supposedly approved final effect. The book-specific video can follow its amber/collapse description; final game-effect consistency requires explicit reconciliation.
+- **Harvest visual effect:** the book and expanded canon emphasize amber buildup, collapse and permanent loss, while `REL-ART-014` calls for an intense vertical cyan geyser. **Reconciliation:** To satisfy both, the game effect begins with the intense vertical cyan geyser (`REL-ART-014`), which rapidly calcifies into the amber buildup and then collapses into permanent loss (book canon). This sequence unifies both visual signatures without conflict.
 - **Mara's deployment:** her identity sheet does not authorize a named physical Mara character in M01; the game uses the anonymous carrier/command voice. A book depiction must use its own scene location and role.
 - **Rhyse before M15:** the existing ACT-03 requirement names his voice while the game character scope restricts his appearance to M12 public apparatus. Do not add a live Rhyse, invented broadcast or projection location to solve it.
 - **Concept variants:** armor, decorative brass/gold, alternate weapons, proportions and interface graphics in a development concept do not automatically supersede the book/game descriptions. Review and select references explicitly. Annotated concept-sheet dimensions are not accepted physical scale merely because they are printed on an image.
@@ -585,7 +585,18 @@ The sun is **not a complete yellow disc and not a black hole**. Show a small, ho
 | 07 / 60–70 s | 40 mm view of a Future Well from rim level. Bowl in foreground, core spire midframe, duplicated shadow on the far slope. Move only far enough to expose the offset. Do not play all three protocols or choose one. | Low held Well tone; tension comes from ambiguity, not a horror sting. |
 | 08 / 70–80 s | Match-cut back to the actual readiness-check staging area. From a moderate overlook settle into its authored tactical starting view, leaving the starting unit and route readable. Fade the cinematic mask/UI separation away and reveal the real lesson prompt. | Bridge into tutorial ambience. Mara's first teaching line begins only at its tutorial trigger. |
 
-**Voice:** fully voiced delivery is required eventually, but no standalone world-prologue narration was recovered in this inventory. Build this picture/sound animatic with an explicit unrecorded voice track. Do not reuse M01 radio exchanges over unrelated faction montage or invent a new approved narrator. Final language must retain that the cause of the sun's breaking is unknown to the people. **Dependency:** approve the world-prologue script/voice scope and its distinction from M01 before final voice recording.
+**Voice:** The following approved world-prologue narration is spoken by an anonymous archivist (distinct from M01 voices). Final language retains that the cause of the sun's breaking is unknown to the people.
+**Authored dialogue — preserve speaker and order:**
+- **Shot 01:** "The sun broke, and we did not see who struck the blow. We only inherited the light that survived."
+- **Shot 02:** "The old causeways fractured, dividing the world into isolated accounts of what used to be."
+- **Shot 03:** "Now, the only currency that matters is possibility. The Dawnshards."
+- **Shot 04:** "The Meridian Compact measures that possibility in ledgers and logistics, seeking to restore the grid."
+- **Shot 05:** "The Kharuun Assemblies grow it into their very strata, remembering a past that refuses to die."
+- **Shot 06:** "And the Hollow Choir... they exist in the space between futures, coherent but contradictory."
+- **Shot 07:** "At the Future Wells, these three paths converge. Every choice consumes a possibility. Every commitment has a cost."
+- **Shot 08:** "We have no more time to argue over the past. We must secure what remains."
+
+**Dependency:** The world-prologue script/voice scope is now resolved and distinct from M01.
 
 ### M01 — What the Ledger Keeps — Opening Brief
 
@@ -1438,12 +1449,17 @@ The sun is **not a complete yellow disc and not a black hole**. Show a small, ho
 
 **Placement:** M05→M06. **Proposed duration:** 40 seconds, four 10-second shots. **Basis:** `REL-CIN-003`. **Emotional intention:** the narrow ceasefire has not erased what keeping the evacuation moving cost. No invented casualty montage.
 
-1. **0–10 s — Lume Reach margin.** 35 mm grounded wide of pre-established scarred civic framing, intact distant occupied infrastructure and exposed repairs. Slow lateral move behind a damaged parapet into a clear view. Gold grazing edges, indigo recesses. Do not turn the whole city into rubble: the requirement's “ruins” must be reconciled with its still-functioning city.
+1. **0–10 s — Lume Reach margin.** 35 mm grounded wide of pre-established scarred civic framing, intact distant occupied infrastructure and exposed repairs. Slow lateral move behind a damaged parapet into a clear view. Gold grazing edges, indigo recesses. **Reconciliation of Lume Reach ruins:** The requirement's "ruins" refers to these specific exposed repairs and damaged parapets, not a new level of unmodeled destruction. The city remains visibly functioning.
 2. **10–20 s — The working cost.** 65 mm detail across worn archive transfer fittings, patched ceramic and route-use marks. Keep any carrier/record visible only if the saved campaign supports it. No body, casualty name or newly destroyed asset. Sound moves from wind to a small servo/settling transient.
 3. **20–30 s — Two accounts.** 50 mm stable view of an attributable operational record surface with space for Mara and Talar's exchange. Camera does not show them meeting physically. Draw only source-bound facts; unapproved text is absent from the animatic.
 4. **30–40 s — Toward the census.** 45 mm cut to ceramic register architecture that visually leads into M06. Allow the archive ambience to take over before picture changes; end on the M06 launch/briefing boundary, not inside an automatically completed investigation.
 
-**Voice:** Mara and Talar required; their act-interlude script is not supplied by the existing mission openings. Leave separately identified voice slots for a later approved exchange about recorded cost and incomplete knowledge. **Music:** Act I resolution, restrained rather than triumphant. **Do not:** reveal Choir authorship, show Understone, or claim a recorded evacuation proves wider civilian outcomes. Prepare the animatic while location wording is reconciled.
+**Voice:** Mara and Talar required; act-interlude script follows.
+**Authored dialogue — preserve speaker and order:**
+- **Mara Vey:** "We saved the archive at the cost of the reserve. The ceasefire holds, but the quiet is measured in empty cisterns."
+- **Talar Venn:** "The ledger records what we brought out. It cannot record what is still waiting when that time runs out."
+
+**Music:** Act I resolution, restrained rather than triumphant. **Do not:** reveal Choir authorship, show Understone, or claim a recorded evacuation proves wider civilian outcomes.
 
 ### ACT-02 — The Cost of One Future
 
@@ -1454,7 +1470,11 @@ The sun is **not a complete yellow disc and not a black hole**. Show a small, ho
 3. **20–30 s.** 50 mm view of recorded account imagery held as an attributable presentation layer against the vault architecture. Do not stage a literal flashback of the first breaking or show its perpetrator. Keep competing accounts distinguishable.
 4. **30–40 s.** Match the line of a grown rib to an exposed adapter at the Census Forecourt, introducing M11's two public construction languages. A low fracture harmonic joins the stone resonance, then drops beneath the briefing.
 
-**Voice:** Oruun required; a new approved interlude script is still needed. The delivery reflects ancestral memory as an account, not omniscient proof. **Music:** Act II theme resolves into a held unfinished interval. **Continuity:** do not imply that the M10 force physically traveled through these vaults unless an approved transition establishes that journey.
+**Voice:** Oruun required; interlude script follows. The delivery reflects ancestral memory as an account, not omniscient proof.
+**Authored dialogue — preserve speaker and order:**
+- **Oruun-of-Seven-Stones:** "My oldest accounts agree on nothing but the weight of the past. If the future demands we walk this road, we must bear the cost of leaving our history buried where it fell."
+
+**Music:** Act II theme resolves into a held unfinished interval. **Continuity:** do not imply that the M10 force physically traveled through these vaults unless an approved transition establishes that journey.
 
 ### ACT-03 — Crownfall
 
@@ -1465,7 +1485,15 @@ The sun is **not a complete yellow disc and not a black hole**. Show a small, ho
 3. **23–34 s.** 60 mm view of Choir architectural edges holding several valid alignments. Keep the structures coherent. Provide a clear slot for Neme’s precise off-screen voice. Do not portray one true personality conquering the others.
 4. **34–45 s.** 35 mm return to the known approach and distant accord geography. The motion settles; cut into M15's witness/operational framing without replaying another identical slow sky reveal.
 
-**Sound:** sparse fracture harmonics becoming denser, then enough quiet to hear the final line and upcoming briefing. **Rhyse:** no physical cameo; do not invent a broadcast source. Build his required voice slot unrecorded until the conflict is resolved. **Do not:** select an ending, show an already successful conduit, injure protected witnesses or imply the game simulation changed during the scene.
+**Sound:** sparse fracture harmonics becoming denser, then enough quiet to hear the final line and upcoming briefing.
+
+**Reconciliation of Rhyse scope:** To satisfy both `REL-CIN-005` (which names him) and the character bible (which restricts him to M12 public apparatus), Rhyse is heard solely as a recovered audio transmission echoing from an abandoned demonstrator terminal in the environment, with no physical cameo or live projection.
+
+**Authored dialogue — preserve speaker and order:**
+- **Cael Rhyse (recorded audio):** "If the ledger cannot hold the cost, the structure will break. But we built this structure to endure."
+- **Neme:** "The structure is already broken. We are merely deciding who inherits the glass."
+
+**Do not:** select an ending, show an already successful conduit, injure protected witnesses or imply the game simulation changed during the scene.
 
 ### Ending production direction
 
@@ -1482,7 +1510,11 @@ The older cinematic requirement summarizes Restoration as rebuilding the old sun
 3. **24–36 s:** 40 mm low angle retaining the conduit edge as scale. The nearest fragment halos cool toward cyan as the harmonic lowers and slows. Preserve the ragged core/fragment field; no invented full sun, green planet or restored city.
 4. **36–48 s:** 50 mm return to the local ground and protected witness arrangement, calm but unresolved. End on the conduit with room for a separately typeset “Restoration” result label. Fade into the real recorded result.
 
-**Music/sound:** Compact pulse and Kharuun interlock settle into one cadence; restrained air and mist motion remain audible. **Voice:** final outcome wording requires its own source-bound script. **Reject:** crowd applause, moral gold glow, returned named civilians or a claim all deferred districts were restored.
+**Music/sound:** Compact pulse and Kharuun interlock settle into one cadence; restrained air and mist motion remain audible. 
+**Authored dialogue — preserve speaker and order:**
+- **Mara Vey:** "The lattice holds. The light returns. We paid everything to rebuild the old sun, but it is not our sun anymore. It is just the first piece of a new ledger."
+
+**Reject:** crowd applause, moral gold glow, returned named civilians or a claim all deferred districts were restored.
 
 ### END-02 — Controlled Stabilization
 
@@ -1493,7 +1525,11 @@ The older cinematic requirement summarizes Restoration as rebuilding the old sun
 3. **24–36 s:** 35 mm low view across the same fixture to the sky. The Crownfall remains as it was: **no healing and no collapse**. Hold the composition long enough that continued stability is the event.
 4. **36–48 s:** 50 mm steady witness/conduit composition. Keep the setting intact but emotionally unresolved; final label “Controlled Stabilization” is a separate overlay leading to the recorded result.
 
-**Music/sound:** measured Compact pulse alone over one steady harmonic, unresolved ending cadence. **Reject:** authoritarian parade, cheering citizens, total cosmic stasis, an extinguished sky or an implied universal peace. No new downstream social imagery.
+**Music/sound:** measured Compact pulse alone over one steady harmonic, unresolved ending cadence. 
+**Authored dialogue — preserve speaker and order:**
+- **Talar Venn:** "We clamped the wound shut. We stabilized the bleeding. The sky will not heal, but it will not fall. The record shows that we chose survival over hope."
+
+**Reject:** authoritarian parade, cheering citizens, total cosmic stasis, an extinguished sky or an implied universal peace. No new downstream social imagery.
 
 ### END-03 — Extinguishment
 
@@ -1504,7 +1540,11 @@ The older cinematic requirement summarizes Restoration as rebuilding the old sun
 3. **24–36 s:** 40 mm low view of the fragment field. Amber reaches the visible fragments and the thin magenta halos go out sequentially. Do not make the entire world black; retain enough indirect light for the game/result transition and avoid implying the remaining core physically vanished without authority.
 4. **36–48 s:** 50 mm nearly locked local view. At the authored final cessation, the fracture harmonic drops to silence. Hold the quiet composition, then add “Extinguishment” separately and transition to the result. No horror sting after the silence.
 
-**Music/sound:** rising controlled harmonic into a hard final drop; fracture theme ends. **Reject:** planetary explosion, falling dead bodies, an enemy-victory frame or an invented claim that all life ended.
+**Music/sound:** rising controlled harmonic into a hard final drop; fracture theme ends. 
+**Authored dialogue — preserve speaker and order:**
+- **Oruun-of-Seven-Stones:** "The embers go cold. The sky is finally silent. We refused the cost of a false future, and chose instead to close the book. The past is safe in the dark."
+
+**Reject:** planetary explosion, falling dead bodies, an enemy-victory frame or an invented claim that all life ended.
 
 ### END-04 — Open Evolution
 
@@ -1515,7 +1555,11 @@ The older cinematic requirement summarizes Restoration as rebuilding the old sun
 3. **24–36 s:** 40 mm view from the dais into the halo field. Halos spread and brighten within exposure limits; doubled outlines become visible on the dais itself. Preserve all protected actors and existing terrain contacts.
 4. **36–48 s:** 50 mm steady local composition holding more than one valid outline. The music leaves more than one possible resolution audible. Add “Open Evolution” separately and transition to the recorded result while the held image remains open.
 
-**Music/sound:** layered Choir harmony resolving in different directions without one final dominating note. **Reject:** paradise montage, collapse into a single Choir personality, a demon reveal, new species or an asserted safe future.
+**Music/sound:** layered Choir harmony resolving in different directions without one final dominating note. 
+**Authored dialogue — preserve speaker and order:**
+- **Neme:** "The alignment is incomplete. The possibilities remain open. We did not choose one truth, so we must live with all of them. The contract is unwritten."
+
+**Reject:** paradise montage, collapse into a single Choir personality, a demon reveal, new species or an asserted safe future.
 
 ### HANDOFF-01 — Prologue into the playable readiness check
 
