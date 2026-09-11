@@ -52,6 +52,23 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-006` | OPEN | NONE | Docs/StrategicDepthDesign.md | 34ca1a0 | 2026-09-11 | Plan written (design section 7): separate body radius from terrain footprint, authored radii, separation on the spatial hash, schema 34; waits for the AI lane's slice to commit |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
+## Unreal suite on 50dc165 + 3a6a2be, and the role-body package held back — 2026-09-11, 21:30Z
+
+**Suite** (`BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-verify`, editor build green,
+built from HEAD 3a6a2be with only the outside agent's nine uncommitted `.uasset` files dirty): 138/139,
+no "Failed to find" asset errors. The only failure is `Echoes.Runtime.Gameplay.CompleteSkirmishDefeat`,
+which again ran its full budget without a match end, so the D3 lane's planner-stall fix (3a6a2be) does not
+resolve it. Schema 34 (d51459e) was not in this build.
+
+**Role bodies (TBR-STR-006) held back.** Applied in the tree under replay schema 35 and measured natively,
+the change breaks two tests for real reasons, not old-spacing pins: a resting group keeps drifting after
+arrival (units complete their move orders while still overlapped, then separation shoves them;
+SPEC-MOV-012 rest stability), and a deployed Bulwark is displaced by a neighbour's separation push (a
+planted unit must hold its ground). The schema gate did cure the authentic schema-30 replay. The change is
+saved as `wip-role-bodies-schema35.patch` in the same evidence folder and reversed out of the shared tree
+so other lanes' builds and native runs do not pick up a failing state; it continues in a scratch copy and
+lands only when native and Unreal are clean.
+
 ## Chokepoint sweep: where prepared ground stops holding — SPEC-BAL-009, 2026-09-11
 
 Scratch experiment (no tree edits; `scratchpad/sweep`), same geometry as the native BAL-STR-1 harness: a
