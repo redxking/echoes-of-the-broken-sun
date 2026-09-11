@@ -572,7 +572,7 @@ The sun is **not a complete yellow disc and not a black hole**. Show a small, ho
 
 ### FD-02 — World prologue / title cinematic
 
-**Purpose:** show the condition of the world, the nature of Dawn and the three civilizations before narrowing into the player's first responsibility. **Proposed edit:** 80 seconds, eight shots. Requirement ceiling: 90 seconds. This is a new editorial treatment, not a recovered approved screenplay. Depict the surviving aftermath of the breaking; do not invent its cause or an eyewitness historical reconstruction.
+**Purpose:** show the condition of the world, the nature of Dawn and the three civilizations before accelerating into a massive climax where the factions collide. **Proposed edit:** 80 seconds, eight shots. Requirement ceiling: 90 seconds. This is a new editorial treatment, not a recovered approved screenplay. Depict the surviving aftermath of the breaking; do not invent its cause or an eyewitness historical reconstruction.
 
 | Shot / time | Specific image, movement and action | Sound / transition |
 |---|---|---|
@@ -581,9 +581,9 @@ The sun is **not a complete yellow disc and not a black hole**. Show a small, ho
 | 03 / 20–30 s | 75 mm detail of a Dawnshard in an existing approved containment fixture. Amber-gold body, fine magenta internal fractures. Hold its scale and faceting, then shift focus to the paired conduits feeding an ark-city system behind it. Do not consume it on camera without an authored event. | The fracture harmonic meets a measured machine pulse; no coin or loot jingle. |
 | 04 / 30–40 s | 35 mm lateral view through a Compact service court: repaired ceramic plates, visible load frames, Surveyor tools and an Anchor intake. Show ordinary working posture, not invented new equipment. | Ceramic foot contact, subdued servo/cargo sounds and a steady cyan-system hum. |
 | 05 / 40–50 s | 35 mm matching lateral direction through a Kharuun passage: banded ribs, polished steps, rooted Waystone and maintained amber sensor nodules. Keep the scene civilized, purposeful and inhabited without adding a named hero. | Machine pulse recedes into root/stone resonance. |
-| 06 / 50–60 s | 40 mm slow approach to a Choir span. Two near-matching edges and two valid shadows become visible through parallax; charcoal-glass body stays coherent. This is a world overview, not a claim that Choir is playable in M01. | Add two restrained glass tones; speech remains clear if later approved. |
-| 07 / 60–70 s | 40 mm view of a Future Well from rim level. Bowl in foreground, core spire midframe, duplicated shadow on the far slope. Move only far enough to expose the offset. Do not play all three protocols or choose one. | Low held Well tone; tension comes from ambiguity, not a horror sting. |
-| 08 / 70–80 s | Match-cut back to the actual readiness-check staging area. From a moderate overlook settle into its authored tactical starting view, leaving the starting unit and route readable. Fade the cinematic mask/UI separation away and reveal the real lesson prompt. | Bridge into tutorial ambience. Mara's first teaching line begins only at its tutorial trigger. |
+| 06 / 50–60 s | 40 mm quickening approach over a Choir span as a Hollow Choir formation surges forward. The camera tracks their charcoal-glass units breaking the serene landscape, accelerating the pace. | The measured pulse accelerates into an intense, driving war drum; glass tones become sharp and aggressive. |
+| 07 / 60–70 s | 35 mm high-angle wide of a Future Well. The Meridian Compact's mechanical forces and Kharuun's stone constructs crash into the Choir's formation in a massive, chaotic clash. Energy bolts and shattered glass fill the air as the three factions collide. | Full orchestral crescendo; chaotic sounds of combat, shattered glass, and heavy weapon fire overlaying the Well's deep resonance. |
+| 08 / 70–80 s | A massive explosion of cyan and amber energy from the Well overtakes the camera (match-cutting the climax), fading instantly into the quiet, localized readiness-check staging area. The camera settles into the tactical starting view. | The massive explosion sound abruptly cuts to the quiet, focused tutorial ambience. Mara's teaching line begins. |
 
 **Voice:** The following approved world-prologue narration is spoken by an anonymous archivist (distinct from M01 voices). Final language retains that the cause of the sun's breaking is unknown to the people.
 **Authored dialogue — preserve speaker and order:**
@@ -592,9 +592,9 @@ The sun is **not a complete yellow disc and not a black hole**. Show a small, ho
 - **Shot 03:** "Now, the only currency that matters is possibility. The Dawnshards."
 - **Shot 04:** "The Meridian Compact measures that possibility in ledgers and logistics, seeking to restore the grid."
 - **Shot 05:** "The Kharuun Assemblies grow it into their very strata, remembering a past that refuses to die."
-- **Shot 06:** "And the Hollow Choir... they exist in the space between futures, coherent but contradictory."
-- **Shot 07:** "At the Future Wells, these three paths converge. Every choice consumes a possibility. Every commitment has a cost."
-- **Shot 08:** "We have no more time to argue over the past. We must secure what remains."
+- **Shot 06:** "And the Hollow Choir... they exist in the space between futures, fighting to ensure no one writes the final contract."
+- **Shot 07:** "At the Future Wells, these three paths converge in total war. Every choice consumes a possibility. Every commitment is paid in blood."
+- **Shot 08:** "The world is tearing itself apart. You must secure what remains."
 
 **Dependency:** The world-prologue script/voice scope is now resolved and distinct from M01.
 
