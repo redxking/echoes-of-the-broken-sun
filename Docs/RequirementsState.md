@@ -56,6 +56,24 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-006` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
+## Regression: GuardEscortSemantics fails on the combined tree — 2026-09-11, 22:23Z
+
+`Echoes.Runtime.AI.GuardEscortSemantics` is failing in the combined Unreal run at HEAD `d846a3b`
+(`BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-combined`). It passed in all three
+earlier suites tonight, including `automation-glassscar` (22:08Z), which already carried this lane's Glass
+Scar low-ground wiring but not the D3 lane's `df85574`. The only change new to the combined run is
+`df85574` on top of `82a728d` (garrison rejoin and its rally-ring test coverage).
+
+**This lane's wiring is cleared twice.** The 22:08Z suite contained the wiring and the test passed; and a
+scratch reproduction of the test's own escort path under the real preset layout (VIP from row 12 to row 52,
+crossing the banded rows, escort guarding) arrives at the identical tick with and without bands (t=336,
+escort at row 45.39 in both), so height bands do not affect that path.
+
+Reported to the D3 lane immediately rather than after the suite, with the suggestion to check the rejoin
+rule against Guard: a garrison unit that rejoins the fight may be leaving its guarded target, which is what
+the test asserts it must not do. Failing assertions follow when the report is written; a suite's report
+exists only once the run ends.
+
 ## Idle defensive fire: reproduced and owned by the D3 lane, schema 36 — 2026-09-11
 
 The D3 lane reproduced the idle defect natively (six idle defenders lost 6-0 inflicting no damage; the same
