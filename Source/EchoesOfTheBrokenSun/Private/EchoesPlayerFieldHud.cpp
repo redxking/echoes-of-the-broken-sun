@@ -83,6 +83,19 @@ void EchoesFieldHud::RaiseOffscreenCombatAlert(
     Registry.Add(Controller, Record);
 }
 
+bool EchoesFieldHud::LatestOffscreenCombatAlert(
+    const AEchoesPlayerController* Controller,
+    FVector2D& OutWorldLocation,
+    double& OutRaisedSeconds)
+{
+    const FEchoesOffscreenAlertRecord* Raised =
+        Controller != nullptr ? OffscreenAlertRegistry().Find(Controller) : nullptr;
+    if (Raised == nullptr) return false;
+    OutWorldLocation = Raised->WorldLocation;
+    OutRaisedSeconds = Raised->RaisedSeconds;
+    return true;
+}
+
 void AEchoesPlayerController::PresentOffscreenCombatAlert(
     const FVector2D& WorldLocation)
 {

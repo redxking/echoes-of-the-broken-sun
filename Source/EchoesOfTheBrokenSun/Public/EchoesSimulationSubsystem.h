@@ -566,6 +566,16 @@ public:
         uint32 TargetId,
         FString& OutFeedback);
 
+    /**
+     * SPEC-TUT-008 chapters 4-5: the readiness drill's opponent planner is
+     * held, so the "contact on the perimeter" is a scripted order on the
+     * opponent's own staged units, queued through the ordinary command path
+     * so the recording replays it exactly. Wave 1 sends the two Kharuun
+     * Soldiers to the east edge of the player's base; wave 2 sends the heavy
+     * and the scout at the damaged Link. Training mode only.
+     */
+    bool IssueTrainingProbe(int32 Wave, FString& OutFeedback);
+
     bool IssueConstructionAssistCommand(
         uint32 WorkerId,
         uint32 StructureId,

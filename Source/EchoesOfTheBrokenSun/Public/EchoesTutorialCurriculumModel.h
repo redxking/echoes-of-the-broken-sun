@@ -66,7 +66,7 @@ inline constexpr int32 EchoesTutorialAuthoredLessonKeys = 10;
  * Raise this only together with the lesson's predicate. A lesson with no
  * predicate cannot be earned, so requiring one reinstates the same soft-lock.
  */
-inline constexpr int32 EchoesTutorialLessonCount = 7;
+inline constexpr int32 EchoesTutorialLessonCount = 10;
 
 /** The implemented curriculum as a contiguous profile mask. */
 inline constexpr uint16 EchoesTutorialLessonMask =

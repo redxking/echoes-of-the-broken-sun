@@ -241,7 +241,7 @@
       ],
       "occurrence": "once_per_attempt",
       "reset_behavior": "reset_on_mission_retry",
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_signal_bound"
     },
     {
       "id": "nar_demo_evt_tut_probe_verified",
@@ -251,7 +251,7 @@
       ],
       "occurrence": "once_per_attempt",
       "reset_behavior": "reset_on_mission_retry",
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_signal_bound"
     },
     {
       "id": "nar_demo_evt_tut_probe_hint",
@@ -271,7 +271,7 @@
       ],
       "occurrence": "once_per_attempt",
       "reset_behavior": "reset_on_mission_retry",
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_signal_bound"
     },
     {
       "id": "nar_demo_evt_tut_board_verified",
@@ -281,7 +281,7 @@
       ],
       "occurrence": "once_per_attempt",
       "reset_behavior": "reset_on_mission_retry",
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_signal_bound"
     },
     {
       "id": "nar_demo_evt_tut_board_hint",
@@ -301,7 +301,7 @@
       ],
       "occurrence": "once_per_attempt",
       "reset_behavior": "reset_on_mission_retry",
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_signal_bound"
     },
     {
       "id": "nar_demo_evt_tut_well_verified",
@@ -311,7 +311,7 @@
       ],
       "occurrence": "once_per_attempt",
       "reset_behavior": "reset_on_mission_retry",
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_signal_bound"
     },
     {
       "id": "nar_demo_evt_tut_well_hint",
@@ -1060,7 +1060,7 @@
         "id": "aud_demo_vo_mara_tut_probe_01",
         "asset_status": "absent"
       },
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_subtitle_bound"
     },
     {
       "id": "nar_demo_line_tut_probe_02",
@@ -1083,7 +1083,7 @@
         "id": "aud_demo_vo_mara_tut_probe_02",
         "asset_status": "absent"
       },
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_subtitle_bound"
     },
     {
       "id": "nar_demo_line_tut_probe_03",
@@ -1106,7 +1106,7 @@
         "id": "aud_demo_vo_mara_tut_probe_03",
         "asset_status": "absent"
       },
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_subtitle_bound"
     },
     {
       "id": "nar_demo_line_tut_probe_hint",
@@ -1154,7 +1154,7 @@
         "id": "aud_demo_vo_mara_tut_board_01",
         "asset_status": "absent"
       },
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_subtitle_bound"
     },
     {
       "id": "nar_demo_line_tut_board_02",
@@ -1177,7 +1177,7 @@
         "id": "aud_demo_vo_mara_tut_board_02",
         "asset_status": "absent"
       },
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_subtitle_bound"
     },
     {
       "id": "nar_demo_line_tut_board_03",
@@ -1200,7 +1200,7 @@
         "id": "aud_demo_vo_mara_tut_board_03",
         "asset_status": "absent"
       },
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_subtitle_bound"
     },
     {
       "id": "nar_demo_line_tut_board_hint",
@@ -1248,7 +1248,7 @@
         "id": "aud_demo_vo_mara_tut_well_01",
         "asset_status": "absent"
       },
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_subtitle_bound"
     },
     {
       "id": "nar_demo_line_tut_well_02",
@@ -1271,7 +1271,7 @@
         "id": "aud_demo_vo_mara_tut_well_02",
         "asset_status": "absent"
       },
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_subtitle_bound"
     },
     {
       "id": "nar_demo_line_tut_well_03",
@@ -1294,7 +1294,7 @@
         "id": "aud_demo_vo_mara_tut_well_03",
         "asset_status": "absent"
       },
-      "binding_status": "authored_unbound"
+      "binding_status": "runtime_subtitle_bound"
     },
     {
       "id": "nar_demo_line_tut_well_hint",

@@ -542,6 +542,11 @@ namespace EchoesFieldHud
 ECHOESOFTHEBROKENSUN_API void RaiseOffscreenCombatAlert(
     const UObject* WorldContext,
     const FVector2D& WorldLocation);
+/** The most recent off-screen attack raised for this controller, if any. */
+ECHOESOFTHEBROKENSUN_API bool LatestOffscreenCombatAlert(
+    const AEchoesPlayerController* Controller,
+    FVector2D& OutWorldLocation,
+    double& OutRaisedSeconds);
 }  // namespace EchoesFieldHud
 
 /** Pure snapshot builder. Presentation never receives a live authority pointer. */

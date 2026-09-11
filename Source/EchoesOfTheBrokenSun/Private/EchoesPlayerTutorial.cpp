@@ -2,6 +2,7 @@
 #include "EchoesTutorialCurriculumModel.h"
 #include "EchoesOfTheBrokenSun.h"
 #include "EchoesRTSCameraPawn.h"
+#include "EchoesFieldHudView.h"
 #include "EchoesCinematicSubsystem.h"
 #include "EchoesNarrativeSubsystem.h"
 #include "Engine/GameInstance.h"
@@ -36,6 +37,14 @@ void AEchoesPlayerController::ResetTutorialObservation()
     TutorialProductionSequence = 0;
     TutorialFoundryMaxKnownEntityId = 0;
     bTutorialFoundryEmerged = false;
+    TutorialProbeUnits.Reset();
+    TutorialProbeProtectedWorkers.Reset();
+    TutorialProbeAttackSequence = 0;
+    TutorialProbeGuardSequence = 0;
+    TutorialBoardOpenedSeconds = 0.0;
+    bTutorialBoardJumped = false;
+    TutorialWellId = 0;
+    TutorialWellSequence = 0;
     TutorialActiveLessonBit = 0;
     TutorialPresentedLessonBit = 0;
     TutorialSelectionSequence = 0;
@@ -245,7 +254,8 @@ void AEchoesPlayerController::ObserveTutorialRosterHudPublication(
 void AEchoesPlayerController::ObserveTutorialAcceptedCommand(uint64 Sequence, EEchoesTutorialOrderCommandOrigin Origin)
 {
     if (!bTutorialOperationAuthorized || IsModalOverlayVisible() || IsReplayInputActive() ||
-        !(TutorialOrders.IsActive() || TutorialConstruction.IsActive() || TutorialProductionLessonBit != 0)) return;
+        !(TutorialOrders.IsActive() || TutorialConstruction.IsActive() || TutorialProductionLessonBit != 0 ||
+          TutorialActiveLessonBit >= 128)) return;
     TutorialAcceptedCommandSequences.Emplace(Sequence, Origin);
 }
 
@@ -810,13 +820,192 @@ void AEchoesPlayerController::TickTutorialObservation()
         if (TutorialProductionSequence != 0 && bTutorialFoundryEmerged && CommitTutorialLesson(64, TEXT("foundry")))
             TutorialProductionLessonBit = 0;
     }
+    else if ((ProgressMask & 128) == 0)
+    {
+        // Lesson eight — Probe (SPEC-TUT-008 chapter 4, "Protect the
+        // position"): a scripted contact on the perimeter; the player answers
+        // with an attack-move, guards a Surveyor with the Bulwark, breaks the
+        // probe and loses no worker.
+        if (TutorialActiveLessonBit != 128)
+        {
+            TutorialProbeUnits.Reset();
+            TutorialProbeProtectedWorkers.Reset();
+            TutorialProbeAttackSequence = 0;
+            TutorialProbeGuardSequence = 0;
+            TutorialAcceptedCommandSequences.Reset();
+            for (const auto& Entity : Simulation->Entities())
+            {
+                if (Entity.hitPoints <= 0) continue;
+                if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                    Entity.type == echoes::sim::EntityType::Worker)
+                    TutorialProbeProtectedWorkers.Add(Entity.id);
+                if (Entity.owner == UEchoesSimulationSubsystem::OpponentPlayerId &&
+                    Entity.type == echoes::sim::EntityType::Soldier)
+                    TutorialProbeUnits.Add(Entity.id);
+            }
+            FString ProbeFeedback;
+            if (TutorialProbeUnits.IsEmpty() || !Bridge->IssueTrainingProbe(1, ProbeFeedback))
+            {
+                TutorialInstruction = LOCTEXT("ProbeStageUnavailable", "The contact staging is unavailable. Restart the readiness check from the title menu.");
+                return;
+            }
+            TutorialActiveLessonBit = 128;
+            TraceTutorialObservation(FString::Printf(TEXT("probe_begin units=%d workers=%d"),
+                TutorialProbeUnits.Num(), TutorialProbeProtectedWorkers.Num()));
+        }
+        for (int32 Index = TutorialAcceptedCommandSequences.Num() - 1; Index >= 0; --Index)
+        {
+            const uint64 Sequence = TutorialAcceptedCommandSequences[Index].Key;
+            const auto Receipt = Simulation->FindCommandResolutionReceipt(UEchoesSimulationSubsystem::LocalPlayerId, Sequence);
+            if (!Receipt.has_value()) continue;
+            TutorialAcceptedCommandSequences.RemoveAt(Index);
+            if (Receipt->outcome != echoes::sim::CommandResolutionOutcome::Applied) continue;
+            for (const auto& Command : Simulation->CommandLog())
+            {
+                if (Command.player != UEchoesSimulationSubsystem::LocalPlayerId || Command.sequence != Sequence) continue;
+                const auto* Actor = Simulation->FindEntity(Command.actor);
+                if (Actor == nullptr || Actor->owner != UEchoesSimulationSubsystem::LocalPlayerId) break;
+                if (Command.type == echoes::sim::CommandType::AttackMove &&
+                    (Actor->type == echoes::sim::EntityType::Soldier || Actor->type == echoes::sim::EntityType::HeavyUnit))
+                    TutorialProbeAttackSequence = Sequence;
+                if (Command.type == echoes::sim::CommandType::Guard && Actor->type == echoes::sim::EntityType::HeavyUnit &&
+                    TutorialProbeProtectedWorkers.Contains(static_cast<uint32>(Command.target)))
+                    TutorialProbeGuardSequence = Sequence;
+                break;
+            }
+        }
+        bool bProbeAlive = false;
+        for (const uint32 Id : TutorialProbeUnits)
+            if (const auto* Unit = Simulation->FindEntity(Id); Unit != nullptr && Unit->hitPoints > 0) bProbeAlive = true;
+        bool bWorkerLost = false;
+        for (const uint32 Id : TutorialProbeProtectedWorkers)
+            if (const auto* Worker = Simulation->FindEntity(Id); Worker == nullptr || Worker->hitPoints <= 0) bWorkerLost = true;
+        if (bWorkerLost)
+        {
+            // Loss offers diagnosis and a direct retry (DeliveryPlan §10.1):
+            // the lesson reopens on the next tick with whatever staged units remain.
+            TutorialActiveLessonBit = 0;
+            TutorialInstruction = LOCTEXT("ProbeWorkerLost", "Probe: a Surveyor was lost. The Bulwark's Guard order keeps it alive; the check repeats with the units that remain.");
+            return;
+        }
+        if (TutorialProbeAttackSequence == 0)
+            TutorialInstruction = LOCTEXT("ProbeAttack", "Probe: contact east of the base. Select your Lancers and Attack-Move onto the contact (F, then the ground near it).");
+        else if (TutorialProbeGuardSequence == 0)
+            TutorialInstruction = LOCTEXT("ProbeGuard", "Probe: select the Bulwark Team and give it a Guard order (J) on a Surveyor. Its whole job becomes that one life.");
+        else if (bProbeAlive)
+            TutorialInstruction = LOCTEXT("ProbeBreak", "Probe: finish the contact. Keep the Surveyors out of its reach.");
+        else
+            TutorialInstruction = LOCTEXT("ProbeDone", "Probe broken; nobody you are responsible for was touched.");
+        if (TutorialProbeAttackSequence != 0 && TutorialProbeGuardSequence != 0 && !bProbeAlive)
+            CommitTutorialLesson(128, TEXT("probe"));
+    }
+    else if ((ProgressMask & 256) == 0)
+    {
+        // Lesson nine — Board (SPEC-TUT-008 chapter 5, "Scout and
+        // interpret"): a second contact arrives where the player is not
+        // looking; the deck flags it and the alert key takes the camera there.
+        if (TutorialActiveLessonBit != 256)
+        {
+            FString ProbeFeedback;
+            if (!Bridge->IssueTrainingProbe(2, ProbeFeedback))
+            {
+                TutorialInstruction = LOCTEXT("BoardStageUnavailable", "The second contact staging is unavailable. Restart the readiness check from the title menu.");
+                return;
+            }
+            TutorialBoardOpenedSeconds = World->GetRealTimeSeconds();
+            bTutorialBoardJumped = false;
+            TutorialActiveLessonBit = 256;
+            TraceTutorialObservation(TEXT("board_begin"));
+        }
+        FVector2D AlertLocation;
+        double RaisedSeconds = 0.0;
+        const bool bAlertRaised = EchoesFieldHud::LatestOffscreenCombatAlert(this, AlertLocation, RaisedSeconds) &&
+            RaisedSeconds >= TutorialBoardOpenedSeconds;
+        if (!bAlertRaised)
+            TutorialInstruction = BoundTutorialText(LOCTEXT("BoardWait", "Board: keep the camera on your Anchor and watch the corner map. When the deck flags an attack off-screen, press {alert_key} to jump straight there."));
+        else if (!bTutorialBoardJumped)
+            TutorialInstruction = BoundTutorialText(LOCTEXT("BoardJump", "Board: the deck has flagged an attack off-screen. Press {alert_key} to jump to it."));
+        else
+            TutorialInstruction = LOCTEXT("BoardDone", "Board: you found it without hunting. The deck watches so you can think.");
+        if (bAlertRaised && bTutorialBoardJumped) CommitTutorialLesson(256, TEXT("board"));
+    }
+    else if ((ProgressMask & 512) == 0)
+    {
+        // Lesson ten — Well (SPEC-TUT-008 chapter 6): walk a Surveyor to the
+        // Future Well and commit a protocol of the player's own choosing.
+        if (TutorialActiveLessonBit != 512)
+        {
+            TutorialWellId = 0;
+            TutorialWellSequence = 0;
+            TutorialAcceptedCommandSequences.Reset();
+            for (const auto& Entity : Simulation->Entities())
+                if (Entity.type == echoes::sim::EntityType::FutureWell && Entity.hitPoints > 0) { TutorialWellId = Entity.id; break; }
+            if (TutorialWellId == 0)
+            {
+                TutorialInstruction = LOCTEXT("WellStageUnavailable", "The Future Well staging is unavailable. Restart the readiness check from the title menu.");
+                return;
+            }
+            TutorialActiveLessonBit = 512;
+        }
+        for (int32 Index = TutorialAcceptedCommandSequences.Num() - 1; Index >= 0; --Index)
+        {
+            const uint64 Sequence = TutorialAcceptedCommandSequences[Index].Key;
+            const auto Receipt = Simulation->FindCommandResolutionReceipt(UEchoesSimulationSubsystem::LocalPlayerId, Sequence);
+            if (!Receipt.has_value()) continue;
+            TutorialAcceptedCommandSequences.RemoveAt(Index);
+            if (Receipt->outcome != echoes::sim::CommandResolutionOutcome::Applied) continue;
+            for (const auto& Command : Simulation->CommandLog())
+            {
+                if (Command.player == UEchoesSimulationSubsystem::LocalPlayerId && Command.sequence == Sequence &&
+                    Command.type == echoes::sim::CommandType::FutureWell &&
+                    Command.target == TutorialWellId &&
+                    Command.wellChoice != echoes::sim::FutureWellChoice::Dormant)
+                {
+                    TutorialWellSequence = Sequence;
+                    break;
+                }
+            }
+        }
+        const auto* Well = Simulation->FindEntity(TutorialWellId);
+        const bool bCommitted = Well != nullptr && Well->wellChoice != echoes::sim::FutureWellChoice::Dormant;
+        if (TutorialWellSequence == 0)
+            TutorialInstruction = LOCTEXT("WellChoose", "Well: choose a protocol (Z Harvest, C Preserve, V Reshape), then right-click the Future Well with a Surveyor. Read the panel before you commit; it is the only version of this that ever happens.");
+        else if (!bCommitted)
+            TutorialInstruction = LOCTEXT("WellHold", "Well: the Surveyor is committing the protocol. Hold the ground until it takes.");
+        else
+            TutorialInstruction = LOCTEXT("WellDone", "Well: committed and logged.");
+        if (TutorialWellSequence != 0 && bCommitted) CommitTutorialLesson(512, TEXT("well"));
+    }
     else
     {
         TutorialActiveLessonBit = 0;
         TutorialInstruction = LOCTEXT("LaterLessonsUnavailable",
-            "The first seven readiness lessons are complete. Further lessons are not available yet.");
+            "All ten readiness lessons are complete.");
     }
 }
+
+void AEchoesPlayerController::JumpToLatestAlert()
+{
+    if (IsModalOverlayVisible() || IsReplayInputActive()) return;
+    FVector2D AlertLocation;
+    double RaisedSeconds = 0.0;
+    if (!EchoesFieldHud::LatestOffscreenCombatAlert(this, AlertLocation, RaisedSeconds))
+    {
+        SetStatusMessage(LOCTEXT("NoAlertToJump", "No off-screen attack has been flagged.").ToString(), 3.0f);
+        return;
+    }
+    auto* Camera = Cast<AEchoesRTSCameraPawn>(GetPawn());
+    if (Camera == nullptr) return;
+    Camera->PanToWorld(FVector(AlertLocation.X, AlertLocation.Y, 0.0));
+    FVector2D Center;
+    if (TutorialActiveLessonBit == 256 && RaisedSeconds >= TutorialBoardOpenedSeconds &&
+        Camera->GetNavigationCenter(Center) && FVector2D::Distance(Center, AlertLocation) <= 600.0f)
+    {
+        bTutorialBoardJumped = true;
+    }
+    SetStatusMessage(LOCTEXT("JumpedToAlert", "Camera on the latest flagged attack.").ToString(), 3.0f);
+}
+
 void AEchoesPlayerController::TickM01Opening()
 {
     if (!bM01OpeningPending || !GetWorld()) return;

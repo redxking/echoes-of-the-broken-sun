@@ -18305,6 +18305,68 @@ bool UEchoesSimulationSubsystem::IssueRepairCommand(
         OutFeedback);
 }
 
+bool UEchoesSimulationSubsystem::IssueTrainingProbe(int32 Wave, FString& OutFeedback)
+{
+    OutFeedback.Reset();
+    if (SelectedOperation != EEchoesOperationMode::TrainingReadiness || bReplayPlaybackActive ||
+        !Simulation.IsValid() || !bScenarioReady ||
+        Simulation->Outcome() != echoes::sim::MatchOutcome::Ongoing)
+    {
+        OutFeedback = TEXT("[TRAINING_PROBE_UNAVAILABLE] The scripted contact runs only in the live readiness drill.");
+        return false;
+    }
+    const echoes::sim::Vec2 Destination = Wave <= 1
+        ? echoes::sim::Vec2::FromTiles(18, 13)
+        : echoes::sim::Vec2::FromTiles(
+              echoes::world::training_staging::kLinkRepairTargetSite.x,
+              echoes::world::training_staging::kLinkRepairTargetSite.y);
+    int32 Queued = 0;
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        const bool bWaveUnit = Wave <= 1
+            ? Entity.type == echoes::sim::EntityType::Soldier
+            : Entity.type == echoes::sim::EntityType::HeavyUnit ||
+              Entity.type == echoes::sim::EntityType::ScoutUnit;
+        if (Entity.owner != OpponentPlayerId || !bWaveUnit || Entity.hitPoints <= 0 || !Entity.completed)
+        {
+            continue;
+        }
+        const std::optional<std::uint64_t> Sequence = Simulation->NextCommandSequence(OpponentPlayerId);
+        if (!Sequence.has_value()) break;
+        echoes::sim::Command Command;
+        Command.executeTick = ResolvePlayerExecuteTick(1);
+        if (!echoes::sim::Simulation::IsExecutableCommandTick(Command.executeTick)) break;
+        Command.player = OpponentPlayerId;
+        Command.sequence = Sequence.value();
+        Command.type = echoes::sim::CommandType::AttackMove;
+        Command.actor = Entity.id;
+        Command.target = 0;
+        Command.position = Destination;
+        Command.wellChoice = echoes::sim::FutureWellChoice::Dormant;
+        Command.buildType = echoes::sim::EntityType::Worker;
+        Command.queue = false;
+        std::string Rejection;
+        if (Simulation->QueueCommand(Command, &Rejection))
+        {
+            ++Queued;
+        }
+        else
+        {
+            UE_LOG(LogEchoes, Warning, TEXT("[ECHOES_TRAINING_PROBE_REJECTED] wave=%d actor=%u reason=%s"),
+                Wave, Entity.id, UTF8_TO_TCHAR(Rejection.c_str()));
+        }
+        if (Queued >= 2) break;
+    }
+    if (Queued == 0)
+    {
+        OutFeedback = TEXT("[TRAINING_PROBE_UNAVAILABLE] The opponent's staged units for this contact are gone.");
+        return false;
+    }
+    UE_LOG(LogEchoes, Display, TEXT("[ECHOES_TRAINING_PROBE] wave=%d units=%d tile=%d,%d"),
+        Wave, Queued, Destination.x.FloorToInt(), Destination.y.FloorToInt());
+    return true;
+}
+
 bool UEchoesSimulationSubsystem::IssueConstructionAssistCommand(
     uint32 WorkerId, uint32 StructureId, FString& OutFeedback)
 {

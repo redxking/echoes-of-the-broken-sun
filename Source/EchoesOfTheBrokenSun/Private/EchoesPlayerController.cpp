@@ -9937,6 +9937,7 @@ void AEchoesPlayerController::SetupInputComponent()
     BindPressed(TEXT("ToggleReducedMotion"), &AEchoesPlayerController::ToggleReducedMotion);
     BindPressed(TEXT("ToggleReducedFlashing"), &AEchoesPlayerController::ToggleReducedFlashing);
     BindPressed(TEXT("ToggleEdgePan"), &AEchoesPlayerController::ToggleEdgePan);
+    BindPressed(TEXT("JumpToLatestAlert"), &AEchoesPlayerController::JumpToLatestAlert);
     BindPressed(TEXT("DecreaseCameraPanSpeed"), &AEchoesPlayerController::DecreaseCameraPanSpeed);
     BindPressed(TEXT("IncreaseCameraPanSpeed"), &AEchoesPlayerController::IncreaseCameraPanSpeed);
     BindPressed(TEXT("DecreaseCameraZoomSpeed"), &AEchoesPlayerController::DecreaseCameraZoomSpeed);

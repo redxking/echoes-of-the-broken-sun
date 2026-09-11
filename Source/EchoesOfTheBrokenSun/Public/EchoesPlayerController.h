@@ -945,6 +945,8 @@ private:
     void ToggleReducedMotion();
     void ToggleReducedFlashing();
     void ToggleEdgePan();
+    /** SPEC-UI-008.F25 / SPEC-TUT-008 chapter 5: frame the most recent off-screen attack. */
+    void JumpToLatestAlert();
     void DecreaseCameraPanSpeed();
     void IncreaseCameraPanSpeed();
     void DecreaseCameraZoomSpeed();
@@ -1206,6 +1208,19 @@ private:
     // below this; a Lancer above it is the one the player's order produced.
     uint32 TutorialFoundryMaxKnownEntityId = 0;
     bool bTutorialFoundryEmerged = false;
+    // Lesson eight (Probe): the scripted contact's units, the workers that must
+    // survive it, and the player's own attack-move and guard orders.
+    TArray<uint32> TutorialProbeUnits;
+    TArray<uint32> TutorialProbeProtectedWorkers;
+    uint64 TutorialProbeAttackSequence = 0;
+    uint64 TutorialProbeGuardSequence = 0;
+    // Lesson nine (Board): an attack flagged off-screen after the lesson opened,
+    // and the jump that framed it.
+    double TutorialBoardOpenedSeconds = 0.0;
+    bool bTutorialBoardJumped = false;
+    // Lesson ten (Well): the player's own committed protocol at the readiness Well.
+    uint32 TutorialWellId = 0;
+    uint64 TutorialWellSequence = 0;
     // ---- end reserved members ----
     FText TutorialInstruction;
     uint64 TutorialSession = 0;

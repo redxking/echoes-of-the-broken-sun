@@ -35,7 +35,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `SPEC-RES-006` | AWAITING HUMAN ACCEPTANCE | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | SPEC-RES-006.INSPECT: click shows remaining Matter; exhausted stub 30%/80% and minimap mark; FieldHudAuthority green; rendered chain did not stage it |
-| `SPEC-TUT-008` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-3 | 7c86d61 | 2026-09-11 | Lessons 1-7 earnable (Link and Foundry wired 2026-09-11); 8-10 authored, unbound; no in-editor drive of 6-7 yet |
+| `SPEC-TUT-008` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-4 | 8ee0af6 | 2026-09-11 | All ten readiness lessons wired and earnable (8-10 added 2026-09-11: scripted replay-safe probe, F1 alert jump, Well commit); no in-editor drive of 6-10 yet |
 | `SPEC-UI-008` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
@@ -5037,6 +5037,45 @@ Status: D2 stays the first unfinished package; these five are the next repairs; 
 below as they land.
 
 
+## D3 Meridian slice — second slice: readiness lessons eight to ten — 2026-09-11
+
+Owner order: "proceed." Controlling IDs: SPEC-TUT-008 chapters 4–6, SPEC-TUT-008.FLOW, SPEC-UI-008.F25
+(off-screen attack alert), REL-AI-022 (scripted contact only; the planner stays held in training).
+Evidence root: `BuildArtifacts/Evidence/d3-meridian-20260911T161144Z` (build-5.log, automation-4). Classes: Unreal automation and source inspection;
+no rendered capture, no physical input, no owner acceptance.
+
+**Scripted contact without breaking replay.** The readiness drill holds the opponent planner, so a
+"contact on the perimeter" has to be scripted. `UEchoesSimulationSubsystem::IssueTrainingProbe(wave)`
+queues ordinary AttackMove commands for the opponent's own staged units (wave 1: the two Kharuun
+Soldiers to 18,13 east of the base; wave 2: the heavy and the scout at the damaged Link 6,17) through
+`Simulation::QueueCommand`, so the recording carries them and replays exactly; no entity is spawned
+mid-run. Training mode only; refused elsewhere.
+
+**Lesson eight — Probe.** Opens by issuing wave 1 and binding every living owned Surveyor as protected.
+Verified by the player's own Applied AttackMove from a Lancer/Bulwark, an Applied Guard from the Bulwark
+onto a protected Surveyor, every probe unit dead, and no protected Surveyor lost. A lost Surveyor reopens
+the lesson with the units that remain (diagnosis and direct retry, DeliveryPlan §10.1).
+
+**Lesson nine — Board.** Opens by issuing wave 2. New binding `JumpToLatestAlert` (F1) frames the most
+recent off-screen attack (`EchoesFieldHud::LatestOffscreenCombatAlert` exposes the raised record; the
+narrative already resolved `{alert_key}` to this action name). Verified when an alert is raised after
+the lesson opened and the jump lands the camera within 600 cm of it. Limit: the alert is raised only for
+an attack that is off-screen when it lands; a player who keeps the second contact in view is told to
+hold the camera on the Anchor and wait.
+
+**Lesson ten — Well.** Binds the readiness map's Future Well. Verified by the player's own Applied
+FutureWell command on it with a non-Dormant protocol and the Well's committed `wellChoice`.
+
+`EchoesTutorialLessonCount` is 10: the profile mask, practice gate and Help screen now cover the whole
+authored curriculum; the closing text reads "All ten readiness lessons are complete." The narrative
+contract binds probe/board/well opened and verified triggers and their subtitle lines; pack recompiled,
+digest unchanged. `tutorial_mastery_complete` stays authored-unbound.
+
+**Verification.** `build-5.log` Result Succeeded (build-4 failed on a `-Wunreachable-code` in the probe
+destination, corrected); `automation-4/index.json` 139/139, 0 warnings, save-isolation guard passed.
+Limits: no in-editor drive of lessons six to ten exists; their first play-through is the owner's or a
+later review driver's. REL-AI-022 is not advanced by a scripted probe.
+
 ## D3 Meridian slice — first slice: research visibility, unpowered Foundry look, Link and Foundry lessons — 2026-09-11
 
 Owner order: "continue working on the game until complete." D2's engineering exit is met (RequirementsState
@@ -5238,3 +5277,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T16:34Z — `REL-FAC-028` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1; commit 7c86d61; Archive shows cost/time/prereq and affected roster before/after; card explains researched damage; visual silhouette cue still open
 - 2026-09-11T16:34Z — `SPEC-UI-008` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1; commit 7c86d61; F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged
 - 2026-09-11T16:34Z — `TBR-UX-001` → **OPEN**; class NONE; evidence —; commit 7c86d61; Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset
+- 2026-09-11T16:57Z — `SPEC-TUT-008` → **IMPLEMENTED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-4; commit 8ee0af6; All ten readiness lessons wired and earnable (8-10 added 2026-09-11: scripted replay-safe probe, F1 alert jump, Well commit); no in-editor drive of 6-10 yet
