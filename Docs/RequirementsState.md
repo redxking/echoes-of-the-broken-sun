@@ -59,6 +59,33 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-008` | OPEN | SRC | — | 44b071c | 2026-09-11 | Owner decision: a Well-less seat buys 1 fighter total while a Preserve holder earns ~33 in 17 minutes; strains SPEC-WEL-002 / REL-WEL-018 neutrality |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
+## CompleteSkirmishDefeat passes: the cause was an opponent blind to a claimed Well — 2026-09-11, 23:40Z
+
+The D3 lane's fix (`0a976b9`) lets the planner's Well scan consider an enemy-held Preserve Well, and the
+test **passes**: the match ends at tick **9,824** with `outcome=2`, and `Gameplay.CompleteSkirmish` passes
+beside it at 2,630. Evidence: `BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-well-contest`.
+
+**The first branch of this lane's 23:30Z prediction is the one that happened.** The failure that ran through
+every Unreal suite tonight had nothing to do with the tick budget, firing lanes, role bodies, height bands,
+idle passivity, cohesion or any replay schema. The opponent could not see a Well another player had claimed,
+on a map with exactly one Well, in a game where only workers are Dawn-free, so it banked matter and never
+bought an army. This lane's Dawn arithmetic identified the economy; that lane found the planner condition.
+
+**Which remedy landed.** Capture: a worker taking the Preserve Well. The cheaper denial play this lane
+identified from `ApplyPreserveIncome` — any hostile unit standing in the zone stops the holder's income at
+once, with no capture and no 300-tick timer — is **not implemented** and remains available if capture proves
+fragile on maps where the Well is harder to reach.
+
+**Action owned by this lane.** `DefeatTickBudget` in `EchoesFullMatchTest.cpp` was raised to 90,000
+provisionally when the cause was unknown; 9,824 is comfortably inside the original 60,000, so it returns to
+60,000 with the comment rewritten to cite the observed finishing tick. Deliberately **not** edited while the
+D3 lane's full suite is building from the working tree: that would put an unannounced change of this lane's
+into their verdict, which is the error this lane made earlier tonight when it attributed a failure to a
+commit rather than to uncommitted work in the tree. The edit follows their run.
+
+`REL-AI-022` also gains a concrete obligation from this: a seat that cannot target a claimed Well cannot
+participate in the Dawn economy at all, so "contest the Well" belongs in doctrine rather than in preference.
+
 ## Predictions on record before the D3 lane's Well-scan fix is measured — 2026-09-11, 23:30Z
 
 Written before the result so the record shows what was predicted, not only what happened. That lane found
