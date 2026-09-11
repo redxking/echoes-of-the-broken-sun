@@ -4974,3 +4974,37 @@ It shows the ordinary controller and bridge actions carrying a player through th
 rendered window, with captures that corroborate the log markers. It does not show physical input,
 a packaged build, a human player, or replay determinism, and it assigns no acceptance. The owner's
 own play session remains the D2 exit's human step.
+
+## D2 owner play test — FAILED, 2026-09-11
+
+The owner played the D2 exit chain in the editor (Glass Scar skirmish, Meridian vs Kharuun) and ruled
+it a failure: "It was a failure." Owner acceptance of D2 is therefore NOT given; the agent-driven
+rendered review of the same chain (entry above, runs 11–16 PASSED) stands as automation-class evidence
+only and did not surface any of the four findings, because it drove the bridge directly and read
+simulation state, not the HUD's affordances. Findings, in the owner's words and the observed frame
+(HUD MATTER 1,580 / DAWN 0 / LOGISTICS 13/18 / ARMY 8/30, an Array Foundry selected far from the Core):
+
+1. "I can build stuff away from power — that's fine — but then I shouldn't be able to build unless it
+   connected to power." Owner ruling: a Meridian production structure may be constructed outside the
+   network, but must not produce until it is connected. Canon today gates drop-off (REL-ECO-014),
+   Aegis fire (REL-FAC-002/004) and repair (REL-BLD-013) on power, and asks for a distinct
+   completed-but-unpowered state (SPEC-UI-008.F15); nothing gates production. To be authored as the
+   owner's ruling and implemented.
+2. "The build functions have LINE UNIT; not sure what that is, how much it costs; same for all the
+   others." The skirmish deck shows role words (LINE UNIT / HEAVY / SCOUT) instead of the faction's
+   unit names, no cost, and the tiles for heavy and scout carry the words "Semicolon" and "Apostrophe"
+   drawn across their labels. SPEC-HUD-004 and DEMO-UI-007 require name, cost, hotkey and disabled
+   reason; REL-UI-002 binds the 3×3 card to QWE/ASD/ZXC, which ";" and "'" are not.
+3. "The Matter graphic doesn't show anything once it's mined out or how much is left when a user
+   clicks on it." SPEC-BLD-001 asks for known remaining volume; SPEC-RES-006 for a recognizable
+   exhausted deposit.
+4. "I can't build any unit; I just get the message I don't have enough resources but it doesn't tell
+   me what resources." The Produce refusal reads "[INSUFFICIENT_RESOURCES] The selected unit cannot be
+   funded." while the Build refusal already names both costs; the simulation distinguishes Matter from
+   Dawn shortfalls (REL-ECO-010.AUTH asks for [INSUFFICIENT DAWN]). The player had 0 Dawn and no
+   statement of where Dawn comes from.
+
+Also observed in the frame: the guidance panel left of the card shows text clipped at its top line.
+Status: D2 stays the first unfinished package; these four are the next repairs; fix records follow
+below as they land.
+
