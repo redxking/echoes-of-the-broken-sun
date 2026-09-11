@@ -28,7 +28,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 
 | ID | State | Class | Evidence | Commit | Date | Note |
 |---|---|---|---|---|---|---|
-| `REL-AI-006` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-6.json | bd2f471 | 2026-09-11 | Cohesion is now the blocking slice: piecemeal commitment leaves every mirror unresolved once defenders return fire |
+| `REL-AI-006` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-7.json | b06254b | 2026-09-11 | Threshold-based massing measured: 114 of 1000 matches changed, zero conversions, branch never fires when saturated; needs muster point and synchronised release |
 | `REL-AI-022` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-2.json | 34ca1a0 | 2026-09-11 | Content-rules matrix 778/1000 terminal after the deposit-expansion planner; Meridian dominant, Kharuun never beats it; numbers diagnostic only (synthetic map, Adaptive only, concurrent lanes change) |
 | `REL-AI-031` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-2.json | 34ca1a0 | 2026-09-11 | Expand to known resources implemented (spread, waiting re-send, remembered deposits, frontier prospecting near the Anchor, fair view only); convert-advantage and Choir economy stalls remain |
 | `REL-ECO-010` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | [INSUFFICIENT_DAWN]/[INSUFFICIENT_MATTER] refusals name unit, price, holding and source; Gameplay.ProductionRefusalText |
@@ -5917,6 +5917,24 @@ and as the other lane's BAL-STR-2 result (prepared ground as costed does not bea
 planner slice that addresses it is REL-AI-006 cohesion: mass a strike force and commit it together
 instead of feeding it in. Numbers stay diagnostic only: one synthetic map, Adaptive only.
 
+**Cohesion as shipped does nothing measurable, and the reason is the population ceiling.** Matrix with
+0692638 (`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-7.json`): still 557 of 1,000, identical per-pairing split.
+A match-by-match comparison against the run before it is the honest measure: 114 of 1,000 matches end on a
+different checksum and 99 run to a different length, but **no match changed from stalling to finishing**.
+An instrumented build settled why: the cohesion branch fires zero times across 12,000 ticks on the harness
+map for either seat. Adaptive targets 18 workers at one population each against a capacity of 30 early and
+42 later, so a seat saturates at roughly 16 to 20 workers and 10 to 14 fighters with zero headroom. The
+rule's own valve then disables it (no headroom to reinforce, so commit what you have), and in the state
+where headroom does exist the seat already holds far more than the four fit units the threshold asks for.
+So the rule is satisfied or bypassed at all times and never actually holds anyone back. This is a
+negative result on this lane's own commit and is recorded as one rather than left implied.
+What REL-AI-006 actually needs is a staging point and a synchronised release: units rally at a muster
+tile, wait as a group, and move off together under one order, instead of each unit deciding alone whether
+enough friends exist. That is a design-sized slice, not a threshold, and it is the next planner work
+alongside the opponent's killing power (`CompleteSkirmishDefeat`). The population split itself
+(REL-AI-022) is the other lever: a seat that spends 18 of 30 population on workers can never field an
+army that ends a match on this map.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
@@ -6271,3 +6289,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T22:47Z — `SPEC-CMB-007` → **AGENT VERIFIED**; class PKG-AUTO; evidence —; commit 2bd56de; Idle return fire (D3 lane, schema 36) fixes the acquisition defect; full Unreal suite 139 passed, only CompleteSkirmishDefeat failing
 - 2026-09-11T22:47Z — `SPEC-STANCE-002` → **AGENT VERIFIED**; class PKG-AUTO; evidence —; commit 2bd56de; Defensive default answers threats via idle return fire (schema 36); verified in the D3 lane's full suite
 - 2026-09-11T22:48Z — `REL-AI-006` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-6.json; commit bd2f471; Cohesion is now the blocking slice: piecemeal commitment leaves every mirror unresolved once defenders return fire
+- 2026-09-11T23:17Z — `REL-AI-006` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-7.json; commit b06254b; Threshold-based massing measured: 114 of 1000 matches changed, zero conversions, branch never fires when saturated; needs muster point and synchronised release
