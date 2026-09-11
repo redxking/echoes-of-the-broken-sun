@@ -38,13 +38,13 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
 | `SPEC-BAL-009` | AGENT VERIFIED | SRC | — | 85eaf3c | 2026-09-11 | Re-measured on schema 36 (85eaf3c): unchanged, 60/60 vs 7/60 control; harness units all carry explicit orders so idle return fire does not apply |
 | `SPEC-BAL-011` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar | 46f1c14 | 2026-09-11 | BAL-STR-3 native blind 30/30, scouted 0/30, flat 0/30; Glass Scar wiring verified in Unreal 138/139 |
-| `SPEC-CMB-007` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-22.log | e925a75 | 2026-09-11 | Idle entities acquire and return fire under schema 36; return-fire scope only, full hierarchy deferred with the Stop stand-down stance |
+| `SPEC-CMB-007` | AGENT VERIFIED | PKG-AUTO | — | 2bd56de | 2026-09-11 | Idle return fire (D3 lane, schema 36) fixes the acquisition defect; full Unreal suite 139 passed, only CompleteSkirmishDefeat failing |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `SPEC-INFO-004` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-bands | 82a728d | 2026-09-11 | Height-band sight inert-safe: native 150/150, Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); Glass Scar wiring pending |
 | `SPEC-RES-003` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s34 | 3c3e836 | 2026-09-11 | Schema 34 slot release: native stall test passes and fails with the rule off; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `SPEC-RES-006` | AWAITING HUMAN ACCEPTANCE | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | SPEC-RES-006.INSPECT: click shows remaining Matter; exhausted stub 30%/80% and minimap mark; FieldHudAuthority green; rendered chain did not stage it |
-| `SPEC-STANCE-002` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-22.log | e925a75 | 2026-09-11 | Defensive default answers attackers in weapon range; the 400 cm pursuit is not built |
+| `SPEC-STANCE-002` | AGENT VERIFIED | PKG-AUTO | — | 2bd56de | 2026-09-11 | Defensive default answers threats via idle return fire (schema 36); verified in the D3 lane's full suite |
 | `SPEC-TUT-008` | AGENT VERIFIED | PKG-REND | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/readiness-review-8 | 46d841c | 2026-09-11 | All ten readiness lessons earnable; lessons 6-10 each committed in a rendered practice run (readiness review driver); practice-mode gate and staging defects repaired; owner play open |
 | `SPEC-UI-008` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged |
 | `TBR-SCP-012` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-17 | 34ca1a0 | 2026-09-11 | First bounded rule landed: opponent Future Well commands withheld in authored campaign operations (bridge, ECHOES_AI_WELL_DOCTRINE); per-mission doctrine remains D7 |
@@ -56,6 +56,30 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-006` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `TBR-STR-007` | OPEN | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | c2437ed | 2026-09-11 | Owner decision: a powered Aegis only matters at parity (6/30); prepared ground as costed does not beat a blind rush |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## Schema 36 verified in Unreal; the acquisition defect is closed — 2026-09-11, 22:45Z
+
+The D3 lane ran the full suite at `85eaf3c` plus its three fixture repairs: **139 passed, 1 failed**, and the
+only failure is `Echoes.Runtime.Gameplay.CompleteSkirmishDefeat`. All three consequences this lane
+attributed to idle return fire in the combined run are cleared in one go: `GuardEscortSemantics` passes with
+the S2 rework (an unarmed Surveyor as the guarded unit, so "the besieger is never fired upon" is true by
+construction rather than by passivity), `FactionResearch` passes with the pin moved to 36, and
+`DestructionVFX` passes untouched — this lane's hypothesis (the victim dying differently once it returns
+fire) was right in shape, and the fixture recovers once the behaviour is consistent. The four-suite
+attribution table in the 22:30Z entry is therefore confirmed end to end: every new failure there belonged to
+the in-flight change, and none to this lane's rules.
+
+`SPEC-CMB-007` and `SPEC-STANCE-002` are unblocked: the acquisition defect this lane reported and narrowed
+is fixed and verified. Scope remains return fire only; a Stop stand-down stance stays recorded as a
+follow-up needing entity state and a snapshot bump.
+
+**CompleteSkirmishDefeat: idle passivity is now ruled out.** It has now failed with a player that can shoot
+back, having already failed in six earlier suites across schema 33 to 35, the planner stall fix, the
+Well-target fix and a budget raised to 90,000 ticks. With the diagnostic this lane surfaced
+(`tick=90000 localCoreHp=1062 openingOpponentCombat=4`), both lanes agree the remaining gap is the
+opponent's killing power, not the budget, and it belongs with `REL-AI-006` cohesion: a force that never
+masses cannot finish a Core. Owned by the D3 lane. The provisional 90,000 budget in `EchoesFullMatchTest`
+should return to 60,000 once a clean run finishes inside it.
 
 ## BAL-STR-2 measured at last: prepared ground does not beat a blind rush — 2026-09-11, 22:40Z
 
@@ -5801,8 +5825,12 @@ behaviour: the ballistic cover regression now counts the attacker's own projecti
 returns fire, so the total is no longer one), and the terrain-memory test clears the defending soldier
 with three heavies before demolishing the Barracks. That second one is worth stating plainly: a Kharuun
 soldier deals 25 a shot against a Meridian heavy's 10, so a lone demolisher dies at about tick 100 and the
-old fixture only passed because the defect kept the defender silent. Every balance sweep that measured
-defence before this carries the same distortion. `test_sim-22.log` 150/150 in all three configurations.
+old fixture only passed because the defect kept the defender silent. That figure is one pairing, not a
+faction claim: the strategy-validation lane measured the authored line units within 7% of each other on
+damage per second (Lancer 12.0, Riftstalker 12.7, Intervalist 12.8), and a Meridian mirror loses the same
+way, so read 25-against-10 as Kharuun line against Meridian heavy and nothing wider. What does generalise
+is the distortion: every balance sweep that measured defence with order-less defenders before this
+carries it. `test_sim-22.log` 150/150 in all three configurations.
 Unreal suite and a matrix re-run are pending.
 
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
@@ -6156,3 +6184,5 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T22:32Z — `SPEC-STANCE-002` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-22.log; commit e925a75; Defensive default answers attackers in weapon range; the 400 cm pursuit is not built
 - 2026-09-11T22:33Z — `SPEC-BAL-009` → **AGENT VERIFIED**; class SRC; evidence —; commit 85eaf3c; Re-measured on schema 36 (85eaf3c): unchanged, 60/60 vs 7/60 control; harness units all carry explicit orders so idle return fire does not apply
 - 2026-09-11T22:40Z — `TBR-STR-007` → **OPEN**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit c2437ed; Owner decision: a powered Aegis only matters at parity (6/30); prepared ground as costed does not beat a blind rush
+- 2026-09-11T22:47Z — `SPEC-CMB-007` → **AGENT VERIFIED**; class PKG-AUTO; evidence —; commit 2bd56de; Idle return fire (D3 lane, schema 36) fixes the acquisition defect; full Unreal suite 139 passed, only CompleteSkirmishDefeat failing
+- 2026-09-11T22:47Z — `SPEC-STANCE-002` → **AGENT VERIFIED**; class PKG-AUTO; evidence —; commit 2bd56de; Defensive default answers threats via idle return fire (schema 36); verified in the D3 lane's full suite
