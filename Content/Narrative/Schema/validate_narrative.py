@@ -2782,6 +2782,13 @@ DEMO_CONTRACT_REGISTRY: dict[str, dict[str, Any]] = {
             "nar_demo_evt_tut_route_verified",
             "nar_demo_evt_tut_reserve_opened",
             "nar_demo_evt_tut_reserve_verified",
+            # Lessons six and seven (2026-09-11): the controller emits these
+            # from the Link and Foundry predicates and the placement refusal.
+            "nar_demo_evt_tut_link_opened",
+            "nar_demo_evt_tut_link_verified",
+            "nar_demo_evt_tut_link_rejected",
+            "nar_demo_evt_tut_foundry_opened",
+            "nar_demo_evt_tut_foundry_verified",
         },
         "counts": {"triggers": 32, "lines": 43},
     },

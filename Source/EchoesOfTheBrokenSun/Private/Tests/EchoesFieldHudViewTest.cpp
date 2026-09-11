@@ -3,6 +3,7 @@
 
 #include "EchoesFieldHudView.h"
 #include "EchoesProductionReasonText.h"
+#include "EchoesFactionPolicy.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -382,6 +383,42 @@ bool FEchoesFieldHudViewTest::RunTest(const FString& Parameters)
         ReplayPlayer.Technology.bVisible);
     TestTrue(TEXT("Replay never inherits live objectives"),
         ReplayPlayer.ObjectiveLines.IsEmpty());
+
+    // DeliveryPlan §4.1: research is a visible commitment. The archive names
+    // the affected roster with before/after values from the simulation's own
+    // rounding, and an owned fighter's card can explain a raised damage figure.
+    {
+        FEchoesFieldHudTechnologyView Technology;
+        FEchoesFieldHudModel::TechnologyPanel(*Player, Selected, 0, true, Technology);
+        if (TestEqual(TEXT("Technology archive lists both Compact tiers"), Technology.Tiers.Num(), 2))
+        {
+            const auto& Rules = Player->Config().rules;
+            const int32 Faction = static_cast<int32>(Player->Player().faction);
+            const auto& Lancer = Rules.archetypes[Faction][static_cast<int32>(EntityType::Soldier)];
+            const uint8 TierOne = static_cast<uint8>(
+                echoes::presentation::TechnologyProfile(Player->Player().faction).TierOne);
+            const int32 Percent = Rules.research[TierOne].combatDamagePercent;
+            const FString Expected = FString::Printf(TEXT("LANCER %d→%d"), Lancer.attackDamage,
+                static_cast<int32>(static_cast<int64>(Lancer.attackDamage) * Percent / 100));
+            TestTrue(TEXT("Tier one names the Lancer's damage before and after"),
+                Technology.Tiers[0].Description.ToString().Contains(Expected));
+            TestTrue(TEXT("Tier one names the whole Foundry roster"),
+                Technology.Tiers[0].Description.ToString().Contains(TEXT("BULWARK TEAM")) &&
+                Technology.Tiers[0].Description.ToString().Contains(TEXT("RELAY SKIFF")));
+            TestTrue(TEXT("Tier two describes sight, not damage"),
+                Technology.Tiers[1].Description.ToString().Contains(TEXT("sight")));
+        }
+        for (const FEchoesFieldHudSelectionEntry& Entry : Live.Selection.Entries)
+        {
+            if (Entry.bOwned && Entry.Damage > 0 && !Entry.bStructure)
+            {
+                TestTrue(TEXT("An owned fighter's card carries its archetype damage for the breakdown"),
+                    Entry.BaseDamage > 0);
+                TestTrue(TEXT("Without research the figure needs no source"),
+                    Entry.BaseDamage != Entry.Damage || Entry.DamageSource.IsEmpty());
+            }
+        }
+    }
 
     const FEchoesFieldHudView Observer =
         FEchoesFieldHudModel::BuildReplayObserver(SimulationValue);

@@ -364,6 +364,10 @@ bool AEchoesPlayerController::ConfirmBuildPlacement()
             UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] attempt=%s stage=preview_rejected detail=%s"), *BuildPlacementAttempt, FEchoesBuildPlacementModel::Feedback(Evaluation.Validity));
         SetStatusMessage(FEchoesBuildPlacementModel::Feedback(
             Evaluation.Validity));
+        if (Bridge != nullptr && !IsReplayInputActive())
+        {
+            ObserveTutorialPlacementRejected(BuildPlacementType, Bridge->WorldToSim(BuildPlacementWorldPosition));
+        }
         return false;
     }
 
@@ -388,6 +392,11 @@ bool AEchoesPlayerController::ConfirmBuildPlacement()
     if (FEchoesPlacementDiagnostics::Enabled())
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_PLACEMENT] attempt=%s stage=queued sequence=%llu %s"),
             *BuildPlacementAttempt, static_cast<unsigned long long>(Bridge->GetLastAcceptedLocalCommandSequence().Get(0)), *LastBuildPlacementDiagnostic);
+    if (!IsReplayInputActive())
+    {
+        ObserveTutorialConstructionEvent(BuildPlacementType, BuildPlacementWorkerId,
+            Bridge->WorldToSim(BuildPlacementWorldPosition));
+    }
     ShowAcceptedCommandMarker(
         BuildPlacementWorldPosition,
         EEchoesCommandMarkerType::Build,

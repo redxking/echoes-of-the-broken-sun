@@ -30,10 +30,14 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 |---|---|---|---|---|---|---|
 | `REL-ECO-010` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | [INSUFFICIENT_DAWN]/[INSUFFICIENT_MATTER] refusals name unit, price, holding and source; Gameplay.ProductionRefusalText |
 | `REL-FAC-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | REL-FAC-002.PROD authored and implemented: Foundry produces only while network-powered; replay schema 32; native+Unreal+rendered green; uncommitted |
+| `REL-FAC-028` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | Archive shows cost/time/prereq and affected roster before/after; card explains researched damage; visual silhouette cue still open |
 | `REL-UI-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `SPEC-RES-006` | AWAITING HUMAN ACCEPTANCE | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | SPEC-RES-006.INSPECT: click shows remaining Matter; exhausted stub 30%/80% and minimap mark; FieldHudAuthority green; rendered chain did not stage it |
+| `SPEC-TUT-008` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-3 | 7c86d61 | 2026-09-11 | Lessons 1-7 earnable (Link and Foundry wired 2026-09-11); 8-10 authored, unbound; no in-editor drive of 6-7 yet |
+| `SPEC-UI-008` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged |
+| `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
 ## Recoverable display-setting changes — 2026-09-09
 
@@ -5033,6 +5037,54 @@ Status: D2 stays the first unfinished package; these five are the next repairs; 
 below as they land.
 
 
+## D3 Meridian slice — first slice: research visibility, unpowered Foundry look, Link and Foundry lessons — 2026-09-11
+
+Owner order: "continue working on the game until complete." D2's engineering exit is met (RequirementsState
+"D2 owner play-test findings repaired"; owner acceptance open), so work advanced into D3 under the standing
+mandate. Controlling IDs: DeliveryPlan §4.1 (research visibility), SPEC-UI-008.F15, REL-FAC-002.PROD,
+SPEC-TUT-008 chapters 2–3, SPEC-TUT-008.FLOW, REL-UI-002 / TBR-UX-001. Evidence root:
+`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z` (identity.txt, build-1/2.log, automation-1/2). Evidence classes: Unreal automation and
+source inspection only; no rendered capture, no physical input, no package, no owner acceptance.
+
+**Research is visible (DeliveryPlan §4.1).** The technology archive now names the affected roster with
+before/after values computed by the simulation's own rounding (`+15% combat damage: LANCER 18→20, BULWARK
+TEAM 10→11, RELAY SKIFF 6→6`; tier two `+20% combat sight (tiles)`), and the widget draws that line under
+each tier. An owned fighter's card explains a raised damage figure as `DAMAGE 20 (18 +15% PRISMATIC
+TARGETING)`; enemy research is never announced (the breakdown is built for the viewer's own entities only).
+`FEchoesFieldHudModel::TechnologyPanel` exposes the panel to tests; `EchoesFieldHudViewTest` pins the
+roster line and the card fields. Not done: a persistent silhouette/material cue on researched fighters
+(§4.1 visual proposal) — the inspector carries the fact today.
+
+**Unpowered Foundry look (SPEC-UI-008.F15 / REL-FAC-002.PROD).** A completed Array Foundry outside the
+network is drawn dark and cold (body colour at ~30%, emissive off), distinct from damage and construction;
+the ordinary look returns on the appearance pass after power is restored (`AEchoesEntityView`,
+`bNetworkOperational` joins the state diff).
+
+**Lessons six and seven are earnable in play (SPEC-TUT-008 chapters 2–3).** The Link observer that shipped
+without call sites is wired: `ConfirmBuildPlacement` reports a refused footprint
+(`ObserveTutorialPlacementRejected`, which accepts only a site `Simulation::ValidatePlacement` refuses and
+emits `tutorial_placement_rejected:link`) and an accepted placement; assist and repair orders reach the
+observer through the existing accepted-command capture; a single click on the finished Link and the field
+HUD's later-frame description of it complete the predicate. Lesson seven binds the staged Foundry, requires
+the player's own Applied Produce order for a Lancer at it, and verifies a new owned Lancer above every
+entity id known when the lesson opened. `EchoesTutorialLessonCount` is 7 (profile mask, practice gate and
+the Help screen follow it); the readiness minimap marks L (Link footprint 6,14), X (blocked outcrop 19,10),
+D (damaged Link 6,17) and F (Foundry 14,10); the narrative contract binds the link/foundry opened, verified
+and rejected triggers and their subtitle lines (`validate_narrative.py` registry, pack recompiled, digest
+unchanged because binding status is not projected). Limits: the wiring is source-verified and covered by
+the observer's own automation (`Campaign.TutorialConstructionObservation`) and the shell/profile tests; no
+in-editor drive of lessons six and seven exists yet, so their first play-through is the owner's or a later
+review driver's. Lessons eight to ten (Probe, Board, Well) remain authored, unbound.
+
+**TBR-UX-001 (deck slot layout) — recommendation, not a decision.** REL-UI-002.AUTH's QWE/ASD/ZXC grid
+collides with SPEC-CTL-012's WASD camera axes as bound in `DefaultInput.ini`; the master itself holds the
+contradiction, so the layout stays an owner decision. Recommendation: option A, command-first — grid keys
+QWE/ASD/ZXC with Move/Stop/Hold/Attack/Patrol/Stance in positions 1–6 and faction abilities in 7–9;
+camera on edge pan, middle drag and arrows; WASD offered as a selectable camera preset. Until ruled, the
+deck keeps its current bindings (F/T/H/J/X and B/N/M, Q/E/;/').
+
+**Verification.** `build-1.log` and `build-3.log` Result Succeeded; `automation-1/index.json` 139/139 (research display and unpowered look), `automation-3/index.json` 139/139 with 0 warnings and the save-isolation guard passed (lessons six and seven; `automation-2` 138/139 was the practice test's literal 0x0020 pin, now derived from `EchoesTutorialLessonCount`). Native suite unchanged by this slice (SimCore untouched). No rendered capture of the archive panel, the dark Foundry or the two lessons was taken; those await the owner's play or a review driver.
+
 ## D2 owner play-test findings repaired — 2026-09-11
 
 Owner order: repair the five findings of "D2 owner play test — FAILED, 2026-09-11" and return the
@@ -5182,3 +5234,7 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T16:05Z — `SPEC-HUD-004`, `REL-UI-002` → **AWAITING HUMAN ACCEPTANCE**; class PKG-REND; evidence BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720; commit ec62a5a; Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001
 - 2026-09-11T16:05Z — `REL-ECO-010` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C; commit ec62a5a; [INSUFFICIENT_DAWN]/[INSUFFICIENT_MATTER] refusals name unit, price, holding and source; Gameplay.ProductionRefusalText
 - 2026-09-11T16:05Z — `REL-UI-003` → **IMPLEMENTED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C; commit ec62a5a; ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open)
+- 2026-09-11T16:34Z — `SPEC-TUT-008` → **IMPLEMENTED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-3; commit 7c86d61; Lessons 1-7 earnable (Link and Foundry wired 2026-09-11); 8-10 authored, unbound; no in-editor drive of 6-7 yet
+- 2026-09-11T16:34Z — `REL-FAC-028` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1; commit 7c86d61; Archive shows cost/time/prereq and affected roster before/after; card explains researched damage; visual silhouette cue still open
+- 2026-09-11T16:34Z — `SPEC-UI-008` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1; commit 7c86d61; F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged
+- 2026-09-11T16:34Z — `TBR-UX-001` → **OPEN**; class NONE; evidence —; commit 7c86d61; Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset

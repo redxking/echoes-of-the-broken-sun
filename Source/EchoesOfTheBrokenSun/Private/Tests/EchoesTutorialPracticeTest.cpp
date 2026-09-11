@@ -1,6 +1,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "EchoesTutorialCurriculumModel.h"
 
 #include "EchoesPlayerFlow.h"
 
@@ -27,7 +28,7 @@ bool FEchoesTutorialPracticeTest::RunTest(const FString& Parameters)
     FEchoesTutorialPracticeState Practice;
     const uint16 DurableMastery = 0x0015;
     TestFalse(TEXT("An unimplemented later lesson cannot begin practice"),
-        Practice.Begin(0x0020));
+        Practice.Begin(static_cast<uint16>(1u << EchoesTutorialLessonCount)));
     TestFalse(TEXT("A multi-lesson target cannot begin practice"),
         Practice.Begin(0x0003));
     TestTrue(TEXT("An implemented mastered lesson can be replayed"),

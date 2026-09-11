@@ -1179,6 +1179,14 @@ private:
     void ObserveTutorialProductionEvent(
         echoes::sim::EntityType ProducedType,
         uint32 ProducerEntity);
+    // Lesson six (Link): a placement the simulation refused, and the finished
+    // Link described in the field HUD on a frame after the click that chose it.
+    void ObserveTutorialPlacementRejected(
+        echoes::sim::EntityType StructureType,
+        echoes::sim::Vec2 Site);
+    void ObserveTutorialConstructionHudPublication(
+        const FEchoesFieldHudView& PublishedView,
+        uint64 PresentationFrame);
     // ---- end reserved declarations ----
     bool CommitTutorialLesson(uint16 Bit, const TCHAR* LessonName);
     FEchoesTutorialSurveyObservation TutorialSurvey;
@@ -1192,6 +1200,12 @@ private:
     uint32 TutorialObservedProductionEntity = 0;
     uint64 TutorialConstructionSequence = 0;
     uint64 TutorialProductionSequence = 0;
+    uint32 TutorialConstructionHudCandidateEntity = 0;
+    uint64 TutorialConstructionHudCandidateFrame = 0;
+    // Lesson seven (Foundry): every entity id known when the lesson opened is
+    // below this; a Lancer above it is the one the player's order produced.
+    uint32 TutorialFoundryMaxKnownEntityId = 0;
+    bool bTutorialFoundryEmerged = false;
     // ---- end reserved members ----
     FText TutorialInstruction;
     uint64 TutorialSession = 0;

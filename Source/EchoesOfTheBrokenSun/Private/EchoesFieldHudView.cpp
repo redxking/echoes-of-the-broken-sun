@@ -510,6 +510,49 @@ void AddNetworkFeedback(const PlayerView& Scoped, const TArray<uint32>& Selected
     }
 }
 
+/**
+ * DeliveryPlan §4.1: the inspector explains the source of a modifier. For an
+ * owned fighter whose damage differs from its archetype, name the completed
+ * research that raised it. Enemy research is never announced (fog rule): the
+ * breakdown is built only for the viewer's own entities.
+ */
+void AddDamageBreakdown(
+    const PlayerView& PlayerView,
+    const Entity& Entity,
+    FEchoesFieldHudSelectionEntry& Entry)
+{
+    const bool bFighter = Entity.type == EntityType::Soldier ||
+        Entity.type == EntityType::HeavyUnit || Entity.type == EntityType::ScoutUnit;
+    if (Entity.owner != PlayerView.Player().id || Entity.attackDamage <= 0 || !bFighter)
+    {
+        return;
+    }
+    const auto& Rules = PlayerView.Config().rules;
+    Entry.BaseDamage =
+        Rules.archetypes[static_cast<int32>(Entity.faction)][static_cast<int32>(Entity.type)].attackDamage;
+    if (Entry.BaseDamage == Entry.Damage)
+    {
+        return;
+    }
+    const auto Profile = echoes::presentation::TechnologyProfile(PlayerView.Player().faction);
+    const ResearchType Types[] = {Profile.TierOne, Profile.TierTwo};
+    const TCHAR* Names[] = {Profile.TierOneContentId, Profile.TierTwoContentId};
+    for (int32 Index = 0; Index < 2; ++Index)
+    {
+        const uint8 RuleIndex = static_cast<uint8>(Types[Index]);
+        if (RuleIndex >= Rules.research.size() || !PlayerView.Player().HasCompletedResearch(Types[Index]) ||
+            Rules.research[RuleIndex].combatDamagePercent == 100)
+        {
+            continue;
+        }
+        Entry.DamageSource = FText::Format(
+            LOCTEXT("DamageSourceResearch", "+{0}% {1}"),
+            FText::AsNumber(Rules.research[RuleIndex].combatDamagePercent - 100),
+            Text(FString(Names[Index]).Replace(TEXT("_"), TEXT(" ")).ToUpper()));
+        return;
+    }
+}
+
 void AddSelectionEntry(
     const Entity& Entity,
     PlayerId Viewer,
@@ -1113,11 +1156,33 @@ void BuildTechnology(
                 FText::AsNumber(
                     static_cast<double>(Rules->researchTicks) /
                         FMath::Max<uint32>(1, PlayerView.Config().ticksPerSecond)));
-            Tier.Description = Rules->combatDamagePercent > 100
-                ? FText::Format(LOCTEXT("TechnologyDamage", "+{0}% combat damage"),
-                    FText::AsNumber(Rules->combatDamagePercent - 100))
-                : FText::Format(LOCTEXT("TechnologyVision", "+{0}% combat vision"),
-                    FText::AsNumber(Rules->combatVisionPercent - 100));
+            // DeliveryPlan §4.1: the affected roster with before/after values,
+            // computed by the simulation's own rounding (value × percent / 100)
+            // from the archetype, so the panel cannot promise a number the
+            // fighter will not carry. Applies to existing and future fighters.
+            const bool bDamageTier = Rules->combatDamagePercent > 100;
+            FString Roster;
+            for (const EntityType Type : {EntityType::Soldier, EntityType::HeavyUnit, EntityType::ScoutUnit})
+            {
+                const auto& Archetype = PlayerView.Config().rules.archetypes
+                    [static_cast<int32>(Player.faction)][static_cast<int32>(Type)];
+                const int32 Before = bDamageTier ? Archetype.attackDamage : Archetype.visionTiles;
+                const int32 After = static_cast<int32>(
+                    static_cast<int64>(Before) *
+                    (bDamageTier ? Rules->combatDamagePercent : Rules->combatVisionPercent) / 100);
+                FString Name = FEchoesProductionReasonText::UnitName(Player.faction, Type, nullptr);
+                if (Name.IsEmpty())
+                {
+                    Name = EntityName(Type).ToString().ToUpper();
+                }
+                Roster += FString::Printf(TEXT("%s%s %d→%d"), Roster.IsEmpty() ? TEXT("") : TEXT(", "),
+                    *Name, Before, After);
+            }
+            Tier.Description = bDamageTier
+                ? FText::Format(LOCTEXT("TechnologyDamage", "+{0}% combat damage: {1}"),
+                    FText::AsNumber(Rules->combatDamagePercent - 100), Text(Roster))
+                : FText::Format(LOCTEXT("TechnologyVision", "+{0}% combat sight (tiles): {1}"),
+                    FText::AsNumber(Rules->combatVisionPercent - 100), Text(Roster));
         }
         const bool bComplete = Player.HasCompletedResearch(Types[Index]);
         const bool bActive = Player.activeResearch == Types[Index];
@@ -1690,6 +1755,7 @@ FEchoesFieldHudView FEchoesFieldHudModel::BuildPlayerScoped(
         {
             AddSelectionEntry(
                 *Entity, PlayerView.Player().id, View.Selection, Catalog);
+            AddDamageBreakdown(PlayerView, *Entity, View.Selection.Entries.Last());
         }
     }
     View.Selection.bVisible = !View.Selection.Entries.IsEmpty();
@@ -1701,6 +1767,16 @@ FEchoesFieldHudView FEchoesFieldHudModel::BuildPlayerScoped(
         [&PlayerView](uint32 Id) { return FindVisibleEntity(PlayerView, Id); }, View);
     BuildProductionQueue(PlayerView, SelectedEntityIds, View.Production);
     return View;
+}
+
+void FEchoesFieldHudModel::TechnologyPanel(
+    const PlayerView& PlayerView,
+    const TArray<uint32>& SelectedEntityIds,
+    int32 FocusedTier,
+    bool bVisible,
+    FEchoesFieldHudTechnologyView& Out)
+{
+    BuildTechnology(PlayerView, SelectedEntityIds, FocusedTier, bVisible, Out);
 }
 
 FEchoesCommandDeckPresentation FEchoesFieldHudModel::DeckPresentation(
@@ -2382,6 +2458,17 @@ bool FEchoesFieldHudModel::Build(
             }
             if ((Mask & 15) == 15 && (Mask & 16) == 0)
                 OutView.ObjectiveControls.Add({LOCTEXT("InspectReserve", "Inspect reserve monitor"), FText::GetEmpty(), EEchoesFieldHudAction::InspectTutorialReserve});
+            if ((Mask & 31) == 31 && (Mask & 32) == 0)
+            {
+                // Lesson six: the Link footprint, the blocked outcrop and the damaged Link.
+                OutView.Minimap.MissionMarkers.Add({Normalize(Vec2::FromTiles(6, 14), OutView.Minimap.Width, OutView.Minimap.Height), LOCTEXT("LinkSiteMarker", "L"), EEchoesFieldHudTone::Accent});
+                OutView.Minimap.MissionMarkers.Add({Normalize(Vec2::FromTiles(19, 10), OutView.Minimap.Width, OutView.Minimap.Height), LOCTEXT("RejectionMarker", "X"), EEchoesFieldHudTone::Warning});
+                OutView.Minimap.MissionMarkers.Add({Normalize(Vec2::FromTiles(6, 17), OutView.Minimap.Width, OutView.Minimap.Height), LOCTEXT("RepairMarker", "D"), EEchoesFieldHudTone::Warning});
+                if (Controller.GetTutorialPendingRejectionAttempt() != 0)
+                    OutView.ObjectiveControls.Add({LOCTEXT("ReadPlacementRejection", "Acknowledge refused placement"), FText::GetEmpty(), EEchoesFieldHudAction::AcknowledgeTutorialRejection});
+            }
+            if ((Mask & 63) == 63 && (Mask & 64) == 0)
+                OutView.Minimap.MissionMarkers.Add({Normalize(Vec2::FromTiles(14, 10), OutView.Minimap.Width, OutView.Minimap.Height), LOCTEXT("FoundryMarker", "F"), EEchoesFieldHudTone::Accent});
         }
         const FText Tutorial = Controller.GetTutorialInstruction();
         OutView.TutorialInstruction = Tutorial;

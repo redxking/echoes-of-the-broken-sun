@@ -1,5 +1,6 @@
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
+#include "EchoesTutorialCurriculumModel.h"
 #include "EchoesTestSaveEnvironment.h"
 #include "EchoesPlayerController.h"
 #include "EchoesCinematicSubsystem.h"
@@ -532,18 +533,18 @@ bool FEchoesPlayerShellTest::RunTest(const FString&)
     TestTrue(TEXT("Help presents exactly ten authored lesson rows"),
         Help.Screen == EEchoesShellScreen::Help &&
         Help.Buttons.Num() == 11);
-    TestEqual(TEXT("Only the five implemented lessons are replayable"),
+    TestEqual(TEXT("Only the implemented lessons are replayable"),
         Help.Buttons.FilterByPredicate([](const FEchoesShellButton& Button)
         {
             return Button.Action == EEchoesShellAction::PracticeTutorialLesson &&
                 Button.bEnabled;
-        }).Num(), 5);
+        }).Num(), EchoesTutorialLessonCount);
     TestEqual(TEXT("Later lessons remain visibly unavailable"),
         Help.Buttons.FilterByPredicate([](const FEchoesShellButton& Button)
         {
             return Button.Action == EEchoesShellAction::PracticeTutorialLesson &&
                 !Button.bEnabled && Button.Label.ToString().Contains(TEXT("unavailable"));
-        }).Num(), 5);
+        }).Num(), EchoesTutorialAuthoredLessonKeys - EchoesTutorialLessonCount);
     const uint16 DurableBeforePractice =
         Controller->GetPlayerProfile().TutorialVerifiedMask;
     const bool bReadinessBeforePractice =

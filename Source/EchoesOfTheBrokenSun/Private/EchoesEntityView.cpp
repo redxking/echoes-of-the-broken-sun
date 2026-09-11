@@ -1415,6 +1415,7 @@ void AEchoesEntityView::ApplyAuthoritativeState(
                                   bTemporaryMineralCover !=
                                       State.temporaryMineralCover ||
                                   bAegisPowered != State.aegisPowered ||
+                                  bNetworkOperational != State.networkOperational ||
                                   ResourceRemaining != State.resourceRemaining;
     EntityId = State.id;
     OwnerPlayerId = State.owner;
@@ -1434,6 +1435,7 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     ChoirIdentityState = State.choirIdentityState;
     bTemporaryMineralCover = State.temporaryMineralCover;
     bAegisPowered = State.aegisPowered;
+    bNetworkOperational = State.networkOperational;
     ResourceRemaining = State.resourceRemaining;
     HitPoints = State.hitPoints;
     MaxHitPoints = State.maxHitPoints;
@@ -2589,6 +2591,27 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
             SetOverlayVisibleAndPickable(HealthBarBackground, false);
             SetOverlayVisibleAndPickable(HealthBarFill, false);
             SetOverlayVisibleAndPickable(OwnerMarker, false);
+        }
+    }
+
+    // SPEC-UI-008.F15 / REL-FAC-002.PROD: a completed Array Foundry outside
+    // the power network reads as dark and cold, distinct from damage (which
+    // keeps the team colour and adds smoke) and from construction. Power
+    // restored returns the ordinary look on the next appearance pass.
+    if (State.faction == echoes::sim::Faction::MeridianCompact &&
+        State.type == echoes::sim::EntityType::Barracks &&
+        State.completed && State.hitPoints > 0 && !State.networkOperational)
+    {
+        BaseBodyColor = FLinearColor(
+            BaseBodyColor.R * 0.30f, BaseBodyColor.G * 0.32f, BaseBodyColor.B * 0.36f);
+        SetBodyColor(BaseBodyColor);
+        for (UMaterialInstanceDynamic* Material : BodyMaterials)
+        {
+            if (Material != nullptr)
+            {
+                Material->SetScalarParameterValue(EmissiveStrengthParameterName, 0.0f);
+                Material->SetScalarParameterValue(MaskedEmissiveStrengthParameterName, 0.0f);
+            }
         }
     }
 

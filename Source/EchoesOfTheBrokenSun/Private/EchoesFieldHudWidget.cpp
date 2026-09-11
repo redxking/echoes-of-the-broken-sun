@@ -259,6 +259,15 @@ FText SelectionVitals(const FEchoesFieldHudSelectionEntry& Entry)
             NSLOCTEXT("EchoesFieldHud", "DepositStockRemaining", "MATTER  {0} REMAINING"),
             FText::AsNumber(Entry.ResourceRemaining));
     }
+    if (Entry.Damage > 0 && Entry.BaseDamage > 0 && Entry.Damage != Entry.BaseDamage &&
+        !Entry.DamageSource.IsEmpty())
+    {
+        // DeliveryPlan §4.1: base + permanent research, so an upgrade is
+        // inspectable rather than an invisible modifier.
+        return FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "SelectionVitalsResearched", "{0}   DAMAGE {1} ({2} {3})"),
+            Entry.Order, Entry.Damage, Entry.BaseDamage, Entry.DamageSource);
+    }
     if (Entry.Damage > 0)
     {
         return FText::Format(
@@ -2752,6 +2761,11 @@ void UEchoesFieldHudWidget::ApplyView()
             Lines.Add(FText::Format(
                 NSLOCTEXT("EchoesFieldHud", "TechTier", "TIER {0} — {1}: {2} [{3}]"),
                 Tier.Tier + 1, Tier.Name, Tier.Cost, Tier.State));
+            if (!Tier.Description.IsEmpty())
+            {
+                // DeliveryPlan §4.1: affected roster and before/after values.
+                Lines.Add(Tier.Description);
+            }
         }
     }
     Panel = GetSection(EEchoesFieldHudSection::Technology);

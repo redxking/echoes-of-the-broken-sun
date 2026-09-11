@@ -182,6 +182,10 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudSelectionEntry final
     int32 Cargo = 0;
     int32 CargoCapacity = 0;
     int32 Damage = 0;
+    /** DeliveryPlan §4.1: the archetype's damage before permanent research; 0 when not applicable. */
+    int32 BaseDamage = 0;
+    /** Completed research that raised Damage above BaseDamage, with its percentage; empty when none. */
+    FText DamageSource;
     FText Production;
     int32 ProductionPercent = 0;
     bool bOwned = false;
@@ -581,6 +585,13 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudModel final
         const TArray<uint32>& SelectedEntityIds,
         bool bReplay,
         const FEchoesContentCatalog* Catalog = nullptr);
+    /** The technology archive panel for a scoped view (DeliveryPlan §4.1); exposed for tests. */
+    static void TechnologyPanel(
+        const echoes::sim::PlayerView& PlayerView,
+        const TArray<uint32>& SelectedEntityIds,
+        int32 FocusedTier,
+        bool bVisible,
+        FEchoesFieldHudTechnologyView& Out);
     [[nodiscard]] static FEchoesFieldHudView BuildNetworkScoped(
         const echoes::sim::net::ScopedViewKeyframe& Keyframe,
         const TArray<uint32>& SelectedEntityIds,

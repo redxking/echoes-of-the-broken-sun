@@ -476,6 +476,19 @@ void AEchoesPlayerController::RefreshFieldHud()
         TutorialRosterHudCandidateEntity = 0;
         TutorialRosterHudCandidateFrame = 0;
     }
+    if (TutorialConstructionHudCandidateEntity != 0 &&
+        PresentationFrame > TutorialConstructionHudCandidateFrame)
+    {
+        if (SelectedEntityIds.Num() != 1 || SelectedEntityIds[0] != TutorialConstructionHudCandidateEntity)
+        {
+            TutorialConstructionHudCandidateEntity = 0;
+            TutorialConstructionHudCandidateFrame = 0;
+        }
+        else
+        {
+            ObserveTutorialConstructionHudPublication(View, PresentationFrame);
+        }
+    }
     const auto Roster = TutorialSelection.RosterProgress();
     if (TutorialSelection.ActiveStage() ==
             EEchoesTutorialSelectionStage::Roster &&

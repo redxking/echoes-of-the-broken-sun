@@ -583,6 +583,8 @@ private:
         echoes::sim::ChoirIdentityState::NotChoir;
     bool bTemporaryMineralCover = false;
     bool bAegisPowered = false;
+    /** REL-FAC-002.PROD / SPEC-UI-008.F15: a completed Meridian Foundry outside the network. */
+    bool bNetworkOperational = false;
     int32 ResourceRemaining = 1500;
     bool bUsingAuthoredRosterMesh = false;
     bool bUsingAuthoredFutureWellMesh = false;

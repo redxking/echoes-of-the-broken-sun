@@ -28,6 +28,14 @@ void AEchoesPlayerController::ResetTutorialObservation()
     TutorialSurvey.Reset();
     TutorialSelection.Reset();
     TutorialOrders.Reset();
+    TutorialConstruction.Reset();
+    TutorialConstructionHudCandidateEntity = 0;
+    TutorialConstructionHudCandidateFrame = 0;
+    TutorialProductionLessonBit = 0;
+    TutorialObservedProductionEntity = 0;
+    TutorialProductionSequence = 0;
+    TutorialFoundryMaxKnownEntityId = 0;
+    bTutorialFoundryEmerged = false;
     TutorialActiveLessonBit = 0;
     TutorialPresentedLessonBit = 0;
     TutorialSelectionSequence = 0;
@@ -170,8 +178,26 @@ void AEchoesPlayerController::ObserveTutorialSelectionEvent(
 {
     auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
     if (!bTutorialOperationAuthorized || IsModalOverlayVisible() || IsReplayInputActive() || !Bridge ||
-        Bridge->IsScenarioPaused() || Bridge->GetOperationMode() != EEchoesOperationMode::TrainingReadiness ||
-        !TutorialSelection.IsActive()) return;
+        Bridge->IsScenarioPaused() || Bridge->GetOperationMode() != EEchoesOperationMode::TrainingReadiness) return;
+    if (TutorialConstruction.IsActive() && Event == EEchoesTutorialSelectionInputEvent::SingleClickSelection &&
+        SelectedEntityIds.Num() == 1 && Bridge->GetSimulation() != nullptr)
+    {
+        // Lesson six: the player selects the finished Link they built; the
+        // HUD's description of it is proven on a later frame.
+        FEchoesTutorialConstructionInput Input;
+        Input.Session = TutorialSession;
+        Input.AuthorityGeneration = Bridge->GetScenarioAuthorityGeneration();
+        Input.InputSequence = ++TutorialInputAttemptSequence;
+        Input.Origin = EEchoesTutorialConstructionOrigin::PlayerInput;
+        Input.PresentationFrame = GFrameCounter;
+        if (TutorialConstruction.ObserveSelection(Input, *Bridge->GetSimulation(), SelectedEntityIds[0]))
+        {
+            TutorialConstructionHudCandidateEntity = SelectedEntityIds[0];
+            TutorialConstructionHudCandidateFrame = Input.PresentationFrame;
+        }
+        return;
+    }
+    if (!TutorialSelection.IsActive()) return;
     const auto* Simulation = Bridge->GetSimulation();
     const auto View = Simulation ? Simulation->CreatePlayerView(UEchoesSimulationSubsystem::LocalPlayerId) : std::nullopt;
     if (!View) return;
@@ -218,8 +244,50 @@ void AEchoesPlayerController::ObserveTutorialRosterHudPublication(
 
 void AEchoesPlayerController::ObserveTutorialAcceptedCommand(uint64 Sequence, EEchoesTutorialOrderCommandOrigin Origin)
 {
-    if (!bTutorialOperationAuthorized || IsModalOverlayVisible() || IsReplayInputActive() || !TutorialOrders.IsActive()) return;
+    if (!bTutorialOperationAuthorized || IsModalOverlayVisible() || IsReplayInputActive() ||
+        !(TutorialOrders.IsActive() || TutorialConstruction.IsActive() || TutorialProductionLessonBit != 0)) return;
     TutorialAcceptedCommandSequences.Emplace(Sequence, Origin);
+}
+
+void AEchoesPlayerController::ObserveTutorialPlacementRejected(
+    echoes::sim::EntityType StructureType,
+    echoes::sim::Vec2 Site)
+{
+    auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    if (!bTutorialOperationAuthorized || IsModalOverlayVisible() || IsReplayInputActive() || !Bridge ||
+        Bridge->IsScenarioPaused() || Bridge->GetOperationMode() != EEchoesOperationMode::TrainingReadiness ||
+        !Bridge->GetSimulation() || !TutorialConstruction.IsActive() ||
+        StructureType != echoes::sim::EntityType::Dropoff) return;
+    FEchoesTutorialConstructionInput Input;
+    Input.Session = TutorialSession;
+    Input.AuthorityGeneration = Bridge->GetScenarioAuthorityGeneration();
+    Input.InputSequence = ++TutorialInputAttemptSequence;
+    Input.Origin = EEchoesTutorialConstructionOrigin::PlayerInput;
+    Input.PresentationFrame = GFrameCounter;
+    // The observer accepts only a site the simulation itself refuses.
+    if (!TutorialConstruction.ObserveRejectedPlacement(Input, *Bridge->GetSimulation(), Site)) return;
+    TutorialPendingRejectionAttempt = Input.InputSequence;
+    if (auto* Narrative = GetGameInstance() ? GetGameInstance()->GetSubsystem<UEchoesNarrativeSubsystem>() : nullptr)
+        Narrative->EnqueueSignal(EEchoesOperationMode::CampaignPrologue,
+            TEXT("tutorial_placement_rejected:link"), GetWorld()->GetRealTimeSeconds());
+    TraceTutorialObservation(FString::Printf(TEXT("link_placement_rejected input=%llu tile=%d,%d"),
+        static_cast<unsigned long long>(Input.InputSequence), Site.x.FloorToInt(), Site.y.FloorToInt()));
+}
+
+void AEchoesPlayerController::ObserveTutorialConstructionHudPublication(
+    const FEchoesFieldHudView& PublishedView,
+    uint64 PresentationFrame)
+{
+    auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    if (!bTutorialOperationAuthorized || IsModalOverlayVisible() || IsReplayInputActive() || !Bridge ||
+        Bridge->IsScenarioPaused() || Bridge->GetOperationMode() != EEchoesOperationMode::TrainingReadiness ||
+        !Bridge->GetSimulation() || !TutorialConstruction.IsActive()) return;
+    if (TutorialConstruction.ObserveHudPublication(TutorialSession, Bridge->GetScenarioAuthorityGeneration(),
+            PresentationFrame, *Bridge->GetSimulation(), SelectedEntityIds, PublishedView))
+    {
+        TutorialConstructionHudCandidateEntity = 0;
+        TutorialConstructionHudCandidateFrame = 0;
+    }
 }
 
 uint64 AEchoesPlayerController::ObserveTutorialRejectedCommandAttempt(const FEchoesTutorialExpectedCommand& Attempt)
@@ -241,6 +309,19 @@ void AEchoesPlayerController::ObserveTutorialRejectionAcknowledged(uint64 InputA
     if (!Bridge || !Bridge->GetSimulation() || InputAttemptSequence == 0 ||
         InputAttemptSequence != TutorialPendingRejectionAttempt || IsReplayInputActive() ||
         !bTutorialOperationAuthorized || Bridge->IsScenarioPaused()) return;
+    if (TutorialConstruction.IsActive())
+    {
+        FEchoesTutorialConstructionInput Input;
+        Input.Session = TutorialSession;
+        Input.AuthorityGeneration = Bridge->GetScenarioAuthorityGeneration();
+        Input.InputSequence = ++TutorialInputAttemptSequence;
+        Input.Origin = EEchoesTutorialConstructionOrigin::PlayerInput;
+        Input.PresentationFrame = GFrameCounter;
+        if (TutorialConstruction.ObserveRejectionAcknowledged(Input, *Bridge->GetSimulation(), InputAttemptSequence) ||
+            !TutorialConstruction.IsActive())
+            TutorialPendingRejectionAttempt = 0;
+        return;
+    }
     TutorialOrders.ObserveRejectionAcknowledged(TutorialSession, Bridge->GetScenarioAuthorityGeneration(),
         *Bridge->GetSimulation(), InputAttemptSequence);
     if (TutorialOrders.RouteProgress().bRejectionAcknowledged || !TutorialOrders.IsActive())
@@ -569,11 +650,171 @@ void AEchoesPlayerController::TickTutorialObservation()
                 CommitTutorialLesson(16, TEXT("reserve"));
         }
     }
+    else if ((ProgressMask & 32) == 0)
+    {
+        // Lesson six — Link (SPEC-TUT-008 chapter 2, "Build a useful
+        // outpost"): a refused placement read and acknowledged, a Power Link
+        // placed at the marked footprint and finished with two Surveyors on
+        // it, the authored damaged Link repaired to full, and the finished
+        // Link selected and described by the field HUD.
+        if (TutorialActiveLessonBit != 32)
+        {
+            uint32 Builder = 0, Assistant = 0;
+            for (const auto& Entity : Player->Entities())
+            {
+                if (Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId ||
+                    Entity.type != echoes::sim::EntityType::Worker || Entity.hitPoints <= 0) continue;
+                if (Entity.id == TutorialWorkerId) { Builder = Entity.id; continue; }
+                if (Assistant == 0) Assistant = Entity.id;
+            }
+            if (Builder == 0) { Builder = Assistant; Assistant = 0; }
+            if (Assistant == 0)
+            {
+                for (const auto& Entity : Player->Entities())
+                    if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                        Entity.type == echoes::sim::EntityType::Worker && Entity.hitPoints > 0 &&
+                        Entity.id != Builder) { Assistant = Entity.id; break; }
+            }
+            FEchoesTutorialConstructionSetup Setup;
+            Setup.LocalPlayer = UEchoesSimulationSubsystem::LocalPlayerId;
+            Setup.Builder = Builder;
+            Setup.Assistant = Assistant;
+            Setup.FirstInputSequence = TutorialInputAttemptSequence + 1;
+            TutorialAcceptedCommandSequences.Reset();
+            TutorialPendingRejectionAttempt = 0;
+            TutorialConstructionHudCandidateEntity = 0;
+            TutorialConstructionHudCandidateFrame = 0;
+            if (!TutorialConstruction.Begin(TutorialSession, AuthorityGeneration, *Simulation, Setup))
+            {
+                TutorialInstruction = LOCTEXT("LinkStageUnavailable", "The Link staging is unavailable: two Surveyors and the damaged Power Link are required. Restart the readiness check from the title menu.");
+                return;
+            }
+            TutorialWorkerId = Builder;
+            TutorialActiveLessonBit = 32;
+            TraceTutorialObservation(FString::Printf(TEXT("link_begin builder=%u assistant=%u repair=%u"),
+                Builder, Assistant, static_cast<uint32>(TutorialConstruction.RepairTarget())));
+        }
+        TutorialConstruction.ObserveState(TutorialSession, AuthorityGeneration, *Simulation);
+        for (int32 Index = TutorialAcceptedCommandSequences.Num() - 1; Index >= 0; --Index)
+        {
+            const auto& Command = TutorialAcceptedCommandSequences[Index];
+            if (!Simulation->FindCommandResolutionReceipt(UEchoesSimulationSubsystem::LocalPlayerId, Command.Key)) continue;
+            FEchoesTutorialConstructionInput Input;
+            Input.Session = TutorialSession;
+            Input.AuthorityGeneration = AuthorityGeneration;
+            Input.InputSequence = ++TutorialInputAttemptSequence;
+            Input.CommandSequence = Command.Key;
+            Input.Origin = EEchoesTutorialConstructionOrigin::PlayerInput;
+            (void)TutorialConstruction.ObserveAcceptedCommand(Input, *Simulation);
+            TutorialAcceptedCommandSequences.RemoveAt(Index);
+        }
+        if (!TutorialConstruction.IsActive())
+        {
+            TutorialActiveLessonBit = 0;
+            TutorialInstruction = LOCTEXT("LinkStageReset", "The Link observation was interrupted. Repeat the current check.");
+            return;
+        }
+        const auto Progress = TutorialConstruction.Progress();
+        if (!Progress.bRejectedPlacementObserved)
+            TutorialInstruction = LOCTEXT("LinkReject", "Link: select a Surveyor, press N, and try the Power Link on the blocked outcrop marked X. Read why the ground refuses it.");
+        else if (!Progress.bRejectionAcknowledged)
+            TutorialInstruction = LOCTEXT("LinkAcknowledge", "Link: acknowledge the refused placement in the readiness panel, then find footing the network can hold.");
+        else if (!Progress.bConstructionStarted)
+            TutorialInstruction = LOCTEXT("LinkPlace", "Link: with a Surveyor selected, press N and place the Power Link on the footprint marked L. Green means the ground will take it.");
+        else if (!Progress.bSimultaneousAssistObserved && !Progress.bConstructionCompleted)
+            TutorialInstruction = LOCTEXT("LinkAssist", "Link: select a second Surveyor and right-click the unfinished Link so both crews build it together.");
+        else if (!Progress.bConstructionCompleted)
+            TutorialInstruction = LOCTEXT("LinkFinish", "Link: keep both Surveyors on the site until the Power Link completes.");
+        else if (!Progress.bRepairCompleted)
+            TutorialInstruction = LOCTEXT("LinkRepair", "Link: the older Power Link to the south-west is damaged. Select a Surveyor, press R, and click it; repair spends Matter until it is whole.");
+        else if (!Progress.bOperationalSelectionPublished)
+            TutorialInstruction = LOCTEXT("LinkInspect", "Link: select the Power Link you built and read its readout: connected, range, drop-off and Logistics.");
+        if (Progress.PredicateSatisfied()) CommitTutorialLesson(32, TEXT("link"));
+    }
+    else if ((ProgressMask & 64) == 0)
+    {
+        // Lesson seven — Foundry (SPEC-TUT-008 chapter 3, "Prepare a first
+        // force"): a Lancer queued at the staged Array Foundry by the player's
+        // own Produce order, and the fielded Lancer that order produced.
+        if (TutorialActiveLessonBit != 64)
+        {
+            uint32 Producer = 0;
+            uint32 MaxId = 0;
+            for (const auto& Entity : Player->Entities())
+            {
+                MaxId = FMath::Max(MaxId, static_cast<uint32>(Entity.id));
+                if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                    Entity.type == echoes::sim::EntityType::Barracks && Entity.completed &&
+                    Entity.hitPoints > 0 && Producer == 0)
+                    Producer = Entity.id;
+            }
+            if (Producer == 0)
+            {
+                TutorialInstruction = LOCTEXT("FoundryStageUnavailable", "The Foundry staging is unavailable. Restart the readiness check from the title menu.");
+                return;
+            }
+            TutorialObservedProductionEntity = Producer;
+            TutorialProductionSequence = 0;
+            TutorialFoundryMaxKnownEntityId = MaxId;
+            bTutorialFoundryEmerged = false;
+            TutorialAcceptedCommandSequences.Reset();
+            TutorialProductionLessonBit = 64;
+            TutorialActiveLessonBit = 64;
+            TraceTutorialObservation(FString::Printf(TEXT("foundry_begin producer=%u maxId=%u"), Producer, MaxId));
+        }
+        for (int32 Index = TutorialAcceptedCommandSequences.Num() - 1; Index >= 0; --Index)
+        {
+            const uint64 Sequence = TutorialAcceptedCommandSequences[Index].Key;
+            const auto Receipt = Simulation->FindCommandResolutionReceipt(UEchoesSimulationSubsystem::LocalPlayerId, Sequence);
+            if (!Receipt.has_value()) continue;
+            TutorialAcceptedCommandSequences.RemoveAt(Index);
+            if (Receipt->outcome != echoes::sim::CommandResolutionOutcome::Applied || TutorialProductionSequence != 0) continue;
+            for (const auto& Command : Simulation->CommandLog())
+            {
+                if (Command.player == UEchoesSimulationSubsystem::LocalPlayerId && Command.sequence == Sequence &&
+                    Command.type == echoes::sim::CommandType::Produce &&
+                    Command.actor == TutorialObservedProductionEntity &&
+                    Command.buildType == echoes::sim::EntityType::Soldier)
+                {
+                    TutorialProductionSequence = Sequence;
+                    break;
+                }
+            }
+        }
+        const echoes::sim::Entity* Producer = nullptr;
+        int32 Percent = 0;
+        for (const auto& Entity : Player->Entities())
+        {
+            if (Entity.id == TutorialObservedProductionEntity) Producer = &Entity;
+            if (TutorialProductionSequence != 0 && !bTutorialFoundryEmerged &&
+                Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
+                Entity.type == echoes::sim::EntityType::Soldier && Entity.completed &&
+                Entity.hitPoints > 0 && static_cast<uint32>(Entity.id) > TutorialFoundryMaxKnownEntityId)
+                bTutorialFoundryEmerged = true;
+        }
+        if (Producer == nullptr || Producer->hitPoints <= 0)
+        {
+            TutorialActiveLessonBit = 0;
+            TutorialProductionLessonBit = 0;
+            TutorialInstruction = LOCTEXT("FoundryStageReset", "The Array Foundry was lost. Restart the readiness check from the title menu.");
+            return;
+        }
+        if (Producer->productionRequired > 0)
+            Percent = FMath::Clamp(Producer->productionProgress * 100 / FMath::Max(1, Producer->productionRequired), 0, 100);
+        if (TutorialProductionSequence == 0)
+            TutorialInstruction = LOCTEXT("FoundryQueue", "Foundry: select the Array Foundry and queue a Lancer from its command card. The cost leaves the ledger the moment production starts.");
+        else if (!bTutorialFoundryEmerged)
+            TutorialInstruction = FText::Format(LOCTEXT("FoundryWait", "Foundry: Lancer in production, {0}%. It emerges at the exit and follows the rally when it is done."), FText::AsNumber(Percent));
+        else
+            TutorialInstruction = LOCTEXT("FoundryDone", "Foundry: your Lancer is on the field.");
+        if (TutorialProductionSequence != 0 && bTutorialFoundryEmerged && CommitTutorialLesson(64, TEXT("foundry")))
+            TutorialProductionLessonBit = 0;
+    }
     else
     {
         TutorialActiveLessonBit = 0;
         TutorialInstruction = LOCTEXT("LaterLessonsUnavailable",
-            "The first five readiness lessons are complete. Further lessons are not available yet.");
+            "The first seven readiness lessons are complete. Further lessons are not available yet.");
     }
 }
 void AEchoesPlayerController::TickM01Opening()
@@ -736,15 +977,23 @@ void AEchoesPlayerController::ObserveTutorialConstructionEvent(
     uint32 BuilderEntity,
     echoes::sim::Vec2 Site)
 {
-    (void)StructureType;
-    (void)BuilderEntity;
     (void)Site;
+    auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    if (!Bridge || !TutorialConstruction.IsActive() || StructureType != echoes::sim::EntityType::Dropoff ||
+        BuilderEntity == 0) return;
+    // The command was just accepted by the bridge; its sequence is judged
+    // against its Applied receipt on the next fixed step.
+    const TOptional<uint64> Sequence = Bridge->GetLastAcceptedLocalCommandSequence();
+    if (Sequence.IsSet()) ObserveTutorialAcceptedCommand(Sequence.GetValue(), EEchoesTutorialOrderCommandOrigin::DirectPlayerCommand);
 }
 
 void AEchoesPlayerController::ObserveTutorialProductionEvent(
     echoes::sim::EntityType ProducedType,
     uint32 ProducerEntity)
 {
-    (void)ProducedType;
-    (void)ProducerEntity;
+    auto* Bridge = GetWorld() ? GetWorld()->GetSubsystem<UEchoesSimulationSubsystem>() : nullptr;
+    if (!Bridge || TutorialProductionLessonBit == 0 || ProducerEntity != TutorialObservedProductionEntity ||
+        ProducedType != echoes::sim::EntityType::Soldier) return;
+    const TOptional<uint64> Sequence = Bridge->GetLastAcceptedLocalCommandSequence();
+    if (Sequence.IsSet()) ObserveTutorialAcceptedCommand(Sequence.GetValue(), EEchoesTutorialOrderCommandOrigin::DirectPlayerCommand);
 }
