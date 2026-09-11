@@ -1074,7 +1074,8 @@ void RunFrontageMatrix(int matches, FrontageOutcome& lanes, FrontageOutcome& con
         std::vector<EntityId> defenders;
         const std::int32_t jitterX = seed % 3;
         const std::int32_t jitterY = (seed / 3) % 3 - 1;
-        for (int index = 0; index < 16; ++index) {
+        // SPEC-BAL-009: a 1.3x force (13 against 10), amended from 1.6x.
+        for (int index = 0; index < 13; ++index) {
             const EntityId id = simulation.SpawnEntity(
                 0, Faction::MeridianCompact, EntityType::Soldier,
                 Vec2::FromTiles(8 + jitterX + (index % 4),
@@ -1130,14 +1131,10 @@ void TestBlobVersusFrontage() {
               << " | lanes off: defender " << control.defenderWins
               << " attacker " << control.attackerWins << " draw " << control.draws
               << " (" << kMatches << " matches each)\n";
-    // Measurement, not yet acceptance: with 12.5 cm pathing footprints the
-    // corridor throttles nothing and the blob spreads past the mouth before
-    // the ranks can punish it (RequirementsState "BAL-STR-1 first
-    // measurement", TBR-STR-006). The 70% acceptance bar returns once mobile
-    // collision footprints are authored; until then the rule must at least
-    // never make the prepared defender worse off than without it.
-    REQUIRE(lanes.defenderWins >= control.defenderWins);
-    REQUIRE(lanes.attackerWins <= control.attackerWins);
+    // SPEC-BAL-009 acceptance: the prepared defender wins at least 70%, and
+    // the schema-32 control (no firing lanes and no role bodies) does worse.
+    REQUIRE(lanes.defenderWins * 100 >= kMatches * 70);
+    REQUIRE(control.defenderWins < lanes.defenderWins);
 }
 
 // SPEC-RES-003 / schema 34: a waiter parked beside the deposit is walled in.

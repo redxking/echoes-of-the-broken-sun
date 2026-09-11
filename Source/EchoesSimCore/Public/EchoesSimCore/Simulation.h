@@ -84,7 +84,13 @@ inline constexpr std::uint32_t kFiringLaneReplayVersion = 33;
 // stalled the deposit for the rest of the match. Older recordings keep the
 // strictly non-preemptive slot they were made with.
 inline constexpr std::uint32_t kUnreachableSlotReleaseReplayVersion = 34;
-inline constexpr std::uint32_t kReplayVersion = kUnreachableSlotReleaseReplayVersion;
+// Schema 35 (2026-09-11, TBR-STR-006): soft separation spaces mobile units by
+// role body radius (worker 30, line 40, heavy 55, scout 30 cm) instead of the
+// 12.5 cm terrain footprint, so a massed group occupies real ground and a
+// chokepoint sets the width of a fight. The footprint still governs terrain
+// clearance and which unit yields. Older recordings keep footprint spacing.
+inline constexpr std::uint32_t kRoleBodyReplayVersion = 35;
+inline constexpr std::uint32_t kReplayVersion = kRoleBodyReplayVersion;
 // SPEC-UNIT-003/REL-FAC-005 fixed-step commitments, independent of render rate.
 inline constexpr Tick kBulwarkDeployTicks = 20;
 inline constexpr Tick kBulwarkPackTicks = 15;
@@ -1317,6 +1323,8 @@ public:
      * presentation can show the "no lane" state without inferring it. */
     [[nodiscard]] EntityId FriendlyBodyBlockingLane(const Entity& attacker,
                                                     const Entity& target) const;
+    /** TBR-STR-006: the radius soft separation keeps between mobile units. */
+    [[nodiscard]] std::int32_t SeparationBodyRadiusRaw(const Entity& entity) const;
     // SPEC-CMB-013: current rules require a clear lane through friendly bodies;
     // false only while replaying a pre-schema-33 recording.
     [[nodiscard]] bool FiringLanesEnforced() const {
@@ -1805,6 +1813,7 @@ private:
     bool legacyPoweredProductionReplaySemantics_ = false;
     bool legacyFiringLaneReplaySemantics_ = false;
     bool legacyUnreachableSlotReplaySemantics_ = false;
+    bool legacyRoleBodyReplaySemantics_ = false;
     bool legacyBulwarkReplaySemantics_ = false;
     bool legacyConstructionAssistReplaySemantics_ = false;
     void UpdateProjectiles();

@@ -36,7 +36,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-FAC-028` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z | 34ca1a0 | 2026-09-11 | Authored optic mesh generated via asset pipeline and integrated in C++ in place of placeholder cube |
 | `REL-UI-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
-| `SPEC-BAL-009` | IN PROGRESS | SRC | — | d51459e | 2026-09-11 | Sweep: chokepoint holds to 1.2x (current) / 1.3x (role bodies), never 1.6x; bar amended to 1.3x; TBR-STR-006 confirmed as the change that meets it |
+| `SPEC-BAL-009` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a0e8c04 | 2026-09-11 | Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `SPEC-RES-003` | AGENT VERIFIED | SRC | — | 3a6a2be | 2026-09-11 | Schema 34: unreachable slot holder releases the extraction slot; native stall test passes and fails with the rule off; Unreal run pending |
@@ -49,8 +49,23 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-003` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Owner delegation 2026-09-11; option A implemented |
 | `TBR-STR-004` | OPEN | NONE | — | 34ca1a0 | 2026-09-11 | Owner decision; design and recommendation in Docs/StrategicDepthDesign.md (2026-09-11) |
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
-| `TBR-STR-006` | OPEN | NONE | Docs/StrategicDepthDesign.md | 34ca1a0 | 2026-09-11 | Plan written (design section 7): separate body radius from terrain footprint, authored radii, separation on the spatial hash, schema 34; waits for the AI lane's slice to commit |
+| `TBR-STR-006` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a0e8c04 | 2026-09-11 | Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## Role bodies land under schema 35; BAL-STR-1 passes — TBR-STR-006, SPEC-BAL-009, 2026-09-11
+
+`SeparationBodyRadiusRaw` spaces moving units by role body (worker 30, line 40, heavy 55, scout 30 cm)
+instead of the 12.5 cm terrain footprint; the footprint still governs terrain clearance and which unit
+yields. Two fixes found by the held-back attempt: resting pairs tolerate half their combined body before
+correcting (a probe showed the last move order completing with a pair still 372 raw units overlapped, and
+separation then drifting a unit 121 raw units against a 51 tolerance; a third-body slack still failed),
+and a deployed Bulwark is never pushed by separation. Replay schema 35 (`kRoleBodyReplayVersion`), legacy
+flag wired into reset, prefix restore and replay begin; `EchoesResearchTest` pins 35.
+
+**BAL-STR-1 passes.** Harness at 13 attackers against 10 (bar amended to 1.3x): defender 60/60 with the
+current rules; the schema-32 control, which disables firing lanes and role bodies together, gives 7/60.
+The native test now asserts the real bar (at least 70% and a lower control). Native suite: see the
+commit. Unreal build and suite for schema 35 not yet run.
 
 ## Unreal suite on 50dc165 + 3a6a2be, and the role-body package held back — 2026-09-11, 21:30Z
 
@@ -5770,3 +5785,5 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T20:30Z — `TBR-STR-006` → **OPEN**; class NONE; evidence Docs/StrategicDepthDesign.md; commit 34ca1a0; Plan written (design section 7): separate body radius from terrain footprint, authored radii, separation on the spatial hash, schema 34; waits for the AI lane's slice to commit
 - 2026-09-11T21:24Z — `SPEC-RES-003` → **AGENT VERIFIED**; class SRC; evidence —; commit 3a6a2be; Schema 34: unreachable slot holder releases the extraction slot; native stall test passes and fails with the rule off; Unreal run pending
 - 2026-09-11T21:28Z — `SPEC-BAL-009` → **IN PROGRESS**; class SRC; evidence —; commit d51459e; Sweep: chokepoint holds to 1.2x (current) / 1.3x (role bodies), never 1.6x; bar amended to 1.3x; TBR-STR-006 confirmed as the change that meets it
+- 2026-09-11T21:36Z — `TBR-STR-006` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a0e8c04; Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending
+- 2026-09-11T21:36Z — `SPEC-BAL-009` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a0e8c04; Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending

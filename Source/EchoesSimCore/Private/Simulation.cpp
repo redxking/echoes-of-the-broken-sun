@@ -4161,6 +4161,22 @@ bool Simulation::ShouldPackAtDestination(const Entity& entity) const {
     return false;
 }
 
+std::int32_t Simulation::SeparationBodyRadiusRaw(const Entity& entity) const {
+    const std::int32_t footprint = FootprintHalfExtentRaw(entity.faction, entity.type);
+    if (legacyRoleBodyReplaySemantics_) {
+        return footprint;
+    }
+    // TBR-STR-006 role bodies (SC2-style unit radius, distinct from the
+    // terrain inner radius): a soldier's torso, not a pathing point.
+    switch (entity.type) {
+        case EntityType::Worker: return std::max(footprint, 30 * kFixedScale / 100);
+        case EntityType::Soldier: return std::max(footprint, 40 * kFixedScale / 100);
+        case EntityType::HeavyUnit: return std::max(footprint, 55 * kFixedScale / 100);
+        case EntityType::ScoutUnit: return std::max(footprint, 30 * kFixedScale / 100);
+        default: return footprint;
+    }
+}
+
 void Simulation::ApplySoftSeparation(
     const std::vector<Vec2>& positionsBeforeOrders) {
     struct MobileCandidate {
@@ -4169,6 +4185,7 @@ void Simulation::ApplySoftSeparation(
         std::int32_t x;
         std::int32_t y;
         std::int32_t halfExtent;
+        std::int32_t body;
         std::int32_t movementPerTick;
         PlayerId owner;
         bool moving;
@@ -4190,6 +4207,7 @@ void Simulation::ApplySoftSeparation(
             e.position.x.Raw(),
             e.position.y.Raw(),
             FootprintHalfExtentRaw(e.faction, e.type),
+            SeparationBodyRadiusRaw(e),
             e.movementPerTickRaw,
             e.owner,
             moving
@@ -4216,7 +4234,8 @@ void Simulation::ApplySoftSeparation(
                 first.assignedResourceNode == second.assignedResourceNode) {
                 continue;
             }
-            const std::int32_t minClearance = mobile[i].halfExtent + mobile[j].halfExtent;
+            // Spacing uses role bodies; who yields still uses the footprint.
+            const std::int32_t minClearance = mobile[i].body + mobile[j].body;
             const std::int64_t deltaX = static_cast<std::int64_t>(mobile[j].x) - mobile[i].x;
             const std::int64_t deltaY = static_cast<std::int64_t>(mobile[j].y) - mobile[i].y;
             if (Abs64(deltaX) >= minClearance || Abs64(deltaY) >= minClearance) {
@@ -4229,7 +4248,17 @@ void Simulation::ApplySoftSeparation(
             }
 
             const std::int64_t dist = IntegerSqrt64(distSq);
-            const std::int64_t overlap = minClearance - dist;
+            std::int64_t overlap = minClearance - dist;
+            // TBR-STR-006: bodies are firm while moving and soft at rest. Two
+            // resting units tolerate half their combined body before
+            // correcting (resting line units settle 40 cm apart, still wider
+            // than the old 25 cm), so a settled group does not shove itself
+            // after arrival (SPEC-MOV-012), while a column pushing through a
+            // gap still takes its full width. A third of the body was
+            // measured and still drifts past the rest tolerance.
+            if (!legacyRoleBodyReplaySemantics_ && !mobile[i].moving && !mobile[j].moving) {
+                overlap -= minClearance / 2;
+            }
             if (overlap <= 0) {
                 continue;
             }
@@ -4307,6 +4336,12 @@ void Simulation::ApplySoftSeparation(
                 }
             }
 
+            if (!legacyRoleBodyReplaySemantics_) {
+                // A planted (deployed) unit holds its ground; its neighbour moves.
+                if (entityA.deployed && !entityB.deployed) { pushA = false; pushB = true; }
+                else if (entityB.deployed && !entityA.deployed) { pushB = false; pushA = true; }
+                else if (entityA.deployed && entityB.deployed) { pushA = false; pushB = false; }
+            }
             if (pushA) {
                 const Vec2 candA = Vec2::FromRaw(
                     static_cast<std::int32_t>(entityA.position.x.Raw() - pushX),
@@ -9521,8 +9556,17 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 }
                 return false;
             };
+            // REL-AI-031 "convert advantage into Core pressure": a captured
+            // Future Well is an objective with 100,000 hit points, not a
+            // fight. Choosing it as the nearest hostile parked a whole
+            // victorious army on the Well for the rest of the match while
+            // the defenceless Core stood eight tiles away (balance matrix
+            // seed 151845016068096; CompleteSkirmishDefeat). A Well is a
+            // target only when nothing else hostile is in view.
             const Entity* nearestEnemy = nullptr;
+            const Entity* nearestWell = nullptr;
             std::uint64_t nearestDistance = std::numeric_limits<std::uint64_t>::max();
+            std::uint64_t nearestWellDistance = std::numeric_limits<std::uint64_t>::max();
             for (const Entity& candidate : entities_) {
                 if (!config_.IsHostile(player, candidate.owner) ||
                     candidate.hitPoints <= 0 ||
@@ -9533,12 +9577,24 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 }
                 const std::uint64_t distance =
                     DistanceSquaredRaw(actor.position, candidate.position);
+                if (candidate.type == EntityType::FutureWell) {
+                    if (distance < nearestWellDistance ||
+                        (distance == nearestWellDistance &&
+                         (nearestWell == nullptr || candidate.id < nearestWell->id))) {
+                        nearestWell = &candidate;
+                        nearestWellDistance = distance;
+                    }
+                    continue;
+                }
                 if (distance < nearestDistance ||
                     (distance == nearestDistance &&
                      (nearestEnemy == nullptr || candidate.id < nearestEnemy->id))) {
                     nearestEnemy = &candidate;
                     nearestDistance = distance;
                 }
+            }
+            if (nearestEnemy == nullptr) {
+                nearestEnemy = nearestWell;
             }
             if (nearestEnemy != nullptr) {
                 command.type = CommandType::Attack;
@@ -11729,6 +11785,7 @@ void Simulation::CaptureReplayBaseline() {
     legacyPoweredProductionReplaySemantics_ = false;
     legacyFiringLaneReplaySemantics_ = false;
     legacyUnreachableSlotReplaySemantics_ = false;
+    legacyRoleBodyReplaySemantics_ = false;
     replayForfeitingPlayer_ = kNeutralPlayer;
 }
 
@@ -11777,6 +11834,8 @@ bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
         prefix.version < kFiringLaneReplayVersion;
     restored.legacyUnreachableSlotReplaySemantics_ =
         prefix.version < kUnreachableSlotReleaseReplayVersion;
+    restored.legacyRoleBodyReplaySemantics_ =
+        prefix.version < kRoleBodyReplayVersion;
     restored.ResolveAegisPower();
     if (replayed->StateChecksum() != restored.StateChecksum()) {
         SetError(error, "replay prefix state does not match restored state");
@@ -11859,6 +11918,8 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
         replay.version < kFiringLaneReplayVersion;
     simulation->legacyUnreachableSlotReplaySemantics_ =
         replay.version < kUnreachableSlotReleaseReplayVersion;
+    simulation->legacyRoleBodyReplaySemantics_ =
+        replay.version < kRoleBodyReplayVersion;
     // Loading a save applies current network rules. Playback must restore the
     // original rules before its first checksum, including zero-tick records.
     simulation->ResolveAegisPower();
