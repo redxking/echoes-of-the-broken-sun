@@ -28,6 +28,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 
 | ID | State | Class | Evidence | Commit | Date | Note |
 |---|---|---|---|---|---|---|
+| `REL-AI-006` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-6.json | bd2f471 | 2026-09-11 | Cohesion is now the blocking slice: piecemeal commitment leaves every mirror unresolved once defenders return fire |
 | `REL-AI-022` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-2.json | 34ca1a0 | 2026-09-11 | Content-rules matrix 778/1000 terminal after the deposit-expansion planner; Meridian dominant, Kharuun never beats it; numbers diagnostic only (synthetic map, Adaptive only, concurrent lanes change) |
 | `REL-AI-031` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-2.json | 34ca1a0 | 2026-09-11 | Expand to known resources implemented (spread, waiting re-send, remembered deposits, frontier prospecting near the Anchor, fair view only); convert-advantage and Choir economy stalls remain |
 | `REL-ECO-010` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | [INSUFFICIENT_DAWN]/[INSUFFICIENT_MATTER] refusals name unit, price, holding and source; Gameplay.ProductionRefusalText |
@@ -5851,6 +5852,19 @@ shoot back, which rules out idle passivity as its cause; with the other lane's d
 Core at 1,062, four opening combat units) it is the opponent's killing power and wants its own slice
 beside REL-AI-006 cohesion.
 
+**Matrix after idle return fire: 557/1,000, and every mirror now stalls.** `BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-6.json`
+(harness built at 85eaf3c): 557 authoritative Corefalls, down from 668 before idle return fire and 705
+before that. The movement is all in the mirrors and the even pairing. Kharuun's mirror went from 111/111
+finished to 0/111, the Meridian mirror stays 0/112, the Choir mirror 2/111, and Kharuun-versus-Meridian
+0/111; every stall reads "commands fail to convert into corefall". Every uneven cross-faction pairing
+still finishes 111/111. This is a spec-correct fix making the diagnostic worse, and it should be read that
+way: defenders that shoot back are harder to break, so an attack that used to end a match no longer does,
+and the AI still commits piecemeal, so evenly matched seats grind without resolving. It is the same root
+as `CompleteSkirmishDefeat` (an opponent that cannot finish a Core at 1,062 hit points in 90,000 ticks)
+and as the other lane's BAL-STR-2 result (prepared ground as costed does not beat a blind rush). The
+planner slice that addresses it is REL-AI-006 cohesion: mass a strike force and commit it together
+instead of feeding it in. Numbers stay diagnostic only: one synthetic map, Adaptive only.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
@@ -6204,3 +6218,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T22:40Z — `TBR-STR-007` → **OPEN**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit c2437ed; Owner decision: a powered Aegis only matters at parity (6/30); prepared ground as costed does not beat a blind rush
 - 2026-09-11T22:47Z — `SPEC-CMB-007` → **AGENT VERIFIED**; class PKG-AUTO; evidence —; commit 2bd56de; Idle return fire (D3 lane, schema 36) fixes the acquisition defect; full Unreal suite 139 passed, only CompleteSkirmishDefeat failing
 - 2026-09-11T22:47Z — `SPEC-STANCE-002` → **AGENT VERIFIED**; class PKG-AUTO; evidence —; commit 2bd56de; Defensive default answers threats via idle return fire (schema 36); verified in the D3 lane's full suite
+- 2026-09-11T22:48Z — `REL-AI-006` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-6.json; commit bd2f471; Cohesion is now the blocking slice: piecemeal commitment leaves every mirror unresolved once defenders return fire
