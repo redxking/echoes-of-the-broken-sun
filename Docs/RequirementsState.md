@@ -54,7 +54,38 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-004` | OPEN | NONE | — | 34ca1a0 | 2026-09-11 | Owner decision; design and recommendation in Docs/StrategicDepthDesign.md (2026-09-11) |
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
 | `TBR-STR-006` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
+| `TBR-STR-007` | OPEN | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | c2437ed | 2026-09-11 | Owner decision: a powered Aegis only matters at parity (6/30); prepared ground as costed does not beat a blind rush |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## BAL-STR-2 measured at last: prepared ground does not beat a blind rush — 2026-09-11, 22:40Z
+
+First valid measurement of `SPEC-BAL-010`'s subject, now that schema 36 lets defenders shoot back. Scratch
+only (`scratchpad/balstr2b`), tree at `85eaf3c`. Defenders hold around their Core; the Aegis sits beyond the
+Core's 800 cm reach so it genuinely depends on its Power Link (the earlier harness placed it inside that
+reach, so "link cut" never unpowered it; the power column now reads 30/30 powered and 0/30 cut, as it
+should). Attackers attack-move onto the Core. Defender wins if the Core stands after 3,000 ticks, 30 seeds.
+
+**Result: the Core falls in almost every cell**, at 6 or 8 defenders against 8, 10 or 12 attackers, with a
+powered Aegis, with its Link cut, or with an extra soldier instead. The single exception is the mirror at
+parity: 8 Meridian defenders + powered Aegis against 8 Meridian attackers survive **6/30**, against **0/30**
+with the Link cut and **0/30** with an extra soldier instead. So the Aegis is worth something, but only at
+parity, and nowhere near Rule D's claim that prepared ground beats a blind attack.
+
+**The harness is sound this time.** A traced match shows the attackers genuinely engaging: the Aegis fires
+and dies by tick 151, the defence damages six of eight attackers, is wiped between ticks 201 and 301, and
+the Core falls at 351. Nobody walks past anybody. A Meridian-vs-Meridian mirror rules out faction data,
+and the authored line units are within 7% of each other in damage per second (Lancer 12.0, Riftstalker 12.7,
+Intervalist 12.8), so the "25 against 10" framing does not apply to line-versus-line.
+
+**Why, arithmetically.** The Aegis deals 28 damage every 20 ticks, 1.4 per second, against roughly 12 per
+attacking soldier: about a tenth of one soldier's output, on 520 HP that eight attackers remove in ~35
+ticks of contact. `REL-FAC-004`'s numbers cannot tip a fight, so Rule D currently rests on an assumption
+this lane has now falsified.
+
+**Open for the owner, not fixed here.** This is a design finding, not a defect: either the Aegis is costed
+as a delaying tripwire and Rule D's wording overstates it, or the turret needs numbers that matter (rate,
+range, or hit points) and that is a balance decision with roster consequences. Recorded as `TBR-STR-007`.
+`SPEC-BAL-010` stays unwritten until that ruling; this entry is its evidence.
 
 ## Schema 36 lands; this lane's balance numbers re-measured against it — 2026-09-11, 22:35Z
 
@@ -519,6 +550,16 @@ here by the agent as option A of each record; the owner can overturn any of them
 * **TBR-STR-004 — Choir Resolution.** DECIDED option A in principle; implementation waits on the
   `REL-FAC-027.HC.WARDEN` / `.AFTERIMAGE` role rulings that already block `REL-AI-024`, so it lands with
   the Choir package (D4), not before.
+* **TBR-STR-007 — Prepared ground: tripwire or real defence.** OPEN, owner decision. Measured 2026-09-11
+  (entry above): a powered Aegis changes nothing except at parity (6/30), because 28 damage every 20 ticks
+  is about a tenth of one attacking soldier's output while its 520 HP falls in ~35 ticks of contact.
+  Options: (A) accept the Aegis as a delaying tripwire and soften Rule D's claim in the design and in
+  `REL-FAC-004`'s purpose text; (B) give the turret numbers that matter (rate, range or hit points) and
+  re-measure BAL-STR-2, accepting roster and Dawn-cost consequences; (C) leave both and let position and
+  height carry defence, which the measured chokepoint and trench results already do. Recommendation: A for
+  wording plus C for play, with B considered only if the owner wants static defence to be a real strategy
+  rather than a delay. Not decided by this lane.
+
 * **TBR-STR-005 — BAL-STR test family.** DECIDED adopt. BAL-STR-1 (blob vs frontage with a rule-off
   control) is built natively as `SPEC-BAL-009` in this continuation; the remaining six follow their rules.
 
@@ -6114,3 +6155,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T22:32Z — `SPEC-CMB-007` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-22.log; commit e925a75; Idle entities acquire and return fire under schema 36; return-fire scope only, full hierarchy deferred with the Stop stand-down stance
 - 2026-09-11T22:32Z — `SPEC-STANCE-002` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/test_sim-22.log; commit e925a75; Defensive default answers attackers in weapon range; the 400 cm pursuit is not built
 - 2026-09-11T22:33Z — `SPEC-BAL-009` → **AGENT VERIFIED**; class SRC; evidence —; commit 85eaf3c; Re-measured on schema 36 (85eaf3c): unchanged, 60/60 vs 7/60 control; harness units all carry explicit orders so idle return fire does not apply
+- 2026-09-11T22:40Z — `TBR-STR-007` → **OPEN**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit c2437ed; Owner decision: a powered Aegis only matters at parity (6/30); prepared ground as costed does not beat a blind rush

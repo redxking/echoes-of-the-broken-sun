@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-11 22:33 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-11 22:40 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `85eaf3c` (upstream `50dc165`); 355 dirty paths, of which non-asset: `Docs/RequirementsState.md`.
+- Branch `main` at `c2437ed` (upstream `50dc165`); 358 dirty paths, of which non-asset: `Docs/RequirementsState.md`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesGuardEscortSemanticsTest.cpp`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesResearchTest.cpp`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -25,21 +25,21 @@ Read this, then fetch only the requirement records you touch:
 
 ## Newest RequirementsState entries
 
+- BAL-STR-2 measured at last: prepared ground does not beat a blind rush — 2026-09-11, 22:40Z
 - Schema 36 lands; this lane's balance numbers re-measured against it — 2026-09-11, 22:35Z
 - Combined Unreal verdict at d846a3b, with the D3 lane's idle fire in the tree — 2026-09-11, 22:30Z
 - Regression: GuardEscortSemantics fails on the combined tree — 2026-09-11, 22:23Z
-- Idle defensive fire: reproduced and owned by the D3 lane, schema 36 — 2026-09-11
 
 ## Recently recorded state rows
 
 - `TBR-UX-001` OPEN · NONE · 2026-09-11
+- `TBR-STR-007` OPEN · SRC · 2026-09-11
 - `TBR-STR-006` AGENT VERIFIED · PKG-AUTO · 2026-09-11
 - `TBR-STR-005` IN PROGRESS · SRC · 2026-09-11
 - `TBR-STR-004` OPEN · NONE · 2026-09-11
 - `TBR-STR-003` IMPLEMENTED · SRC · 2026-09-11
 - `TBR-STR-002` AGENT VERIFIED · PKG-AUTO · 2026-09-11
 - `TBR-STR-001` IMPLEMENTED · SRC · 2026-09-11
-- `TBR-SCP-012` IN PROGRESS · PKG-AUTO · 2026-09-11
 
 ## Before you stop
 
