@@ -189,7 +189,7 @@ bool FEchoesPointerSurfaceCoverageTest::RunTest(const FString& Parameters)
                  HudLayout.ResourcePanel.GetSize().Y + KINDA_SMALL_NUMBER >= 62.0f * Case.HudScale);
         for (const FEchoesCommandDeckProfile& Profile : DeckProfiles)
         {
-            const TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<6>>
+            const TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<9>>
                 Entries = FEchoesCommandDeckModel::BuildActionEntries(Profile);
             TestTrue(
                 *FString::Printf(
@@ -242,7 +242,7 @@ bool FEchoesPointerSurfaceCoverageTest::RunTest(const FString& Parameters)
 
     // 3. Cursor-targeted deck actions must arm rather than fire at the panel.
     {
-        const TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<6>>
+        const TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<9>>
             WorkerEntries = FEchoesCommandDeckModel::BuildActionEntries(
                 FEchoesCommandDeckProfile{2, 0, 0, 0, false, false});
         bool bFoundBuild = false;

@@ -74,17 +74,17 @@ struct FEchoesCommandDeckModel final
      * clickable entries in the same order. The right-mouse context entry is
      * omitted: it is already a mouse action and needs no button.
      */
-    [[nodiscard]] static TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<6>>
+    [[nodiscard]] static TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<9>>
     BuildActionEntries(const FEchoesCommandDeckProfile& Profile)
     {
-        TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<6>> Entries;
+        TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<9>> Entries;
         const auto Add = [&Entries](
                              EEchoesCommandDeckAction Action,
                              const TCHAR* Label,
                              const TCHAR* Hotkey,
                              bool bRequiresCursorTarget)
         {
-            if (Entries.Num() < 6)
+            if (Entries.Num() < 9)
             {
                 Entries.Add(FEchoesCommandDeckActionEntry{
                     Action, Label, Hotkey, bRequiresCursorTarget});

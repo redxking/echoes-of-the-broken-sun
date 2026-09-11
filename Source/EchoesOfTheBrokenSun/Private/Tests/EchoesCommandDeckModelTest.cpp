@@ -41,7 +41,7 @@ bool FEchoesCommandDeckModelTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Worker exposes its existing repair gesture"),
         Worker.Contains(TEXT("[R] REPAIR")));
     const auto WorkerEntries = FEchoesCommandDeckModel::BuildActionEntries(Profile);
-    TestEqual(TEXT("Worker deck retains room within the six-slot command contract"),
+    TestEqual(TEXT("Worker deck retains room within the nine-slot command contract"),
         WorkerEntries.Num(), 5);
     const FEchoesCommandDeckActionEntry* RepairEntry = WorkerEntries.FindByPredicate(
         [](const FEchoesCommandDeckActionEntry& Entry)

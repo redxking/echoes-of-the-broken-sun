@@ -10,7 +10,7 @@
  */
 struct FEchoesCommandDeckLayout final
 {
-    static constexpr int32 MaxButtons = 6;
+    static constexpr int32 MaxButtons = 9;
     static constexpr float MinimumButtonWidth = 64.0f;
 
     FBox2D Panel = FBox2D(ForceInit);

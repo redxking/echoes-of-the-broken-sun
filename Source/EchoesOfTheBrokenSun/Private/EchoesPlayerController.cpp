@@ -12407,7 +12407,7 @@ bool AEchoesPlayerController::HandleBattlefieldPointerPressed(
         Layout.CommandDeckPanel.IsInsideOrOn(ScreenPosition);
     if (bOverCommandDeck)
     {
-        const TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<6>>
+        const TArray<FEchoesCommandDeckActionEntry, TInlineAllocator<9>>
             Entries = FEchoesCommandDeckModel::BuildActionEntries(
                 BuildCommandDeckProfile());
         const FEchoesCommandDeckLayout DeckLayout =
