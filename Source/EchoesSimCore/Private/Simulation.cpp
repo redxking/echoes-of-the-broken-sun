@@ -26,7 +26,14 @@ constexpr std::uint32_t kMaximumSerializedCommands =
     static_cast<std::uint32_t>(kMaximumCommandLogEntries);
 constexpr std::size_t kMaximumCachedPathFields = 128;
 // SPEC-BUD-006 authored Logistics ceiling for one player.
-constexpr std::int32_t kMaximumPopulationCapacity = 200;
+// REL-ECO-011 (TBR-STR-003, 2026-09-11): the Logistics ceiling is 120 under
+// current rules; recordings older than schema 33 keep the 200 they were made
+// with. Above kCommittedBandThreshold committed Logistics every further two
+// points of fielded population cost one more (a line unit costs 3, not 2), so
+// mass is taxed by the rules and not only by the map.
+constexpr std::int32_t kMaximumPopulationCapacity = 120;
+constexpr std::int32_t kLegacyMaximumPopulationCapacity = 200;
+constexpr std::int32_t kCommittedBandThreshold = 80;
 constexpr std::int32_t kGuardLeashRaw = 6 * kFixedScale;
 constexpr std::int32_t kGuardFollowRaw = 2 * kFixedScale;
 constexpr std::int32_t kPatrolLeashRaw = 6 * kFixedScale;
@@ -66,6 +73,15 @@ constexpr std::int32_t kMaximumMapDimension =
     std::numeric_limits<std::int32_t>::max() / kFixedScale;
 constexpr std::uint8_t kValidCommandCoreProtectionMask =
     static_cast<std::uint8_t>((1U << kMaximumPlayers) - 1U);
+
+// Every replay schema from the legacy cutoff to the current one has explicit
+// semantics (the legacy*ReplaySemantics_ flags), so all of them load. A list
+// of named versions used to live here and silently dropped schemas 30 to 32
+// as each bump appended only the newest constant; retained recordings and
+// campaign checkpoints at those versions were then refused as unsupported.
+[[nodiscard]] bool IsSupportedReplayVersion(std::uint32_t version) {
+    return version >= kLegacyReplayVersion && version <= kReplayVersion;
+}
 
 [[nodiscard]] bool HasChoirSnapshotSchema(std::uint32_t version) {
     return version >= kChoirSnapshotVersion;
@@ -1972,7 +1988,7 @@ std::int32_t Simulation::MobileEntityReservations(PlayerId player) const {
     return CountMobileEntityReservations(entities_, player);
 }
 
-std::int32_t Simulation::PopulationUsed(PlayerId player) const {
+std::int32_t Simulation::BasePopulationUsed(PlayerId player) const {
     if (FindPlayer(player) == nullptr) {
         return 0;
     }
@@ -1985,6 +2001,22 @@ std::int32_t Simulation::PopulationUsed(PlayerId player) const {
         }
     }
     return used;
+}
+
+std::int32_t Simulation::CommittedBandSurcharge(PlayerId player) const {
+    if (legacyFiringLaneReplaySemantics_) {
+        return 0;
+    }
+    const std::int32_t base = BasePopulationUsed(player);
+    return std::max(0, base - kCommittedBandThreshold) / 2;
+}
+
+std::int32_t Simulation::PopulationUsed(PlayerId player) const {
+    // REL-ECO-011.BAND: the fielded army above the committed threshold costs
+    // more to hold. Reservations in production keep their admitted cost; the
+    // surcharge lands when the unit stands on the field.
+    return SaturatingAdd(BasePopulationUsed(player),
+                         CommittedBandSurcharge(player));
 }
 
 std::int32_t Simulation::PopulationCapacity(PlayerId player) const {
@@ -2017,7 +2049,9 @@ std::int32_t Simulation::PopulationCapacity(PlayerId player) const {
     // additive and unbounded, so without this a player who spends on nothing but
     // depots raises the army ceiling past the load the 400-unit performance
     // budget is qualified against.
-    return std::min(capacity, kMaximumPopulationCapacity);
+    return std::min(capacity, legacyFiringLaneReplaySemantics_
+                                  ? kLegacyMaximumPopulationCapacity
+                                  : kMaximumPopulationCapacity);
 }
 
 bool Simulation::IsOperationalDropoff(const Entity& entity) const {
@@ -6178,7 +6212,103 @@ void Simulation::ProcessRepair(Entity& worker) {
     }
 }
 
+namespace {
+// SPEC-CMB-013: a body occludes with at least this radius. Pathing footprints
+// are 12.5 cm so units can pass in corridors; a soldier's torso is not, and a
+// lane rule measured against the footprint fired through nearly everyone.
+constexpr std::int64_t kFiringLaneBodyRadiusRaw = 3 * kFixedScale / 5; // 60 cm
+
+// SPEC-CMB-013 (TBR-STR-001): allied mobile bodies occlude the shot the way
+// Mineral Cover does. Only the segment strictly between the two footprints
+// counts, so a shoulder-to-shoulder neighbour never blocks and the target
+// itself is never its own obstruction. Shared by the authoritative simulation
+// and the player view so presentation reports exactly what the rules apply.
+EntityId FriendlyBodyBlockingLaneIn(const std::vector<Entity>& entities,
+                                    const SimulationConfig& config,
+                                    bool lanesEnforced,
+                                    const Entity& attacker,
+                                    const Entity& target) {
+    if (!lanesEnforced || attacker.attackDamage <= 0) {
+        return 0;
+    }
+    const std::int64_t deltaX =
+        static_cast<std::int64_t>(target.position.x.Raw()) -
+        attacker.position.x.Raw();
+    const std::int64_t deltaY =
+        static_cast<std::int64_t>(target.position.y.Raw()) -
+        attacker.position.y.Raw();
+    const std::int64_t lengthSquared = deltaX * deltaX + deltaY * deltaY;
+    if (lengthSquared <= 0) {
+        return 0;
+    }
+    const std::int64_t length = IntegerSqrt64(lengthSquared);
+    const std::int64_t muzzleClearance =
+        FootprintHalfExtentFor(config.rules, attacker.faction, attacker.type);
+    const std::int64_t targetClearance =
+        FootprintHalfExtentFor(config.rules, target.faction, target.type);
+    EntityId nearest = 0;
+    std::int64_t nearestDot = std::numeric_limits<std::int64_t>::max();
+    for (const Entity& body : entities) {
+        if (body.id == attacker.id || body.id == target.id ||
+            body.hitPoints <= 0 || !body.completed ||
+            body.temporaryMineralCover ||
+            config.IsHostile(attacker.owner, body.owner)) {
+            continue;
+        }
+        if (body.type != EntityType::Worker && body.type != EntityType::Soldier &&
+            body.type != EntityType::HeavyUnit &&
+            body.type != EntityType::ScoutUnit) {
+            continue;
+        }
+        if (body.deployed) {
+            continue; // a deployed shield is low; allies fire over it
+        }
+        const std::int64_t bodyRadius = std::max<std::int64_t>(
+            kFiringLaneBodyRadiusRaw,
+            FootprintHalfExtentFor(config.rules, body.faction, body.type));
+        const std::int64_t bodyX =
+            static_cast<std::int64_t>(body.position.x.Raw()) -
+            attacker.position.x.Raw();
+        const std::int64_t bodyY =
+            static_cast<std::int64_t>(body.position.y.Raw()) -
+            attacker.position.y.Raw();
+        const std::int64_t dot = bodyX * deltaX + bodyY * deltaY;
+        const std::int64_t along = dot / length;
+        if (along <= muzzleClearance + bodyRadius ||
+            along >= length - targetClearance) {
+            continue;
+        }
+        const std::int64_t cross = bodyX * deltaY - bodyY * deltaX;
+        const std::int64_t perpendicular = Abs64(cross) / length;
+        if (perpendicular >= bodyRadius) {
+            continue;
+        }
+        if (dot < nearestDot) {
+            nearestDot = dot;
+            nearest = body.id;
+        }
+    }
+    return nearest;
+}
+}  // namespace
+
+EntityId Simulation::FriendlyBodyBlockingLane(const Entity& attacker,
+                                              const Entity& target) const {
+    return FriendlyBodyBlockingLaneIn(entities_, config_,
+                                      !legacyFiringLaneReplaySemantics_,
+                                      attacker, target);
+}
+
+EntityId PlayerView::FriendlyBodyBlockingLane(const Entity& attacker,
+                                              const Entity& target) const {
+    return FriendlyBodyBlockingLaneIn(entities_, config_, firingLanesEnforced_,
+                                      attacker, target);
+}
+
 bool Simulation::HasLineOfFire(const Entity& attacker, const Entity& target) const {
+    if (FriendlyBodyBlockingLane(attacker, target) != 0) {
+        return false;
+    }
     if (!HasLineOfSight(attacker.position, target.position)) {
         // Destructible mineral cover may receive the shot. A permanent wall
         // before that cover still blocks it; do not spend a cooldown on it.
@@ -7992,9 +8122,11 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
     view.usesBulwarkCommitmentRules_ = !legacyBulwarkReplaySemantics_;
     view.productionRequiresNetworkPower_ =
         !legacyLinkReplaySemantics_ && !legacyPoweredProductionReplaySemantics_;
+    view.firingLanesEnforced_ = !legacyFiringLaneReplaySemantics_;
     view.player_ = *playerState;
     view.decisionSeed_ = config_.randomSeed;
     view.populationUsed_ = PopulationUsed(player);
+    view.committedBandSurcharge_ = CommittedBandSurcharge(player);
     view.populationCapacity_ = PopulationCapacity(player);
     view.mobileEntityCount_ = MobileEntityCount(player);
     view.mobileEntityReservations_ = MobileEntityReservations(player);
@@ -9015,6 +9147,9 @@ std::vector<Command> Simulation::GenerateAiCommands(
                     std::uint64_t bestDistance = std::numeric_limits<std::uint64_t>::max();
                     Vec2 frontier{};
                     bool haveFrontier = false;
+                    std::uint64_t farDistance = std::numeric_limits<std::uint64_t>::max();
+                    Vec2 farFrontier{};
+                    bool haveFarFrontier = false;
                     constexpr std::array<std::array<std::int32_t, 2>, 4> steps{{
                         {{0, -1}}, {{1, 0}}, {{0, 1}}, {{-1, 0}},
                     }};
@@ -9044,15 +9179,29 @@ std::vector<Command> Simulation::GenerateAiCommands(
                                 continue;
                             }
                             const std::uint64_t distance = DistanceSquaredRaw(centre, tile);
-                            if (distance > kProspectRadiusRaw * kProspectRadiusRaw) {
-                                continue;
-                            }
-                            if (distance < bestDistance) {
-                                bestDistance = distance;
-                                frontier = tile;
-                                haveFrontier = true;
+                            if (distance <= kProspectRadiusRaw * kProspectRadiusRaw) {
+                                if (distance < bestDistance) {
+                                    bestDistance = distance;
+                                    frontier = tile;
+                                    haveFrontier = true;
+                                }
+                            } else if (distance < farDistance) {
+                                farDistance = distance;
+                                farFrontier = tile;
+                                haveFarFrontier = true;
                             }
                         }
+                    }
+                    // Once the ground within the radius is fully explored and
+                    // still holds only the crowded deposit, look farther: the
+                    // nearest frontier to home anywhere. Without this a seat
+                    // whose home ring was all explored never prospected again,
+                    // queued ten workers on one extraction slot and issued no
+                    // further orders for the rest of the match (seat 0 on the
+                    // harness map, 34 commands in 8,000 ticks, 2026-09-11).
+                    if (!haveFrontier && haveFarFrontier) {
+                        frontier = farFrontier;
+                        haveFrontier = true;
                     }
                     if (!haveFrontier) {
                         return false;
@@ -11529,6 +11678,7 @@ void Simulation::CaptureReplayBaseline() {
     legacyOpenGroundReplaySemantics_ = false;
     legacyMaskedCorridorReplaySemantics_ = false;
     legacyPoweredProductionReplaySemantics_ = false;
+    legacyFiringLaneReplaySemantics_ = false;
     replayForfeitingPlayer_ = kNeutralPlayer;
 }
 
@@ -11573,6 +11723,8 @@ bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
         prefix.version < kMaskedCorridorReplayVersion;
     restored.legacyPoweredProductionReplaySemantics_ =
         prefix.version < kPoweredProductionReplayVersion;
+    restored.legacyFiringLaneReplaySemantics_ =
+        prefix.version < kFiringLaneReplayVersion;
     restored.ResolveAegisPower();
     if (replayed->StateChecksum() != restored.StateChecksum()) {
         SetError(error, "replay prefix state does not match restored state");
@@ -11617,13 +11769,7 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
     if (error != nullptr) {
         error->clear();
     }
-    if (replay.version != kLegacyReplayVersion &&
-        replay.version != kForfeitReplayVersion &&
-        replay.version != kProductionReplayVersion &&
-        replay.version != kLinkMechanicsReplayVersion &&
-        replay.version != kBulwarkCommitmentReplayVersion &&
-        replay.version != kMaintenanceReplayVersion &&
-        replay.version != kReplayVersion) {
+    if (!IsSupportedReplayVersion(replay.version)) {
         SetError(error, "replay version is unsupported");
         return std::nullopt;
     }
@@ -11657,6 +11803,8 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
         replay.version < kMaskedCorridorReplayVersion;
     simulation->legacyPoweredProductionReplaySemantics_ =
         replay.version < kPoweredProductionReplayVersion;
+    simulation->legacyFiringLaneReplaySemantics_ =
+        replay.version < kFiringLaneReplayVersion;
     // Loading a save applies current network rules. Playback must restore the
     // original rules before its first checksum, including zero-tick records.
     simulation->ResolveAegisPower();
@@ -11675,13 +11823,7 @@ std::optional<Simulation> Simulation::ReplayToEnd(const ReplayRecord& replay,
     if (error != nullptr) {
         error->clear();
     }
-    if (replay.version != kLegacyReplayVersion &&
-        replay.version != kForfeitReplayVersion &&
-        replay.version != kProductionReplayVersion &&
-        replay.version != kLinkMechanicsReplayVersion &&
-        replay.version != kBulwarkCommitmentReplayVersion &&
-        replay.version != kMaintenanceReplayVersion &&
-        replay.version != kReplayVersion) {
+    if (!IsSupportedReplayVersion(replay.version)) {
         SetError(error, "replay version is unsupported");
         return std::nullopt;
     }
@@ -11809,13 +11951,7 @@ std::optional<MatchReport> Simulation::BuildMatchReport(
     if (error != nullptr) {
         error->clear();
     }
-    if (replay.version != kLegacyReplayVersion &&
-        replay.version != kForfeitReplayVersion &&
-        replay.version != kProductionReplayVersion &&
-        replay.version != kLinkMechanicsReplayVersion &&
-        replay.version != kBulwarkCommitmentReplayVersion &&
-        replay.version != kMaintenanceReplayVersion &&
-        replay.version != kReplayVersion) {
+    if (!IsSupportedReplayVersion(replay.version)) {
         SetError(error, "replay version is unsupported");
         return std::nullopt;
     }

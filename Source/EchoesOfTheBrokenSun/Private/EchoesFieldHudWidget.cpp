@@ -352,6 +352,12 @@ FText SelectionDetails(
                 Summary, Entry.Counterplay);
         }
     }
+    if (!Entry.LaneStatus.IsEmpty())
+    {
+        Summary = FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "SelectionLaneStatus", "{0}\n{1}"),
+            Summary, Entry.LaneStatus);
+    }
     if (!Entry.Production.IsEmpty())
     {
         Summary = FText::Format(
@@ -884,9 +890,15 @@ void UEchoesFieldHudSectionWidget::SetResourceTelemetry(const FEchoesFieldHudRes
         ResourceSummaryText == nullptr) return;
     ResourceValues[0]->SetText(FText::AsNumber(Resources.Matter));
     ResourceValues[1]->SetText(FText::AsNumber(Resources.Dawn));
-    ResourceValues[2]->SetText(FText::Format(NSLOCTEXT("EchoesFieldHud", "LogisticsValue", "{0}/{1}"),
-        Resources.PopulationUsed, Resources.PopulationCapacity));
-    ResourceValues[2]->SetColorAndOpacity(Resources.PopulationUsed > Resources.PopulationCapacity
+    // REL-ECO-011.BAND: the committed surcharge is part of the used figure;
+    // name it so a heavy army reads as a choice, not as a mystery number.
+    ResourceValues[2]->SetText(Resources.CommittedBandSurcharge > 0
+        ? FText::Format(NSLOCTEXT("EchoesFieldHud", "LogisticsValueCommitted", "{0}/{1} (+{2} committed)"),
+            Resources.PopulationUsed, Resources.PopulationCapacity, Resources.CommittedBandSurcharge)
+        : FText::Format(NSLOCTEXT("EchoesFieldHud", "LogisticsValue", "{0}/{1}"),
+            Resources.PopulationUsed, Resources.PopulationCapacity));
+    ResourceValues[2]->SetColorAndOpacity(
+        Resources.PopulationUsed > Resources.PopulationCapacity || Resources.CommittedBandSurcharge > 0
         ? ToneColor(EEchoesFieldHudTone::Warning, bHighContrast) : TextColor(bHighContrast));
     const int32 ArmyCommitted = Resources.MobileEntitiesFielded + Resources.MobileEntitiesInProduction;
     ResourceValues[3]->SetText(Resources.bMobileEntityCountAvailable

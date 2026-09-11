@@ -2,7 +2,7 @@
 
 **Author and owner:** Angelis Pseftis
 **Created:** 2026-09-03
-**Maintained:** 2026-09-10
+**Maintained:** 2026-09-11
 
 Start with [AGENTS.md](../AGENTS.md) for shared agent rules. This index routes work to the controlling
 sources; it creates no game requirement and accepts no result. Current owner instructions and the host's
@@ -38,6 +38,7 @@ explicit owner decision, not permission to silently rewrite either. Record affec
 | Release sequencing and demo recovery | [GameCompletionDirective.md](GameCompletionDirective.md), [DeliveryPlan active state and package context](DeliveryPlan.md#active-execution-state), and [DemoRecoveryDirective.md](DemoRecoveryDirective.md). These organize work; the master owns criteria and the state record owns acceptance. |
 | Historical evidence lookup | [ProjectLedger.md](Archive/ProjectLedger.md) and exact retained artifacts. Dated runs remain historical until their applicability is checked. |
 | Agent handoff or specialist prompt | [AgentProjectBrief.md](Prompts/AgentProjectBrief.md), [ArtDirectorSessionPrompt.md](Prompts/ArtDirectorSessionPrompt.md), [AudioDirectorSessionPrompt.md](Prompts/AudioDirectorSessionPrompt.md), [AudioVisualDirectorMasterPrompt.md](Prompts/AudioVisualDirectorMasterPrompt.md), [P0P4CodeReviewPrompt.md](Prompts/P0P4CodeReviewPrompt.md). These select work; they do not grant ownership or override shared rules. |
+| Strategic depth, faction identity, anti-mass balance | [StrategicDepthDesign.md](StrategicDepthDesign.md): 2026-09-11 design for position/information/timing over mass, per-faction win conditions and matchup web, proposed rules (firing lanes, Ridge tier, Logistics ceiling, Choir Resolution) and `BAL-STR` doctrinal tests. Subordinate design reference; each rule is decided under `TBR-STR-*` in RequirementsState before it becomes a requirement. |
 | Gaming prompts, implementation, debugging, presentation iteration | [GameDevelopmentWorkflow.md](Prompts/GameDevelopmentWorkflow.md): task brief, verification loop, review priorities, and dated official-source mapping. Subordinate procedure; it changes no game requirement or acceptance gate. |
 
 Paths shown as code inside skills are relative to the checkout unless explicitly absolute. Markdown links

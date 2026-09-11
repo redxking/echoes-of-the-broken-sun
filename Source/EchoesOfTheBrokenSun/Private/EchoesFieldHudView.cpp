@@ -553,7 +553,10 @@ void AddDamageBreakdown(
     }
 }
 
+const Entity* FindVisibleEntity(const PlayerView& View, uint32 Id);
+
 void AddSelectionEntry(
+    const PlayerView& PlayerView,
     const Entity& Entity,
     PlayerId Viewer,
     FEchoesFieldHudSelectionView& Out,
@@ -561,6 +564,18 @@ void AddSelectionEntry(
 {
     FEchoesFieldHudSelectionEntry Entry;
     Entry.EntityId = Entity.id;
+    // SPEC-CMB-013 firing lanes: the authoritative "no lane" state, read from
+    // the same rule the simulation applies, never inferred from geometry here.
+    if (Entity.owner == Viewer && Entity.attackDamage > 0 &&
+        Entity.order.type == OrderType::Attack && Entity.order.target != 0)
+    {
+        const echoes::sim::Entity* Target = FindVisibleEntity(PlayerView, Entity.order.target);
+        if (Target != nullptr && PlayerView.FriendlyBodyBlockingLane(Entity, *Target) != 0)
+        {
+            Entry.LaneStatus = LOCTEXT("SelectionNoLane",
+                "[NO LANE] An allied unit stands between this unit and its target; it holds fire. Spread the line or step to a flank.");
+        }
+    }
     Entry.Name = NamedEntity(Entity.faction, Entity.type, Catalog);
     Entry.Faction = Text(echoes::presentation::FactionDisplayName(Entity.faction));
     Entry.Role = EntityRole(Entity.faction, Entity.type, Catalog);
@@ -1741,6 +1756,7 @@ FEchoesFieldHudView FEchoesFieldHudModel::BuildPlayerScoped(
     View.Resources.Dawn = PlayerView.Player().resources.dawnshards;
     View.Resources.PopulationUsed = PlayerView.PopulationUsed();
     View.Resources.PopulationCapacity = PlayerView.PopulationCapacity();
+    View.Resources.CommittedBandSurcharge = PlayerView.CommittedBandSurcharge();
     View.Resources.bMobileEntityCountAvailable = true;
     View.Resources.MobileEntitiesFielded = PlayerView.MobileEntityCount();
     View.Resources.MobileEntitiesInProduction = PlayerView.MobileEntityReservations();
@@ -1754,7 +1770,7 @@ FEchoesFieldHudView FEchoesFieldHudModel::BuildPlayerScoped(
         if (const echoes::sim::Entity* Entity = FindVisibleEntity(PlayerView, Id))
         {
             AddSelectionEntry(
-                *Entity, PlayerView.Player().id, View.Selection, Catalog);
+                PlayerView, *Entity, PlayerView.Player().id, View.Selection, Catalog);
             AddDamageBreakdown(PlayerView, *Entity, View.Selection.Entries.Last());
         }
     }

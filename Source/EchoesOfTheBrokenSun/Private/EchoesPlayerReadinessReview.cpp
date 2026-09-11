@@ -164,7 +164,7 @@ void AEchoesPlayerController::RunReadinessReviewStage(float DeltaTime)
         return;
     }
     const float Elapsed = ReadinessReviewStageElapsedSeconds;
-    if (GCapturePending && Elapsed >= kCaptureDelaySeconds)
+    if (GCapturePending && Elapsed >= EchoesReadinessReviewDetail::kCaptureDelaySeconds)
     {
         GCapturePending = false;
         CaptureReadinessReview(*GCaptureName);

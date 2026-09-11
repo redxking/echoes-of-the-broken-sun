@@ -651,6 +651,7 @@ Launch research upgrades are intentionally compact, providing exactly two sequen
 * **SPEC-CMB-008 — Intelligent overkill damage avoidance:** Units operating under autonomous targeting filters shall evaluate in-flight projectile damage already directed at their target entity. If cumulative pending damage is predicted to meet or exceed the target's remaining health, subsequent units automatically retarget the next viable hostile rather than wasting attacks. Focus-fire commands bypass this and always obey the player.
 * **SPEC-CMB-009 — Lifecycle termination and remains cleanup:** When an entity's health reaches 0, it loses authority immediately, drops active order queues, clears its collision footprint from the spatial hash grid, and instantiates a cosmetic destruction view actor. Ruin wreckage blocks zero unit paths or commands, remaining on screen for exactly 200 simulation ticks before executing a clean fade out.
 * **SPEC-CMB-010 — Tactical disengagement and retreat:** Unit retreat is handled as ordinary user-directed movement, carrying zero hidden disengagement penalties or artificial morale state nerfs. Wounded units receive immediate low-health notifications and may be included in player-configured automatic automated retreat policies to designated safe nodes.
+* **SPEC-CMB-013 — Firing lanes (allied body occlusion):** A weapon firing loop requires a clear straight lane from muzzle to target through the bodies of allied mobile units. An allied Worker, line, heavy, or scout unit whose body (radius: the larger of its footprint and 60 cm) intersects the segment strictly between the attacker's and the target's footprints blocks the shot exactly as Mineral Cover does under `SPEC-CMB-003`: the attacker retains its cooldown, does not fire, and under autonomous acquisition (`SPEC-CMB-007`) prefers a hostile it has a lane to. A deployed Bulwark shield is low and never occludes allied fire. Hostile bodies never block (they are targets); structures follow `SPEC-CMB-004`. `SPEC-CMB-005` immunity is unchanged: a blocked shot inflicts 0 damage to the blocker. The blocked state shall be observable on the unit and its selection card with the same grammar as `LOGISTICS FULL`. Purpose (owner direction 2026-09-11, TBR-STR-001): a massed group fires with its outer rank only, so frontage, `SPEC-MOV-005` Line formation, and chokepoints decide fights rather than unit count. Replay schema 33 carries the rule; older recordings keep the unrestricted fire they were made with. Verification: `SRC` (native "firing lanes block friendly bodies": column blocked, flank clear, deployed Bulwark exempt); `PKG-AUTO` BAL-STR-1 blob-versus-frontage with a rule-off control (`TBR-STR-005`).
 
 * **SPEC-CMB-011 —** No hidden systems. There is no suppression, morale, stun, knockback, capture, stealth, camouflage, resurrection, or regeneration unless an explicit named ability in this document supplies the complete rule.
 
@@ -1248,6 +1249,12 @@ technologies; they do not define six additional upgrades. Preserve both IDs and 
   * **SPEC-BAL-008.FAIL:** Unscripted fixtures or headless runs with passive units shall never be cited as gameplay balance evidence.
   * **SPEC-BAL-008.VERIF:** `SRC` + `PKG-AUTO` (AI competency verification suite).
   * **SPEC-BAL-008.LANE:** Opponent AI (`EchoesAIController`).
+* **SPEC-BAL-009 — BAL-STR-1 Blob Versus Frontage (TBR-STR-005):** A 1.6× force that attack-moves through a two-tile chokepoint into a prepared defender holding two ranks beside the mouth shall lose at least 70% of seeded matches, and the identical recording replayed without `SPEC-CMB-013` firing lanes (schema 32 continuation) shall show a lower defender rate, otherwise the pass is not evidence for the rule.
+  * **SPEC-BAL-009.AUTH:** Sixty or more seeded matches per mode from one baseline with the same orders; authored 650 cm line range on both sides; defender ranks perpendicular to their own line of fire.
+  * **SPEC-BAL-009.MEASURE:** First measurement 2026-09-11: defenders 0/60 in both modes; the corridor throttles nothing while mobile footprints are 12.5 cm (`TBR-STR-006`). Until footprints are authored the native test asserts only that the rule never makes the prepared defender worse off.
+  * **SPEC-BAL-009.FAIL:** A defender rate below 70% once `TBR-STR-006` lands, or a rule-off control equal to or above the rule-on rate, fails acceptance.
+  * **SPEC-BAL-009.VERIF:** `SRC` (native "BAL-STR-1 blob versus frontage").
+  * **SPEC-BAL-009.LANE:** Core Gameplay & Balance.
 
 
 
@@ -3463,9 +3470,10 @@ DevelopmentBible.md, SpecGapReport.md), and decomposed into testable atomic leav
   * **REL-ECO-010.VERIF:** `SRC` (Dawn overdraft rejection test).
   * **REL-ECO-010.LANE:** Core Gameplay (`EchoesSimCore`).
 
-* **REL-ECO-011 — Logistics Capacity Allocation Mechanics:** Committed units shall consume Logistics capacity (Workers: 1; Combat Line: 2; Heavies: 3). Base capacity is granted by Command Cores (+12) and supply structures (+5 or +6), capped at 200 total.
+* **REL-ECO-011 — Logistics Capacity Allocation Mechanics:** Committed units shall consume Logistics capacity (Workers: 1; Combat Line: 2; Heavies: 3). Base capacity is granted by Command Cores (+12) and supply structures (+5 or +6), capped at 120 total (TBR-STR-003, 2026-09-11; 200 before replay schema 33).
   * **REL-ECO-011.AUTH:** Active population consumption shall be tracked authoritatively; queueing a unit shall reserve its Logistics capacity immediately upon production start.
-  * **REL-ECO-011.FAIL:** Exceeding maximum capacity of 200 without deliberate upgrade fails validation.
+  * **REL-ECO-011.BAND:** Committed band (TBR-STR-003). Above 80 fielded Logistics, every further two points of fielded population cost one additional point (a line unit effectively costs 3, a heavy 4.5), computed deterministically from the fielded total and charged the moment a unit stands on the field; admitted production keeps its quoted cost. The HUD names the surcharge beside the used figure. Purpose: mass is taxed by the rules, so a 120-ceiling army needs roughly eighteen supply structures across the map and still fields fewer bodies than its ceiling suggests. Replay schema 33 carries the ceiling and the band; older recordings keep 200 and no band. Verification: `SRC` (native "committed band and ceiling"), BAL-STR-5 (`TBR-STR-005`).
+  * **REL-ECO-011.FAIL:** Exceeding maximum capacity of 120 without deliberate upgrade, or fielding above 80 without the surcharge, fails validation.
   * **REL-ECO-011.VERIF:** `SRC` (Logistics accounting and reservation test).
   * **REL-ECO-011.LANE:** Core Gameplay (`EchoesSimCore`).
 
@@ -6818,6 +6826,7 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `SPEC-BAL-006` | Batch Replayability and Verification: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
 | `SPEC-BAL-007` | Balance Evidence Expiry and Re-Validation: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
 | `SPEC-BAL-008` | AI Instrument Competence Baseline: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
+| `SPEC-BAL-009` | BAL-STR-1 Blob Versus Frontage (TBR-STR-005): | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
 | `SPEC-BLD-001` | Blueprint placement validation: | §10. Construction, production, repair, and research |
 | `SPEC-BLD-002` | Transactional cost subtraction: | §10. Construction, production, repair, and research |
 | `SPEC-BLD-003` | Multi-builder speed scaling falloff: | §10. Construction, production, repair, and research |
@@ -6880,6 +6889,7 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `SPEC-CMB-008` | Intelligent overkill damage avoidance: | §11. Combat resolution, stances, and counterplay |
 | `SPEC-CMB-009` | Lifecycle termination and remains cleanup: | §11. Combat resolution, stances, and counterplay |
 | `SPEC-CMB-010` | Tactical disengagement and retreat: | §11. Combat resolution, stances, and counterplay |
+| `SPEC-CMB-013` | Firing lanes (allied body occlusion): | §11. Combat resolution, stances, and counterplay |
 | `SPEC-CMB-011` | No hidden systems. There is no suppression, morale, stun, knockback, capture, stealth, camouflage, resurrection, or regeneration unless an explicit na | §11. Combat resolution, stances, and counterplay |
 | `SPEC-CMB-012` | Automation. Automatic ability use is disabled by default. A player may enable an ability-specific toggle where offered; the toggle shows allowed targe | §11.1 Combat stances |
 | `SPEC-CMD-001` | Move / Context | §6.1 Common commands |

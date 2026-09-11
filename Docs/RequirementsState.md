@@ -51,6 +51,31 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-006` | OPEN | NONE | Docs/StrategicDepthDesign.md | 34ca1a0 | 2026-09-11 | Plan written (design section 7): separate body radius from terrain footprint, authored radii, separation on the spatial hash, schema 34; waits for the AI lane's slice to commit |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
+## Uncommitted work swept into a stash and recovered — 2026-09-11, 20:30–20:40Z
+
+**What happened.** Between about 20:30Z and 20:34Z an agent outside this session and the D3 lane ran
+`git stash` on the shared `main` tree (reflog: `reset: moving to HEAD` at `a732e50`), then
+`git pull --rebase origin main`, then committed and pushed `5d8f888` and `6053834`. `stash@{0}` ("WIP on
+main: a732e50 [D3] Authored optic mesh…") captured every uncommitted change at that moment. The working
+tree was left equal to HEAD, so the strategic-depth work (SPEC-CMB-013 firing lanes and replay schema 33,
+REL-ECO-011 ceiling and committed band, `IsSupportedReplayVersion`, the 60 cm lane radius, SPEC-BAL-009,
+the HUD lane and band states, the load diagnostics, three test updates and the master/README/DeliveryPlan
+edits) disappeared from disk. The state entries had already been committed inside `5d8f888`.
+
+**Recovery.** `git diff --binary a732e50 stash@{0} -- . ':(exclude)Content'` saved as
+`BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/recovery-stash0-noncontent.patch` (stash sha in
+`recovery-stash0.txt`); every file dry-ran clean and was applied to the working tree only. Native suite
+147/147 afterwards. `stash@{0}` is kept untouched: it also holds 22 `.uasset` changes (M01/M02 material
+instances and M01 voice lines) from an asset generator run, and a deletion of
+`M_EchoesWorldSurface.uasset`, which must not be restored blindly. Those are left for the owner.
+
+**Also withdrawn.** The lanes-stubbed defeat attribution run queued at 20:35Z was stopped before it
+started: after the stash its stub target no longer existed, so it would have built plain HEAD and been
+logged as a lanes-stubbed result. Its guard had also matched its own command line and could never have
+started. No attribution evidence exists yet; the defeat question in the entries below stays open.
+
+**Protection taken.** This lane's hunks are committed locally, staged by hunk, not pushed.
+
 ## Committed band, lane body radius, and the first BAL-STR-1 measurement — 2026-09-11
 
 Continuation under the owner's delegation. Evidence root stays
@@ -115,7 +140,14 @@ lines either, so it is withdrawn.) The other lane's own full suite at 20:11Z (`d
 passed 138/139 and failed only this test, as did its defeat-only run (`automation-18-defeat`, 60,000
 ticks). Changes between the green 19:01Z run and the first failure include this lane's 60 cm lane body
 radius, which blocks far more fire than the 12.5 cm footprint in force at 19:01Z, the committed band, and
-the other lane's posture gates. A lanes-stubbed single run decides the first; see the next entry. The other lane reports that its Well-capture posture gate, live in the tree during
+the other lane's posture gates. A lanes-stubbed single run decides the first; see the next entry.
+
+Native mechanism probe (scratch `probe4`, clean source copy, prototype default rules): ten line units
+attack-move into a powered, armed Aegis (confirmed `aegisPowered`, 28 damage, 900 cm, 20 ticks) in front of
+a Core. Packed and spread formations, lanes on and off, all four give the identical result to the tick
+(Aegis down at 179, Core at 298, no attacker lost). In a direct assault the lane rule changed nothing. This
+weighs against firing lanes as the cause of the defeat-test failure, but it is not decisive: the prototype
+rules are not the authored content rules, and the probe has no Glass Scar approach or opponent planner. The other lane reports that its Well-capture posture gate, live in the tree during
 both `automation-6` (19:59Z) and `automation-7`, stopped the Glass Scar opponent taking the centre Well
 and broke this test; it has since reverted that gate and moved campaign Well doctrine into the bridge
 (TBR-SCP-012 option B). Firing lanes may still slow the assault, but no run isolates that yet. Next

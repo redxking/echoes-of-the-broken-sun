@@ -33,8 +33,8 @@ bool FEchoesResearchTest::RunTest(const FString& Parameters)
     // purpose: an unannounced bump must fail here rather than pass silently.
     TestEqual(TEXT("Research interruption uses snapshot schema 31"),
               echoes::sim::kSnapshotVersion, 31U);
-    TestEqual(TEXT("Current replay version is 32 (powered production)"),
-              echoes::sim::kReplayVersion, 32U);
+    TestEqual(TEXT("Current replay version is 33 (firing lanes, SPEC-CMB-013)"),
+              echoes::sim::kReplayVersion, 33U);
     TestEqual(TEXT("Construction-assist cutoff remains replay 29"),
               echoes::sim::kMaintenanceReplayVersion, 29U);
     TestEqual(TEXT("Historical Bulwark commitment cutoff remains replay 28"),

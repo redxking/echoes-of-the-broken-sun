@@ -67,7 +67,17 @@ inline constexpr std::uint32_t kMaskedCorridorReplayVersion = 31;
 // unit production until a network node reaches it. Older recordings keep the
 // ungated production they were made with.
 inline constexpr std::uint32_t kPoweredProductionReplayVersion = 32;
-inline constexpr std::uint32_t kReplayVersion = kPoweredProductionReplayVersion;
+// Schema 33 (owner ruling 2026-09-11, TBR-STR-001 / SPEC-CMB-013): firing
+// lanes. A friendly mobile body standing on the straight line from muzzle to
+// target blocks the shot exactly as Mineral Cover does; the unit holds its
+// cooldown and looks for a lane. A blob fires with its outer rank only, so
+// frontage, formation and chokepoints decide fights. A deployed Bulwark shield
+// is low and never occludes allied fire. Older recordings keep the unrestricted
+// fire they were made with. The same schema carries REL-ECO-011's ceiling of
+// 120 and the committed band (TBR-STR-003); older recordings keep 200 and no
+// band.
+inline constexpr std::uint32_t kFiringLaneReplayVersion = 33;
+inline constexpr std::uint32_t kReplayVersion = kFiringLaneReplayVersion;
 // SPEC-UNIT-003/REL-FAC-005 fixed-step commitments, independent of render rate.
 inline constexpr Tick kBulwarkDeployTicks = 20;
 inline constexpr Tick kBulwarkPackTicks = 15;
@@ -1017,9 +1027,20 @@ public:
     [[nodiscard]] bool ProductionRequiresNetworkPower() const {
         return productionRequiresNetworkPower_;
     }
+    // SPEC-CMB-013: current rules require a clear lane through friendly bodies;
+    // false only while replaying a pre-schema-33 recording.
+    [[nodiscard]] bool FiringLanesEnforced() const {
+        return firingLanesEnforced_;
+    }
+    /** SPEC-CMB-013: the visible allied body blocking attacker's lane to
+     * target, or 0. Same geometry as the authoritative rule; allied bodies
+     * are always visible to their own seat, so the answer is exact. */
+    [[nodiscard]] EntityId FriendlyBodyBlockingLane(const Entity& attacker,
+                                                    const Entity& target) const;
     [[nodiscard]] const PlayerState& Player() const { return player_; }
     [[nodiscard]] std::uint64_t DecisionSeed() const { return decisionSeed_; }
     [[nodiscard]] std::int32_t PopulationUsed() const { return populationUsed_; }
+    [[nodiscard]] std::int32_t CommittedBandSurcharge() const { return committedBandSurcharge_; }
     [[nodiscard]] std::int32_t PopulationCapacity() const {
         return populationCapacity_;
     }
@@ -1089,9 +1110,11 @@ private:
     Tick currentTick_ = 0;
     bool usesBulwarkCommitmentRules_ = true;
     bool productionRequiresNetworkPower_ = true;
+    bool firingLanesEnforced_ = true;
     PlayerState player_{};
     std::uint64_t decisionSeed_ = 0;
     std::int32_t populationUsed_ = 0;
+    std::int32_t committedBandSurcharge_ = 0;
     std::int32_t populationCapacity_ = 0;
     std::int32_t mobileEntityCount_ = 0;
     std::int32_t mobileEntityReservations_ = 0;
@@ -1281,6 +1304,17 @@ public:
     [[nodiscard]] bool IsCollapsedFutureWell(const Entity& entity) const;
     [[nodiscard]] bool IsOperationalFutureWell(const Entity& entity) const;
     [[nodiscard]] bool IsFutureWellContested(const Entity& entity) const;
+    /** SPEC-CMB-013 firing lanes: the nearest allied mobile body whose
+     * footprint intersects the straight segment from attacker to target, or 0
+     * when the lane is clear. Deployed Bulwark shields never block. Public so
+     * presentation can show the "no lane" state without inferring it. */
+    [[nodiscard]] EntityId FriendlyBodyBlockingLane(const Entity& attacker,
+                                                    const Entity& target) const;
+    // SPEC-CMB-013: current rules require a clear lane through friendly bodies;
+    // false only while replaying a pre-schema-33 recording.
+    [[nodiscard]] bool FiringLanesEnforced() const {
+        return !legacyFiringLaneReplaySemantics_;
+    }
     [[nodiscard]] std::vector<FutureWellTelegraph>
     PublicFutureWellTelegraphs() const;
 
@@ -1394,6 +1428,10 @@ public:
                                                EntityType type) const;
     [[nodiscard]] std::int32_t PopulationUsed(PlayerId player) const;
     [[nodiscard]] std::int32_t PopulationCapacity(PlayerId player) const;
+    /** REL-ECO-011.BAND: fielded population before the committed-band surcharge. */
+    [[nodiscard]] std::int32_t BasePopulationUsed(PlayerId player) const;
+    /** REL-ECO-011.BAND: extra Logistics charged for the army above 80 committed. */
+    [[nodiscard]] std::int32_t CommittedBandSurcharge(PlayerId player) const;
     /** SPEC-RES-008: live owned controllable mobile entities (buildings excluded). */
     [[nodiscard]] std::int32_t MobileEntityCount(PlayerId player) const;
     /** SPEC-RES-008: mobile units in an active production slot; released once on completion, cancellation or producer loss. */
@@ -1758,6 +1796,7 @@ private:
     bool legacyOpenGroundReplaySemantics_ = false;
     bool legacyMaskedCorridorReplaySemantics_ = false;
     bool legacyPoweredProductionReplaySemantics_ = false;
+    bool legacyFiringLaneReplaySemantics_ = false;
     bool legacyBulwarkReplaySemantics_ = false;
     bool legacyConstructionAssistReplaySemantics_ = false;
     void UpdateProjectiles();

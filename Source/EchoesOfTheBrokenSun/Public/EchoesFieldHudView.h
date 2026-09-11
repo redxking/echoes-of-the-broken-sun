@@ -122,6 +122,8 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudResourceView final
     int32 Dawn = 0;
     int32 PopulationUsed = 0;
     int32 PopulationCapacity = 0;
+    /** REL-ECO-011.BAND: Logistics charged above the committed threshold; 0 below it. */
+    int32 CommittedBandSurcharge = 0;
     /**
      * SPEC-RES-008 army accounting. Fielded plus in-production is the number
      * production is checked against; a network keyframe does not carry it, so
@@ -176,6 +178,8 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudSelectionEntry final
     FText Limitation;
     FText Counterplay;
     FText Order;
+    /** SPEC-CMB-013: set while an owned attacker holds fire because an allied body blocks its lane. */
+    FText LaneStatus;
     int32 Count = 1;
     int32 HitPoints = 0;
     int32 MaxHitPoints = 0;

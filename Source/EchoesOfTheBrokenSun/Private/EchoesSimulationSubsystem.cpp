@@ -10100,34 +10100,29 @@ bool UEchoesSimulationSubsystem::LoadScenarioFromPath(const FString& SavePath, F
             CompositionIds.Add(NoNeutralMeridianEvidenceInterfaceId);
             CompositionIds.Add(NoNeutralKharuunEvidenceInterfaceId);
             CompositionIds.Add(NoNeutralWellId);
-            if (!IsKharuunEntity(Oruun, EntityType::ScoutUnit) ||
-                !IsKharuunEntity(Waystone, EntityType::Dropoff) ||
-                !IsKharuunEntity(Witness, EntityType::ScoutUnit) ||
-                !IsPublicInterface(
-                    FirstDistrictInterface,
-                    Faction::MeridianCompact,
-                    Plan.FirstDistrictSite,
-                    true) ||
-                !IsPublicInterface(
-                    SecondDistrictInterface,
-                    Faction::MeridianCompact,
-                    Plan.SecondDistrictSite,
-                    true) ||
-                !IsPublicInterface(
-                    MeridianEvidenceInterface,
-                    Faction::MeridianCompact,
-                    Plan.MeridianEvidenceSite,
-                    true) ||
-                !IsPublicInterface(
-                    KharuunEvidenceInterface,
-                    Faction::KharuunAssemblies,
-                    Plan.KharuunEvidenceSite,
-                    false) ||
-                !bValidWell ||
-                CompositionIds.Num() != 8)
+            TArray<FString> Mismatches;
+            if (!IsKharuunEntity(Oruun, EntityType::ScoutUnit)) Mismatches.Add(TEXT("oruun"));
+            if (!IsKharuunEntity(Waystone, EntityType::Dropoff)) Mismatches.Add(TEXT("waystone"));
+            if (!IsKharuunEntity(Witness, EntityType::ScoutUnit)) Mismatches.Add(TEXT("witness"));
+            if (!IsPublicInterface(FirstDistrictInterface, Faction::MeridianCompact, Plan.FirstDistrictSite, true)) Mismatches.Add(TEXT("first-district"));
+            if (!IsPublicInterface(SecondDistrictInterface, Faction::MeridianCompact, Plan.SecondDistrictSite, true)) Mismatches.Add(TEXT("second-district"));
+            if (!IsPublicInterface(MeridianEvidenceInterface, Faction::MeridianCompact, Plan.MeridianEvidenceSite, true)) Mismatches.Add(TEXT("meridian-evidence"));
+            if (!IsPublicInterface(KharuunEvidenceInterface, Faction::KharuunAssemblies, Plan.KharuunEvidenceSite, false)) Mismatches.Add(TEXT("kharuun-evidence"));
+            if (!bValidWell)
             {
-                OutFailure = TEXT(
-                    "snapshot does not match the active No Neutral Ledger composition");
+                Mismatches.Add(FString::Printf(
+                    TEXT("well(owner=%u choice=%u)"),
+                    Well != nullptr ? static_cast<unsigned>(Well->owner) : 999u,
+                    Well != nullptr ? static_cast<unsigned>(Well->wellChoice) : 999u));
+            }
+            if (CompositionIds.Num() != 8) Mismatches.Add(TEXT("duplicate-ids"));
+            if (!Mismatches.IsEmpty())
+            {
+                // Name the failing predicate: a refusal the player or a test
+                // cannot attribute is a refusal nobody can act on.
+                OutFailure = FString::Printf(
+                    TEXT("snapshot does not match the active No Neutral Ledger composition: %s"),
+                    *FString::Join(Mismatches, TEXT(",")));
                 return false;
             }
         }
@@ -10528,6 +10523,16 @@ bool UEchoesSimulationSubsystem::LoadScenarioFromPath(const FString& SavePath, F
     }
     else
     {
+        // A fallback to an older generation is a recovery, not a silent
+        // success: say why the primary checkpoint was refused. Display, not
+        // Warning: several tests refuse a checkpoint on purpose (stale map,
+        // wrong ledger) and a warning would mark every one of them unclean.
+        UE_LOG(
+            LogEchoes,
+            Display,
+            TEXT("[ECHOES_QUICK_LOAD_PRIMARY_REFUSED] path=%s reason=%s"),
+            *SavePath,
+            *PrimaryFailure);
         FString StagedBackupFailure;
         if (TryLoad(BackupTemporaryPath, StagedBackupFailure))
         {
