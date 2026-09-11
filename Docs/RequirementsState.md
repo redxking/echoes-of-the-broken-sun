@@ -6126,6 +6126,12 @@ through `IsFutureWellContested`, is not implemented and remains available if cap
 the diagnostic now also records the tick the opponent's Dawn first rises above its opening reserve, which
 separates "never contested" from "contested too late to matter" on future runs.
 
+**Full Unreal suite green: 140 of 140.** `BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-full-wellfix` on the tree
+carrying every planner fix in this slice plus the strategy-validation lane's schema 33 to 35 work. This is
+the first fully clean Unreal suite of the session and it answers the question the claimed-Well fix raised:
+a planner that now targets Wells other players hold changes behaviour in every scenario where one exists,
+and no campaign mission, tutorial lesson or presentation fixture regressed. Native stands at 150/150.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
