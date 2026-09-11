@@ -196,6 +196,18 @@ public:
      * Agent-driven; it is not physical input and not human acceptance.
      */
     void StartConcessionResultReview();
+    /**
+     * Bounded non-shipping driver for the DeliveryPlan D2 exit chain in a real
+     * rendered window: deploy an ordinary Glass Scar skirmish through the title,
+     * then gather to delivery, place and finish a structure, harvest the Well,
+     * train to the 30-entity limit and read its refusal, move and fight with
+     * visible health change, quick-save and quick-load, repair a damaged owned
+     * target, and end with a truthful result. It drives the same controller and
+     * bridge actions the player's bindings call and writes one capture per
+     * stage. Agent-driven in-process review; not physical input, not packaged
+     * execution and not human acceptance.
+     */
+    void StartD2ExitReview();
     void NotifyRuntimeFailure(const FString& FailureCode);
     void NotifyMatchFinished(echoes::sim::MatchOutcome Outcome);
     void NotifyCampaignPrologueFinished(
@@ -862,6 +874,10 @@ private:
     void RunPointerCombatGuardReviewStage(float DeltaTime);
     void RunDisplayRevertReviewStage(float DeltaTime);
     void RunConcessionResultReviewStage(float DeltaTime);
+    void RunD2ExitReviewStage(float DeltaTime);
+    void FinishD2ExitReview(const TCHAR* Result, const FString& Detail);
+    void CaptureD2ExitReview(const TCHAR* Stage);
+    void AdvanceD2ExitReview(int32 NextStage, const TCHAR* StageName, const FString& Detail);
     void FinishConcessionResultReview(const TCHAR* Result, const FString& Detail);
     void FinishDisplayRevertReview(const TCHAR* Result, const FString& Detail);
     void LogDisplayRevertReviewPresentation(const TCHAR* Stage) const;
@@ -1022,6 +1038,28 @@ private:
     bool bPointerCombatGuardReviewActive = false;
     bool bDisplayRevertReviewActive = false;
     bool bConcessionResultReviewActive = false;
+    bool bD2ExitReviewActive = false;
+    int32 D2ExitReviewStage = 0;
+    float D2ExitReviewStageElapsedSeconds = 0.0f;
+    float D2ExitReviewTotalElapsedSeconds = 0.0f;
+    int32 D2ExitReviewCaptureIndex = 0;
+    FString D2ExitReviewOutputDir;
+    FString D2ExitReviewStagesPassed;
+    FString D2ExitReviewStagesUnproven;
+    int32 D2ExitReviewMatterBeforeGather = 0;
+    int32 D2ExitReviewDawnBeforeWell = 0;
+    uint32 D2ExitReviewBuilderId = 0;
+    uint32 D2ExitReviewWellWorkerId = 0;
+    uint32 D2ExitReviewWellId = 0;
+    uint32 D2ExitReviewBuiltStructureId = 0;
+    uint32 D2ExitReviewRepairWorkerId = 0;
+    uint32 D2ExitReviewRepairTargetId = 0;
+    int32 D2ExitReviewRepairStartHitPoints = 0;
+    int32 D2ExitReviewPeakArmy = 0;
+    bool bD2ExitReviewArmyLimitRefused = false;
+    bool bD2ExitReviewCombatObserved = false;
+    uint64 D2ExitReviewSaveTick = 0;
+    uint64 D2ExitReviewSaveChecksum = 0;
     int32 ConcessionReviewStage = 0;
     float ConcessionReviewStageElapsedSeconds = 0.0f;
     float ConcessionReviewTotalElapsedSeconds = 0.0f;

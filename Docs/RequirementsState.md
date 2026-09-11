@@ -4664,7 +4664,11 @@ after the mission starts, asserts at the checkpoint that no opponent entity is u
 production queue (so the assumption is stated, not implied), and releases it right after the
 schema-28 projection so the rest of the mission runs against the shipped opponent.
 
-* **TBR-SCP-012 — Opponent doctrine inside authored campaign operations.** OPEN. The investigation
+* **TBR-SCP-012 — Opponent doctrine inside authored campaign operations.** DECIDED by the owner,
+  2026-09-11 ("Proceed with your recommended way forward"): option B — authored campaign operations
+  receive a bounded per-mission opponent doctrine derived from each `SPEC-MSN-*` contract, implemented
+  in D7 with each mission's capability manifest; until D7 lands, the shipped Adaptive doctrine keeps
+  running in missions and the M14/M15 fixtures keep their scoped planner hold. Original record: the investigation
   found that every non-skirmish operation drives the opponent with the Adaptive skirmish macro
   economy (`EchoesSimulationSubsystem.cpp`, `QueueOpponentCommands`), including crisis missions
   such as M14 and M15 whose contracts describe a bounded authored opposition. Options: (A) keep the
@@ -4780,3 +4784,185 @@ both pushed to `origin/main`.
 **Commit identity, second slice.** Code `a37bacd` on `main`, documentation commit immediately after;
 both pushed to `origin/main` under the owner's "push to main then continue working" instruction.
 Automation only: no packaged build, no rendered capture, no physical input, no owner acceptance.
+
+## D2 exit check — rendered agent-driven review of the player chain, 2026-09-11
+
+Owner order: "Proceed with your recommended way forward." The recommended way forward was to run the
+D2 exit check as an observed play session with rendered evidence on an ordinary map. Display-scope
+agent input was not available in this session (the application grant for the editor was declined),
+so the session was driven by the project's own rendered-review pattern: a non-shipping command-line
+switch (`-EchoesD2ExitReview`) starts a controller stage machine that issues the same controller and
+bridge actions the player's bindings call, logs one marker per stage, and writes one window capture
+per stage. Evidence class: **agent-driven in-process rendered review**. It is not physical input, not
+packaged execution, not a replay-determinism claim, and not owner acceptance; only Angelis assigns
+acceptance.
+
+### What was built
+
+- `Source/EchoesOfTheBrokenSun/Private/EchoesPlayerD2ExitReview.cpp` (new): `StartD2ExitReview`,
+  `RunD2ExitReviewStage`, `AdvanceD2ExitReview`, `CaptureD2ExitReview`, `FinishD2ExitReview`. Stages:
+  open_modes (Title → Modes, tutorial-skip confirmation, skirmish setup override), open_briefing,
+  deploy, gather_issue, gather_deliver, build_issue, build_site, build_complete, well_harvest,
+  train_to_limit, fight, save_load, repair_issue, repair_wait, outcome. Every stage has a budget and
+  ends PASSED or UNPROVEN with the measured detail; a route failure ends the review FAILED.
+- Hooks: declarations and members in `EchoesPlayerController.h`; tick hook beside the other
+  non-shipping reviews in `EchoesPlayerController.cpp`; switch parse beside the concession review in
+  `EchoesGameMode.cpp`.
+- `Scripts/run_d2_exit_review.sh`: isolated `-UserDir` and `-EchoesSaveGameDirectory`, windowed
+  1280×720, Metal-compiler preflight (exit 8), 300 s startup guard that samples a stalled process
+  (exit 7), completion marker wait, exit 0 only on `result=PASSED`, exit 4 on PARTIAL.
+
+### Skirmish used
+
+Glass Scar, 1v1, local Meridian Compact vs Kharuun Assemblies, difficulty Story, opponent personality
+Defensive, resources Abundant (700 Matter / 60 Dawn), victory Corefall, game speed Fast. These are
+ordinary settings from the setup overlay, applied through `SetPendingSkirmishSetup` while the Modes
+overlay is up and consumed at deploy by `ApplySkirmishSetup`. The Defensive opponent recalls its
+combat units to within nine tiles of its Core, which is what lets one bounded session train to the
+limit before it goes looking for the fight; the Standard Adaptive opponent razed the base during the
+training stage in attempt 3 (below).
+
+### Attempts and what each one taught
+
+1. `d2-exit-review-20260911T0752Z` — no stage ran. The process stopped logging right after
+   `InternalLoadLibrary: 'MetalRHI'` and sat for the launcher's whole budget. `sample` showed the
+   game thread in `FMetalDynamicRHI::FMetalDynamicRHI → VerifyMetalCompiler → FMessageDialog::Open`
+   and the main thread in `-[NSAlert runModal]`: the engine's Xcode Metal compiler check had opened a
+   modal dialog because `xcrun -sdk macosx metal -v` failed ("missing Metal Toolchain") after the
+   2026-09-10 Command Line Tools 27.0 install. The toolchain became available again a few minutes
+   after the first `xcrun metal` call. Not a project defect; the launcher now preflights it and
+   samples a stalled startup.
+2. `d2-exit-review-20260911T0830Z` — FAILED at open_modes (Error screen). The launcher had gained
+   `-unattended` to neutralise dialogs, but the project reads `FApp::IsUnattended` in the game mode
+   (developer auto-start), the shell (`RefreshShell` returns early) and the field HUD, so the player
+   route no longer existed. The flag was removed.
+3. `d2-exit-review-20260911T0840Z` — route, gather (700→710 Matter at tick 117), build (Foundry at
+   tile 9,15, complete at tick 306, 760/760) passed. Well UNPROVEN: the Well at (32,32) is under fog
+   at deployment and the Well order requires a visible target, exactly as for the player. Train
+   UNPROVEN: the Standard Adaptive opponent attacked after its opening posture and the local Command
+   Core fell at tick 12036 (`[ECHOES_MATCH_FINISHED] outcome=2`); peak army 12. The save/load PASSED
+   line of that run is withdrawn: it compared a finished match's state with itself and the committed
+   status it read may have been the defeat autosave, not the quick save.
+4. `d2-exit-review-20260911T0850Z` — stopped by the operator once training stalled. Well PASSED
+   (Dawn 60→530 at tick 817 after the worker walked the Well into sight). Training: all three
+   producers reported block reason 6, LogisticsCapacity, at 18/18. Two findings: a Matter deposit
+   serves one harvester at a time (`occupied < 1` in the harvest queue), so three workers on one
+   deposit were one worker; and logistics capacity (Core 12 + one Power Link 6) binds long before
+   the 30-entity limit, so the player must build supply nodes to field 30. Income with workers spread
+   one per deposit: 600→900 Matter in 30 s with 8 workers.
+5. `d2-exit-review-20260911T0900Z` — PARTIAL, 12 of 14 stages passed, ended by a Corefall victory at
+   tick 4663 with the result screen visible; peak army 30. Well PASSED (Dawn 60→530, tick 789). The
+   army reached 30 (bridge: `MobileEntityLimit`, mobile=30 reserved=0) but the HUD proof was taken
+   from a Foundry that could not fund a Lancer, so the status line read INSUFFICIENT_RESOURCES:
+   train_to_limit UNPROVEN by a driver defect (it must ask the exact producer and unit pair that
+   reported the limit). Fight PASSED: hostile entity 40 fell from 100 to 94 health at tick 3444 with
+   the army in contact (capture shows ARMY 30/30). Save/load PASSED as a real rewind: saved at tick
+   3444 (checksum 14337633855558427044) to `EchoesQuickSave.bin`, ran on to tick 3744, loaded back to
+   tick 3444 with the same checksum, "Checkpoint restored". Repair UNPROVEN: the assault the fight
+   stage left running took the enemy Core before the recalled unit reached home. Both defects are
+   the driver's; the fix disengages the army after the fight is observed and resumes the assault only
+   in the outcome stage.
+6. `d2-exit-review-20260911T0905Z` — PARTIAL, 13 of 14 stages passed, Corefall victory at tick 4652,
+   peak army 30. train_to_limit PASSED: at 30 fielded and 0 reserved the Core's worker order was
+   refused through the player's production path with the HUD status "[ARMY_LIMIT] 30 controllable
+   units are already fielded or in production. Lose or cancel one before adding another." Fight
+   PASSED (hostile 39, 100→94, tick 3453) and the army was recalled home. Save/load PASSED (saved
+   3453, ran on to 3753, loaded 3453, checksum 7420737901777578356 both times). Repair UNPROVEN: after
+   the rewind to tick 3453 no owned unit had yet been hurt (the first health change was the enemy's),
+   so there was nothing to repair. Driver change: the fight stage now holds contact until an owned
+   unit is damaged (or 45 s after the first hostile loss) before it disengages and saves.
+7. (no directory) — stopped early by the operator. Reading the run-6 captures showed a capture-timing
+   flaw: the frame is grabbed in the tick that logs the marker, before the HUD redraws, so the
+   train_to_limit capture still showed the previous status line ("WORKER: 1 production order
+   queued.") although the log detail carried the ARMY_LIMIT text. Captures now follow each transition
+   by 0.4 s. The aborted run's directory was removed.
+8. `d2-exit-review-20260911T0915Z` — PARTIAL, 13 of 14 stages passed, Corefall victory at tick 11590,
+   peak army 30; the limit refusal is now in the capture as well as the log. Fight PASSED on an owned
+   loss (Relay Skiff 11, 75→61 at tick 3518) after the enemy's first loss (worker 17, 100→94 at tick
+   3482); save/load PASSED (3518 → 3818 → 3518, checksum 15021201751050662505). Repair UNPROVEN: the
+   recalled skiff was alive and the simulation ran 7,000 ticks (autosave at tick 6000 in between), but
+   the unit never came within four tiles of the Core centre; with thirty units around a solid 5×5
+   footprint that criterion was wrong, not the walk. Repair processing re-checks the Meridian network
+   every tick, so the rendezvous is now judged against the network radius of any completed Core or
+   supply node, the recall point is six tiles north of the Core beside the supply nodes, and the
+   target is stopped once the repair order is accepted.
+9. `d2-exit-review-20260911T0925Z` — PARTIAL, 12 of 14, victory at tick 20993. Training UNPROVEN in a
+   new way: peak army 17 with 5,790 Matter banked. The second supply node, ordered at tile 5,5, never
+   progressed, and because the driver treated any incomplete site as "construction underway" it
+   ordered no further node; all three producers reported LogisticsCapacity for the remaining nine
+   minutes. Fight PASSED only on the fallback (enemy Core 976→958) because no owned unit was hurt
+   inside the 45 s contact window, so repair again had no damaged owned target. Driver changes: a
+   site whose progress stalls for 30 s gets a construction assist from another worker and is
+   cancelled at 90 s so a fresh one is placed; training notes list open sites; the contact window is
+   150 s.
+10. `d2-exit-review-20260911T0935Z` — PARTIAL, 14 of 15, victory at tick 12502, peak army 30. Every
+    supply node this run (sites 50, 54, 60, 64) sat at 0 progress until a second worker was sent to
+    assist; the builder ordered from inside the crowd at the Core never started. Recorded as an
+    observation beside the open SPEC-MOV-003 route-field question, not attributed. Limit PASSED at
+    186 s (29 fielded + 1 reserved, ARMY_LIMIT in the HUD capture). Fight PASSED on owned damage
+    (Relay Skiff 11, 75→61, tick 6677). Save/load PASSED (6677 → 6977 → 6677, checksum
+    17068501941048092357). Repair order PASSED (worker 41 on skiff 11, accepted) but repair_wait
+    UNPROVEN: health stayed 61/75 for 150 s. Repair processing walks the worker to within two tiles
+    and clears the order silently if the worker leaves the eight-tile network, and the recalled army
+    had been parked four tiles from the Core, so congestion is the likeliest cause. Driver changes:
+    the army falls back to mid-map on our side, the repair rendezvous is six tiles west of the Core,
+    the target must stand at it, the worker nearest it is used, and repair progress is logged and
+    the order re-issued if it drops.
+11. `d2-exit-review-20260911T0945Z` — **PASSED, 15 of 15 stages**, Corefall victory at tick 8027 with
+    the result screen visible, peak army 30, 284 s of session time. Record below. Its one weakness is
+    presentational: the repair_wait capture was taken after the outcome stage had already panned the
+    camera to the enemy Core, so it shows the enemy base with the HUD rather than the repaired unit;
+    the log line carries the repair (61→62 at tick 7035). Driver change for the rerun: the outcome
+    stage waits for the pending capture, the repaired unit is selected so its health readout is in
+    frame, and the stage passes at +4 health so the bar has visibly moved.
+12. `d2-exit-review-20260911T1005Z` — **PASSED, 15 of 15 stages** on build-19 (the review file alone changed after build-18), Corefall victory at tick 7844, peak army 30, 278 s. Same chain and numbers within noise: delivery at tick 117, Foundry complete at tick 313, Dawn 60→530 at tick 794, limit at 182 s with the ARMY_LIMIT refusal in frame, fight on the Relay Skiff (75→61, tick 6555), rewind 6893→6593 (checksum 15992019110030251321), repair 61→65 at tick 6911 with the selected skiff's readout at 71/75 in the capture, result screen visible. Two consecutive full passes; this directory is the primary retained evidence and run 11 the second.
+
+### Run 11 record — `BuildArtifacts/Evidence/d2-exit-review-20260911T0945Z`
+
+Identity: source `2cb36a9` plus the uncommitted review files listed in that directory's
+`identity.txt` (`dirty=6`, committed below as this entry's code commit); editor build-18
+(`d2-foundation-20260911T0050Z/build-18.log`, Result Succeeded); module dylib sha256
+`3c6d5c38…679a81`, sim core `b5b2935a…00cb06`. Log `D2ExitReview.log`, captures `captures/00…14`,
+isolated saves under `Scope/SaveGames` (the quick save the rewind read is `EchoesQuickSave.bin`).
+
+| Stage | Result | Measured detail | Capture |
+|---|---|---|---|
+| open_modes | PASSED | Title → Modes, setup applied (Glass Scar, Abundant, Fast, Story, Defensive, Corefall) | 00 |
+| open_briefing | PASSED | Briefing screen | 01 |
+| deploy | PASSED | Gameplay screen | 02 |
+| gather_issue | PASSED | workers 4,5,6 → deposits 24,25,24; Matter 700 before | 03 |
+| gather_deliver | PASSED | Matter 700→710 at tick 124 | 04 |
+| build_issue | PASSED | Foundry placed at tile 9,15 by worker 4; Well worker 6 walking to the Well | 05 |
+| build_site | PASSED | site 34, 0/160 | 06 |
+| build_complete | PASSED | structure 34 complete, 760/760, tick 320 | 07 |
+| well_harvest | PASSED | Dawn 60→530, Well 32, worker 6, tick 801 | 08 |
+| train_to_limit | PASSED | 29 fielded + 1 reserved = 30; Foundry Lancer order refused; HUD "[ARMY_LIMIT] 30 controllable units…" in frame with ARMY 30/30 | 09 |
+| fight | PASSED | owned Relay Skiff 11: 75→61 at tick 6684, army 13 in contact | 10 |
+| save_load | PASSED | saved 6724 (checksum 4098457489890168808), ran on to 7024, loaded 6724, same checksum, "Checkpoint restored" | 11 |
+| repair_issue | PASSED | worker 66 ordered to repair skiff 11 at 61/75, accepted | 12 |
+| repair_wait | PASSED | skiff 11: 61→62 at tick 7035 (capture shows the enemy base, see attempt 11) | 13 |
+| outcome | PASSED | outcome 1, victory by Corefall at tick 8027, result screen visible | 14 |
+
+Peak fielded mobile count 30 of the 30 limit. Session 284 s of wall time at Fast speed.
+
+### Changes to the driver between attempts
+
+Well: walk the worker to the Well when the order is refused, retry once in sight. Gather: one worker
+per deposit, least-loaded then nearest, with the nearest deposit as the fallback when the far one is
+under fog. Training: workers first (they are the income), soldiers once eight workers exist, a supply
+node (Dropoff type, Power Link) whenever logistics used + 4 ≥ capacity and nothing is under
+construction, 30-second training notes with per-producer block reasons. Save/load: save while paused,
+record tick and checksum, wait for a commit whose request id is new and not an autosave, let the
+match run on ≥300 ticks, load, and require the tick to rewind to the saved tick with the saved
+checksum. Repair: recall the damaged unit nearest home; state plainly when the local Core has
+fallen. Fight: state plainly when the local Core has fallen; hold contact until an owned unit is hurt
+(or 45 s after the first hostile loss), then recall the army home so save, load and repair run on a
+live match; the outcome stage sends it back out. Limit proof: ask the exact producer and unit pair
+that reported `MobileEntityLimit`. Captures: taken 0.4 s after each stage transition.
+
+### What this evidence is and is not
+
+It shows the ordinary controller and bridge actions carrying a player through the chain in a real
+rendered window, with captures that corroborate the log markers. It does not show physical input,
+a packaged build, a human player, or replay determinism, and it assigns no acceptance. The owner's
+own play session remains the D2 exit's human step.

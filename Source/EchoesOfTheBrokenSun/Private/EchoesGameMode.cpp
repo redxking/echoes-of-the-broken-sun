@@ -2248,6 +2248,12 @@ void AEchoesGameMode::BeginPlay()
         {
             Controller->StartConcessionResultReview();
         }
+        if (FParse::Param(
+                FCommandLine::Get(),
+                TEXT("EchoesD2ExitReview")))
+        {
+            Controller->StartD2ExitReview();
+        }
         if ((FParse::Param(
                  FCommandLine::Get(),
                  TEXT("EchoesFutureWellArtReview")) ||
