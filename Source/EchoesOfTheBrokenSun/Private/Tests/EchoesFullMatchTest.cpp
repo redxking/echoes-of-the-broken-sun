@@ -1143,13 +1143,52 @@ bool FEchoesFullMatchDefeatTest::RunTest(const FString& Parameters)
     {
         const echoes::sim::Entity* RemainingLocalCore =
             Bridge->FindEntity(LocalCore);
+        // The opening cohort alone never explained this stall. Report what the
+        // opponent actually became, so a failure says whether it ran out of
+        // army, of production, or of economy rather than only how it started.
+        int32 OpponentCombat = 0;
+        int32 OpponentWorkers = 0;
+        int32 OpponentProducers = 0;
+        for (const echoes::sim::Entity& Entity :
+             Bridge->GetSimulation()->Entities())
+        {
+            if (Entity.owner != UEchoesSimulationSubsystem::OpponentPlayerId ||
+                Entity.hitPoints <= 0)
+            {
+                continue;
+            }
+            switch (Entity.type)
+            {
+            case echoes::sim::EntityType::Soldier:
+            case echoes::sim::EntityType::HeavyUnit:
+            case echoes::sim::EntityType::ScoutUnit:
+                ++OpponentCombat;
+                break;
+            case echoes::sim::EntityType::Worker:
+                ++OpponentWorkers;
+                break;
+            case echoes::sim::EntityType::Barracks:
+                ++OpponentProducers;
+                break;
+            default:
+                break;
+            }
+        }
+        const echoes::sim::PlayerState* OpponentState =
+            Bridge->GetSimulation()->FindPlayer(
+                UEchoesSimulationSubsystem::OpponentPlayerId);
         AddError(FString::Printf(
-            TEXT("[ECHOES_ORDINARY_DEFEAT_STALLED] tick=%llu localCoreHp=%d openingOpponentCombat=%d wellOrder=%s grantedOutcome=false boostedDamage=false"),
+            TEXT("[ECHOES_ORDINARY_DEFEAT_STALLED] tick=%llu localCoreHp=%d openingOpponentCombat=%d wellOrder=%s grantedOutcome=false boostedDamage=false endOpponentCombat=%d endOpponentWorkers=%d endOpponentProducers=%d endOpponentMatter=%d endOpponentDawn=%d"),
             static_cast<unsigned long long>(
                 Bridge->GetSimulation()->CurrentTick()),
             RemainingLocalCore != nullptr ? RemainingLocalCore->hitPoints : 0,
             InitialOpponentCombatUnits.Num(),
-            bWellOrderIssued ? TEXT("true") : TEXT("false")));
+            bWellOrderIssued ? TEXT("true") : TEXT("false"),
+            OpponentCombat,
+            OpponentWorkers,
+            OpponentProducers,
+            OpponentState != nullptr ? OpponentState->resources.material : -1,
+            OpponentState != nullptr ? OpponentState->resources.dawnshards : -1));
     }
     TestTrue(TEXT("Standard opponent begins with an ordinary combat cohort"),
              !InitialOpponentCombatUnits.IsEmpty());

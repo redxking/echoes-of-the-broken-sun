@@ -5961,6 +5961,22 @@ alongside the opponent's killing power (`CompleteSkirmishDefeat`). The populatio
 (REL-AI-022) is the other lever: a seat that spends 18 of 30 population on workers can never field an
 army that ends a match on this map.
 
+**CompleteSkirmishDefeat explained: the opponent is Dawn-starved, not outfought.** An enriched stall
+diagnostic (this lane's edit to `EchoesFullMatchTest`, reporting the opponent's end state rather than only
+its opening cohort) reports, at the 90,000-tick budget: `endOpponentCombat=1 endOpponentWorkers=18
+endOpponentProducers=1 endOpponentMatter=7020`, with the player's Core at 1,168. The opponent is neither
+poor nor population-capped; it banks 7,020 matter it cannot spend and finishes with fewer fighters than it
+started with. The cause is the authored economy: every Kharuun combat unit costs Dawn (Riftstalker 30,
+Cairnback 30, Resonant 25) while its worker costs none, the only recurring Dawn income is holding a Future
+Well on the Preserve protocol (`ApplyPreserveIncome`; Harvest is a one-off on collapse), Glass Scar has
+exactly one Well at the contested centre (32,32), and both seats start with 30 Dawn. In this test the
+player commits that Well, so the opponent's Dawn income is zero for the whole match: it can train workers
+for ever and never another fighter. It loses the match by never contesting the Well, not by failing to
+fight. This lane's campaign Well doctrine is cleared as a cause: `[ECHOES_AI_WELL_DOCTRINE]` fires zero
+times in this run (evidence `BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-defeat-diag`), as expected for a
+skirmish. The slice this needs is in the planner: a seat with no Dawn income and a known Well must treat
+that as the strategic emergency it is and go contest it (REL-AI-031 expansion, REL-AI-024 economy).
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
