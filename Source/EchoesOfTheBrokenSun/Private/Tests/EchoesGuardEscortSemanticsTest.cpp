@@ -325,11 +325,16 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
                  OrderIs(Simulation, Guard, sim::OrderType::Guard, Vip));
     }
 
-    // Scenario 2 — response envelope, clear-on-death, and idle passivity. An
-    // enemy Lancer besieges a guarded Skiff from 6.5 tiles: outside the
-    // guarded-centered 6-tile scan, inside its own weapon reach. The guards
-    // never respond, the Guard orders clear in the very step the guarded unit
-    // is culled, and the survivors stay inert even under point-blank fire.
+    // Scenario 2 — response envelope and clear-on-death. An enemy Lancer
+    // besieges a guarded Surveyor from 6.5 tiles: outside the guarded-centered
+    // 6-tile scan, inside its own weapon reach. The guards never respond and
+    // the Guard orders clear in the very step the guarded unit is culled.
+    // The guarded unit is unarmed on purpose: under schema 36 an idle armed
+    // unit returns fire (SPEC-STANCE-002), so an armed one would shoot its
+    // besieger and the scan would no longer be what this scenario measures.
+    // After the loss the former guards are idle and do return fire, which is
+    // the point of that schema; what stays pinned is that they take no order
+    // and never move.
     {
         sim::Simulation Simulation(BaseConfig);
         TestTrue(TEXT("S2: local player joins"),
@@ -338,7 +343,7 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
                  Simulation.AddPlayer(1, sim::Faction::MeridianCompact, {0, 0}));
         const sim::Vec2 VipPosition = sim::Vec2::FromTiles(20, 20);
         const sim::EntityId Vip = Simulation.SpawnEntity(
-            0, sim::Faction::MeridianCompact, sim::EntityType::ScoutUnit,
+            0, sim::Faction::MeridianCompact, sim::EntityType::Worker,
             VipPosition);
         const sim::EntityId GuardWest = Simulation.SpawnEntity(
             0, sim::Faction::MeridianCompact, sim::EntityType::Soldier,
@@ -429,7 +434,8 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
                  OrderIs(Simulation, GuardSouth, sim::OrderType::None, 0));
 
         // Walk the besieger point-blank and reopen fire: the surviving former
-        // guards have no auto-acquire and never respond.
+        // guards take no order and never move, though under schema 36 they do
+        // return fire at whatever is shooting them.
         sim::Command FoeMove{};
         FoeMove.player = 1;
         FoeMove.type = sim::CommandType::Move;
@@ -452,6 +458,10 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
         const std::int32_t GuardSouthHitPointsBefore =
             Simulation.FindEntity(GuardSouth)->hitPoints;
         bool SurvivorsStayedPassive = true;
+        const sim::Vec2 WestRestingPosition =
+            Simulation.FindEntity(GuardWest)->position;
+        const sim::Vec2 SouthRestingPosition =
+            Simulation.FindEntity(GuardSouth)->position;
         for (std::int32_t WindowTick = 0;
              WindowTick < 40 && !WallClockExceeded();
              ++WindowTick)
@@ -460,9 +470,11 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
             const sim::Entity* West = Simulation.FindEntity(GuardWest);
             const sim::Entity* South = Simulation.FindEntity(GuardSouth);
             if ((West != nullptr &&
-                 West->order.type != sim::OrderType::None) ||
+                 (West->order.type != sim::OrderType::None ||
+                  !(West->position == WestRestingPosition))) ||
                 (South != nullptr &&
-                 South->order.type != sim::OrderType::None))
+                 (South->order.type != sim::OrderType::None ||
+                  !(South->position == SouthRestingPosition))))
             {
                 SurvivorsStayedPassive = false;
             }
@@ -471,11 +483,10 @@ bool FEchoesGuardEscortSemanticsTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("S2: a former guard takes point-blank fire after the loss"),
                  GuardSouthAfter == nullptr ||
                      GuardSouthAfter->hitPoints < GuardSouthHitPointsBefore);
-        TestTrue(TEXT("S2: order-less survivors never retaliate or move"),
+        TestTrue(TEXT("S2: order-less survivors take no order and never move"),
                  SurvivorsStayedPassive);
-        TestTrue(TEXT("S2: the besieger is still untouched at the end"),
-                 Simulation.FindEntity(Foe) != nullptr &&
-                     Simulation.FindEntity(Foe)->hitPoints == FoeMaxHitPoints);
+        TestTrue(TEXT("S2: the besieger survives its own point-blank exchange"),
+                 Simulation.FindEntity(Foe) != nullptr);
     }
 
     // Scenario 3 — Hold and Guard admission. Workers (no attack) can be guard

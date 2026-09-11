@@ -5833,6 +5833,24 @@ is the distortion: every balance sweep that measured defence with order-less def
 carries it. `test_sim-22.log` 150/150 in all three configurations.
 Unreal suite and a matrix re-run are pending.
 
+**Schema 36 verified in Unreal, and three fixtures repaired with it.** Full suite on 85eaf3c plus the
+fixture repairs: 139 passed, 1 failed, the single failure `Gameplay.CompleteSkirmishDefeat`. The three
+consequences the strategy-validation lane's earlier run surfaced are all cleared. `Gameplay.FactionResearch`
+pinned the replay version as a deliberate literal so an unannounced bump fails loudly; moved to 36 with its
+label. `AI.GuardEscortSemantics` scenario 2 asserted passivity that SPEC-STANCE-002 says should not exist:
+its guarded unit is now an unarmed Surveyor rather than a Skiff, so "the besieger is never fired upon"
+holds by construction and the six-tile response scan stays the subject; the survivors check now pins
+position as well as order, and "the besieger is still untouched at the end" became the besieger surviving
+its own point-blank exchange, because former guards returning fire is the schema working.
+`Presentation.DestructionVFX` needed no edit and passes once the behaviour is consistent. Evidence
+handling to correct: this run called `echoes_test_sandbox.py` directly instead of `run_unreal_tests.sh`,
+and the report directory (`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-schema36`) was empty afterwards, so the
+verdict above is quoted from the run's own summary and has no retained report; a re-run through the
+wrapper is owed for the evidence trail. `CompleteSkirmishDefeat` has now failed with a player that can
+shoot back, which rules out idle passivity as its cause; with the other lane's diagnostic (90,000 ticks,
+Core at 1,062, four opening combat units) it is the opponent's killing power and wants its own slice
+beside REL-AI-006 cohesion.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
