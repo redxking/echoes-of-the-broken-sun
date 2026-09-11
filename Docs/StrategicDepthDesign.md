@@ -119,7 +119,20 @@ turtle. Current numbers already point this way; make them explicit:
   picture of losing to it.
 
 No faction gets a turret that works without its infrastructure obligation. That is why turtling is a
-choice with a cost, and why an unscouted rush into any of them should lose.
+choice with a cost.
+
+**Measured 2026-09-11, and the last sentence of this rule was wrong.** "An unscouted rush into any of them
+should lose" is falsified for the Aegis at current numbers (BAL-STR-2, RequirementsState "prepared ground
+does not beat a blind rush"). Across 6 or 8 defenders against 8, 10 or 12 attackers the Core falls in every
+cell but one: 8 defenders plus a powered Aegis against 8 attackers survive 6/30, against 0/30 with the Link
+cut. The Aegis contributes 28 damage every 20 ticks, about a tenth of one attacking soldier's output, on 520
+HP that eight attackers strip in roughly 35 ticks of contact. A Meridian mirror and near-identical authored
+line damage (Lancer 12.0, Riftstalker 12.7, Intervalist 12.8 per second) rule out a faction artifact.
+
+So prepared ground is currently a **tripwire**: it buys time, warning and a small parity edge, not a won
+fight. What does beat a larger blind attacker, measured, is position and information: the chokepoint result
+(Rule A and role bodies) and the height-band result (Rule B). Whether the Aegis should become a real defence
+is an owner decision, `TBR-STR-007`; until it is ruled, this rule should be read as delay, not denial.
 
 ---
 
