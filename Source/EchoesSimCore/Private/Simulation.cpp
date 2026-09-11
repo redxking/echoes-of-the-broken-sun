@@ -9636,8 +9636,35 @@ std::vector<Command> Simulation::GenerateAiCommands(
                     garrisonIsTheArmy = !hostileNearHome;
                 }
             }
+            // A retreat is a walk to cover, not a march across the map. The
+            // rule ordered any wounded unit home from wherever it stood, so a
+            // unit that had reached the enemy base spent the rest of the match
+            // walking back, could not heal when it arrived, and set off again:
+            // 29,113 retreat-home orders against 31 attack-moves in 20,000
+            // ticks on the harness map, with units recalled from as far as 64
+            // tiles. A unit already closer to the enemy than to its own Core
+            // fights where it stands.
+            bool homeIsTheNearerRefuge = true;
+            if (commandCore != nullptr) {
+                const std::uint64_t distanceHome =
+                    DistanceSquaredRaw(actor.position, commandCore->position);
+                for (const Entity& seen : view.Entities()) {
+                    if (!config_.IsHostile(player, seen.owner) ||
+                        seen.hitPoints <= 0 ||
+                        (seen.type != EntityType::CommandCore &&
+                         seen.type != EntityType::Barracks &&
+                         seen.type != EntityType::Dropoff)) {
+                        continue;
+                    }
+                    if (DistanceSquaredRaw(actor.position, seen.position) <
+                        distanceHome) {
+                        homeIsTheNearerRefuge = false;
+                        break;
+                    }
+                }
+            }
             const bool shouldRetreat =
-                !garrisonIsTheArmy &&
+                !garrisonIsTheArmy && homeIsTheNearerRefuge &&
                 commandCore != nullptr && actor.maxHitPoints > 0 &&
                 static_cast<std::int64_t>(actor.hitPoints) * 100 <=
                     static_cast<std::int64_t>(actor.maxHitPoints) *
@@ -9648,7 +9675,22 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 const std::uint64_t holdDistance =
                     static_cast<std::uint64_t>(3 * kFixedScale) *
                     (3 * kFixedScale);
+                // Do not re-issue the order a unit is already carrying out.
+                // Re-sending "walk to the rally ring" every planning pass was
+                // most of the retreat traffic measured above (27,889 of the
+                // orders went to units already standing at home) and spends
+                // the difficulty tier's command budget on nothing.
+                if (actor.order.type == OrderType::Move &&
+                    DistanceSquaredRaw(actor.order.destination,
+                                       commandCore->position) <=
+                        static_cast<std::uint64_t>(4 * kFixedScale) *
+                            (4 * kFixedScale)) {
+                    continue;
+                }
                 if (distanceToCore <= holdDistance) {
+                    if (actor.order.type == OrderType::Hold) {
+                        continue;
+                    }
                     command.type = CommandType::Hold;
                 } else {
                     constexpr std::array<std::pair<std::int32_t, std::int32_t>, 8>

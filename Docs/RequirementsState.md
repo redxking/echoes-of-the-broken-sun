@@ -6159,6 +6159,19 @@ the first fully clean Unreal suite of the session and it answers the question th
 a planner that now targets Wells other players hold changes behaviour in every scenario where one exists,
 and no campaign mission, tutorial lesson or presentation fixture regressed. Native stands at 150/150.
 
+**The mirror stall was a retreat that never ended.** Instrumentation on the harness map found the
+opponent issuing 29,113 retreat-home orders against 31 attack-moves in 20,000 ticks, with 16 of 31 units
+recalled from more than 20 tiles at least 50 times each and one from 64 tiles, the width of the map. Two
+defects, both in the retreat branch. A wounded unit was ordered home from wherever it stood, so a unit that
+had reached the enemy base walked back across the map, could not heal on arrival (only a Meridian worker
+repairs a unit, inside its network) and set off again. And the order was re-issued every planning pass to
+units already carrying it out, which was 27,889 of those orders and spent the difficulty tier's command
+budget on nothing. Now a unit closer to the enemy than to its own Core fights where it stands, and an order
+already being obeyed is not re-sent. Measured on the same probes: attack-moves 31 to 11,856, retreat orders
+29,113 to 3,451, recalls from beyond 20 tiles 1,224 to 29, units recalled 50 or more times 16 of 31 to none
+of 12, and the Meridian mirror that had never produced a result now ends in a Corefall for seat 0. Native
+150/150 (`test_sim-26.log`). A full matrix re-run is owed and the numbers here are single-seed probes.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
