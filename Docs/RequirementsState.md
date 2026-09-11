@@ -38,11 +38,13 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
 | `SPEC-BAL-009` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a0e8c04 | 2026-09-11 | Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending |
 | `SPEC-BAL-011` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a2f2449 | 2026-09-11 | Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150 |
+| `SPEC-CMB-007` | BLOCKED | SRC | — | 8750287 | 2026-09-11 | Defect 2026-09-11: Hold units acquire only at ~7.4 tiles with 6.5-tile weapons; idle and attack-moving units never fire. Firing lanes and faction data ruled out by controls. Blocks BAL-STR-2. |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `SPEC-INFO-004` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a2f2449 | 2026-09-11 | Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150 |
 | `SPEC-RES-003` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s34 | 3c3e836 | 2026-09-11 | Schema 34 slot release: native stall test passes and fails with the rule off; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `SPEC-RES-006` | AWAITING HUMAN ACCEPTANCE | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | SPEC-RES-006.INSPECT: click shows remaining Matter; exhausted stub 30%/80% and minimap mark; FieldHudAuthority green; rendered chain did not stage it |
+| `SPEC-STANCE-002` | BLOCKED | SRC | — | 8750287 | 2026-09-11 | Defensive default does not answer threats in weapon range; idle defenders inflicted no damage in scratch probes |
 | `SPEC-TUT-008` | AGENT VERIFIED | PKG-REND | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/readiness-review-8 | 46d841c | 2026-09-11 | All ten readiness lessons earnable; lessons 6-10 each committed in a rendered practice run (readiness review driver); practice-mode gate and staging defects repaired; owner play open |
 | `SPEC-UI-008` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged |
 | `TBR-SCP-012` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-17 | 34ca1a0 | 2026-09-11 | First bounded rule landed: opponent Future Well commands withheld in authored campaign operations (bridge, ECHOES_AI_WELL_DOCTRINE); per-mission doctrine remains D7 |
@@ -53,6 +55,34 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
 | `TBR-STR-006` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a0e8c04 | 2026-09-11 | Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## Defect: units do not acquire threats at weapon range — SPEC-CMB-007, SPEC-STANCE-001..003, 2026-09-11
+
+Found while building the BAL-STR-2 harness; reported, not fixed (combat/AI behaviour is the D3 lane's).
+Scratch probes only, no tree edits (`scratchpad/balstr2`).
+
+**Symptom.** Twelve Meridian defenders around a Core are killed by ten Kharuun attackers without killing
+one. Traced on a single Hold defender (`defender.cpp`): its order stays type 8 with target 0 and cooldown 0
+while the nearest hostile closes from 32 tiles to 8.1, although its weapon range is 6.5 tiles (6,656 raw);
+it first takes a target at about 7.4 tiles and dies at tick 234. `SPEC-STANCE-003` requires a Hold unit to
+engage any valid visible hostile inside weapon range, and `SPEC-CMB-007` requires autonomous acquisition
+without a manual target.
+
+**Worse for the other stances.** Same setup (`stance.cpp`), defenders given Hold, Stop (idle) and
+AttackMove: Hold damages six attackers, starting only at tick 146; Stop and AttackMove defenders inflict
+**no damage at all** before dying (first-damage tick never reached), and AttackMove defenders die soonest.
+`SPEC-STANCE-002` makes Defensive the default, so idle units must answer threats in weapon range.
+
+**Not caused by this lane's rules.** With firing lanes disabled in a scratch copy of the simulation the
+results are identical (Hold 6 hurt, Stop and AttackMove 0, same end ticks), so `SPEC-CMB-013` is not the
+cause. A Meridian-versus-Meridian mirror (`stance_mirror.cpp`) shows the same pattern, so it is not faction
+data: Hold defenders eventually win 5 alive to 0, while Stop and AttackMove defenders still inflict nothing.
+
+**Consequence for balance work.** Every harness that leaves defenders on Hold understates defence, which
+is why flat-ground defenders lost 0/30 in the chokepoint and trench sweeps. Those results stand as
+comparisons between conditions (each side measured under the same defect) but their absolute rates should
+be re-measured once acquisition is fixed. BAL-STR-2 (prepared ground against a blind rush) is blocked on
+this and has no recorded number.
 
 ## Height-band sight lands (inert until a map sets bands) — TBR-STR-002, SPEC-INFO-004, SPEC-BAL-011, 2026-09-11
 
@@ -5835,3 +5865,5 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T21:49Z — `TBR-STR-002` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a2f2449; Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150
 - 2026-09-11T21:49Z — `SPEC-INFO-004` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a2f2449; Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150
 - 2026-09-11T21:49Z — `SPEC-BAL-011` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a2f2449; Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150
+- 2026-09-11T21:54Z — `SPEC-CMB-007` → **BLOCKED**; class SRC; evidence —; commit 8750287; Defect 2026-09-11: Hold units acquire only at ~7.4 tiles with 6.5-tile weapons; idle and attack-moving units never fire. Firing lanes and faction data ruled out by controls. Blocks BAL-STR-2.
+- 2026-09-11T21:54Z — `SPEC-STANCE-002` → **BLOCKED**; class SRC; evidence —; commit 8750287; Defensive default does not answer threats in weapon range; idle defenders inflicted no damage in scratch probes
