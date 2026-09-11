@@ -7,11 +7,7 @@ metadata:
 
 # Echoes skirmish full-match playtest
 
-## Project authority
-
-Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
-
-Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+Inherits [AGENTS.md](../../../AGENTS.md), [Docs/README.md](../../../Docs/README.md) and [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md). Fetch the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md) records with `python3 Scripts/req.py both <ID>...`, never the masters whole.
 
 Read `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/GameCompletionDirective.md`, `Docs/Requirements.md`, the skirmish rules in `Docs/Archive/DevelopmentBible.md`, `Docs/Archive/ProjectLedger.md`, the exact package identity, and [echoes-session-control](../echoes-session-control/SKILL.md). Require a real GUI-control interface with fresh screenshots/state and real mouse/keyboard input; otherwise stop. Configure only through rendered setup controls and record map, faction, AI personality/difficulty, resources, victory condition, display/accessibility settings, seed if exposed, and package identity.
 

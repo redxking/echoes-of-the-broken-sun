@@ -7,11 +7,7 @@ metadata:
 
 # Echoes audio listening review
 
-## Project authority
-
-Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
-
-Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+Inherits [AGENTS.md](../../../AGENTS.md), [Docs/README.md](../../../Docs/README.md) and [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md). Fetch the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md) records with `python3 Scripts/req.py both <ID>...`, never the masters whole.
 
 Read `Docs/AudioDirection.md`, the audio rules in `Docs/Archive/DevelopmentBible.md`, Track C in `Docs/GameCompletionDirective.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Archive/AssetRegister.md`, the package identity, and [echoes-session-control](../echoes-session-control/SKILL.md). Use an actual audio output/listening path and live rendered gameplay; waveforms, logs, or screenshots alone do not prove player-perceived audibility. If audio cannot be heard through the available interface, stop and request a human/listening tool.
 

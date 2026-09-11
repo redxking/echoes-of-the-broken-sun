@@ -7,11 +7,7 @@ metadata:
 
 # Echoes clean-machine install qualification
 
-## Project authority
-
-Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
-
-Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+Inherits [AGENTS.md](../../../AGENTS.md), [Docs/README.md](../../../Docs/README.md) and [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md). Fetch the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md) records with `python3 Scripts/req.py both <ID>...`, never the masters whole.
 
 Read `Docs/GameCompletionDirective.md` Gate 44 and clean-machine procedure, `Docs/Requirements.md`, `Docs/Archive/SetupAndBuild.md`, `Docs/Archive/ProjectLedger.md`, the current task handoff, [echoes-session-control](../echoes-session-control/SKILL.md), [echoes-heavy-run-coordination](../echoes-heavy-run-coordination/SKILL.md), and the exact package/signing records. Require a callable GUI-control interface with fresh visible state/screenshots and actual mouse/keyboard events, or stop and request a human/tool. This action needs an exclusive resource reservation; acquire it through the live control process and record and release the reservation after the session.
 

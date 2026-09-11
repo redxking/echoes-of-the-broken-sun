@@ -7,11 +7,7 @@ metadata:
 
 # Echoes heavy-run coordination
 
-## Project authority
-
-Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
-
-Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+Inherits [AGENTS.md](../../../AGENTS.md), [Docs/README.md](../../../Docs/README.md) and [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md). Fetch the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md) records with `python3 Scripts/req.py both <ID>...`, never the masters whole.
 
 Use before a build, cook, package, editor/runtime launch, profiling, soak, GPU-intensive capture, port-bound automation, or GUI run. It coordinates exclusive resource use; it does not authorize source changes or acceptance.
 

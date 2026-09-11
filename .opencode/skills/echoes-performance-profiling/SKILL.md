@@ -7,11 +7,7 @@ metadata:
 
 # Echoes performance profiling
 
-## Project authority
-
-Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
-
-Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+Inherits [AGENTS.md](../../../AGENTS.md), [Docs/README.md](../../../Docs/README.md) and [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md). Fetch the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md) records with `python3 Scripts/req.py both <ID>...`, never the masters whole.
 
 Read [Project/AGENTS.md](../../../AGENTS.md), `Docs/GameCompletionDirective.md`, `Docs/Archive/ProjectLedger.md`, `Docs/Archive/SetupAndBuild.md`, [echoes-session-control](../echoes-session-control/SKILL.md), the current task handoff, and [echoes-heavy-run-coordination](../echoes-heavy-run-coordination/SKILL.md). Before any profile, confirm an exclusive resource reservation through the live control process; record and release the reservation afterward. A stale, unconfirmed, or unrelated reservation is invalid. Profile the exact current commit and package identity; first state whether the run is editor, Development package, or signed Shipping package. The M1 Pro baseline keeps Nanite and VSM off. Do not profile while a local coding model competes for GPU/unified memory.
 

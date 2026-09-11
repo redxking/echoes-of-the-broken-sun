@@ -7,11 +7,7 @@ metadata:
 
 # Echoes tutorial usability playtest
 
-## Project authority
-
-Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
-
-Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+Inherits [AGENTS.md](../../../AGENTS.md), [Docs/README.md](../../../Docs/README.md) and [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md). Fetch the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md) records with `python3 Scripts/req.py both <ID>...`, never the masters whole.
 
 Read `Docs/OpeningAndTutorialScript.md`, `Docs/Archive/DevelopmentBible.md`, `Docs/DemoRecoveryDirective.md`, `Docs/Requirements.md`, `Docs/Archive/ProjectLedger.md`, the package-provenance record, and [echoes-session-control](../echoes-session-control/SKILL.md). Require a live GUI interface with fresh state and real mouse/keyboard events. Begin with no injected save or source-derived coordinates; work from the visible tutorial prompts and controls.
 

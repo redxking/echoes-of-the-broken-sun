@@ -7,11 +7,7 @@ metadata:
 
 # Echoes voice production
 
-## Project authority
-
-Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
-
-Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+Inherits [AGENTS.md](../../../AGENTS.md), [Docs/README.md](../../../Docs/README.md) and [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md). Fetch the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md) records with `python3 Scripts/req.py both <ID>...`, never the masters whole.
 
 Read [Project/AGENTS.md](../../../AGENTS.md), `Docs/GameCompletionDirective.md` Track C and §7, `Docs/CharacterVoiceIdentityBible.md`, `Docs/Archive/DevelopmentBible.md` (§Writing rules), `Docs/OpeningAndTutorialScript.md` or the authoritative mission source as relevant, `Docs/AudioDirection.md`, `Docs/Archive/AssetRegister.md`, `Docs/Archive/ProjectLedger.md`, and [echoes-session-control](../echoes-session-control/SKILL.md). A current task ownership is required for edits.
 

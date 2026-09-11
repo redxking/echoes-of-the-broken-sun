@@ -17,6 +17,7 @@ instruction hierarchy take precedence. A newer timestamp alone does not promote 
 | [DevelopmentBible.md](Archive/DevelopmentBible.md) | Creative canon: world, factions, characters, and narrative intent. Its legacy `Archive/` location does not retire this role. Behavioral numbers and implementation snapshots defer to the two master files. |
 | [AGENTS.md](../AGENTS.md) | Shared operating rules, ownership, evidence, authorship, communication, and completion discipline for every agent. |
 | [AgentSkillRouting.md](AgentSkillRouting.md) | Selects the canonical task-specific procedures under `.opencode/skills/`. Client bridges contain no independent policies. |
+| [CONTEXT.md](CONTEXT.md) | Generated session packet (`Scripts/build_context.py`): checkout identity, active package, next action, newest state entries. A view only; edit DeliveryPlan or record state, then regenerate. |
 
 The requirements master and creative canon govern different decisions. A contradiction between them is an
 explicit owner decision, not permission to silently rewrite either. Record affected IDs and options in
@@ -88,6 +89,12 @@ Git state live rather than copying counts, branch names, or tracking assertions 
 The [SC2 gameplay audit](SC2GameplayGapAudit.md) is a dated source-level comparison, not a current defect ledger. Its complete 162-item/32-event intake now lives in [Requirements.md](Requirements.md#gameplay-completeness-intake--sc2-audit-2026-09-09). Read the [state and decision dispositions](RequirementsState.md#sc2-audit-intake-and-continuous-work--2026-09-09) and [active D0–D10 sequence](DeliveryPlan.md#active-execution-state) before continuing affected gameplay work. Keep passing recent repairs, unresolved design choices and required player evidence separate. The ordinary document checker includes `Scripts/check_gameplay_audit_traceability.py` so this coverage cannot silently lose a row.
 
 ## Maintenance verification
+
+Query records instead of reading the masters whole: `python3 Scripts/req.py both <ID>...`, `family <FAM>`,
+`search "<text>"`, `section "<heading>"`. Record per-ID state with `python3 Scripts/record_state.py`
+(structured row plus journal line in RequirementsState; owner-only states need `--owner`). Rebuild the
+session packet with `python3 Scripts/build_context.py`. The Claude Code hooks in `.claude/settings.json`
+print the packet at session start and refuse whole-file reads of the two masters.
 
 Run `python3 Scripts/check_agent_docs.py` from the checkout after guidance edits. It checks local links,
 client/skill pointers, metadata, requirement identity/index coverage and family-navigation counts.

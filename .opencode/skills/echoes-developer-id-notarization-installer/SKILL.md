@@ -7,11 +7,7 @@ metadata:
 
 # Echoes Developer ID, notarization, and installer
 
-## Project authority
-
-Follow [Project/AGENTS.md](../../../AGENTS.md) and the authority map in [Docs/README.md](../../../Docs/README.md). Read the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md).
-
-Use [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md) for skill selection, path ownership, heavy-run coordination, and evidence handling.
+Inherits [AGENTS.md](../../../AGENTS.md), [Docs/README.md](../../../Docs/README.md) and [AgentSkillRouting.md](../../../Docs/AgentSkillRouting.md). Fetch the affected [Requirements.md](../../../Docs/Requirements.md) and [RequirementsState.md](../../../Docs/RequirementsState.md) records with `python3 Scripts/req.py both <ID>...`, never the masters whole.
 
 Read `Docs/GameCompletionDirective.md` release gate, `Docs/Requirements.md`, `Docs/Archive/SetupAndBuild.md`, `Docs/Archive/ProjectLedger.md`, the current task handoff, [echoes-session-control](../echoes-session-control/SKILL.md), [echoes-heavy-run-coordination](../echoes-heavy-run-coordination/SKILL.md), and the exact candidate package-provenance record. This is credentialed and external-state work: keychain access, Developer ID signing, notary submission, stapling, installer creation, upload, and publication require separate explicit Angelis authority. Without it, prepare a checklist only and stop.
 

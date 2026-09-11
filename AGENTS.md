@@ -14,12 +14,16 @@ into a current restriction.
 1. Locate the checkout: from the containing `EchoesOfTheBrokenSun` folder, enter `Project`. Read the
    execution state before operational preflight. For authorized implementation inspect branch, commit,
    dirty paths and relevant running work. Preserve other work.
-2. For execution or continuation, first read the [active execution state](Docs/DeliveryPlan.md#active-execution-state)
-   and follow its package context routing and pause boundary. Documentation-only maintenance respects
-   that boundary and does not require execution preflight or active-writer checks.
-   Read [Docs/README.md](Docs/README.md), then the relevant sections of
-   [Docs/Requirements.md](Docs/Requirements.md) and [Docs/RequirementsState.md](Docs/RequirementsState.md).
-   Requirements define behavior; the state record defines evidence state and owner acceptance.
+2. For execution or continuation, first read [Docs/CONTEXT.md](Docs/CONTEXT.md), the generated session
+   packet (regenerate it with `python3 Scripts/build_context.py`); it carries the
+   [active execution state](Docs/DeliveryPlan.md#active-execution-state), package routing and pause boundary.
+   Documentation-only maintenance respects that boundary and does not require execution preflight or
+   active-writer checks. Read [Docs/README.md](Docs/README.md) for the authority map. Fetch the affected
+   requirement records with `python3 Scripts/req.py both <ID>...` (also `family`, `search`, `section`)
+   instead of opening [Docs/Requirements.md](Docs/Requirements.md) or
+   [Docs/RequirementsState.md](Docs/RequirementsState.md) whole. Requirements define behavior; the state
+   record defines evidence state and owner acceptance. Record outcomes with
+   `python3 Scripts/record_state.py`, then rebuild the packet before handoff.
 3. Read [Docs/AgentSkillRouting.md](Docs/AgentSkillRouting.md), inspect skill descriptions, and read the
    smallest applicable set completely. State the selected skills when first applying them. Load the affected
    design references through the authority map; a prompt or old chat is not a substitute.
