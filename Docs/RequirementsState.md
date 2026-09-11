@@ -4693,8 +4693,50 @@ destination=(32,33)`); `Campaign.TheBrokenSun` at "Possible, Manifest, and Neme 
 command sites" (`[ECHOES_BROKEN_SUN_CONTRACT_FAILED] tick=6322 approach=false accord=false
 heavy=false`, detail: the heavy at tile 21,30 ordered to site 18,30 never arrives). These are
 mission-scripting arrival problems under solid footprints (`SPEC-MSN-012`, `SPEC-MSN-015`,
-`SPEC-MOV-006`); they are investigated next and belong to D6/D7 if they prove to be authored-site
-placement rather than a movement rule. Baseline for the day: 12 on main → 10 → 7 → 3, none added.
+`SPEC-MOV-006`). Baseline for the day: 12 on main → 10 → 7 → 3, none added.
+
+**The last three, investigated (three read-only investigations, six refuters, all upheld).** None
+is a movement rule. (1) `FutureThatWon`: the mission completed at tick 1664 with the verifier inside
+its 3-tile readback circle (`[ECHOES_FUTURE_THAT_WON_FINISHED] result=success`); the fixture's
+`PaceWitness` has a mission-complete early return in its outer loop and its step loop but not in its
+escort-regroup loop, completion was driven from inside that loop, the bridge pauses the simulation on
+success, and the loop then burned its 1,800-tick budget against a frozen match. The regroup loop now
+returns on completion with the same 3-tile judgment the other loops use. Fixture only. (2)
+`FreshJourney` M12: the assertion "readback legitimately reveals the Future Well" checked visibility
+at tick zero, before the approach Move that follows it; it had only ever passed because the Oruun's
+readback halt at (38,42) put the Well at (32,56) 232 raw-tile² inside a 16-tile Resonant sight circle
+(limit 256); solid footprints moved that halt to row 41 (261 > 256). `SPEC-MSN-012` promises no reveal
+at readback, and the `FutureWell` command still refuses an unseen target, so the fixture now sends the
+worker to the approach tile first and waits up to 2,600 ticks for fair sight — the pattern its own
+M10/M11 legs and the FutureThatWon fixture already use. Fixture only. (3) `TheBrokenSun`: mission
+scripting spawned the neutral witness Oruun at his accord site plus two columns, i.e. on the row every
+founding doctrine's accord heavy walks along; with solid bodies (`SPEC-MOV-006`) the Manifest heavy
+stopped 3.14 tiles short of (18,30) for good and the settle predicate could never be met. Oruun now
+stands two rows off the site (row site.y-2: raw y 28672 for all three doctrines), inside the 3-tile
+witness radius and clear of the approach and of the heavy's resting tiles; no site, predicate or
+simulation rule changed. Retained M15 replays or checkpoints recorded with the old spawn would
+diverge from a fresh scenario; none is a committed fixture. Two game-side facts recorded, not
+repaired: the route field is blind to foreign mobile bodies that the step gate enforces, so a
+stationary foreign unit on a route stops a mover permanently (`SPEC-MOV-003`, the D9b measurement
+above; D7/owner decision on a body-aware field); and in the failing run the M15 approach anchor
+structure at (32,56) had ceased to be alive by tick 6322, an unexplained event that only had room to
+occur because the settle wait ran to 6,300 ticks.
+
+**Automation rerun 4** (`d2-foundation-20260911T0050Z/automation-04/index.json`, editor rebuilt at
+`build-05.log` Result Succeeded, 02:59–03:09 UTC): 138 tests, 137 passed, 1 failed.
+`Campaign.FutureThatWon` and `Campaign.TheBrokenSun` pass. `Campaign.FreshJourney` now clears every
+mission on its first route and fails on its second route variant at "Mission 04 Reshape completes
+through guarded ordinary play": `[M04_DIAGNOSTIC] tick=1126 phase=5 expectedPhase=4 foundingChoice=3
+... firstObservedLoss=bearer{id=11 hp=5/85 → missing}` — the archive bearer is killed in combat on
+the Reshape branch, a step no earlier run reached (retained in `automation-04.m04-diagnostic.txt`).
+Day sequence: 12 on main → 10 → 7 → 3 → 1, none added. Whether the bearer loss is mission balance
+under an opponent that now captures Wells and earns Dawn (the planner repair changes live AI command
+streams by design), an escort-scripting gap, or a fixture assumption is the next investigation; it is
+`SPEC-MSN-004` territory and does not touch the D2 foundation.
+
+**Commit identity, third slice.** Code `ec1cca5` on `main`, documentation commit immediately after,
+both pushed to `origin/main`. Automation only: no packaged build, no rendered capture, no physical
+input, no owner acceptance.
 
 **Commit identity, second slice.** Code `a37bacd` on `main`, documentation commit immediately after;
 both pushed to `origin/main` under the owner's "push to main then continue working" instruction.
