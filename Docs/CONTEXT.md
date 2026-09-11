@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-11 23:00 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-11 23:18 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `6e2e360` (upstream `50dc165`); 355 dirty paths, of which non-asset: `Docs/RequirementsState.md`.
+- Branch `main` at `d6fcf9d` (upstream `50dc165`); 356 dirty paths, of which non-asset: `Docs/RequirementsState.md`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesFullMatchTest.cpp`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -25,10 +25,10 @@ Read this, then fetch only the requirement records you touch:
 
 ## Newest RequirementsState entries
 
+- Cohesion is not the binding constraint; the population split is — 2026-09-11, 23:05Z
 - Retained artifact for the schema 36 verdict — 2026-09-11, 22:59Z
 - Three findings, one root: the opponent never masses — 2026-09-11, 22:50Z
 - Schema 36 verified in Unreal; the acquisition defect is closed — 2026-09-11, 22:45Z
-- BAL-STR-2 measured at last: prepared ground does not beat a blind rush — 2026-09-11, 22:40Z
 
 ## Recently recorded state rows
 

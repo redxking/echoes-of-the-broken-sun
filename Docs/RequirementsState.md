@@ -58,6 +58,30 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-007` | OPEN | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | c2437ed | 2026-09-11 | Owner decision: a powered Aegis only matters at parity (6/30); prepared ground as costed does not beat a blind rush |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
+## Cohesion is not the binding constraint; the population split is — 2026-09-11, 23:05Z
+
+The D3 lane reports a **negative result on its own cohesion commit** (`0692638`), and it revises what this
+lane recorded at 22:50Z. The matrix with cohesion is still 557/1,000 with an identical per-pairing split;
+114 matches end on a different checksum and 99 at a different length, but **not one moved from stalling to
+finishing**. An instrumented build shows the massing branch firing zero times in 12,000 ticks for either
+seat: Adaptive targets 18 workers at one population each against a capacity of 30 early and 42 later, so a
+seat saturates at 16-20 workers and 10-14 fighters with no headroom, the "commit anyway when there is no
+headroom" valve switches massing off, and wherever headroom exists the seat already holds far more than the
+four fit units the threshold asks for. The rule is satisfied or bypassed at all times.
+
+**Correction to this lane's 22:50Z note.** That entry named piecemeal commitment as the shared root of the
+stalled mirrors, `CompleteSkirmishDefeat` and this lane's BAL-STR-2 result. Commitment is not the binding
+constraint: a seat that spends 18 of 30 population on workers cannot field an army that ends a match on
+that map, whatever order it commits in. The population split (`REL-AI-022`) sits upstream of cohesion, and
+`REL-AI-006` still needs a real muster: units waiting as a group and released under one order, rather than
+each unit judging alone.
+
+**This strengthens BAL-STR-2 rather than softening it.** If a seat can only ever field 10-14 fighters, then
+"is a powered Aegis worth its cost" and "how large an army can a seat hold" are the same economic question.
+A defence measured against 8-12 attackers is being measured against roughly the largest force the economy
+allows, which makes the tripwire finding (a powered Aegis matters only at parity, 6/30) a statement about
+the shipping economy, not only about the turret. `TBR-STR-007` should be read with that in mind.
+
 ## Retained artifact for the schema 36 verdict — 2026-09-11, 22:59Z
 
 `BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-final36`, run through
@@ -94,7 +118,9 @@ opposite direction, and the three open symptoms are now one cause.
   only at parity (6/30).
 
 The common factor is that a force which arrives piecemeal cannot convert an advantage, and that once
-defenders shoot back, an even fight no longer resolves at all. Idle return fire did not cause this: it made
+defenders shoot back, an even fight no longer resolves at all. **(Revised 23:05Z: measurement shows
+commitment order was not the binding constraint; the population split is upstream of it. See "Cohesion is
+not the binding constraint" above.)** Idle return fire did not cause this: it made
 a pre-existing weakness visible, which is the fix working. `REL-AI-006` cohesion (mass a strike force and
 commit it together) is the blocking slice, owned by the D3 lane and now IN PROGRESS.
 
