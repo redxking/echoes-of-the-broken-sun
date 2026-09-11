@@ -172,6 +172,10 @@ FEchoesResourceMonitorView FEchoesResourceMonitorModel::Build(
     Out.LiquidFunds.Dawn = PlayerView.Player().resources.dawnshards;
     Out.Logistics.Used = PlayerView.PopulationUsed();
     Out.Logistics.Capacity = PlayerView.PopulationCapacity();
+    Out.Logistics.bMobileEntityCountAvailable = true;
+    Out.Logistics.MobileEntitiesFielded = PlayerView.MobileEntityCount();
+    Out.Logistics.MobileEntitiesInProduction = PlayerView.MobileEntityReservations();
+    Out.Logistics.MobileEntityLimit = echoes::sim::kMobileEntityLimit;
     Out.Workers.bActivityAvailable = true;
     Out.Availability.bWorkerSourceAssignmentsAvailable = true;
     Out.Availability.bRelayExpiryAvailable = true;

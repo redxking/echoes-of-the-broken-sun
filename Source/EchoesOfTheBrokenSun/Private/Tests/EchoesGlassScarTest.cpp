@@ -391,7 +391,7 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
     {
         if (Entity.owner == UEchoesSimulationSubsystem::LocalPlayerId &&
             Entity.type == echoes::sim::EntityType::Soldier &&
-            Entity.position == echoes::sim::Vec2::FromTiles(16, 10))
+            Entity.position == echoes::sim::Vec2::FromTiles(17, 10))
         {
             RouteScout = Entity.id;
             break;

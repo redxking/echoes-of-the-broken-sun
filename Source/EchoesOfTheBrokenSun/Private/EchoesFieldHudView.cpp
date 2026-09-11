@@ -1216,15 +1216,9 @@ FEchoesCommandDeckProfile BuildNetworkCommandProfile(
                 ++Profile.WorkerCount;
                 break;
             case EntityType::Soldier:
-                ++Profile.CombatCount;
-                break;
             case EntityType::HeavyUnit:
-                ++Profile.CombatCount;
-                Profile.bHasHeavyUnit = true;
-                break;
             case EntityType::ScoutUnit:
                 ++Profile.CombatCount;
-                Profile.bHasScoutUnit = true;
                 break;
             case EntityType::CommandCore:
             case EntityType::Dropoff:
@@ -1624,6 +1618,10 @@ FEchoesFieldHudView FEchoesFieldHudModel::BuildPlayerScoped(
     View.Resources.Dawn = PlayerView.Player().resources.dawnshards;
     View.Resources.PopulationUsed = PlayerView.PopulationUsed();
     View.Resources.PopulationCapacity = PlayerView.PopulationCapacity();
+    View.Resources.bMobileEntityCountAvailable = true;
+    View.Resources.MobileEntitiesFielded = PlayerView.MobileEntityCount();
+    View.Resources.MobileEntitiesInProduction = PlayerView.MobileEntityReservations();
+    View.Resources.MobileEntityLimit = echoes::sim::kMobileEntityLimit;
     View.Resources.SimulationTick = PlayerView.CurrentTick();
     View.Resources.LocalFaction = Text(
         echoes::presentation::FactionDisplayName(PlayerView.Player().faction));

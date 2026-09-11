@@ -84,6 +84,16 @@ bool FEchoesBuildPlacementPreviewTest::RunTest(const FString& Parameters)
         echoes::sim::Faction::MeridianCompact,
         echoes::sim::EntityType::Worker,
         echoes::sim::Vec2::FromTiles(8, 8));
+    // SPEC-STR-003: the Barracks footprint is 4x4, so the candidate at 12,8
+    // spans tiles 10-14, and the far column is six tiles from the builder --
+    // beyond a Surveyor's five-tile sight. A second worker on the far side
+    // scouts the ground so the sweep tests footprints rather than fog.
+    const echoes::sim::EntityId FarScout = Simulation.SpawnEntity(
+        0,
+        echoes::sim::Faction::MeridianCompact,
+        echoes::sim::EntityType::Worker,
+        echoes::sim::Vec2::FromTiles(15, 8));
+    if (!TestTrue(TEXT("Far-side scout spawns"), FarScout != 0)) return false;
     Simulation.Step();
     const std::optional<echoes::sim::PlayerView> View =
         Simulation.CreatePlayerView(0);

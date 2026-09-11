@@ -747,6 +747,39 @@ bool FEchoesFullMatchTest::RunTest(const FString& Parameters)
 
     TestTrue(TEXT("The strike force reveals the opposing Command Core"),
              bEnemyCoreRevealed);
+    // These two are the D2 exit chain (gather -> fund -> train -> dispatch)
+    // and are not relaxed for a fast victory: a match the strike force wins
+    // before the economy funds one Lancer has not shown the economy works.
+    if (ReinforcementProductionOrders == 0 || ReinforcementsDispatched == 0)
+    {
+        const echoes::sim::Simulation* Final = Bridge->GetSimulation();
+        const echoes::sim::PlayerState* LocalState =
+            Final != nullptr ? Final->FindPlayer(UEchoesSimulationSubsystem::LocalPlayerId) : nullptr;
+        int32 LiveWorkers = 0, CarryingWorkers = 0, IdleWorkers = 0;
+        if (Final != nullptr)
+        {
+            for (const echoes::sim::Entity& Entity : Final->Entities())
+            {
+                if (Entity.owner != UEchoesSimulationSubsystem::LocalPlayerId ||
+                    Entity.type != echoes::sim::EntityType::Worker || Entity.hitPoints <= 0)
+                {
+                    continue;
+                }
+                ++LiveWorkers;
+                CarryingWorkers += Entity.cargo > 0 ? 1 : 0;
+                IdleWorkers += Entity.order.type == echoes::sim::OrderType::None ? 1 : 0;
+            }
+        }
+        AddInfo(FString::Printf(
+            TEXT("[REINFORCEMENT_DIAGNOSTIC] outcome=%d tick=%llu matter=%d dawn=%d workers=%d carrying=%d idle=%d productionOrders=%d dispatched=%d coreRevealed=%s"),
+            static_cast<int32>(Bridge->GetMatchOutcome()),
+            static_cast<unsigned long long>(Final != nullptr ? Final->CurrentTick() : 0),
+            LocalState != nullptr ? LocalState->resources.material : -1,
+            LocalState != nullptr ? LocalState->resources.dawnshards : -1,
+            LiveWorkers, CarryingWorkers, IdleWorkers,
+            ReinforcementProductionOrders, ReinforcementsDispatched,
+            bEnemyCoreRevealed ? TEXT("true") : TEXT("false")));
+    }
     TestTrue(
         TEXT("The gathering economy funds ongoing normal reinforcement production"),
         ReinforcementProductionOrders > 0);

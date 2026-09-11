@@ -516,7 +516,9 @@ void AddCommand(FTraceHasher& Hasher, const echoes::sim::Command& Command)
             return (Actor->type == echoes::sim::EntityType::CommandCore &&
                     Command.buildType == echoes::sim::EntityType::Worker) ||
                     (Actor->type == echoes::sim::EntityType::Barracks &&
-                     Command.buildType == echoes::sim::EntityType::Soldier)
+                     (Command.buildType == echoes::sim::EntityType::Soldier ||
+                      Command.buildType == echoes::sim::EntityType::HeavyUnit ||
+                      Command.buildType == echoes::sim::EntityType::ScoutUnit))
                 ? true
                 : Reject(TEXT("production actor or unit type is invalid"));
 

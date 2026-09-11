@@ -4255,15 +4255,19 @@ bool UEchoesSimulationSubsystem::StartScenario(
                 // share the approved six-Surveyor/two-Lancer force. Training
                 // adds no roster, map, or narrative canon.
                 SpawnUnit(Owner, ForceFaction, EntityType::CommandCore, 10, 10);
+                // SPEC-STR-003: the Foundry is 4x4, so its footprint reaches
+                // two tiles from 14,10 in every direction. 14,12 and 16,10
+                // are inside it and 8,8 is inside the 5x5 Core; every mobile
+                // spawn below stands clear of both.
                 SpawnUnit(Owner, ForceFaction, EntityType::Barracks, 14, 10);
                 SpawnUnit(Owner, ForceFaction, EntityType::Dropoff, 6, 17);
                 SpawnUnit(Owner, ForceFaction, EntityType::Worker, 8, 13);
                 SpawnUnit(Owner, ForceFaction, EntityType::Worker, 11, 14);
-                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 14, 12);
+                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 14, 13);
                 SpawnUnit(Owner, ForceFaction, EntityType::Worker, 8, 16);
                 SpawnUnit(Owner, ForceFaction, EntityType::Worker, 11, 17);
                 SpawnUnit(Owner, ForceFaction, EntityType::Worker, 14, 15);
-                SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 8, 8);
+                SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 6, 8);
                 SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 12, 7);
                 SpawnUnit(Owner, ForceFaction, EntityType::HeavyUnit, 7, 6);
                 SpawnUnit(Owner, ForceFaction, EntityType::ScoutUnit, 15, 6);
@@ -4277,8 +4281,8 @@ bool UEchoesSimulationSubsystem::StartScenario(
                 SpawnUnit(Owner, ForceFaction, EntityType::Dropoff, 6, 17);
                 SpawnUnit(Owner, ForceFaction, EntityType::Worker, 8, 13);
                 SpawnUnit(Owner, ForceFaction, EntityType::Worker, 11, 14);
-                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 14, 12);
-                SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 8, 8);
+                SpawnUnit(Owner, ForceFaction, EntityType::Worker, 14, 13);
+                SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 6, 8);
                 SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 12, 7);
                 SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 16, 10);
                 SpawnUnit(Owner, ForceFaction, EntityType::HeavyUnit, 7, 6);
@@ -4289,9 +4293,12 @@ bool UEchoesSimulationSubsystem::StartScenario(
             SpawnUnit(Owner, ForceFaction, EntityType::CommandCore, 54, 54);
             SpawnUnit(Owner, ForceFaction, EntityType::Barracks, 50, 54);
             SpawnUnit(Owner, ForceFaction, EntityType::Dropoff, 58, 48);
-            SpawnUnit(Owner, ForceFaction, EntityType::Worker, 51, 53);
+            // 51,53 sat inside the 4x4 Barracks at 50,54 and 57,52 inside
+            // the 2x2 Aegis Post at 58,53 once ground occupancy became real;
+            // a worker spawned with no standing room never gathers.
+            SpawnUnit(Owner, ForceFaction, EntityType::Worker, 51, 51);
             SpawnUnit(Owner, ForceFaction, EntityType::Worker, 54, 50);
-            SpawnUnit(Owner, ForceFaction, EntityType::Worker, 57, 52);
+            SpawnUnit(Owner, ForceFaction, EntityType::Worker, 56, 51);
             SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 50, 57);
             SpawnUnit(Owner, ForceFaction, EntityType::Soldier, 54, 58);
             SpawnUnit(Owner, ForceFaction, EntityType::HeavyUnit, 57, 58);
@@ -19624,6 +19631,11 @@ bool UEchoesSimulationSubsystem::ValidatePrototypeCommand(
                     break;
                 case echoes::sim::ProductionResult::CapacityReached:
                     OutFeedback = TEXT("[LOGISTICS_CAPACITY] Build a drop-off before adding more units.");
+                    break;
+                case echoes::sim::ProductionResult::MobileEntityLimitReached:
+                    OutFeedback = FString::Printf(
+                        TEXT("[ARMY_LIMIT] %d controllable units are already fielded or in production. Lose or cancel one before adding another."),
+                        echoes::sim::kMobileEntityLimit);
                     break;
                 case echoes::sim::ProductionResult::EntityCapacityReached:
                     OutFeedback = TEXT("[ENTITY_CAPACITY] The deterministic entity limit was reached.");

@@ -4012,7 +4012,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
         // lead already stands at the requested standoff (with one-eighth-tile
         // slack for integer truncation); a zero standoff demands exact
         // arrival, and its final step lands exactly on Goal.
-        const auto ComputeMissionEightConvoyStep = [](
+        const auto ComputeMissionEightConvoyStep = [Bridge](
             const Vec2& Current,
             const Vec2& Goal,
             int32 StandoffRaw,
@@ -4066,11 +4066,26 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                 OutStepDestination = Goal;
                 return true;
             }
-            OutStepDestination = Vec2::FromRaw(
-                static_cast<int32>(
-                    Current.x.Raw() + DeltaX * TravelRaw / Distance),
-                static_cast<int32>(
-                    Current.y.Raw() + DeltaY * TravelRaw / Distance));
+            int64 CurrentTravel = TravelRaw;
+            while (true)
+            {
+                OutStepDestination = Vec2::FromRaw(
+                    static_cast<int32>(
+                        Current.x.Raw() + DeltaX * CurrentTravel / Distance),
+                    static_cast<int32>(
+                        Current.y.Raw() + DeltaY * CurrentTravel / Distance));
+                if (Bridge->GetSimulation() == nullptr ||
+                    Bridge->GetSimulation()->IsPositionPassableFor(0, OutStepDestination))
+                {
+                    break;
+                }
+                CurrentTravel += echoes::sim::kFixedScale;
+                if (CurrentTravel >= Distance)
+                {
+                    OutStepDestination = Goal;
+                    break;
+                }
+            }
             return true;
         };
         // True when the candidate position's tile lies outside every live
@@ -4205,7 +4220,7 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     {
                         continue;
                     }
-                    if (Simulation->IsPositionPassable(Candidate) &&
+                    if (Simulation->IsPositionPassableFor(0, Candidate) &&
                         MissionEightStandHiddenFromHostiles(Candidate))
                     {
                         Chosen = Candidate;

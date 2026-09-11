@@ -1652,6 +1652,250 @@ void TestProductionPopulationAndVictory() {
     REQUIRE(victory.Outcome() == MatchOutcome::Player0Victory);
 }
 
+void TestMobileEntityLimitAndReservations() {
+    // SPEC-RES-008: exactly 30 controllable mobile entities per player,
+    // buildings excluded, concurrent with and reported apart from Logistics.
+    // Production reserves a slot when an item starts; completion, cancellation
+    // and death each release exactly once; a waiting queue entry cannot start
+    // over the limit; the opponent's scoped view carries the same count.
+    static_assert(kMobileEntityLimit == 30);
+    SimulationConfig config{32, 32, 20, 0x4d4f42494c453330ULL};
+    // Lift Logistics far above the army limit so the two cannot be confused.
+    for (auto& faction : config.rules.archetypes) {
+        faction[static_cast<std::size_t>(EntityType::CommandCore)]
+            .populationCapacity = 200;
+    }
+    Simulation sim(config);
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, {5000, 5000}));
+    const EntityId core = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(5, 5));
+    const EntityId barracks = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Barracks,
+        Vec2::FromTiles(12, 5));
+    REQUIRE(core != 0 && barracks != 0);
+    REQUIRE(sim.PopulationCapacity(0) == 200);
+    std::vector<EntityId> workers;
+    for (std::int32_t index = 0; index < 27; ++index) {
+        const EntityId worker = sim.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Worker,
+            Vec2::FromTiles(4 + index % 12, 12 + index / 12));
+        REQUIRE(worker != 0);
+        workers.push_back(worker);
+    }
+    REQUIRE(sim.MobileEntityCount(0) == 27);
+    REQUIRE(sim.MobileEntityReservations(0) == 0);
+    // Structures never spend the allowance.
+    REQUIRE(sim.MobileEntityCount(0) + 2 ==
+            static_cast<std::int32_t>(sim.Entities().size()));
+
+    // One Lancer active, one waiting behind it: the active one reserves.
+    std::uint64_t sequence = 0;
+    Command first = MakeCommand(sim.CurrentTick(), 0, ++sequence,
+                                CommandType::Produce, barracks);
+    first.buildType = EntityType::Soldier;
+    Command second = first;
+    second.sequence = ++sequence;
+    REQUIRE(sim.QueueCommand(first));
+    REQUIRE(sim.QueueCommand(second));
+    sim.Step();
+    REQUIRE(sim.FindEntity(barracks)->productionRequired > 0);
+    REQUIRE(sim.FindEntity(barracks)->productionQueue.size() == 1);
+    REQUIRE(sim.MobileEntityReservations(0) == 1);
+    REQUIRE(sim.ValidateProduction(0, core, EntityType::Worker) ==
+            ProductionResult::Valid);
+
+    // Two more workers: 29 fielded + 1 reserved = 30. The army limit binds
+    // while Logistics still has room, and it is named as the army limit.
+    for (std::int32_t index = 27; index < 29; ++index) {
+        const EntityId worker = sim.SpawnEntity(
+            0, Faction::MeridianCompact, EntityType::Worker,
+            Vec2::FromTiles(4 + index % 12, 12 + index / 12));
+        REQUIRE(worker != 0);
+        workers.push_back(worker);
+    }
+    REQUIRE(sim.MobileEntityCount(0) == 29);
+    REQUIRE(sim.PopulationCapacity(0) - sim.PopulationUsed(0) > 10);
+    REQUIRE(sim.ValidateProduction(0, core, EntityType::Worker) ==
+            ProductionResult::MobileEntityLimitReached);
+    REQUIRE(sim.ProductionStartBlockReasonFor(0, core, EntityType::Worker) ==
+            ProductionStartBlockReason::MobileEntityLimit);
+    const std::optional<PlayerView> planningView = sim.CreatePlayerView(0);
+    REQUIRE(planningView.has_value());
+    REQUIRE(planningView->MobileEntityCount() == 29);
+    REQUIRE(planningView->MobileEntityReservations() == 1);
+    // A Produce command against the limit is refused outright: no active
+    // item, no waiting entry, no resources moved.
+    const std::int32_t materialBefore = sim.FindPlayer(0)->resources.material;
+    Command refused = MakeCommand(sim.CurrentTick(), 0, ++sequence,
+                                  CommandType::Produce, core);
+    refused.buildType = EntityType::Worker;
+    REQUIRE(sim.QueueCommand(refused));
+    sim.Step();
+    REQUIRE(sim.FindEntity(core)->productionRequired == 0);
+    REQUIRE(sim.FindEntity(core)->productionQueue.empty());
+    REQUIRE(sim.FindPlayer(0)->resources.material == materialBefore);
+
+    // The active Lancer completes: 30 fielded, 0 reserved, and the waiting
+    // Lancer must not start while the field is full.
+    sim.Step(120);
+    REQUIRE(sim.MobileEntityCount(0) == 30);
+    REQUIRE(sim.MobileEntityReservations(0) == 0);
+    REQUIRE(sim.FindEntity(barracks)->productionRequired == 0);
+    REQUIRE(sim.FindEntity(barracks)->productionQueue.size() == 1);
+    const std::optional<ProducerQueueState> heldQueue =
+        sim.ProducerQueueStateFor(0, barracks);
+    REQUIRE(heldQueue.has_value() && !heldQueue->active &&
+            heldQueue->waiting.size() == 1);
+
+    // A death releases exactly one slot and the waiting Lancer starts on the
+    // next tick, reserving it again.
+    Entity* casualty = sim.MutableEntityForTesting(workers.front());
+    REQUIRE(casualty != nullptr);
+    casualty->hitPoints = 0;
+    sim.Step();
+    REQUIRE(sim.MobileEntityCount(0) == 29);
+    REQUIRE(sim.FindEntity(barracks)->productionRequired > 0);
+    REQUIRE(sim.FindEntity(barracks)->productionQueue.empty());
+    REQUIRE(sim.MobileEntityReservations(0) == 1);
+    REQUIRE(sim.ValidateProduction(0, core, EntityType::Worker) ==
+            ProductionResult::MobileEntityLimitReached);
+
+    // Cancelling the active item releases the reservation exactly once.
+    Command cancel = MakeCommand(sim.CurrentTick(), 0, ++sequence,
+                                 CommandType::CancelProduction, barracks);
+    cancel.target = 0;
+    SetExpectedProductionItem(
+        cancel, sim.FindEntity(barracks)->activeProductionItemId);
+    REQUIRE(sim.QueueCommand(cancel));
+    sim.Step();
+    REQUIRE(sim.FindEntity(barracks)->productionRequired == 0);
+    REQUIRE(sim.MobileEntityReservations(0) == 0);
+    REQUIRE(sim.ValidateProduction(0, core, EntityType::Worker) ==
+            ProductionResult::Valid);
+    REQUIRE(sim.ProductionStartBlockReasonFor(0, core, EntityType::Worker) ==
+            ProductionStartBlockReason::None);
+
+    // Starting a worker takes the freed slot back and the Barracks is again
+    // refused for the army reason.
+    Command replacement = MakeCommand(sim.CurrentTick(), 0, ++sequence,
+                                      CommandType::Produce, core);
+    replacement.buildType = EntityType::Worker;
+    REQUIRE(sim.QueueCommand(replacement));
+    sim.Step();
+    REQUIRE(sim.MobileEntityReservations(0) == 1);
+    REQUIRE(sim.ValidateProduction(0, barracks, EntityType::Soldier) ==
+            ProductionResult::MobileEntityLimitReached);
+
+    // The accounting is derived from authoritative state, so a snapshot
+    // round trip restores it and the checksum exactly.
+    std::string error;
+    std::optional<Simulation> restored =
+        Simulation::LoadSnapshot(sim.SaveSnapshot(), &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(error.empty());
+    REQUIRE(restored->MobileEntityCount(0) == 29);
+    REQUIRE(restored->MobileEntityReservations(0) == 1);
+    REQUIRE(restored->ValidateProduction(0, barracks, EntityType::Soldier) ==
+            ProductionResult::MobileEntityLimitReached);
+    sim.Step(10);
+    restored->Step(10);
+    REQUIRE(restored->StateChecksum() == sim.StateChecksum());
+
+    // Logistics exhaustion below the army limit still reports Logistics, so
+    // the two refusals cannot be mistaken for each other.
+    Simulation logistics({32, 32, 20, 0x4c4f47495354ULL});
+    REQUIRE(logistics.AddPlayer(0, Faction::MeridianCompact, {5000, 5000}));
+    const EntityId logisticsCore = logistics.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(5, 5));
+    REQUIRE(logisticsCore != 0);
+    for (std::int32_t index = 0; index < 12; ++index) {
+        REQUIRE(logistics.SpawnEntity(
+                    0, Faction::MeridianCompact, EntityType::Worker,
+                    Vec2::FromTiles(10 + index % 6, 10 + index / 6)) != 0);
+    }
+    REQUIRE(logistics.MobileEntityCount(0) == 12);
+    REQUIRE(logistics.PopulationUsed(0) == logistics.PopulationCapacity(0));
+    REQUIRE(logistics.ValidateProduction(0, logisticsCore, EntityType::Worker) ==
+            ProductionResult::CapacityReached);
+    REQUIRE(logistics.ProductionStartBlockReasonFor(
+                0, logisticsCore, EntityType::Worker) ==
+            ProductionStartBlockReason::LogisticsCapacity);
+}
+
+void TestWorkerReachMeasuresToTheFootprint() {
+    // Reproduced 2026-09-11 from the M01 live Gather regression: a Surveyor
+    // returning from the deposit at 16,16 to the 5x5 Core at 10,10 arrives on
+    // the diagonal, stops at the footprint corner 3.54 tiles from the centre,
+    // and with a circular 3.13-tile reach never delivers. SPEC-RES-004 /
+    // SPEC-RES-005 require the loop to complete; SPEC-BLD-003 requires
+    // construction to begin on arrival. Reach is now measured to the
+    // footprint box for delivery, construction and repair.
+    Simulation sim({48, 48, 20, 0x52454143484249ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, {400, 30}));
+    const EntityId core = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::CommandCore,
+        Vec2::FromTiles(10, 10));
+    const EntityId worker = sim.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker,
+        Vec2::FromTiles(14, 13));
+    const EntityId node = sim.SpawnResourceNode(Vec2::FromTiles(16, 16), 1500);
+    REQUIRE(core != 0 && worker != 0 && node != 0);
+    sim.Step(2);
+    Command gather = MakeCommand(sim.CurrentTick(), 0, 1, CommandType::Gather, worker);
+    gather.target = node;
+    gather.position = Vec2::FromTiles(16, 16);
+    REQUIRE(sim.QueueCommand(gather));
+    const std::int32_t materialBefore = sim.FindPlayer(0)->resources.material;
+    std::int32_t deliveries = 0;
+    bool wasDelivering = false;
+    std::int32_t lastCargo = 0;
+    Tick firstDeliveryTick = 0;
+    for (int step = 0; step < 900; ++step) {
+        sim.Step();
+        const Entity* state = sim.FindEntity(worker);
+        REQUIRE(state != nullptr);
+        if (wasDelivering && lastCargo > 0 && state->cargo == 0) {
+            ++deliveries;
+            if (firstDeliveryTick == 0) {
+                firstDeliveryTick = sim.CurrentTick();
+            }
+        }
+        wasDelivering = state->order.type == OrderType::Deliver;
+        lastCargo = state->cargo;
+    }
+    // The diagonal return completes, repeatedly, and the load is credited.
+    REQUIRE(firstDeliveryTick != 0 && firstDeliveryTick < 200);
+    REQUIRE(deliveries >= 3);
+    REQUIRE(sim.FindPlayer(0)->resources.material > materialBefore);
+    REQUIRE(sim.FindEntity(core) != nullptr);
+
+    // Construction: a 4x4 Foundry site approached on the diagonal begins
+    // building instead of the builder circling its corner.
+    Simulation build({48, 48, 20, 0x4255494c44ULL});
+    REQUIRE(build.AddPlayer(0, Faction::MeridianCompact, {2000, 200}));
+    REQUIRE(build.SpawnEntity(0, Faction::MeridianCompact, EntityType::CommandCore,
+                              Vec2::FromTiles(6, 6)) != 0);
+    const EntityId builder = build.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(22, 22));
+    REQUIRE(builder != 0);
+    Command construct = MakeCommand(0, 0, 1, CommandType::Build, builder);
+    construct.buildType = EntityType::Barracks;
+    construct.position = Vec2::FromTiles(16, 16);
+    REQUIRE(build.QueueCommand(construct));
+    bool progressed = false;
+    for (int step = 0; step < 600 && !progressed; ++step) {
+        build.Step();
+        for (const Entity& entity : build.Entities()) {
+            if (entity.type == EntityType::Barracks && entity.constructionProgress > 0) {
+                progressed = true;
+            }
+        }
+    }
+    REQUIRE(progressed);
+}
+
 void TestFogAndNonCheatingAi() {
     static_assert(!std::is_default_constructible_v<PlayerView>);
     Simulation simulation({32, 32, 20, 5});
@@ -10283,6 +10527,8 @@ int main(int argc, char** argv) {
         {"movement order rejection reasons",
          TestMovementOrderRejectionReasons},
         {"production population and victory", TestProductionPopulationAndVictory},
+        {"mobile entity limit and reservations", TestMobileEntityLimitAndReservations},
+        {"worker reach measures to the footprint", TestWorkerReachMeasuresToTheFootprint},
         {"fog and non-cheating AI", TestFogAndNonCheatingAi},
         {"four-player visibility snapshot and outcome",
          TestFourPlayerVisibilitySnapshotAndOutcome},

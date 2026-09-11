@@ -75,7 +75,7 @@ bool FEchoesVisibilityLifecycleTest::RunTest(const FString& Parameters)
             FogView->GetUnexploredTileCount() > 0);
     const int32 InitialKnownTiles = FogView->GetKnownTileCount();
 
-    const echoes::sim::Vec2 ScoutStart = echoes::sim::Vec2::FromTiles(16, 10);
+    const echoes::sim::Vec2 ScoutStart = echoes::sim::Vec2::FromTiles(17, 10);
     const echoes::sim::Vec2 RevealPoint = echoes::sim::Vec2::FromTiles(21, 24);
     const echoes::sim::Vec2 TargetPosition = echoes::sim::Vec2::FromTiles(25, 28);
     echoes::sim::EntityId ScoutId = 0;

@@ -85,6 +85,11 @@ struct FEchoesResourceMonitorLogistics final
     bool bPermanentCapacityAvailable = false;
     bool bTemporaryCapacityAvailable = false;
     bool bWaitingRequestsAreReserved = false;
+    /** SPEC-RES-008 army accounting; unavailable from a scoped network keyframe. */
+    bool bMobileEntityCountAvailable = false;
+    int32 MobileEntitiesFielded = 0;
+    int32 MobileEntitiesInProduction = 0;
+    int32 MobileEntityLimit = 0;
 };
 
 /** Facts not carried by the current scoped input are explicitly unavailable. */

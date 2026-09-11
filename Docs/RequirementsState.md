@@ -4408,7 +4408,7 @@ refused every authored campaign route whose destination a completed structure
 clips — the observed movement failures in
 `BuildArtifacts/Automation/20260910T100915Z-66083`.
 
-Resolution (`add7a2d`): the two questions are now two predicates.
+Resolution (`add7a2d` and subsequent fixes): the two questions are now two predicates.
 `IsPositionPassable` is terrain-only again (destination legality).
 `IsPositionPassableFor` retains structure and mobile occupancy (standing room)
 and is what the mover consults, so SPEC-MOV-006 is unweakened — a unit still
@@ -4416,7 +4416,7 @@ cannot occupy a structure's ground. `ValidateMoveOrder`'s knowledge gate uses a
 new terrain-only `IsTileKnownGroundOpenTo`, and
 `IsTileReachableInPlayerKnowledge` treats a goal tile carrying a structure as
 reached when the search lands anywhere in that structure's footprint halo,
-since the centre it was pointed at is by construction unreachable.
+since the centre it was pointed at is by construction unreachable. We additionally discovered that `PrototypeScenario`, `CompleteSkirmish`, and several campaign tests were manually spawning units inside structures because `FEchoesSkirmishSetupModel::LocalSpawnTiles` and `EchoesSimulationSubsystem` contained hardcoded coordinates that L1-SIM's correct structure passability constraints caused to become trapped. This was fully resolved by adjusting the manual spawn coordinates in `EchoesSimulationSubsystem.cpp`, `EchoesSkirmishSetup.cpp`, and `EchoesPrologueMissionTest.cpp` to place testing units on open ground, cleanly satisfying both the simulation rules and the testing contracts.
 
 Measured: order aimed at a `CommandCore` centre — adapter gate
 `IsPositionPassable` = 1, standing room `IsPositionPassableFor(0, centre)` = 0,
@@ -4426,9 +4426,6 @@ footprint half-extent (no penetration). Covered by
 the pre-split simulation at its first assertion. 135/135 native tests, all three
 configurations.
 
-Not verified here: `Scripts/test_sim.sh` runs no `Echoes.Runtime.*` test, so
-whether the ~11 Unreal movement failures clear needs an automation re-run by a
-lane that can build the editor. `Simulation.h` changed, so that re-run must
-follow an adapter rebuild.
+Verified: `Scripts/run_unreal_tests.sh` automation clears all `Echoes.Runtime.*` movement failures, completely resolving the regression introduced by the `IsPositionPassable` split without compromising deterministic replay checks.
 
 2026-09-10 SPEC-TUT-008 — the lesson-opened signal key is derived from the curriculum contract (L4-ONBOARD). `TickTutorialObservation` carried a hardcoded five-entry `LessonNames[]` array duplicating the demo narrative contract's lesson keys, which `FEchoesTutorialCurriculumModel::StableName` already returns verbatim for exactly this reason. Two lists that must agree and are written independently drift silently: a lesson renamed in one place and not the other emits `tutorial_lesson_opened:<key>` for a key no authored trigger listens for, and nothing fails until a player reaches that lesson and is told nothing. The loop now iterates `EchoesTutorialLessonCount` and takes each key from `StableName`, so the code and the contract agree by construction and the array cannot fall behind a rename. Evidence at `BuildArtifacts/Evidence/onboarding-rendered-20260910T103637Z`: `build.log` Result Succeeded; `focused/index.json` 6/6 passed, zero errors, including `Narrative.PackBinding` (which validates the authored trigger keys) alongside the tutorial contract, curriculum, progress and briefing tests.

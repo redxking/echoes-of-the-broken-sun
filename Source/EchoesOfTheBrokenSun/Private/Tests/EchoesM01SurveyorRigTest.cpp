@@ -27,7 +27,7 @@ bool FEchoesM01SurveyorRigTest::RunTest(const FString& Parameters)
     if (!Bridge || !Bridge->StartPrototypeScenario() || !Bridge->SelectOperationMode(
         EEchoesOperationMode::CampaignPrologue, Feedback)) return false;
     const echoes::sim::Vec2 AuthoredWorkerPosition =
-        echoes::sim::Vec2::FromTiles(14, 12);
+        echoes::sim::Vec2::FromTiles(14, 13);
     const echoes::sim::Vec2 AuthoredResourcePosition =
         echoes::sim::Vec2::FromTiles(16, 16);
     echoes::sim::EntityId AuthoredWorkerId = 0;

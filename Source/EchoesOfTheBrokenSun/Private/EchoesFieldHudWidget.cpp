@@ -614,8 +614,8 @@ void UEchoesFieldHudSectionWidget::SetResourceTelemetry(const FEchoesFieldHudRes
 {
     ResourceTelemetry = Resources;
     if (Section != EEchoesFieldHudSection::ResourceLedger) return;
-    if (RootBorder && ResourceValues.Num() != 3) RebuildContent();
-    if (ResourceValues.Num() != 3 || ResourceIdentityText == nullptr ||
+    if (RootBorder && ResourceValues.Num() != 4) RebuildContent();
+    if (ResourceValues.Num() != 4 || ResourceIdentityText == nullptr ||
         ResourceSummaryText == nullptr) return;
     ResourceValues[0]->SetText(FText::AsNumber(Resources.Matter));
     ResourceValues[1]->SetText(FText::AsNumber(Resources.Dawn));
@@ -623,16 +623,29 @@ void UEchoesFieldHudSectionWidget::SetResourceTelemetry(const FEchoesFieldHudRes
         Resources.PopulationUsed, Resources.PopulationCapacity));
     ResourceValues[2]->SetColorAndOpacity(Resources.PopulationUsed > Resources.PopulationCapacity
         ? ToneColor(EEchoesFieldHudTone::Warning, bHighContrast) : TextColor(bHighContrast));
+    const int32 ArmyCommitted = Resources.MobileEntitiesFielded + Resources.MobileEntitiesInProduction;
+    ResourceValues[3]->SetText(Resources.bMobileEntityCountAvailable
+        ? FText::Format(NSLOCTEXT("EchoesFieldHud", "ArmyValue", "{0}/{1}"),
+            ArmyCommitted, Resources.MobileEntityLimit)
+        : NSLOCTEXT("EchoesFieldHud", "ArmyUnavailable", "--"));
+    ResourceValues[3]->SetColorAndOpacity(Resources.bMobileEntityCountAvailable &&
+            ArmyCommitted >= Resources.MobileEntityLimit
+        ? ToneColor(EEchoesFieldHudTone::Warning, bHighContrast) : TextColor(bHighContrast));
     TArray<FText> Factions{Resources.LocalFaction, Resources.OpponentFaction};
     Factions.RemoveAll([](const FText& Text) { return Text.IsEmpty(); });
     ResourceIdentityText->SetText(FText::Join(FText::FromString(TEXT("  //  ")), Factions));
     TArray<FText> Summary{Resources.MatchState, Resources.ResearchStatus};
     Summary.RemoveAll([](const FText& Text) { return Text.IsEmpty(); });
     ResourceSummaryText->SetText(FText::Join(FText::FromString(TEXT("  //  ")), Summary));
+    const FText ArmyContext = Resources.bMobileEntityCountAvailable
+        ? FText::Format(
+            NSLOCTEXT("EchoesFieldHud", "ArmyContext", "Army {0} fielded + {1} in production of {2} controllable units"),
+            Resources.MobileEntitiesFielded, Resources.MobileEntitiesInProduction, Resources.MobileEntityLimit)
+        : NSLOCTEXT("EchoesFieldHud", "ArmyContextUnavailable", "Army count not carried by this view");
     const FText ResourceTooltip = FText::Format(
-        NSLOCTEXT("EchoesFieldHud", "ResourceContext", "{0}\nMatter {1}; Dawn {2}; Logistics {3}/{4}\n{5}"),
+        NSLOCTEXT("EchoesFieldHud", "ResourceContext", "{0}\nMatter {1}; Dawn {2}; Logistics {3}/{4}\n{5}\n{6}"),
         ResourceIdentityText->GetText(), Resources.Matter, Resources.Dawn,
-        Resources.PopulationUsed, Resources.PopulationCapacity, ResourceSummaryText->GetText());
+        Resources.PopulationUsed, Resources.PopulationCapacity, ArmyContext, ResourceSummaryText->GetText());
     if (ResourceActionButton != nullptr)
     {
         ResourceActionButton->SetToolTipText(FText::Format(
@@ -753,11 +766,15 @@ void UEchoesFieldHudSectionWidget::RebuildContent()
     {
         UHorizontalBox* ResourceRow = WidgetTree->ConstructWidget<UHorizontalBox>();
         ContentBox->AddChildToVerticalBox(ResourceRow);
+        // SPEC-RES-008 / DeliveryPlan section 8: the army count and its
+        // reservations sit beside Logistics so a player can tell which of
+        // the two limits is binding.
         const FText Labels[] = {
             NSLOCTEXT("EchoesFieldHud", "MatterLabel", "MATTER"),
             NSLOCTEXT("EchoesFieldHud", "DawnLabel", "DAWN"),
-            NSLOCTEXT("EchoesFieldHud", "LogisticsLabel", "LOGISTICS")};
-        for (int32 Index = 0; Index < 3; ++Index)
+            NSLOCTEXT("EchoesFieldHud", "LogisticsLabel", "LOGISTICS"),
+            NSLOCTEXT("EchoesFieldHud", "ArmyLabel", "ARMY")};
+        for (int32 Index = 0; Index < static_cast<int32>(UE_ARRAY_COUNT(Labels)); ++Index)
         {
             UHorizontalBox* Column = WidgetTree->ConstructWidget<UHorizontalBox>();
             auto* ColumnSlot = ResourceRow->AddChildToHorizontalBox(Column);

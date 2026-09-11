@@ -723,17 +723,28 @@ void AEchoesPlayerController::CancelTutorialSkipModal()
 
 #undef LOCTEXT_NAMESPACE
 
+// Call sites for the L4-ONBOARD cross-lane request recorded against
+// SPEC-TUT-008.FLOW (lesson six): BuildAtCursor and ProduceUnit call these
+// immediately after command acceptance, guarded by !IsReplayInputActive().
+// The bodies are intentionally inert until the controller establishes the
+// lesson session and authority generation that
+// FEchoesTutorialConstructionObservation::ObserveAcceptedCommand requires;
+// feeding it an unattributed input would be refused by its own provenance
+// checks. No lesson is earned here and EchoesTutorialLessonCount stays five.
 void AEchoesPlayerController::ObserveTutorialConstructionEvent(
     echoes::sim::EntityType StructureType,
     uint32 BuilderEntity,
     echoes::sim::Vec2 Site)
 {
-    // L4-ONBOARD will implement this later.
+    (void)StructureType;
+    (void)BuilderEntity;
+    (void)Site;
 }
 
 void AEchoesPlayerController::ObserveTutorialProductionEvent(
     echoes::sim::EntityType ProducedType,
     uint32 ProducerEntity)
 {
-    // L4-ONBOARD will implement this later.
+    (void)ProducedType;
+    (void)ProducerEntity;
 }

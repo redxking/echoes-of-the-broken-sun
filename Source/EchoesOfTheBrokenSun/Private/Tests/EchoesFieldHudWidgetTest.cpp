@@ -56,6 +56,10 @@ FEchoesFieldHudView BattlefieldView(float Scale)
     View.Resources.Dawn = 31;
     View.Resources.PopulationUsed = 18;
     View.Resources.PopulationCapacity = 40;
+    View.Resources.bMobileEntityCountAvailable = true;
+    View.Resources.MobileEntitiesFielded = 17;
+    View.Resources.MobileEntitiesInProduction = 3;
+    View.Resources.MobileEntityLimit = 30;
     View.Resources.SimulationTick = 77;
     View.Resources.LocalFaction = FText::FromString(TEXT("MERIDIAN"));
     View.Resources.OpponentFaction = FText::FromString(TEXT("KHARUUN"));
@@ -219,12 +223,13 @@ bool FEchoesFieldHudWidgetTest::RunTest(const FString& Parameters)
     UWidget* InitialRoot = Widget->GetRootWidget();
     TestNotNull(TEXT("Field HUD owns a native UMG root"), InitialRoot);
     auto* ResourcePanel = Widget->GetSection(EEchoesFieldHudSection::ResourceLedger);
-    TestEqual(TEXT("Critical resources have three independent readouts"), ResourcePanel->GetResourceReadoutCount(), 3);
+    TestEqual(TEXT("Critical resources have four independent readouts"), ResourcePanel->GetResourceReadoutCount(), 4);
     TestFalse(TEXT("Critical resource values never require scrolling"), ResourcePanel->UsesScrollableContent());
-    if (ResourcePanel->GetResourceReadoutCount() != 3) return false;
+    if (ResourcePanel->GetResourceReadoutCount() != 4) return false;
     TestEqual(TEXT("Matter displays the actual scoped balance"), ResourcePanel->GetResourceReadout(0)->GetText().ToString(), FString(TEXT("420")));
     TestEqual(TEXT("Dawn displays the actual scoped balance"), ResourcePanel->GetResourceReadout(1)->GetText().ToString(), FString(TEXT("31")));
     TestEqual(TEXT("Logistics keeps used and capacity together"), ResourcePanel->GetResourceReadout(2)->GetText().ToString(), FString(TEXT("18/40")));
+    TestEqual(TEXT("Army shows fielded plus in-production against the SPEC-RES-008 limit"), ResourcePanel->GetResourceReadout(3)->GetText().ToString(), FString(TEXT("20/30")));
     TestEqual(TEXT("Resource identity is visibly retained from the scoped factions"),
         ResourcePanel->GetResourceIdentityReadout()->GetText().ToString(),
         FString(TEXT("MERIDIAN  //  KHARUUN")));
@@ -593,6 +598,8 @@ bool FEchoesFieldHudWidgetTest::RunTest(const FString& Parameters)
         FitsLedger(ResourcePanel->GetResourceReadout(1)));
     TestTrue(TEXT("Logistics readout remains inside the declared resource bounds"),
         FitsLedger(ResourcePanel->GetResourceReadout(2)));
+    TestTrue(TEXT("Army readout remains inside the declared resource bounds"),
+        FitsLedger(ResourcePanel->GetResourceReadout(3)));
     TestTrue(TEXT("Faction identity remains inside the declared resource bounds"),
         FitsLedger(ResourcePanel->GetResourceIdentityReadout()));
     TestTrue(TEXT("Match and research context remains inside the declared resource bounds"),

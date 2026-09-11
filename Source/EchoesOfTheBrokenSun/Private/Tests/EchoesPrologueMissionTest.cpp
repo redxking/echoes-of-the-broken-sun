@@ -233,8 +233,8 @@ bool FEchoesPrologueMissionTest::RunTest(const FString& Parameters)
         return Left.Y == Right.Y ? Left.X < Right.X : Left.Y < Right.Y;
     });
     TArray<FIntPoint> ExpectedWorkerTiles{
-        {14, 12}, {8, 13}, {11, 14}, {14, 15}, {8, 16}, {11, 17}};
-    TArray<FIntPoint> ExpectedSoldierTiles{{12, 7}, {8, 8}};
+        {8, 13}, {14, 13}, {11, 14}, {14, 15}, {8, 16}, {11, 17}};
+    TArray<FIntPoint> ExpectedSoldierTiles{{12, 7}, {6, 8}};
     TestTrue(
         TEXT("M01 Surveyor deployment uses the source-cleared starting tiles"),
         WorkerTiles == ExpectedWorkerTiles);

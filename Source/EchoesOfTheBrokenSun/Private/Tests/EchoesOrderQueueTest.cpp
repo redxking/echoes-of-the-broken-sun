@@ -88,6 +88,7 @@ bool FEchoesOrderQueueTest::RunTest(const FString& Parameters)
             if (Sim->ValidateMoveOrder(UEchoesSimulationSubsystem::LocalPlayerId,
                                        MoverId, Candidate)
                 != echoes::sim::CommandResolutionOutcome::Applied) continue;
+            if (!Sim->IsPositionPassableFor(0, Candidate)) continue;
             // A goal on the actor's own tile validates trivially and would
             // produce no movement to observe.
             if (Candidate.x.FloorToInt() == Origin.x.FloorToInt() &&
@@ -207,24 +208,34 @@ bool FEchoesOrderQueueTest::RunTest(const FString& Parameters)
     Bridge->StopPrototypeScenario();
     if (!TestTrue(TEXT("Replay scenario restarts"),
                   Bridge->StartPrototypeScenario())) return false;
+    // The checksum folds in the tick counter and every other entity, so the
+    // second run has to repeat the first run's whole timeline: the same
+    // unpause, the same three settle ticks before the mover is reset, the
+    // same tick between the unqueued leg and the queued pair, the same four
+    // settle ticks and the same consume count. Any tick added or dropped on
+    // one side is a different match, not a determinism failure.
+    Bridge->SetScenarioPaused(false);
+    for (int32 Settle = 0; Settle < 3; ++Settle) Bridge->Tick(0.05f);
     auto* Replay = const_cast<Simulation*>(Bridge->GetSimulation());
     if (!TestNotNull(TEXT("Replay authority exists"), Replay)) return false;
     Entity* ReplayMover = Replay->MutableEntityForTesting(MoverId);
-    if (ReplayMover != nullptr)
+    if (TestNotNull(TEXT("Replay fixture recreates the mover"), ReplayMover))
     {
         ReplayMover->order = {};
         ReplayMover->orderQueue.clear();
-        ReplayMover->position = Origin;
-        Bridge->IssueCommand(CommandType::Move, MoverId, 0, World1,
-                             FutureWellChoice::Dormant, Feedback, false);
+        TestTrue(TEXT("Replay mover restarts at the first run's origin"),
+            ReplayMover->position.x == Origin.x && ReplayMover->position.y == Origin.y);
+        TestTrue(TEXT("Replay unqueued move is accepted"),
+            Bridge->IssueCommand(CommandType::Move, MoverId, 0, World1,
+                                 FutureWellChoice::Dormant, Feedback, false));
         Bridge->Tick(0.05f);
-        Bridge->IssueCommand(CommandType::Move, MoverId, 0, World2,
-                             FutureWellChoice::Dormant, Feedback, true);
-        Bridge->Tick(0.05f);
-        Bridge->IssueCommand(CommandType::Move, MoverId, 0, World3,
-                             FutureWellChoice::Dormant, Feedback, true);
-        // Exactly the tick count the first run used, so the comparison is of
-        // the queued sequence and not of two different amounts of elapsed time.
+        TestTrue(TEXT("Replay first queued move is accepted"),
+            Bridge->IssueCommand(CommandType::Move, MoverId, 0, World2,
+                                 FutureWellChoice::Dormant, Feedback, true));
+        TestTrue(TEXT("Replay second queued move is accepted"),
+            Bridge->IssueCommand(CommandType::Move, MoverId, 0, World3,
+                                 FutureWellChoice::Dormant, Feedback, true));
+        for (int32 Settle = 0; Settle < 4; ++Settle) Bridge->Tick(0.05f);
         for (int32 Step = 0; Step < ConsumeTicks; ++Step) Bridge->Tick(0.05f);
         TestEqual(TEXT("A queued sequence replays to the same checksum"),
             Replay->StateChecksum(), FirstChecksum);

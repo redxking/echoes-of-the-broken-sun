@@ -72,6 +72,11 @@ void AEchoesPlayerController::BuildResourceMonitorShellView(FEchoesShellView& Vi
     Lines.Add(FText::Format(LOCTEXT("Liquid", "AVAILABLE NOW\nMatter {0}  ·  Dawn {1}\nLogistics {2} / {3}"),
         FText::AsNumber(Data.LiquidFunds.Matter), FText::AsNumber(Data.LiquidFunds.Dawn),
         FText::AsNumber(Data.Logistics.Used), FText::AsNumber(Data.Logistics.Capacity)));
+    if (Data.Logistics.bMobileEntityCountAvailable)
+        Lines.Add(FText::Format(LOCTEXT("ArmyLimit", "Army {0} fielded + {1} in production of {2} controllable units. Fielded plus in-production is what new production is checked against; Logistics is a separate limit."),
+            FText::AsNumber(Data.Logistics.MobileEntitiesFielded), FText::AsNumber(Data.Logistics.MobileEntitiesInProduction),
+            FText::AsNumber(Data.Logistics.MobileEntityLimit)));
+    else Lines.Add(LOCTEXT("ArmyUnavailable", "Army count against the controllable-unit limit: unavailable in this view."));
     if (Data.Logistics.bTemporaryCapacityAvailable)
         Lines.Add(FText::Format(LOCTEXT("TemporaryCapacity", "Connected Relay capacity: {0} temporary Logistics. Permanent-capacity breakdown: unavailable."),
             FText::AsNumber(Data.Logistics.TemporaryCapacityFromActiveRelays)));

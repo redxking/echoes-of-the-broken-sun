@@ -281,6 +281,39 @@ struct AiComposition final {
            type == EntityType::ScoutUnit;
 }
 
+// SPEC-RES-008: the entity classes that spend a player's 30-slot mobile
+// allowance. Listed explicitly rather than as !IsBuildingType so neutral
+// deposits and Future Wells can never be miscounted, and so a new mobile
+// class must be classified here before it can be produced.
+[[nodiscard]] bool IsMobileEntityType(EntityType type) {
+    return type == EntityType::Worker || IsBarracksUnitType(type);
+}
+
+[[nodiscard]] std::int32_t CountMobileEntities(
+    const std::vector<Entity>& entities, PlayerId player) {
+    std::int32_t count = 0;
+    for (const Entity& entity : entities) {
+        if (entity.owner == player && entity.hitPoints > 0 &&
+            IsMobileEntityType(entity.type)) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+[[nodiscard]] std::int32_t CountMobileEntityReservations(
+    const std::vector<Entity>& entities, PlayerId player) {
+    std::int32_t reserved = 0;
+    for (const Entity& entity : entities) {
+        if (entity.owner == player && entity.hitPoints > 0 &&
+            entity.productionRequired > 0 &&
+            IsMobileEntityType(entity.productionType)) {
+            ++reserved;
+        }
+    }
+    return reserved;
+}
+
 [[nodiscard]] bool IsValidTerrain(Terrain terrain) {
     return terrain >= Terrain::Open && terrain <= Terrain::Scarred;
 }
@@ -802,16 +835,12 @@ constexpr std::int32_t kScarredMovementPercent = 85;
         return ProductionResult::CapacityReached;
     }
 
-    if (!IsBuildingType(unitType)) {
-        std::int32_t mobileEntities = 0;
-        for (const Entity& entity : view.Entities()) {
-            if (entity.owner == view.Player().id && entity.hitPoints > 0 && !IsBuildingType(entity.type)) {
-                mobileEntities++;
-            }
-        }
-        if (mobileEntities >= 30) {
-            return ProductionResult::CapacityReached;
-        }
+    // SPEC-RES-008: the opponent plans against the same limit the player is
+    // held to, from its own scoped view.
+    if (IsMobileEntityType(unitType) &&
+        view.MobileEntityCount() + view.MobileEntityReservations() >=
+            kMobileEntityLimit) {
+        return ProductionResult::MobileEntityLimitReached;
     }
     return ProductionResult::Valid;
 }
@@ -1901,6 +1930,20 @@ std::int32_t Simulation::PopulationCost(Faction faction,
     return PopulationCostFor(config_.rules, faction, type);
 }
 
+std::int32_t Simulation::MobileEntityCount(PlayerId player) const {
+    if (FindPlayer(player) == nullptr) {
+        return 0;
+    }
+    return CountMobileEntities(entities_, player);
+}
+
+std::int32_t Simulation::MobileEntityReservations(PlayerId player) const {
+    if (FindPlayer(player) == nullptr) {
+        return 0;
+    }
+    return CountMobileEntityReservations(entities_, player);
+}
+
 std::int32_t Simulation::PopulationUsed(PlayerId player) const {
     if (FindPlayer(player) == nullptr) {
         return 0;
@@ -2516,16 +2559,12 @@ ProductionResult Simulation::ValidateProduction(PlayerId player,
         return ProductionResult::CapacityReached;
     }
 
-    if (!IsBuildingType(unitType)) {
-        std::int32_t mobileEntities = 0;
-        for (const Entity& entity : entities_) {
-            if (entity.owner == player && entity.hitPoints > 0 && !IsBuildingType(entity.type)) {
-                mobileEntities++;
-            }
-        }
-        if (mobileEntities >= 30) {
-            return ProductionResult::CapacityReached;
-        }
+    // SPEC-RES-008: fielded plus reserved mobile entities. Reported apart
+    // from Logistics so "army limit reached" never reads as "build a drop-off".
+    if (IsMobileEntityType(unitType) &&
+        MobileEntityCount(player) + MobileEntityReservations(player) >=
+            kMobileEntityLimit) {
+        return ProductionResult::MobileEntityLimitReached;
     }
     if (entities_.size() >= kMaximumSerializedEntities || nextEntityId_ == 0 ||
         nextEntityId_ == std::numeric_limits<EntityId>::max() ||
@@ -2589,16 +2628,10 @@ ProductionStartBlockReason Simulation::ProductionStartBlockReasonFor(
         return ProductionStartBlockReason::LogisticsCapacity;
     }
 
-    if (!IsBuildingType(unitType)) {
-        std::int32_t mobileEntities = 0;
-        for (const Entity& entity : entities_) {
-            if (entity.owner == player && entity.hitPoints > 0 && !IsBuildingType(entity.type)) {
-                mobileEntities++;
-            }
-        }
-        if (mobileEntities >= 30) {
-            return ProductionStartBlockReason::LogisticsCapacity;
-        }
+    if (IsMobileEntityType(unitType) &&
+        MobileEntityCount(player) + MobileEntityReservations(player) >=
+            kMobileEntityLimit) {
+        return ProductionStartBlockReason::MobileEntityLimit;
     }
     if (entities_.size() >= kMaximumSerializedEntities || nextEntityId_ == 0 ||
         nextEntityId_ == std::numeric_limits<EntityId>::max() ||
@@ -3040,6 +3073,32 @@ bool Simulation::InInteractionRange(const Entity& first,
                                FootprintHalfExtentRaw(second.faction, second.type);
     return DistanceSquaredRaw(first.position, second.position) <=
            static_cast<std::uint64_t>(range * range);
+}
+
+bool Simulation::InStructureReach(const Entity& worker,
+                                  const Entity& structure,
+                                  std::int32_t extraRangeRaw) const {
+    // Reproduced 2026-09-11 (M01 live Gather regression): the Core is 5x5, so
+    // its corner sits 2.5*sqrt(2) = 3.54 tiles from the centre while the
+    // circular reach was 0.5 + 2.5 + 0.125 = 3.13 tiles. A Surveyor returning
+    // from a deposit on the diagonal stopped at the corner, MoveTowards could
+    // not enter the footprint, and the load was never credited. Measuring to
+    // the footprint box makes every side and corner reachable at the same
+    // clearance and leaves small footprints (units, deposits) unchanged.
+    const std::int64_t half =
+        FootprintHalfExtentRaw(structure.faction, structure.type);
+    const std::int64_t reach =
+        static_cast<std::int64_t>(extraRangeRaw) +
+        FootprintHalfExtentRaw(worker.faction, worker.type);
+    const std::int64_t offsetX = std::max<std::int64_t>(
+        0,
+        Abs64(static_cast<std::int64_t>(worker.position.x.Raw()) -
+              structure.position.x.Raw()) - half);
+    const std::int64_t offsetY = std::max<std::int64_t>(
+        0,
+        Abs64(static_cast<std::int64_t>(worker.position.y.Raw()) -
+              structure.position.y.Raw()) - half);
+    return offsetX * offsetX + offsetY * offsetY <= reach * reach;
 }
 
 bool Simulation::IsTileKnownPassableTo(PlayerId player,
@@ -4494,6 +4553,15 @@ bool Simulation::TryActivateNextProduction(Entity& producer) {
         PopulationCapacity(producer.owner)) {
         return false;
     }
+    // SPEC-RES-008: a waiting mobile unit stays waiting while fielded plus
+    // reserved entities already reach the limit; a death, cancellation or
+    // lost producer frees the slot and the next tick starts it.
+    if (IsMobileEntityType(item.unitType) &&
+        MobileEntityCount(producer.owner) +
+                MobileEntityReservations(producer.owner) >=
+            kMobileEntityLimit) {
+        return false;
+    }
     player->resources.material -= item.configuredCost.material;
     player->resources.dawnshards -= item.configuredCost.dawnshards;
     producer.activeProductionItemId = item.itemId;
@@ -5682,7 +5750,7 @@ void Simulation::ProcessDeliver(Entity& worker) {
         ReturnHarvestCargo(worker);
         return;
     }
-    if (!InInteractionRange(worker, *dropoff, kFixedScale / 2) ||
+    if (!InStructureReach(worker, *dropoff, kFixedScale / 2) ||
         !HasLineOfSight(worker.position, dropoff->position)) {
         const Vec2 before = worker.position;
         (void)MoveTowards(worker, dropoff->position);
@@ -5690,7 +5758,7 @@ void Simulation::ProcessDeliver(Entity& worker) {
             ReturnHarvestCargo(worker);
             return;
         }
-        if (InInteractionRange(worker, *dropoff, kFixedScale / 2) &&
+        if (InStructureReach(worker, *dropoff, kFixedScale / 2) &&
             HasLineOfSight(worker.position, dropoff->position)) {
             worker.harvestState = HarvestState::Delivering;
         }
@@ -5729,7 +5797,7 @@ void Simulation::ProcessBuild(Entity& worker) {
         worker.order = {};
         return;
     }
-    if (!InInteractionRange(worker, *site, kFixedScale / 2)) {
+    if (!InStructureReach(worker, *site, kFixedScale / 2)) {
         (void)MoveTowards(worker, site->position);
         return;
     }
@@ -5748,7 +5816,7 @@ void Simulation::ProcessBuild(Entity& worker) {
             if (other.id != worker.id && other.owner == worker.owner &&
                 other.type == EntityType::Worker && other.order.type == OrderType::Build &&
                 other.order.target == site->id &&
-                InInteractionRange(other, *site, kFixedScale / 2)) {
+                InStructureReach(other, *site, kFixedScale / 2)) {
                 if (other.id < worker.id) {
                     builderRank++;
                 }
@@ -5828,7 +5896,7 @@ void Simulation::ProcessRepair(Entity& worker) {
         worker.faction == Faction::MeridianCompact
             ? 2 * kFixedScale
             : kFixedScale / 2;
-    if (!InInteractionRange(worker, *target, interactionRange)) {
+    if (!InStructureReach(worker, *target, interactionRange)) {
         (void)MoveTowards(worker, target->position);
         return;
     }
@@ -5861,7 +5929,7 @@ void Simulation::ProcessRepair(Entity& worker) {
                 other.order.target == target->id &&
                 other.hitPoints > 0 && other.completed &&
                 currentTick_ >= other.repairInterruptedUntilTick &&
-                InInteractionRange(other, *target, 2 * kFixedScale)) {
+                InStructureReach(other, *target, 2 * kFixedScale)) {
                 ++rank;
             }
         }
@@ -7651,6 +7719,8 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
     view.decisionSeed_ = config_.randomSeed;
     view.populationUsed_ = PopulationUsed(player);
     view.populationCapacity_ = PopulationCapacity(player);
+    view.mobileEntityCount_ = MobileEntityCount(player);
+    view.mobileEntityReservations_ = MobileEntityReservations(player);
     view.materialDeliveries_ = materialDeliveryReceipts_[player];
     view.repairReceipts_ = repairReceipts_[player];
     view.constructionReceipts_ = constructionReceipts_[player];

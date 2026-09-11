@@ -794,14 +794,17 @@ TArray<FIntPoint> FEchoesSkirmishSetupModel::LocalSpawnTiles(
     switch (Preset)
     {
         case EEchoesSkirmishMapPreset::GlassScar:
-            // Dropoff 6,17 -> 6,14.
+            // Dropoff 6,17 -> 6,14. The Barracks at 14,10 is 4x4
+            // (SPEC-STR-003), so 14,12 and 16,10 are inside its footprint and
+            // 8,8 is inside the 5x5 Core; the worker, Soldier and route scout
+            // that used those tiles now stand one tile clear of them.
             return {{10, 10}, {14, 10}, {6, 14}, {8, 13}, {11, 14},
-                    {14, 12}, {8, 8}, {12, 7}, {16, 10}, {7, 6},
+                    {14, 13}, {6, 8}, {12, 7}, {17, 10}, {7, 6},
                     {15, 6}, {6, 11}};
         case EEchoesSkirmishMapPreset::CrownfallBasin:
             // Dropoff 6,45 -> 3,47.
             return {{10, 52}, {14, 52}, {3, 47}, {8, 49}, {11, 48},
-                    {14, 50}, {8, 54}, {12, 57}, {16, 54}, {7, 58},
+                    {14, 49}, {8, 55}, {12, 57}, {17, 54}, {7, 58},
                     {15, 58}, {6, 53}};
         case EEchoesSkirmishMapPreset::SorynConfluence:
             // Dropoff 13,38 -> 10,38.
@@ -818,13 +821,15 @@ TArray<FIntPoint> FEchoesSkirmishSetupModel::OpponentSpawnTiles(
     switch (Preset)
     {
         case EEchoesSkirmishMapPreset::GlassScar:
-            // Dropoff 58,48 -> 58,50.
-            return {{54, 54}, {50, 54}, {58, 50}, {51, 53}, {54, 50},
-                    {57, 52}, {50, 57}, {54, 58}, {57, 58},
+            // Dropoff 58,48 -> 58,50. Workers stand clear of the 4x4
+            // Barracks at 50,54 and the 2x2 Aegis Post at 58,53
+            // (SPEC-STR-003/004 footprints, SPEC-MOV-006 standing room).
+            return {{54, 54}, {50, 54}, {58, 50}, {51, 51}, {54, 50},
+                    {56, 51}, {50, 57}, {54, 58}, {57, 58},
                     {49, 58}, {58, 53}};
         case EEchoesSkirmishMapPreset::CrownfallBasin:
             // Dropoff 58,19 -> 61,17.
-            return {{54, 12}, {50, 12}, {61, 17}, {51, 13}, {54, 16},
+            return {{54, 12}, {50, 12}, {61, 17}, {49, 15}, {54, 16},
                     {57, 14}, {50, 9}, {54, 6}, {57, 6},
                     {49, 6}, {58, 11}};
         case EEchoesSkirmishMapPreset::SorynConfluence:

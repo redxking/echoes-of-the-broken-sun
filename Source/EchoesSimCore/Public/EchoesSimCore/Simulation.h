@@ -33,6 +33,12 @@ using ReplayCancellationCheck = std::function<bool()>;
 
 inline constexpr PlayerId kNeutralPlayer = 0xff;
 inline constexpr std::size_t kMaximumPlayers = 4;
+// SPEC-RES-008: each player fields at most this many controllable mobile
+// entities (workers, fighters, scouts, command characters); buildings are
+// excluded. Production reserves a slot when an item starts, so fielded plus
+// in-production entities never exceed it. Independent of the weighted
+// Logistics ceiling; a player can hit either first.
+inline constexpr std::int32_t kMobileEntityLimit = 30;
 inline constexpr std::int32_t kFixedScale = 1024;
 inline constexpr std::size_t kMaximumCommandLogEntries = 256U * 1024U;
 inline constexpr std::size_t kMaximumCommandResolutionReceipts = 4096;
@@ -312,6 +318,10 @@ enum class ProductionResult : std::uint8_t {
     CapacityReached = 7,
     EntityCapacityReached = 8,
     QueueFull = 9,
+    // SPEC-RES-008: fielded plus in-production mobile entities reach
+    // kMobileEntityLimit. Distinct from CapacityReached so the player is told
+    // which limit binds.
+    MobileEntityLimitReached = 10,
 };
 
 enum class ProductionStartBlockReason : std::uint8_t {
@@ -325,6 +335,7 @@ enum class ProductionStartBlockReason : std::uint8_t {
     EntityCapacity = 7,
     QueueFull = 8,
     UnsupportedUnit = 9,
+    MobileEntityLimit = 10,
 };
 
 enum class ResearchResult : std::uint8_t {
@@ -989,6 +1000,14 @@ public:
     [[nodiscard]] std::int32_t PopulationCapacity() const {
         return populationCapacity_;
     }
+    // SPEC-RES-008 accounting for this player: live controllable mobile
+    // entities and mobile units currently in an active production slot.
+    [[nodiscard]] std::int32_t MobileEntityCount() const {
+        return mobileEntityCount_;
+    }
+    [[nodiscard]] std::int32_t MobileEntityReservations() const {
+        return mobileEntityReservations_;
+    }
     [[nodiscard]] const std::vector<Entity>& Entities() const { return entities_; }
     // Owner-only, transient presentation state evaluated by simulation rules,
     // including historical replay compatibility. Never serialized or hashed.
@@ -1038,6 +1057,8 @@ private:
     std::uint64_t decisionSeed_ = 0;
     std::int32_t populationUsed_ = 0;
     std::int32_t populationCapacity_ = 0;
+    std::int32_t mobileEntityCount_ = 0;
+    std::int32_t mobileEntityReservations_ = 0;
     std::vector<PlayerViewTile> tiles_{};
     std::vector<Entity> entities_{};
     std::vector<EntityId> connectedRelayUnits_{};
@@ -1337,6 +1358,10 @@ public:
                                                EntityType type) const;
     [[nodiscard]] std::int32_t PopulationUsed(PlayerId player) const;
     [[nodiscard]] std::int32_t PopulationCapacity(PlayerId player) const;
+    /** SPEC-RES-008: live owned controllable mobile entities (buildings excluded). */
+    [[nodiscard]] std::int32_t MobileEntityCount(PlayerId player) const;
+    /** SPEC-RES-008: mobile units in an active production slot; released once on completion, cancellation or producer loss. */
+    [[nodiscard]] std::int32_t MobileEntityReservations(PlayerId player) const;
     [[nodiscard]] MatchOutcome Outcome() const;
     /** Records a deterministic player forfeit by retiring that player's live Command Core. */
     bool ForfeitPlayer(PlayerId player);
@@ -1490,6 +1515,17 @@ private:
     [[nodiscard]] bool InInteractionRange(const Entity& first,
                                           const Entity& second,
                                           std::int32_t extraRangeRaw) const;
+    /**
+     * Worker reach to a structure, measured to the nearest point of the
+     * structure's square footprint rather than to its centre. A circle around
+     * the centre leaves the corners of a 5x5 footprint outside reach, and a
+     * worker that arrives on the diagonal then stands at the corner with its
+     * cargo for ever. Used for delivery, construction and repair; weapon range
+     * keeps InInteractionRange so combat resolution is unchanged.
+     */
+    [[nodiscard]] bool InStructureReach(const Entity& worker,
+                                        const Entity& structure,
+                                        std::int32_t extraRangeRaw) const;
     [[nodiscard]] std::optional<Vec2> FindNextPathWaypoint(
         Vec2 from,
         Vec2 destination) const;

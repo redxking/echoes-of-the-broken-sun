@@ -240,6 +240,9 @@ bool FEchoesPresentationPoolingTest::RunTest(const FString& Parameters)
         Resource.id = 900008;
         Resource.type = echoes::sim::EntityType::ResourceNode;
         Resource.wellChoice = echoes::sim::FutureWellChoice::Dormant;
+        // A deposit with stock is a live pick target; SPEC-RES-006 makes an
+        // exhausted one non-interactable, which is asserted separately below.
+        Resource.resourceRemaining = 1500;
         RebindView->ActivateForEntity(Resource, true);
         // On the reactivated view the pick region and the drawn overlay move
         // together, so a rebound full-health entity carries no invisible pick
@@ -274,6 +277,19 @@ bool FEchoesPresentationPoolingTest::RunTest(const FString& Parameters)
                  RebindView->GetEntityPickProxyTopHeight() > 0.0f);
         TestTrue(TEXT("Body selection collision survives the rebind"),
                  RebindView->HasBodySelectionCollisionEnabled());
+        echoes::sim::Entity Exhausted = Resource;
+        Exhausted.id = 900009;
+        Exhausted.resourceRemaining = 0;
+        RebindView->PrepareForPool();
+        RebindView->ActivateForEntity(Exhausted, true);
+        TestFalse(TEXT("An exhausted deposit stops answering entity resolution"),
+                  RebindView->IsEntityPickProxyEnabled());
+        TestFalse(TEXT("An exhausted deposit cannot be body-selected"),
+                  RebindView->HasBodySelectionCollisionEnabled());
+        RebindView->PrepareForPool();
+        RebindView->ActivateForEntity(Resource, true);
+        TestTrue(TEXT("Reactivating a live deposit restores its pick volume"),
+                 RebindView->IsEntityPickProxyEnabled());
         const uint64 WarmMIDCount = RebindView->GetOwnedMIDCreationCount();
         for (const echoes::sim::Entity* WarmState :
              {&Covered, &Deployment, &Relay, &Waystone,

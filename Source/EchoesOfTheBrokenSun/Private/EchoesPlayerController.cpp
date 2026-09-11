@@ -12275,15 +12275,9 @@ AEchoesPlayerController::BuildCommandDeckProfile() const
                 ++Profile.WorkerCount;
                 break;
             case echoes::sim::EntityType::Soldier:
-                ++Profile.CombatCount;
-                break;
             case echoes::sim::EntityType::HeavyUnit:
-                ++Profile.CombatCount;
-                Profile.bHasHeavyUnit = true;
-                break;
             case echoes::sim::EntityType::ScoutUnit:
                 ++Profile.CombatCount;
-                Profile.bHasScoutUnit = true;
                 break;
             case echoes::sim::EntityType::CommandCore:
             case echoes::sim::EntityType::Dropoff:

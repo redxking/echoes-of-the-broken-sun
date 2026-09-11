@@ -849,7 +849,7 @@ private:
                 static_cast<std::uint8_t>(sim::EntityType::UtilityStructure) ||
             static_cast<std::uint8_t>(event.productionBlockReason) >
                 static_cast<std::uint8_t>(
-                    sim::ProductionStartBlockReason::UnsupportedUnit))
+                    sim::ProductionStartBlockReason::MobileEntityLimit))
         {
             return false;
         }

@@ -114,6 +114,15 @@ struct ECHOESOFTHEBROKENSUN_API FEchoesFieldHudResourceView final
     int32 Dawn = 0;
     int32 PopulationUsed = 0;
     int32 PopulationCapacity = 0;
+    /**
+     * SPEC-RES-008 army accounting. Fielded plus in-production is the number
+     * production is checked against; a network keyframe does not carry it, so
+     * the readout is marked unavailable rather than shown as zero.
+     */
+    bool bMobileEntityCountAvailable = false;
+    int32 MobileEntitiesFielded = 0;
+    int32 MobileEntitiesInProduction = 0;
+    int32 MobileEntityLimit = 0;
     uint64 SimulationTick = 0;
     FText LocalFaction;
     FText OpponentFaction;
