@@ -36,7 +36,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-FAC-028` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z | 34ca1a0 | 2026-09-11 | Authored optic mesh generated via asset pipeline and integrated in C++ in place of placeholder cube |
 | `REL-UI-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
-| `SPEC-BAL-009` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 native measurement harness; acceptance bar pending TBR-STR-006 |
+| `SPEC-BAL-009` | IN PROGRESS | SRC | — | d51459e | 2026-09-11 | Sweep: chokepoint holds to 1.2x (current) / 1.3x (role bodies), never 1.6x; bar amended to 1.3x; TBR-STR-006 confirmed as the change that meets it |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `SPEC-RES-003` | AGENT VERIFIED | SRC | — | 3a6a2be | 2026-09-11 | Schema 34: unreachable slot holder releases the extraction slot; native stall test passes and fails with the rule off; Unreal run pending |
@@ -51,6 +51,35 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
 | `TBR-STR-006` | OPEN | NONE | Docs/StrategicDepthDesign.md | 34ca1a0 | 2026-09-11 | Plan written (design section 7): separate body radius from terrain footprint, authored radii, separation on the spatial hash, schema 34; waits for the AI lane's slice to commit |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## Chokepoint sweep: where prepared ground stops holding — SPEC-BAL-009, 2026-09-11
+
+Scratch experiment (no tree edits; `scratchpad/sweep`), same geometry as the native BAL-STR-1 harness: a
+wall with a two-tile gap, ten 650 cm soldiers on Hold in two ranks beside the mouth, N attackers
+attack-moving through, 30 seeds per cell, rule-off control as a schema-32 continuation of the same
+recording. "Bodies" is a scratch variant of `ApplySoftSeparation` spacing units by role body radius
+(worker 30, line 40, heavy 55, scout 30 cm) instead of the 12.5 cm footprint. Defender wins:
+
+| Attackers vs 10 | current, lanes on | current, lanes off | 30/40/55/30 cm bodies, lanes on | bodies, lanes off |
+|---|---|---|---|---|
+| 10 | 30/30 | 30/30 | 30/30 | 30/30 |
+| 11 | 30/30 | 30/30 | 30/30 | 30/30 |
+| 12 | 26/30 | 26/30 | 30/30 | 30/30 |
+| 13 | 9/30 | 3/30 | 30/30 | 30/30 |
+| 14 | 0/30 | 0/30 | 3/30 | 4/30 |
+| 16 | 0/30 | 0/30 | 0/30 | 0/30 |
+
+**Findings.** Prepared ground beats equal numbers every time. The chokepoint holds to about 1.2x attackers
+on current rules and to 1.3x with role bodies; nothing holds 1.6x. That is the square law of massed fire
+(to beat 1.6x a defender needs about 2.6x the effectiveness), not a missing rule. Firing lanes matter only
+at the margin (13 attackers: 9/30 against 3/30). The earlier record that "bodies alone do not change
+BAL-STR-1" was an artifact of testing at 1.6x, past every break point; at 1.3x bodies take the defender
+from 9/30 to 30/30. The same bodies variant breaks three native tests (group arrival packing, Bulwark
+deployed travel, and the authentic schema-30 Bulwark replay, which needs a legacy gate).
+
+**Decision (owner delegation).** SPEC-BAL-009's bar moves from a 1.6x force to 1.3x (13 attackers against
+10), still 70% defender wins with a lower rule-off rate. TBR-STR-006 (role bodies) is confirmed as the
+change that meets it; it lands as its own package with a replay-schema gate and the three tests repaired.
 
 ## Walled-off slot holder releases the extraction slot — SPEC-RES-003, schema 34, 2026-09-11
 
@@ -5723,3 +5752,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T20:12Z — `TBR-SCP-012` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-17; commit 34ca1a0; First bounded rule landed: opponent Future Well commands withheld in authored campaign operations (bridge, ECHOES_AI_WELL_DOCTRINE); per-mission doctrine remains D7
 - 2026-09-11T20:30Z — `TBR-STR-006` → **OPEN**; class NONE; evidence Docs/StrategicDepthDesign.md; commit 34ca1a0; Plan written (design section 7): separate body radius from terrain footprint, authored radii, separation on the spatial hash, schema 34; waits for the AI lane's slice to commit
 - 2026-09-11T21:24Z — `SPEC-RES-003` → **AGENT VERIFIED**; class SRC; evidence —; commit 3a6a2be; Schema 34: unreachable slot holder releases the extraction slot; native stall test passes and fails with the rule off; Unreal run pending
+- 2026-09-11T21:28Z — `SPEC-BAL-009` → **IN PROGRESS**; class SRC; evidence —; commit d51459e; Sweep: chokepoint holds to 1.2x (current) / 1.3x (role bodies), never 1.6x; bar amended to 1.3x; TBR-STR-006 confirmed as the change that meets it

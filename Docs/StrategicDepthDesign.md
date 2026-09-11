@@ -392,6 +392,24 @@ either. Until bodies have real size, Rules A and B cannot do what section 1 prom
 6. **Order.** After the other lane's current AI slice is committed, because this changes every fight and
    every path its tests measure.
 
+**Sweep result (supersedes the plan's assumption above).** Measured with the BAL-STR-1 geometry, 30 seeds
+per cell, defender wins out of 30:
+
+| Attackers vs 10 | current, lanes on | current, lanes off | 30/40/55/30 cm bodies, lanes on | bodies, lanes off |
+|---|---|---|---|---|
+| 10 | 30/30 | 30/30 | 30/30 | 30/30 |
+| 11 | 30/30 | 30/30 | 30/30 | 30/30 |
+| 12 | 26/30 | 26/30 | 30/30 | 30/30 |
+| 13 | 9/30 | 3/30 | 30/30 | 30/30 |
+| 14 | 0/30 | 0/30 | 3/30 | 4/30 |
+| 16 | 0/30 | 0/30 | 0/30 | 0/30 |
+
+Prepared ground beats equal numbers every time and the chokepoint holds to about 1.2x (current rules) or
+1.3x (role bodies). No geometry holds 1.6x; that is the square law of massed fire, so BAL-STR-1's bar is now
+1.3x. Firing lanes matter at the margin (13 attackers: 9 against 3). Role bodies are the change that moves
+the break point, which confirms TBR-STR-006 as the next package. Beating larger forces than 1.3x is the job
+of Rule D (powered Aegis, faced Bulwarks, cover) and Rule B (height bands), measured by BAL-STR-2 and 3.
+
 **Open question on the defeat test.** `CompleteSkirmishDefeat` failed while an AI posture gate from the
 other lane was live, so whether firing lanes slow the opponent's assault is not yet measured. The budget
 was raised provisionally from 60,000 to 90,000 ticks; it returns to 60,000 if the clean run finishes

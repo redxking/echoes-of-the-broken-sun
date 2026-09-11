@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-11 21:24 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-11 21:28 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `3a6a2be` (upstream `50dc165`); 360 dirty paths, of which non-asset: `Docs/Requirements.md`, `Docs/RequirementsState.md`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesResearchTest.cpp`, `Source/EchoesSimCore/Private/Simulation.cpp`, `Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h`.
+- Branch `main` at `d51459e` (upstream `50dc165`); 357 dirty paths, of which non-asset: `Docs/Requirements.md`, `Docs/RequirementsState.md`, `Docs/StrategicDepthDesign.md`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -25,10 +25,10 @@ Read this, then fetch only the requirement records you touch:
 
 ## Newest RequirementsState entries
 
+- Chokepoint sweep: where prepared ground stops holding — SPEC-BAL-009, 2026-09-11
 - Walled-off slot holder releases the extraction slot — SPEC-RES-003, schema 34, 2026-09-11
 - Uncommitted work swept into a stash and recovered — 2026-09-11, 20:30–20:40Z
 - Committed band, lane body radius, and the first BAL-STR-1 measurement — 2026-09-11
-- Owner delegation on strategic depth — decisions taken, 2026-09-11
 
 ## Recently recorded state rows
 
