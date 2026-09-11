@@ -527,6 +527,17 @@ AEchoesEntityView::AEchoesEntityView()
     ChoirIdentityField->SetReceivesDecals(false);
     ChoirIdentityField->SetVisibility(false);
 
+    // DeliveryPlan §4.1: a small raised optic module, visible at gameplay
+    // zoom, on a fighter carrying permanent research. Presentation only.
+    ResearchCueField = CreateDefaultSubobject<UStaticMeshComponent>(
+        TEXT("ResearchCueField"));
+    ResearchCueField->SetupAttachment(SceneRoot);
+    ResearchCueField->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    ResearchCueField->SetGenerateOverlapEvents(false);
+    ResearchCueField->SetCastShadow(false);
+    ResearchCueField->SetReceivesDecals(false);
+    ResearchCueField->SetVisibility(false);
+
     AegisPowerField = CreateDefaultSubobject<UStaticMeshComponent>(
         TEXT("AegisPowerField"));
     AegisPowerField->SetupAttachment(SceneRoot);
@@ -681,6 +692,9 @@ AEchoesEntityView::AEchoesEntityView()
     WarformStateField->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
     ChoirIdentityField->SetStaticMesh(CylinderMesh);
     ChoirIdentityField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
+    ResearchCueField->SetStaticMesh(CubeMesh);
+    ResearchCueField->SetRelativeLocation(FVector(0.0f, 0.0f, 118.0f));
+    ResearchCueField->SetRelativeScale3D(FVector(0.16f, 0.16f, 0.16f));
     AegisPowerField->SetStaticMesh(AbilityRangeRingMesh != nullptr ? AbilityRangeRingMesh : CylinderMesh);
     AegisPowerField->SetRelativeLocation(FVector(0.0f, 0.0f, 6.0f));
     AegisPowerField->SetRelativeScale3D(AbilityDiscScale(
@@ -798,6 +812,8 @@ void AEchoesEntityView::PrepareForPool()
     ChoirIdentityState = echoes::sim::ChoirIdentityState::NotChoir;
     bTemporaryMineralCover = false;
     bAegisPowered = false;
+    bResearchCue = false;
+    ResearchCueField->SetVisibility(false);
     bUsingAuthoredRosterMesh = false;
     bUsingAuthoredFutureWellMesh = false;
     bUsingAuthoredResourceMesh = false;
@@ -1390,6 +1406,21 @@ void AEchoesEntityView::ApplyAuthoritativeState(
         State.wellChoice == echoes::sim::FutureWellChoice::Reshape &&
         State.reshapeUntilTick == 0;
     const bool bNewWellProtocolActive = State.wellProtocolTicks > 0;
+    // DeliveryPlan §4.1: research is a visible commitment. A fighter whose
+    // damage exceeds the archetype the rules define carries an optic; the
+    // rules come from the live simulation, or the defaults when no scenario
+    // is running (tests, pooled previews).
+    bool bNewResearchCue = false;
+    if (State.type == echoes::sim::EntityType::Soldier ||
+        State.type == echoes::sim::EntityType::HeavyUnit ||
+        State.type == echoes::sim::EntityType::ScoutUnit)
+    {
+        const echoes::sim::Simulation* CueSimulation = Bridge != nullptr ? Bridge->GetSimulation() : nullptr;
+        const echoes::sim::SimulationRules CueRules =
+            CueSimulation != nullptr ? CueSimulation->Config().rules : echoes::sim::DefaultSimulationRules();
+        const int32 Base = CueRules.archetypes[static_cast<int32>(State.faction)][static_cast<int32>(State.type)].attackDamage;
+        bNewResearchCue = Base > 0 && State.attackDamage > Base;
+    }
     const bool bNewFutureWellTerminallyCollapsed =
         State.type == echoes::sim::EntityType::FutureWell &&
         State.wellChoice == echoes::sim::FutureWellChoice::Harvest &&
@@ -1415,6 +1446,7 @@ void AEchoesEntityView::ApplyAuthoritativeState(
                                   bTemporaryMineralCover !=
                                       State.temporaryMineralCover ||
                                   bAegisPowered != State.aegisPowered ||
+                                  bResearchCue != bNewResearchCue ||
                                   bNetworkOperational != State.networkOperational ||
                                   ResourceRemaining != State.resourceRemaining;
     EntityId = State.id;
@@ -1435,6 +1467,7 @@ void AEchoesEntityView::ApplyAuthoritativeState(
     ChoirIdentityState = State.choirIdentityState;
     bTemporaryMineralCover = State.temporaryMineralCover;
     bAegisPowered = State.aegisPowered;
+    bResearchCue = bNewResearchCue;
     bNetworkOperational = State.networkOperational;
     ResourceRemaining = State.resourceRemaining;
     HitPoints = State.hitPoints;
@@ -2202,6 +2235,7 @@ void AEchoesEntityView::ConfigureAppearance(const echoes::sim::Entity& State)
         }
     }
     ChoirIdentityField->SetVisibility(bIsChoirIdentityUnit, true);
+    ResearchCueField->SetVisibility(bResearchCue && State.hitPoints > 0, true);
     AegisPowerField->SetVisibility(
         State.aegisPowered &&
             State.faction == echoes::sim::Faction::MeridianCompact &&
@@ -3125,6 +3159,11 @@ bool AEchoesEntityView::IsChoirIdentityStateVisible() const
 bool AEchoesEntityView::IsAegisPowerFieldVisible() const
 {
     return AegisPowerField != nullptr && AegisPowerField->IsVisible();
+}
+
+bool AEchoesEntityView::IsResearchCueVisible() const
+{
+    return ResearchCueField != nullptr && ResearchCueField->IsVisible();
 }
 
 bool AEchoesEntityView::IsFutureWellPresentationVisible() const

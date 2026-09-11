@@ -114,6 +114,8 @@ public:
     [[nodiscard]] bool IsWarformStateVisible() const;
     [[nodiscard]] bool IsChoirIdentityStateVisible() const;
     [[nodiscard]] bool IsAegisPowerFieldVisible() const;
+    /** DeliveryPlan §4.1: a persistent optic on a fighter whose damage exceeds its archetype base. */
+    [[nodiscard]] bool IsResearchCueVisible() const;
     [[nodiscard]] bool IsTemporaryMineralCover() const
     {
         return bTemporaryMineralCover;
@@ -382,6 +384,7 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> ChoirIdentityField;
+    TObjectPtr<UStaticMeshComponent> ResearchCueField;
 
     UPROPERTY(VisibleAnywhere, Category = "Echoes|View")
     TObjectPtr<UStaticMeshComponent> AegisPowerField;
@@ -583,6 +586,7 @@ private:
         echoes::sim::ChoirIdentityState::NotChoir;
     bool bTemporaryMineralCover = false;
     bool bAegisPowered = false;
+    bool bResearchCue = false;
     /** REL-FAC-002.PROD / SPEC-UI-008.F15: a completed Meridian Foundry outside the network. */
     bool bNetworkOperational = false;
     int32 ResourceRemaining = 1500;

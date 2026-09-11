@@ -64,7 +64,7 @@ enum class EStage : int32
     Done
 };
 
-const TCHAR* StageName(int32 Stage)
+const TCHAR* ReadinessStageName(int32 Stage)
 {
     switch (static_cast<EStage>(Stage))
     {
@@ -147,7 +147,7 @@ void AEchoesPlayerController::FinishReadinessReview(const TCHAR* Result, const F
     bReadinessReviewActive = false;
     UE_LOG(LogEchoes, Display,
         TEXT("[ECHOES_READINESS_REVIEW_COMPLETE] result=%s stage=%s passed=%s verifiedMask=0x%03x sessionMask=0x%03x elapsed=%.1f detail=%s agentDriven=true osInjection=false unaidedHuman=false packaged=false controlledNonshipping=true"),
-        Result, StageName(ReadinessReviewStage),
+        Result, ReadinessStageName(ReadinessReviewStage),
         ReadinessReviewStagesPassed.IsEmpty() ? TEXT("none") : *ReadinessReviewStagesPassed,
         PlayerProfile.TutorialVerifiedMask, TutorialSessionVerifiedMask,
         ReadinessReviewTotalElapsedSeconds, *Detail);
@@ -172,7 +172,7 @@ void AEchoesPlayerController::RunReadinessReviewStage(float DeltaTime)
     const auto Stage = [this]() { return static_cast<EStage>(ReadinessReviewStage); };
     const auto Pass = [this](EStage Next, const FString& Detail)
     {
-        const TCHAR* Name = StageName(ReadinessReviewStage);
+        const TCHAR* Name = ReadinessStageName(ReadinessReviewStage);
         UE_LOG(LogEchoes, Display, TEXT("[ECHOES_READINESS_REVIEW_STAGE] lesson=%d stage=%s result=PASSED elapsed=%.1f detail=%s"),
             ReadinessReviewLessonIndex < kLessonCount ? 6 + ReadinessReviewLessonIndex : 0,
             Name, ReadinessReviewStageElapsedSeconds, *Detail);
@@ -190,7 +190,7 @@ void AEchoesPlayerController::RunReadinessReviewStage(float DeltaTime)
     {
         FinishReadinessReview(TEXT("FAILED"), FString::Printf(
             TEXT("%s_AT_STAGE_%s shell=%d instruction=%s status=%s"),
-            Reason, StageName(ReadinessReviewStage), static_cast<int32>(PlayerFlow.Current()),
+            Reason, ReadinessStageName(ReadinessReviewStage), static_cast<int32>(PlayerFlow.Current()),
             *TutorialInstruction.ToString(), *GetStatusMessage()));
     };
     const auto Select = [this](const TArray<uint32>& Ids)

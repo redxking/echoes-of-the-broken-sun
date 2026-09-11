@@ -439,6 +439,33 @@ bool FEchoesCombatEffectsTest::RunTest(const FString& Parameters)
         Settings->SetReducedFlashingEnabled(bPreviousReducedFlashing);
     }
 
+    // DeliveryPlan §4.1: a researched fighter is recognizable at gameplay zoom
+    // by a persistent optic; the archetype figure shows nothing.
+    if (AEchoesEntityView* ResearchView = World->SpawnActor<AEchoesEntityView>())
+    {
+        const auto& Rules = echoes::sim::DefaultSimulationRules();
+        const int32 LancerBase = Rules.archetypes[static_cast<int32>(echoes::sim::Faction::MeridianCompact)]
+            [static_cast<int32>(echoes::sim::EntityType::Soldier)].attackDamage;
+        echoes::sim::Entity Lancer{};
+        Lancer.id = 8100;
+        Lancer.owner = 0;
+        Lancer.faction = echoes::sim::Faction::MeridianCompact;
+        Lancer.type = echoes::sim::EntityType::Soldier;
+        Lancer.position = echoes::sim::Vec2::FromTiles(12, 12);
+        Lancer.completed = true;
+        Lancer.hitPoints = 145;
+        Lancer.maxHitPoints = 145;
+        Lancer.attackDamage = LancerBase;
+        ResearchView->ApplyAuthoritativeState(Lancer, true);
+        TestFalse(TEXT("An unresearched Lancer shows no research optic"), ResearchView->IsResearchCueVisible());
+        Lancer.attackDamage = LancerBase * 115 / 100;
+        ResearchView->ApplyAuthoritativeState(Lancer, false);
+        TestTrue(TEXT("A Lancer above its archetype damage shows the research optic"), ResearchView->IsResearchCueVisible());
+        Lancer.attackDamage = LancerBase;
+        ResearchView->ApplyAuthoritativeState(Lancer, false);
+        TestFalse(TEXT("The optic follows the authoritative figure, never sticks"), ResearchView->IsResearchCueVisible());
+    }
+
     WorldWrapper.ForwardErrorMessages(this);
     return !HasAnyErrors() && !WorldWrapper.HasFailed();
 }

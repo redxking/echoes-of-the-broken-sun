@@ -30,7 +30,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 |---|---|---|---|---|---|---|
 | `REL-ECO-010` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | [INSUFFICIENT_DAWN]/[INSUFFICIENT_MATTER] refusals name unit, price, holding and source; Gameplay.ProductionRefusalText |
 | `REL-FAC-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | REL-FAC-002.PROD authored and implemented: Foundry produces only while network-powered; replay schema 32; native+Unreal+rendered green; uncommitted |
-| `REL-FAC-028` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | Archive shows cost/time/prereq and affected roster before/after; card explains researched damage; visual silhouette cue still open |
+| `REL-FAC-028` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-6 | 3481fa3 | 2026-09-11 | Archive before/after roster, card damage breakdown, and a persistent optic on researched Meridian fighters (placeholder cube; authored mesh open) |
 | `REL-UI-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
@@ -5037,6 +5037,27 @@ Status: D2 stays the first unfinished package; these five are the next repairs; 
 below as they land.
 
 
+## D3 Meridian slice — fourth slice: researched fighters carry a visible optic — 2026-09-11
+
+Owner order: "proceed." Controlling IDs: DeliveryPlan §4.1 (persistent silhouette/material detail plus the
+inspector, not a full-model replacement; enemy appearance only through permitted observation), REL-FAC-028,
+REL-FAC-029. Evidence root: `BuildArtifacts/Evidence/d3-meridian-20260911T161144Z` — build-16.log, automation-6. Classes: Unreal automation and source
+inspection; no rendered capture, no owner acceptance.
+
+A Meridian fighter (Lancer, Bulwark Team, Relay Skiff) whose authoritative damage exceeds the archetype the
+simulation rules define carries a small raised optic module (`ResearchCueField` on `AEchoesEntityView`,
+cube mesh at 118 cm, 16% scale), visible at gameplay zoom and hidden again the moment the figure returns to
+base; the rules come from the live simulation or the defaults when no scenario runs. Because the cue reads
+the entity's own damage figure through the player's scoped view, an enemy fighter shows it only when
+observed, and never through fog. `Presentation.CombatEffects` pins base → no optic, +15% → optic, back →
+none. Together with the archive's before/after roster line and the card's `DAMAGE 20 (18 +15% PRISMATIC
+TARGETING)` breakdown (first slice), Prismatic Targeting is now visible at three levels. Not done: a
+faction-authored optic mesh/material in place of the placeholder cube (art direction); a vision-tier cue
+for Horizon Lattice (sight is previewed on selection today).
+
+**Verification.** `build-16.log` Result Succeeded (build-15 failed on a unity-build name collision between
+the two review drivers' stage-name helpers, renamed); `automation-6/index.json` 139/139, 0 warnings.
+
 ## D3 Meridian slice — third slice: readiness lessons six to ten proven in play — 2026-09-11
 
 Owner order: "proceed." Controlling IDs: SPEC-TUT-008 chapters 2–6, SPEC-TUT-008.FLOW, SPEC-TUT-008.RECOVERY,
@@ -5322,3 +5343,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T16:34Z — `TBR-UX-001` → **OPEN**; class NONE; evidence —; commit 7c86d61; Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset
 - 2026-09-11T16:57Z — `SPEC-TUT-008` → **IMPLEMENTED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-4; commit 8ee0af6; All ten readiness lessons wired and earnable (8-10 added 2026-09-11: scripted replay-safe probe, F1 alert jump, Well commit); no in-editor drive of 6-10 yet
 - 2026-09-11T17:41Z — `SPEC-TUT-008` → **AGENT VERIFIED**; class PKG-REND; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/readiness-review-8; commit 46d841c; All ten readiness lessons earnable; lessons 6-10 each committed in a rendered practice run (readiness review driver); practice-mode gate and staging defects repaired; owner play open
+- 2026-09-11T17:52Z — `REL-FAC-028` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-6; commit 3481fa3; Archive before/after roster, card damage breakdown, and a persistent optic on researched Meridian fighters (placeholder cube; authored mesh open)
