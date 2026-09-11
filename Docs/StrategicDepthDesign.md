@@ -443,6 +443,15 @@ BAL-STR-3 (height bands with and without a scout).
 two scouts on the rim 0/30, on flat ground 0/30. Glass Scar's low rows are wired in a separate step after an
 Unreal run.
 
+**Only Glass Scar has band data (2026-09-11).** `glass_scar_map_source_v2.json` is the one map source in the
+region-and-band format: two bands (`plain` 0, `scar-depth` −1) with every crossing and both edge corridors
+on the low band, rows 30–34 across the full width, which is exactly what the live preset now writes.
+`crownfall_basin_map_source_v1.json` and `soryn_confluence_map_source_v1.json` use the older
+variant-and-operations format and author no bands at all, so height plays no part on those two maps yet.
+Crownfall Basin's "ridges" are impassable walls with gates; making them walkable high ground is an
+authoring change to that map. Until both are re-authored, `SPEC-INFO-004` is correct but only Glass Scar
+exercises it, and BAL-STR-3's map-level evidence rests on Glass Scar alone.
+
 **Open question on the defeat test.** `CompleteSkirmishDefeat` failed while an AI posture gate from the
 other lane was live, so whether firing lanes slow the opponent's assault is not yet measured. The budget
 was raised provisionally from 60,000 to 90,000 ticks; it returns to 60,000 if the clean run finishes

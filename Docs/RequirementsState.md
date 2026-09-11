@@ -38,7 +38,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
 | `SPEC-BAL-009` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | BAL-STR-1 passes its 1.3x bar with role bodies; control 7/60 |
 | `SPEC-BAL-011` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a2f2449 | 2026-09-11 | Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150 |
-| `SPEC-CMB-007` | BLOCKED | SRC | — | 8750287 | 2026-09-11 | Defect 2026-09-11: Hold units acquire only at ~7.4 tiles with 6.5-tile weapons; idle and attack-moving units never fire. Firing lanes and faction data ruled out by controls. Blocks BAL-STR-2. |
+| `SPEC-CMB-007` | BLOCKED | SRC | — | df85574 | 2026-09-11 | Narrowed 2026-09-11: Hold acquires as specified (interaction range adds footprints); the defect is idle units never acquiring or firing. D3 lane owns the fix, replay schema 36 |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `SPEC-INFO-004` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-bands | 82a728d | 2026-09-11 | Height-band sight inert-safe: native 150/150, Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); Glass Scar wiring pending |
@@ -49,12 +49,72 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `SPEC-UI-008` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged |
 | `TBR-SCP-012` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-17 | 34ca1a0 | 2026-09-11 | First bounded rule landed: opponent Future Well commands withheld in authored campaign operations (bridge, ECHOES_AI_WELL_DOCTRINE); per-mission doctrine remains D7 |
 | `TBR-STR-001` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Owner Go 2026-09-11, option A authored as SPEC-CMB-013 and implemented; deployed Bulwark exempt |
-| `TBR-STR-002` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a2f2449 | 2026-09-11 | Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150 |
+| `TBR-STR-002` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar | df85574 | 2026-09-11 | Glass Scar rows 30-34 wired as low ground; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); runtime proof that a crossing unit is blind to the rim |
 | `TBR-STR-003` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Owner delegation 2026-09-11; option A implemented |
 | `TBR-STR-004` | OPEN | NONE | — | 34ca1a0 | 2026-09-11 | Owner decision; design and recommendation in Docs/StrategicDepthDesign.md (2026-09-11) |
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
 | `TBR-STR-006` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## Glass Scar crossings are low ground — TBR-STR-002 wiring verified, 2026-09-11, 22:18Z
+
+`ConfigureGlassScar` now marks rows 30–34 across the full width as height band −1, matching
+`glass_scar_map_source_v2.json` exactly (five low regions, both edge corridors, four blocked spans; verified
+row for row and column for column against the source). Sight is the only effect: movement, cover and combat
+are unchanged.
+
+**Evidence.** Unreal `BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar`: editor
+build green, 138/139, no "Failed to find" asset errors, only the unattributed
+`Echoes.Runtime.Gameplay.CompleteSkirmishDefeat`, which has failed in every run tonight including builds
+carrying none of this lane's work. The engine log shows the presentation chasm at rows 30–34, agreeing with
+the wired band rows. Runtime proof on the real layout (`scratchpad/glassscar/scar.cpp`): a unit in the
+Buried Causeway cannot see a hostile on the north rim while that hostile sees down into the crossing;
+without bands both see each other.
+
+**Standing limit.** The other two shipping skirmish maps author no bands, so height plays no part there
+yet, and BAL-STR-3's map-level evidence rests on Glass Scar alone. The build also contained the D3 lane's
+uncommitted `Simulation.cpp` edit, which is theirs and unrelated to sight.
+
+## Correction and narrowing: the acquisition defect is the idle default — 2026-09-11
+
+The D3 lane corrected this lane's report and is right. **Withdrawn:** "Hold units acquire only at ~7.4
+tiles with 6.5-tile weapons". `InInteractionRange` adds both entities' footprint half-extents to the weapon
+range, so a Hold unit's effective reach is wider than its weapon range by design; the probe compared the
+measured distance against `attackRangeRaw` alone and read that padding as lateness. `ProcessHold` calls
+`FindNearestVisibleEnemyInRange` on every tick it has no target, so Hold acquires as specified.
+
+**Stands, and narrowed.** An idle armed unit never acquires or fires. Both per-order switches carry
+`case OrderType::None: break;` (lines 7103 and 7344), so a unit with no order runs no acquisition or firing
+path at all, which is why idle defenders inflicted zero damage before dying in the probes. That contradicts
+`SPEC-STANCE-002`, which makes Defensive the default, and `SPEC-CMB-007`, which requires autonomous
+acquisition without a manual target. It also fits `CompleteSkirmishDefeat`, where the scripted local player
+sits idle and never shoots back, so neither side can force an end. (The lane's phrasing "no case exists" is
+too strong: the cases exist and do nothing.)
+
+**Also separated.** The attack-move result (zero damage before dying) is not a firing defect: those units do
+acquire and fire, but walk at the enemy and arrive piecemeal, which is `REL-AI-006` cohesion, the D3 lane's
+next slice.
+
+**Ownership.** The D3 lane has taken the idle-default fix and reserved replay schema 36 for it; this lane's
+last schema is 35 and nothing here is pending on the replay version. `SPEC-CMB-007` and `SPEC-STANCE-002`
+stay BLOCKED until that lands.
+
+## Height bands exist only on Glass Scar — map data gap, 2026-09-11
+
+Checked after wiring the Glass Scar preset. `glass_scar_map_source_v2.json` is the only map source in the
+region-and-band format and the only one authoring height bands (`plain` 0, `scar-depth` −1; every crossing
+and both edge corridors low, rows 30–34 full width, matching the preset). The other two shipping skirmish
+maps, `crownfall_basin_map_source_v1.json` and `soryn_confluence_map_source_v1.json`, use the older
+variant-and-operations format and author no bands, so `SPEC-INFO-004` has no effect there. Crownfall
+Basin's twin "ridges" are impassable walls with three gates; turning them into walkable high ground is an
+authoring change to that map, not a rule change. Not a defect: the rule applies wherever data exists.
+Consequence: BAL-STR-3's map-level evidence rests on Glass Scar alone until the other two are re-authored.
+
+**Runtime proof on the real layout** (`scratchpad/glassscar/scar.cpp`, scratch only): a scratch simulation
+reproducing the live preset (rows 30–34 blocked from x=8..55 except the three crossings, bands low across
+the full width) places a unit in the Buried Causeway at (32,32) and a hostile on the north rim at (32,27).
+With bands the crosser cannot see the rim defender while the rim defender sees down into the crossing;
+without bands both see each other. Map data, rule and preset agree.
 
 ## Unreal suite on height-band sight (8750287 + records) — 2026-09-11, 22:06Z
 
@@ -5915,3 +5975,5 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T21:56Z — `TBR-STR-006` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35; commit c705496; Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat)
 - 2026-09-11T21:56Z — `SPEC-BAL-009` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35; commit c705496; BAL-STR-1 passes its 1.3x bar with role bodies; control 7/60
 - 2026-09-11T22:07Z — `SPEC-INFO-004` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-bands; commit 82a728d; Height-band sight inert-safe: native 150/150, Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); Glass Scar wiring pending
+- 2026-09-11T22:18Z — `SPEC-CMB-007` → **BLOCKED**; class SRC; evidence —; commit df85574; Narrowed 2026-09-11: Hold acquires as specified (interaction range adds footprints); the defect is idle units never acquiring or firing. D3 lane owns the fix, replay schema 36
+- 2026-09-11T22:18Z — `TBR-STR-002` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar; commit df85574; Glass Scar rows 30-34 wired as low ground; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); runtime proof that a crossing unit is blind to the rim

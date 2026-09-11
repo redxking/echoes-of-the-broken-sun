@@ -2716,6 +2716,21 @@ struct FEchoesImmutableCheckpointCapture final
 [[nodiscard]] int32 ConfigureGlassScar(echoes::sim::Simulation& Simulation)
 {
     int32 BlockedTiles = 0;
+    // TBR-STR-002 / SPEC-INFO-004: the scar is low ground. Rows 30-34 across
+    // the full width carry the authored `scar-depth` band from
+    // glass_scar_map_source_v2.json, including the two edge corridors outside
+    // the blocked span below. A unit crossing sees only the crossing until it
+    // climbs out; a defender on the rim sees down into it. Sight is the only
+    // effect: movement, cover and combat are unchanged.
+    for (int32 TileY = 30; TileY <= 34; ++TileY)
+    {
+        for (int32 TileX = 0;
+             TileX < FEchoesSkirmishSetupModel::MapWidthTiles;
+             ++TileX)
+        {
+            Simulation.SetHeightBand(TileX, TileY, -1);
+        }
+    }
     for (int32 TileY = 30; TileY <= 34; ++TileY)
     {
         for (int32 TileX = 8; TileX <= 55; ++TileX)
