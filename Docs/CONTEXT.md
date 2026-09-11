@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-11 22:18 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-11 22:23 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `df85574` (upstream `50dc165`); 358 dirty paths, of which non-asset: `Docs/CONTEXT.md`, `Docs/RequirementsState.md`, `Docs/StrategicDepthDesign.md`, `Source/EchoesOfTheBrokenSun/Private/EchoesSimulationSubsystem.cpp`.
+- Branch `main` at `d846a3b` (upstream `50dc165`); 357 dirty paths, of which non-asset: `Docs/RequirementsState.md`, `Source/EchoesSimCore/Private/Simulation.cpp`, `Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -25,10 +25,10 @@ Read this, then fetch only the requirement records you touch:
 
 ## Newest RequirementsState entries
 
+- Idle defensive fire: reproduced and owned by the D3 lane, schema 36 — 2026-09-11
 - Glass Scar crossings are low ground — TBR-STR-002 wiring verified, 2026-09-11, 22:18Z
 - Correction and narrowing: the acquisition defect is the idle default — 2026-09-11
 - Height bands exist only on Glass Scar — map data gap, 2026-09-11
-- Unreal suite on height-band sight (8750287 + records) — 2026-09-11, 22:06Z
 
 ## Recently recorded state rows
 

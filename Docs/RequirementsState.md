@@ -56,6 +56,29 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-006` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
+## Idle defensive fire: reproduced and owned by the D3 lane, schema 36 — 2026-09-11
+
+The D3 lane reproduced the idle defect natively (six idle defenders lost 6-0 inflicting no damage; the same
+six on Hold hurt four attackers) and confirmed the cause this lane narrowed to: the tick loop's order switch
+does nothing for `OrderType::None`, so an idle armed unit never acquires. Its fix is idle **return fire
+only** under replay schema 36 (`kIdleDefensiveFireReplayVersion`) with the usual legacy flag: an idle unit
+shoots back at something already attacking its own side. A first attempt at the full `SPEC-CMB-007`
+hierarchy broke seven native tests because the simulation stores "ordered to Stop" and "has no orders" as
+one state, so idle units engaged things the fixtures expect to survive; a separate stand-down stance would
+need a new entity field and a snapshot bump and is recorded rather than smuggled in.
+
+**Correction to this lane's report.** The attack-move half does not reproduce: the D3 lane measured
+attack-moving defenders killing five of ten, so they acquire and fire and were dying on the approach in
+this lane's probe. Withdrawn; only the idle finding stands. That is the second correction to this lane's
+acquisition report, after the Hold-lateness claim.
+
+**Two fixture consequences, owned by that lane with this lane's agreement.**
+`TestBallisticCoverAndTrackingRegression` (not this lane's fixture) sees two projectiles once the target
+returns fire; counting only the attacker's own projectile preserves the fixture's intent, which is that a
+covered shot resolves against the cover. `TestExploredTerrainAndPermanentObjectMemory` loses its demolisher
+to return fire; its subject is terrain and object memory, so the repair belongs with the change that caused
+it. `SPEC-CMB-007` and `SPEC-STANCE-002` stay BLOCKED under that lane until schema 36 lands.
+
 ## Glass Scar crossings are low ground — TBR-STR-002 wiring verified, 2026-09-11, 22:18Z
 
 `ConfigureGlassScar` now marks rows 30–34 across the full width as height band −1, matching
