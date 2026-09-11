@@ -9057,9 +9057,9 @@ std::vector<Command> Simulation::GenerateAiCommands(
             }
             const Entity* nearestWell = nullptr;
             std::uint64_t nearestWellDistance = std::numeric_limits<std::uint64_t>::max();
+            bool nearestWellIsHeldByFoe = false;
             for (const Entity& candidate : entities_) {
                 if (candidate.type != EntityType::FutureWell ||
-                    candidate.wellChoice != FutureWellChoice::Dormant ||
                     std::any_of(view.PublicFutureWellTelegraphs().begin(),
                         view.PublicFutureWellTelegraphs().end(),
                         [&](const FutureWellTelegraph& event) {
@@ -9068,17 +9068,45 @@ std::vector<Command> Simulation::GenerateAiCommands(
                     !IsEntityVisibleTo(player, candidate.id)) {
                     continue;
                 }
+                // REL-AI-031 / REL-AI-024: a claimed Well is still a target.
+                // This scan took Dormant Wells only, so the moment an opponent
+                // committed the map's Well this seat stopped seeing it for the
+                // rest of the match. On Glass Scar, whose single Well is the
+                // contested centre, that is the whole economy: every Kharuun
+                // fighter costs Dawn, the only recurring Dawn income is a
+                // Preserve Well, and the opponent in CompleteSkirmishDefeat
+                // banked 7,020 matter, trained workers for ever and finished
+                // with one fighter. The rules already allow the answer: a
+                // Future Well command accepts a Preserve Well held by an
+                // enemy, and standing inside the same radius denies its income
+                // even without the capture.
+                const bool wellIsDormant =
+                    candidate.wellChoice == FutureWellChoice::Dormant;
+                const bool wellIsHeldByFoe =
+                    candidate.wellChoice == FutureWellChoice::Preserve &&
+                    config_.IsHostile(player, candidate.owner);
+                if (!wellIsDormant && !wellIsHeldByFoe) {
+                    continue;
+                }
                 // Skip wells already assigned to a worker in this batch.
                 if (wellsAssignedThisBatch.count(candidate.id)) {
                     continue;
                 }
                 const std::uint64_t distance =
                     DistanceSquaredRaw(actor.position, candidate.position);
-                if (distance < nearestWellDistance ||
-                    (distance == nearestWellDistance &&
-                     (nearestWell == nullptr || candidate.id < nearestWell->id))) {
+                // An unclaimed Well is still worth more than taking one by
+                // force, so it wins regardless of distance.
+                const bool betterThanBest =
+                    nearestWell == nullptr ||
+                    (nearestWellIsHeldByFoe && wellIsDormant) ||
+                    (nearestWellIsHeldByFoe == wellIsHeldByFoe &&
+                     (distance < nearestWellDistance ||
+                      (distance == nearestWellDistance &&
+                       candidate.id < nearestWell->id)));
+                if (betterThanBest) {
                     nearestWell = &candidate;
                     nearestWellDistance = distance;
+                    nearestWellIsHeldByFoe = wellIsHeldByFoe;
                 }
             }
             bool wellAlreadyTargeted = false;
