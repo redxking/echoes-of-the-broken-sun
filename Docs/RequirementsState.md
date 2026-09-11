@@ -41,7 +41,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `SPEC-CMB-007` | BLOCKED | SRC | — | 8750287 | 2026-09-11 | Defect 2026-09-11: Hold units acquire only at ~7.4 tiles with 6.5-tile weapons; idle and attack-moving units never fire. Firing lanes and faction data ruled out by controls. Blocks BAL-STR-2. |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
-| `SPEC-INFO-004` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a2f2449 | 2026-09-11 | Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150 |
+| `SPEC-INFO-004` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-bands | 82a728d | 2026-09-11 | Height-band sight inert-safe: native 150/150, Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); Glass Scar wiring pending |
 | `SPEC-RES-003` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s34 | 3c3e836 | 2026-09-11 | Schema 34 slot release: native stall test passes and fails with the rule off; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `SPEC-RES-006` | AWAITING HUMAN ACCEPTANCE | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | SPEC-RES-006.INSPECT: click shows remaining Matter; exhausted stub 30%/80% and minimap mark; FieldHudAuthority green; rendered chain did not stage it |
 | `SPEC-STANCE-002` | BLOCKED | SRC | — | 8750287 | 2026-09-11 | Defensive default does not answer threats in weapon range; idle defenders inflicted no damage in scratch probes |
@@ -55,6 +55,15 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
 | `TBR-STR-006` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## Unreal suite on height-band sight (8750287 + records) — 2026-09-11, 22:06Z
+
+`BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-bands`: editor build green, 138/139, no
+"Failed to find" asset errors, only the unattributed `Echoes.Runtime.Gameplay.CompleteSkirmishDefeat`.
+The height-band rule is inert in this build (no map sets bands), which is what the run had to establish:
+adding the band array, the packed terrain bytes and the vision check changes nothing in play or in any
+retained save or replay. Glass Scar's crossings (rows 30–34) are wired as low ground in a separate commit,
+which needs its own Unreal run because it changes what every unit crossing the scar can see.
 
 ## Attribution correction: 4155bdd also carries the D3 lane's Well-target fix — 2026-09-11
 
@@ -5905,3 +5914,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T21:54Z — `SPEC-STANCE-002` → **BLOCKED**; class SRC; evidence —; commit 8750287; Defensive default does not answer threats in weapon range; idle defenders inflicted no damage in scratch probes
 - 2026-09-11T21:56Z — `TBR-STR-006` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35; commit c705496; Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat)
 - 2026-09-11T21:56Z — `SPEC-BAL-009` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35; commit c705496; BAL-STR-1 passes its 1.3x bar with role bodies; control 7/60
+- 2026-09-11T22:07Z — `SPEC-INFO-004` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-bands; commit 82a728d; Height-band sight inert-safe: native 150/150, Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); Glass Scar wiring pending

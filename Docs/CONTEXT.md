@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-11 21:57 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-11 22:07 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `900a610` (upstream `50dc165`); 356 dirty paths, of which non-asset: `Docs/RequirementsState.md`, `Scripts/run_ai_balance_matrix.py`.
+- Branch `main` at `82a728d` (upstream `50dc165`); 356 dirty paths, of which non-asset: `Docs/RequirementsState.md`, `Source/EchoesSimCore/Private/Simulation.cpp`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -25,10 +25,10 @@ Read this, then fetch only the requirement records you touch:
 
 ## Newest RequirementsState entries
 
+- Unreal suite on height-band sight (8750287 + records) — 2026-09-11, 22:06Z
 - Attribution correction: 4155bdd also carries the D3 lane's Well-target fix — 2026-09-11
 - Unreal suite on schema 35 role bodies (4155bdd + 3c3e836) — 2026-09-11, 21:55Z
 - Defect: units do not acquire threats at weapon range — SPEC-CMB-007, SPEC-STANCE-001..003, 2026-09-11
-- Height-band sight lands (inert until a map sets bands) — TBR-STR-002, SPEC-INFO-004, SPEC-BAL-011, 2026-09-11
 
 ## Recently recorded state rows
 
