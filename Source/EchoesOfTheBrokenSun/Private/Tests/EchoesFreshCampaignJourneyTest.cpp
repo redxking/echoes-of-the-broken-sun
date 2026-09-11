@@ -5974,16 +5974,28 @@ bool FEchoesFreshCampaignJourneyTest::RunTest(const FString& Parameters)
                     5600),
                 TEXT("Mission 12 verifies both recorded inputs")) ||
             !Require(
-                Bridge->GetSimulation()->IsEntityVisibleTo(
-                    UEchoesSimulationSubsystem::LocalPlayerId,
-                    M12Start.FutureWonWellId),
-                TEXT("Mission 12 readback legitimately reveals the Future Well")) ||
-            !Require(
                 Move(M12Workers[0], M12WellApproach),
                 FString::Printf(
                     TEXT("Mission 12 worker accepts the Well approach (%d,%d)"),
                     M12WellApproach.x.FloorToInt(),
                     M12WellApproach.y.FloorToInt())) ||
+            // SPEC-MSN-012 promises no reveal at readback; the Well is seen the
+            // way M10, M11 and the FutureThatWon fixture see theirs -- a unit
+            // walks into sight of it. The zero-tick check that stood here had
+            // only ever passed because the Oruun's readback halt happened to
+            // sit 0.7 tiles inside a 16-tile scout circle; solid footprints
+            // moved that halt one row and the coincidence with it. The
+            // FutureWell command itself still refuses an unseen target.
+            !Require(
+                TickM12(
+                    [Bridge, &M12Start]()
+                    {
+                        return Bridge->GetSimulation()->IsEntityVisibleTo(
+                            UEchoesSimulationSubsystem::LocalPlayerId,
+                            M12Start.FutureWonWellId);
+                    },
+                    2600),
+                TEXT("Mission 12 approach legitimately reveals the Future Well")) ||
             !Require(
                 Bridge->IssueCommand(
                     CommandType::FutureWell,

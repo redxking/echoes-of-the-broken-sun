@@ -4426,12 +4426,19 @@ bool UEchoesSimulationSubsystem::StartScenario(
                 EntityType::Worker,
                 Plan.TalarPublicRecordSite.x.FloorToInt(),
                 Plan.TalarPublicRecordSite.y.FloorToInt());
+            // Oruun stands two rows off his accord site (row site.y-2), not two
+            // columns along it: the command force reaches every founding
+            // doctrine's Oruun site along that row, and with solid bodies
+            // (SPEC-MOV-006) a neutral witness parked on it stopped the accord
+            // heavy 3.1 tiles short of the site for good. Two rows away keeps
+            // him inside the 3-tile witness radius and clear of the approach
+            // and of the heavy's resting tiles for all three sites.
             BrokenSunOruunId = SpawnUnit(
                 3,
                 Faction::KharuunAssemblies,
                 EntityType::ScoutUnit,
-                Plan.OruunAccordSite.x.FloorToInt() + 2,
-                Plan.OruunAccordSite.y.FloorToInt());
+                Plan.OruunAccordSite.x.FloorToInt(),
+                Plan.OruunAccordSite.y.FloorToInt() - 2);
             UE_LOG(
                 LogEchoes,
                 Display,

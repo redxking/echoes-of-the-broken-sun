@@ -1029,6 +1029,16 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
                 }
                 Bridge->Tick(0.05f);
                 --RemainingTicks;
+                // The mission can complete on a tick driven from inside this
+                // loop; the bridge then pauses the simulation, so waiting for
+                // the escorts to close up would burn the whole budget against
+                // a frozen match. Judge the witness where the mission judged it.
+                if (Bridge->GetFutureThatWonPhase() ==
+                    EEchoesFutureThatWonPhase::Complete)
+                {
+                    return FutureThatWonEntityWithinTiles(
+                        Bridge, WitnessId, Goal, 3);
+                }
             }
             if (FutureThatWonEntityWithinReachOfStructure(
                     Bridge, WitnessId, InterfaceId, Goal, 1))
