@@ -9521,7 +9521,12 @@ std::vector<Command> Simulation::GenerateAiCommands(
             // returns to the fight.
             bool garrisonIsTheArmy = false;
             if (commandCore != nullptr) {
-                constexpr std::int64_t kHomeRadiusRaw = 3 * kFixedScale;
+                // The rally ring itself is three tiles out, and its diagonal
+                // offsets land about 4.2 tiles from the Core, so a three-tile
+                // test never matched the units actually standing in it: most
+                // of the wounded garrison stayed idle on the ring. Five tiles
+                // covers the whole ring.
+                constexpr std::int64_t kHomeRadiusRaw = 5 * kFixedScale;
                 constexpr std::uint64_t kHomeThreatRadiusRaw = 9 * kFixedScale;
                 if (DistanceSquaredRaw(actor.position, commandCore->position) <=
                         static_cast<std::uint64_t>(kHomeRadiusRaw) * kHomeRadiusRaw &&
