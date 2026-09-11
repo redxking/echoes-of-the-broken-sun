@@ -55,8 +55,35 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-004` | OPEN | NONE | — | 34ca1a0 | 2026-09-11 | Owner decision; design and recommendation in Docs/StrategicDepthDesign.md (2026-09-11) |
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
 | `TBR-STR-006` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s35 | c705496 | 2026-09-11 | Role bodies schema 35: native 148/148 with BAL-STR-1 60/60 at 13 vs 10; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
-| `TBR-STR-007` | OPEN | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | c2437ed | 2026-09-11 | Owner decision: a powered Aegis only matters at parity (6/30); prepared ground as costed does not beat a blind rush |
+| `TBR-STR-007` | OPEN | SRC | — | 737038c | 2026-09-11 | Read with the Dawn economy: combat units all cost Dawn, Dawn comes only from Wells plus a 30-Dawn start, so a Well-less seat fields one fighter; BAL-STR-2 granted units outright |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## CompleteSkirmishDefeat: the opponent cannot buy an army without a Well — 2026-09-11, 23:15Z
+
+The D3 lane's enriched stall line refutes the population-split theory for this scenario and points at Dawn:
+`tick=90000 localCoreHp=1168 openingOpponentCombat=4 wellOrder=true endOpponentCombat=1
+endOpponentWorkers=18 endOpponentProducers=1 endOpponentMatter=7020`. The opponent is neither
+population-capped nor poor; it banks 7,020 matter and ends with fewer fighters than it started with.
+
+**Checked against authored content by this lane, and the arithmetic closes.** Every combat unit costs Dawn:
+`ka_riftstalker` 75/30, `ka_cairnback` 120/30, `ka_resonant` 80/25; Meridian 20-25; Choir 35-45. Only
+workers are Dawn-free (`mc_surveyor`, `ka_tender` at 0; `hc_threadkeeper` still 5). `REL-ECO-009` makes Dawn
+obtainable **strictly** through Future Well interactions plus mission-authored starting reserves, and the
+skirmish standard start is `ResourcePool{500, 30}`. A seat that never holds the Well can therefore buy
+exactly **one** Riftstalker from its opening reserve and nothing afterwards, while matter accumulates
+because matter is the only resource it can still earn. The Defeat fixture has the local player commit the
+Well (`wellOrder=true`), which locks the opponent out of Dawn for the whole match by construction.
+
+**Falsifiable prediction given to that lane** (its next run adds `endOpponentDawn`): the value should read
+0-29 and should reach zero within a few hundred ticks of the opponent's first combat unit. If it instead
+holds hundreds of Dawn, this reading is wrong and the fault is production or targeting.
+
+**Two consequences.** (1) AI doctrine: a seat that does not contest the Well cannot field an army at all, so
+"contest the Well or lose" is a doctrine requirement (`SPEC-DOC-*`, `REL-AI-022`), not a preference — and
+`SPEC-WEL-002` / `REL-WEL-018` promise that no Well protocol is an automatic win, which a Dawn monopoly
+strains. (2) `TBR-STR-007` is partly an economy question: this lane's BAL-STR-2 harness granted both sides
+their units outright, so it measured a defence against 8-12 attackers, more army than a Well-less seat
+could ever buy. The Aegis decision should be read alongside how much Dawn a seat can actually reach.
 
 ## Cohesion is not the binding constraint; the population split is — 2026-09-11, 23:05Z
 
@@ -6332,3 +6359,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T22:47Z — `SPEC-STANCE-002` → **AGENT VERIFIED**; class PKG-AUTO; evidence —; commit 2bd56de; Defensive default answers threats via idle return fire (schema 36); verified in the D3 lane's full suite
 - 2026-09-11T22:48Z — `REL-AI-006` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-6.json; commit bd2f471; Cohesion is now the blocking slice: piecemeal commitment leaves every mirror unresolved once defenders return fire
 - 2026-09-11T23:17Z — `REL-AI-006` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-7.json; commit b06254b; Threshold-based massing measured: 114 of 1000 matches changed, zero conversions, branch never fires when saturated; needs muster point and synchronised release
+- 2026-09-11T23:22Z — `TBR-STR-007` → **OPEN**; class SRC; evidence —; commit 737038c; Read with the Dawn economy: combat units all cost Dawn, Dawn comes only from Wells plus a 30-Dawn start, so a Well-less seat fields one fighter; BAL-STR-2 granted units outright
