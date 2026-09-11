@@ -58,6 +58,27 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-007` | OPEN | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | c2437ed | 2026-09-11 | Owner decision: a powered Aegis only matters at parity (6/30); prepared ground as costed does not beat a blind rush |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
 
+## Retained artifact for the schema 36 verdict — 2026-09-11, 22:59Z
+
+`BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-final36`, run through
+`Scripts/run_unreal_tests.sh` on a clean tree: **139 tests, 138 passed**, no "Failed to find" asset errors,
+and the only failure is `Echoes.Runtime.Gameplay.CompleteSkirmishDefeat`. Artifact confirmed present before
+being quoted: `index.json` 122,214 bytes alongside `Engine.log` and the `SaveIsolation` evidence, no doubled
+path.
+
+**Scope, stated precisely.** Built at HEAD `6e0ff49`, so it covers replay schema 36 (idle return fire) and
+the three Unreal fixtures that follow it. It does **not** contain `0692638` (REL-AI-006 cohesion), which
+landed after the build began; cohesion needs its own run and this verdict says nothing about it.
+
+**Defeat diagnostic moved.** `tick=90000 localCoreHp=1168 openingOpponentCombat=4` here, against
+`localCoreHp=1062` in the 22:30Z run: the opponent did slightly *less* damage over the same 90,000 ticks.
+That is consistent with the shared root recorded above — defenders that return fire are harder to break and
+the attack still arrives piecemeal — and not with any theory in which the budget is the limit.
+
+This lane's own run was started to give the 139-pass result a citable artifact. The D3 lane has since
+recovered its own report from a doubled path, so that verdict is cited too; this one stands as an
+independent artifact at a known commit on a clean tree.
+
 ## Three findings, one root: the opponent never masses — 2026-09-11, 22:50Z
 
 Noted from this lane because the D3 lane's matrix corroborates this lane's BAL-STR-2 result from the
