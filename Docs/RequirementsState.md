@@ -4738,6 +4738,45 @@ streams by design), an escort-scripting gap, or a fixture assumption is the next
 both pushed to `origin/main`. Automation only: no packaged build, no rendered capture, no physical
 input, no owner acceptance.
 
+**`SPEC-DOC-005` / `SPEC-MSN-004` — Mission 04 Reshape bearer loss (game; repaired, fourth slice).**
+One read-only investigation and two refuters. The correctness refuter rebuilt the Reshape leg
+headlessly against the current simulation and reproduced the retained diagnostic to the tick: the
+Waystone roots at tick 851, the Listening Spine foundation (44 HP, placed at 49,35 while its builder
+was still 25 tiles away) is destroyed at 995, and the bearer dies at 1126 at (48,31) to two Lancers,
+two Bulwark Teams and the Skiff (85→79→61→43→33→15→5). Corrected cause: the Reshape sites sit
+inside the ordinary harvest vision of the opponent's gatherers at the deposit at (52,45), so the
+foundation and the bearer are seen as soon as they appear; and the Adaptive planner's
+nearest-visible-hostile attack scan accepted any visible hostile at any distance and ran before the
+opening-posture check, so the whole force marched twenty-two tiles during the posture that
+`SPEC-DOC-005` (ledger SIM-033) says holds it near the Core for 300 s. Not reconnaissance (the
+frontier walk is unreachable under the posture), not Wells or Dawn (Mission 04 stages no capturable
+Well), and not today's changes: the regression dates from `a289ff5` (opponent economy populating
+that deposit) and was masked because no run since had reached this leg. Repair: during the Adaptive
+opening posture a visible hostile is an attack target only inside the posture's own nine-tile radius
+around the Core or within three tiles of an owned structure; the retreat branch, post-posture play,
+other doctrines and the scout are unchanged. The nine-tile figure reuses the existing hold radius
+and has no separate master authority; worker protection beyond that radius (`REL-AI-031`) is
+deliberately deferred during the opening and recorded here. Planner-only, so retained replays and
+snapshots reproduce exactly; live Adaptive command streams change in the first 6000 ticks whenever a
+hostile is visible beyond that ground. Native test `Adaptive opening posture bounds attack reach`.
+Fixture hardening (place the Spine only when the builder and its guard are within reach; move the
+bearer after the Spine completes as the Preserve and Harvest legs do; pace the escort to the bearer)
+is recorded as follow-up, not as the repair: the foundation itself was destroyed, so a fixture-only
+change would have moved the failure, not cleared it.
+
+**Automation rerun 5** (`d2-foundation-20260911T0050Z/automation-05/index.json`, editor rebuilt at
+`build-06.log` Result Succeeded, 03:54–04:04 UTC): 138 tests, 138 passed, 0 failed; the wrapper
+exited 0 for the first time in the retained history. `Campaign.FreshJourney` completes every route
+variant, including the Mission 04 Reshape leg. Day sequence: 12 failures on main → 10 → 7 → 3 → 1
+→ 0, none added. Native: 139/139 in three configurations (`test_sim-09.log`). Evidence class is
+unchanged — native source tests and editor automation; no packaged build, rendered capture, physical
+input or owner acceptance. D2's remaining exit obligation is therefore the human one: a player
+gathers, builds, trains, moves, fights, repairs and recovers under 30 on an ordinary map, observed
+in a packaged or editor session rather than inferred from these suites.
+
+**Commit identity, fourth slice.** Code `9adc348` on `main`, documentation commit immediately after,
+both pushed to `origin/main`.
+
 **Commit identity, second slice.** Code `a37bacd` on `main`, documentation commit immediately after;
 both pushed to `origin/main` under the owner's "push to main then continue working" instruction.
 Automation only: no packaged build, no rendered capture, no physical input, no owner acceptance.
