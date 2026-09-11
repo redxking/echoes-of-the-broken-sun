@@ -4956,8 +4956,8 @@ record tick and checksum, wait for a commit whose request id is new and not an a
 match run on ≥300 ticks, load, and require the tick to rewind to the saved tick with the saved
 checksum. Repair: recall the damaged unit nearest home; state plainly when the local Core has
 fallen. Fight: state plainly when the local Core has fallen; hold contact until an owned unit is hurt
-(or 45 s after the first hostile loss), then recall the army home so save, load and repair run on a
-live match; the outcome stage sends it back out. Limit proof: ask the exact producer and unit pair
+(or 150 s after the first hostile loss), then recall the army to mid-map on our side so save, load
+and repair run on a live match away from the base ring; the outcome stage sends it back out. Limit proof: ask the exact producer and unit pair
 that reported `MobileEntityLimit`. Captures: taken 0.4 s after each stage transition.
 
 ### What this evidence is and is not
