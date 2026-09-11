@@ -439,6 +439,10 @@ BAL-STR-3 (height bands with and without a scout).
   Scar and full-match suites, which cross the scar. Balance: BAL-STR-3 (crossing blind against a rim
   defender, with and without a scout on the rim).
 
+**Height bands landed (inert).** BAL-STR-3 at 10 against 10: crossing blind the defender wins 30/30, with
+two scouts on the rim 0/30, on flat ground 0/30. Glass Scar's low rows are wired in a separate step after an
+Unreal run.
+
 **Open question on the defeat test.** `CompleteSkirmishDefeat` failed while an AI posture gate from the
 other lane was live, so whether firing lanes slow the opponent's assault is not yet measured. The budget
 was raised provisionally from 60,000 to 90,000 ticks; it returns to 60,000 if the clean run finishes

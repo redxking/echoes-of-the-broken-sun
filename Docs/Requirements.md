@@ -556,6 +556,7 @@ the complete simulation tick. Both budgets apply to their named measurement scop
 | SPEC-INFO-001 | Unexplored | No terrain, resource, route, unit, structure, or event detail except public mission markers. |
 | SPEC-INFO-002 | Explored | Remembered terrain and last observed permanent objects; no live unit or temporary terrain state. |
 | SPEC-INFO-003 | Visible | Live authorized state of terrain and visible entities, limited to fields the rules expose. |
+| SPEC-INFO-004 | Height-band sight | A tile's signed height band (0 plain, −1 low, +1 high) limits sight: a unit sees no tile on a higher band than the tile it stands on; level and downhill sight are unchanged, and a friend standing higher shares its sight (TBR-STR-002, 2026-09-11). Bands are set per map and saved in the terrain byte's spare bits, so older saves load as plain. Verification: native "height bands block uphill sight"; BAL-STR-3 (`SPEC-BAL-011`). |
 | SPEC-INFO-004 | Last known | Optional timestamped position and class from earlier direct vision; fades after 600 ticks and is never targetable. |
 | SPEC-INFO-005 | Anonymous vibration | Approximate moving contact with age and uncertainty; no unit identity, exact location, ownership certainty, or direct target. |
 | SPEC-INFO-006 | Public event | Telegraphed Well, mission, structure-collapse, or route event visible to all affected players as explicitly authored. |
@@ -1255,6 +1256,10 @@ technologies; they do not define six additional upgrades. Preserve both IDs and 
   * **SPEC-BAL-009.FAIL:** A defender rate below 70% once `TBR-STR-006` lands, or a rule-off control equal to or above the rule-on rate, fails acceptance.
   * **SPEC-BAL-009.VERIF:** `SRC` (native "BAL-STR-1 blob versus frontage").
   * **SPEC-BAL-009.LANE:** Core Gameplay & Balance.
+* **SPEC-BAL-011 — BAL-STR-3 Crossing Low Ground Blind (TBR-STR-002):** Ten attackers that attack-move across unscouted low ground toward ten defenders holding the higher rim shall lose at least 70% of seeded matches; the same force with two scouts already on the rim, and the same force on flat ground, shall win at least 70%. Scouting, not numbers, decides the crossing.
+  * **SPEC-BAL-011.MEASURE:** 2026-09-11 native: defender wins 30/30 crossing blind, 0/30 with two flank scouts on the rim, 0/30 with no bands (at 11 attackers blind: 18/30; at 12: 0/30).
+  * **SPEC-BAL-011.VERIF:** `SRC` (native "BAL-STR-3 trench crossing rewards scouting").
+  * **SPEC-BAL-011.LANE:** Core Gameplay & Balance.
 
 
 
@@ -6827,6 +6832,7 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `SPEC-BAL-007` | Balance Evidence Expiry and Re-Validation: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
 | `SPEC-BAL-008` | AI Instrument Competence Baseline: | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
 | `SPEC-BAL-009` | BAL-STR-1 Blob Versus Frontage (TBR-STR-005): | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
+| `SPEC-BAL-011` | BAL-STR-3 Crossing Low Ground Blind (TBR-STR-002): | 16.4 Mass AI Balance Validation Architecture (`SPEC-BAL-*`) |
 | `SPEC-BLD-001` | Blueprint placement validation: | §10. Construction, production, repair, and research |
 | `SPEC-BLD-002` | Transactional cost subtraction: | §10. Construction, production, repair, and research |
 | `SPEC-BLD-003` | Multi-builder speed scaling falloff: | §10. Construction, production, repair, and research |
@@ -6972,6 +6978,7 @@ they do not prove semantic consistency, implementation, evidence or owner accept
 | `SPEC-INFO-001` | Unexplored | 8. Fog of war, intelligence, alerts, and reconnaissance |
 | `SPEC-INFO-002` | Explored | 8. Fog of war, intelligence, alerts, and reconnaissance |
 | `SPEC-INFO-003` | Visible | 8. Fog of war, intelligence, alerts, and reconnaissance |
+| `SPEC-INFO-004` | Height-band sight | 8. Fog of war, intelligence, alerts, and reconnaissance |
 | `SPEC-INFO-004` | Last known | 8. Fog of war, intelligence, alerts, and reconnaissance |
 | `SPEC-INFO-005` | Anonymous vibration | 8. Fog of war, intelligence, alerts, and reconnaissance |
 | `SPEC-INFO-006` | Public event | 8. Fog of war, intelligence, alerts, and reconnaissance |

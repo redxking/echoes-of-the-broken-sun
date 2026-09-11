@@ -54,6 +54,8 @@ constexpr std::uint32_t kProductionPipelineSnapshotVersion = 29;
 constexpr std::uint32_t kLinkMechanicsSnapshotVersion = 30;
 constexpr std::uint32_t kBulwarkCommitmentSnapshotVersion = 31;
 constexpr std::size_t kSerializedRememberedObjectBytes = 24;
+constexpr std::uint8_t kHeightBandLowBit = 0x40;
+constexpr std::uint8_t kHeightBandHighBit = 0x80;
 constexpr std::size_t kLegacyFactionCount = 2;
 constexpr std::size_t kLegacyResearchTypeCount = 5;
 constexpr std::size_t kLegacySerializedEntityBytes = 202;
@@ -1328,6 +1330,7 @@ Simulation::Simulation(SimulationConfig config)
         throw std::invalid_argument("invalid deterministic simulation configuration");
     }
     terrain_.assign(static_cast<std::size_t>(tileCount), Terrain::Open);
+    heightBand_.assign(static_cast<std::size_t>(tileCount), 0);
     for (PlayerId player = 0; player < players_.size(); ++player) {
         players_[player].id = player;
         explored_[player].assign(static_cast<std::size_t>(tileCount), 0);
@@ -1655,6 +1658,23 @@ bool Simulation::TryAllocateEntityId(EntityId& id) {
     }
     id = nextEntityId_++;
     return true;
+}
+
+bool Simulation::SetHeightBand(std::int32_t tileX, std::int32_t tileY, std::int8_t band) {
+    if (tileX < 0 || tileY < 0 || tileX >= config_.mapWidthTiles ||
+        tileY >= config_.mapHeightTiles || band < -1 || band > 1) {
+        return false;
+    }
+    heightBand_[static_cast<std::size_t>(tileY * config_.mapWidthTiles + tileX)] = band;
+    return true;
+}
+
+std::int8_t Simulation::HeightBandAt(std::int32_t tileX, std::int32_t tileY) const {
+    if (tileX < 0 || tileY < 0 || tileX >= config_.mapWidthTiles ||
+        tileY >= config_.mapHeightTiles) {
+        return 0;
+    }
+    return heightBand_[static_cast<std::size_t>(tileY * config_.mapWidthTiles + tileX)];
 }
 
 bool Simulation::SetTerrainTile(std::int32_t tileX,
@@ -7869,6 +7889,9 @@ bool Simulation::UpdateVisibility(
         }
         const std::int32_t centerX = position.x.FloorToInt();
         const std::int32_t centerY = position.y.FloorToInt();
+        // TBR-STR-002 uphill blindness: sight does not reach a higher band
+        // than the one the viewer stands on. Level and downhill are unchanged.
+        const std::int8_t viewerBand = HeightBandAt(centerX, centerY);
         for (std::int32_t offsetY = -radiusTiles; offsetY <= radiusTiles;
             ++offsetY) {
             for (std::int32_t offsetX = -radiusTiles; offsetX <= radiusTiles;
@@ -7892,6 +7915,9 @@ bool Simulation::UpdateVisibility(
                 }
                 const std::size_t tile = static_cast<std::size_t>(
                     tileY * config_.mapWidthTiles + tileX);
+                if (heightBand_[tile] > viewerBand) {
+                    continue;
+                }
                 visible_[player][tile] = 1;
                 explored_[player][tile] = 1;
                 // Terrain memory snapshots at the moment of sight. Once
@@ -9830,9 +9856,22 @@ void Simulation::WriteSnapshotPayload(Writer& writer, std::uint32_t version) con
         writer.U64(lastExecutedSequence_[player]);
     }
     writer.U32(static_cast<std::uint32_t>(terrain_.size()));
-    writer.Bytes(std::span<const std::uint8_t>(
-        reinterpret_cast<const std::uint8_t*>(terrain_.data()),
-        terrain_.size()));
+    // TBR-STR-002: the tile's height band rides in the terrain byte's spare
+    // high bits (0x40 low ground, 0x80 high ground). A plain map writes the
+    // same bytes it always did.
+    // One block write, exactly as before: the checksum hasher treats a block
+    // differently from single bytes, and every retained replay pins it.
+    std::vector<std::uint8_t> encodedTerrain(terrain_.size());
+    for (std::size_t tile = 0; tile < terrain_.size(); ++tile) {
+        std::uint8_t encoded = static_cast<std::uint8_t>(terrain_[tile]);
+        if (heightBand_[tile] < 0) {
+            encoded |= kHeightBandLowBit;
+        } else if (heightBand_[tile] > 0) {
+            encoded |= kHeightBandHighBit;
+        }
+        encodedTerrain[tile] = encoded;
+    }
+    writer.Bytes(std::span<const std::uint8_t>(encodedTerrain.data(), encodedTerrain.size()));
     for (const auto& explored : explored_) {
         writer.U32(static_cast<std::uint32_t>(explored.size()));
         writer.Bytes(explored);
@@ -10171,17 +10210,10 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         SetError(error, "snapshot header is truncated");
         return std::nullopt;
     }
-    if (version != kSnapshotVersion &&
-        version != kLinkMechanicsSnapshotVersion &&
-        version != kProductionPipelineSnapshotVersion &&
-        version != kHostilitySnapshotVersion &&
-        version != kFutureWellLifecycleSnapshotVersion &&
-        version != kWorkStateSnapshotVersion &&
-        version != kMemorySnapshotVersion &&
-        version != kCommandResolutionReceiptSnapshotVersion &&
-        version != kProtectedCommandCoreSnapshotVersion &&
-        version != kChoirSnapshotVersion &&
-        version != kPriorSnapshotVersion && version != kLegacySnapshotVersion) {
+    // Every snapshot schema from the legacy cutoff to the current one loads.
+    // A hand-kept list here would drop the previous version at each bump, as
+    // the replay loader's list once dropped replay schemas 30 to 32.
+    if (version < kLegacySnapshotVersion || version > kSnapshotVersion) {
         SetError(error, "snapshot version is unsupported");
         return std::nullopt;
     }
@@ -10432,12 +10464,18 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             return std::nullopt;
         }
         std::uint8_t encoded = 0;
+        const std::uint8_t bandBits = kHeightBandLowBit | kHeightBandHighBit;
         if (!reader.U8(encoded) ||
-            encoded > static_cast<std::uint8_t>(Terrain::Scarred)) {
+            static_cast<std::uint8_t>(encoded & ~bandBits) >
+                static_cast<std::uint8_t>(Terrain::Scarred) ||
+            (encoded & bandBits) == bandBits) {
             SetError(error, "snapshot terrain contains an invalid value");
             return std::nullopt;
         }
-        terrain = static_cast<Terrain>(encoded);
+        const std::size_t tile = static_cast<std::size_t>(&terrain - simulation.terrain_.data());
+        simulation.heightBand_[tile] = (encoded & kHeightBandLowBit) != 0 ? -1
+            : (encoded & kHeightBandHighBit) != 0 ? 1 : 0;
+        terrain = static_cast<Terrain>(encoded & ~bandBits);
     }
     for (auto& explored : simulation.explored_) {
         if (IsCancelled()) {

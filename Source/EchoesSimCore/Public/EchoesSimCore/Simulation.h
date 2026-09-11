@@ -1334,6 +1334,9 @@ public:
     PublicFutureWellTelegraphs() const;
 
     bool SetTerrainTile(std::int32_t tileX, std::int32_t tileY, Terrain terrain);
+    /** TBR-STR-002: set a tile's height band (-1, 0 or +1). Returns false out of range. */
+    bool SetHeightBand(std::int32_t tileX, std::int32_t tileY, std::int8_t band);
+    [[nodiscard]] std::int8_t HeightBandAt(std::int32_t tileX, std::int32_t tileY) const;
     [[nodiscard]] Terrain TerrainAt(std::int32_t tileX,
                                     std::int32_t tileY) const;
     [[nodiscard]] bool IsPositionPassable(Vec2 position) const;
@@ -1751,6 +1754,10 @@ private:
     DeterministicRng rng_{};
     std::array<PlayerState, kMaximumPlayers> players_{};
     std::vector<Terrain> terrain_{};
+    // TBR-STR-002: signed height band per tile (0 plain, -1 low, +1 high).
+    // Saved in the spare high bits of each terrain byte, so the snapshot
+    // layout and version are unchanged and older saves decode as plain.
+    std::vector<std::int8_t> heightBand_{};
     std::array<std::vector<std::uint8_t>, kMaximumPlayers> explored_{};
     std::array<std::vector<std::uint8_t>, kMaximumPlayers> visible_{};
     // FOG information state "Explored": remembered terrain snapshotted at the

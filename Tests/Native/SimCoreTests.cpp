@@ -1189,6 +1189,125 @@ void TestUnreachableSlotHolderReleases() {
     REQUIRE(!sim.FindEntity(waiter)->harvestSlotHeld);
 }
 
+// TBR-STR-002 height bands: sight does not reach a higher band. A viewer in
+// low ground cannot see a hostile on the rim beside it; the rim sees down; a
+// friendly scout on the rim restores the low viewer's sight. Bands ride in the
+// terrain byte's spare bits, so they survive a round trip without a new
+// snapshot version, and a byte claiming both bands is refused.
+void TestHeightBandsBlockUphillSight() {
+    Simulation sim({24, 24, 20, 0x42414e44ULL});
+    REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    REQUIRE(sim.AddPlayer(1, Faction::KharuunAssemblies, {0, 0}));
+    for (std::int32_t x = 0; x < 24; ++x) {
+        for (std::int32_t y = 10; y <= 12; ++y) {
+            REQUIRE(sim.SetHeightBand(x, y, -1));
+        }
+    }
+    REQUIRE(!sim.SetHeightBand(0, 0, 2));
+    REQUIRE(!sim.SetHeightBand(24, 0, 0));
+    const EntityId low = sim.SpawnEntity(0, Faction::MeridianCompact,
+                                         EntityType::Soldier, Vec2::FromTiles(6, 11));
+    const EntityId rim = sim.SpawnEntity(1, Faction::KharuunAssemblies,
+                                         EntityType::Soldier, Vec2::FromTiles(6, 14));
+    REQUIRE(low != 0 && rim != 0);
+    sim.Step(2);
+    REQUIRE(sim.HeightBandAt(6, 11) == -1);
+    REQUIRE(sim.HeightBandAt(6, 14) == 0);
+    REQUIRE(!sim.IsEntityVisibleTo(0, rim));   // looking up out of the scar
+    REQUIRE(sim.IsEntityVisibleTo(1, low));    // looking down into it
+    REQUIRE(sim.VisibilityAt(0, Vec2::FromTiles(6, 12)) == Visibility::Visible);
+    const EntityId scout = sim.SpawnEntity(0, Faction::MeridianCompact,
+                                           EntityType::ScoutUnit, Vec2::FromTiles(9, 15));
+    REQUIRE(scout != 0);
+    sim.Step(2);
+    REQUIRE(sim.IsEntityVisibleTo(0, rim));    // a friend on the rim shares sight
+
+    std::string error;
+    std::vector<std::uint8_t> bytes = sim.SaveSnapshot();
+    REQUIRE(ReadU32(bytes, 4) == kSnapshotVersion);
+    std::optional<Simulation> restored = Simulation::LoadSnapshot(bytes, &error);
+    REQUIRE(restored.has_value());
+    REQUIRE(restored->HeightBandAt(6, 11) == -1);
+    REQUIRE(restored->HeightBandAt(6, 14) == 0);
+    REQUIRE(restored->StateChecksum() == sim.StateChecksum());
+
+    // A plain map saves exactly the bytes it always did.
+    Simulation plain({24, 24, 20, 0x42414e44ULL});
+    REQUIRE(plain.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    Simulation banded({24, 24, 20, 0x42414e44ULL});
+    REQUIRE(banded.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+    REQUIRE(banded.SetHeightBand(3, 3, 0));
+    REQUIRE(plain.SaveSnapshot() == banded.SaveSnapshot());
+}
+
+// SPEC-BAL-011 / BAL-STR-3 (TBR-STR-002): ten attackers attack-move across a
+// low trench (rows 16..23) toward ten defenders holding the far rim. Crossing
+// blind must lose; two scouts already on the rim must restore the fight; with
+// no bands the attackers win. Measured 2026-09-11: 0/30, 30/30, 0/30.
+int RunTrenchCrossing(int mode) {
+    int defenderWins = 0;
+    for (int seed = 0; seed < 30; ++seed) {
+        SimulationConfig config{40, 40, 20, 0x5452454eULL + static_cast<std::uint64_t>(seed)};
+        for (auto& faction : config.rules.archetypes) {
+            faction[static_cast<std::size_t>(EntityType::Soldier)].attackRangeRaw = 13 * kFixedScale / 2;
+        }
+        Simulation sim(config);
+        REQUIRE(sim.AddPlayer(0, Faction::MeridianCompact, {0, 0}));
+        REQUIRE(sim.AddPlayer(1, Faction::MeridianCompact, {0, 0}));
+        if (mode >= 1) {
+            for (std::int32_t y = 16; y <= 23; ++y) {
+                for (std::int32_t x = 0; x < 40; ++x) {
+                    REQUIRE(sim.SetHeightBand(x, y, -1));
+                }
+            }
+        }
+        const std::int32_t jx = seed % 5;
+        const std::int32_t jy = (seed / 5) % 2;
+        std::vector<EntityId> attackers;
+        std::vector<EntityId> defenders;
+        for (int i = 0; i < 10; ++i) {
+            attackers.push_back(sim.SpawnEntity(0, Faction::MeridianCompact, EntityType::Soldier,
+                Vec2::FromTiles(14 + jx + (i % 6) * 2, 8 + jy + (i / 6) * 2)));
+            defenders.push_back(sim.SpawnEntity(1, Faction::MeridianCompact, EntityType::Soldier,
+                Vec2::FromTiles(12 + i * 2, 27)));
+        }
+        if (mode == 2) {
+            // Two flank scouts on the rim, each ~8 tiles from the nearest defender.
+            REQUIRE(sim.SpawnEntity(0, Faction::MeridianCompact, EntityType::ScoutUnit, Vec2::FromTiles(4, 25)) != 0);
+            REQUIRE(sim.SpawnEntity(0, Faction::MeridianCompact, EntityType::ScoutUnit, Vec2::FromTiles(38, 25)) != 0);
+        }
+        std::uint64_t sequence = 1;
+        for (EntityId id : attackers) {
+            Command order = MakeCommand(0, 0, sequence++, CommandType::AttackMove, id);
+            order.position = Vec2::FromTiles(20 + (static_cast<int>(id) % 5), 36);
+            REQUIRE(sim.QueueCommand(order));
+        }
+        sequence = 1;
+        for (EntityId id : defenders) {
+            REQUIRE(sim.QueueCommand(MakeCommand(0, 1, sequence++, CommandType::Hold, id)));
+        }
+        sim.Step(1500);
+        int attackersAlive = 0, defendersAlive = 0;
+        for (const Entity& entity : sim.Entities()) {
+            if (entity.hitPoints <= 0 || entity.type != EntityType::Soldier) continue;
+            if (entity.owner == 0) ++attackersAlive; else ++defendersAlive;
+        }
+        if (defendersAlive > attackersAlive) ++defenderWins;
+    }
+    return defenderWins;
+}
+
+void TestTrenchCrossingRewardsScouting() {
+    const int flat = RunTrenchCrossing(0);
+    const int blind = RunTrenchCrossing(1);
+    const int scouted = RunTrenchCrossing(2);
+    std::cout << "  BAL-STR-3 defender wins of 30: no bands " << flat << ", crossing blind "
+              << blind << ", two scouts on the rim " << scouted << "\n";
+    REQUIRE(blind * 100 >= 30 * 70);   // crossing unscouted low ground loses
+    REQUIRE(scouted * 100 <= 30 * 30); // scouting restores the attack
+    REQUIRE(flat * 100 <= 30 * 30);    // the same force wins on flat ground
+}
+
 void TestCombatResolvesDeterministically() {
     Simulation simulation({20, 20, 20, 7});
     AddTwoPlayers(simulation, {0, 0}, {0, 0});
@@ -11291,6 +11410,8 @@ int main(int argc, char** argv) {
         {"replay version range is supported", TestReplayVersionRangeIsSupported},
         {"committed band and ceiling", TestCommittedBandAndCeiling},
         {"unreachable slot holder releases", TestUnreachableSlotHolderReleases},
+        {"height bands block uphill sight", TestHeightBandsBlockUphillSight},
+        {"BAL-STR-3 trench crossing rewards scouting", TestTrenchCrossingRewardsScouting},
         {"BAL-STR-1 blob versus frontage", TestBlobVersusFrontage},
         {"protected Command Core deterministic contract",
          TestProtectedCommandCoreContract},

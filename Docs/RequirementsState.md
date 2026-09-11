@@ -37,20 +37,45 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-UI-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
 | `SPEC-BAL-009` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a0e8c04 | 2026-09-11 | Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending |
+| `SPEC-BAL-011` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a2f2449 | 2026-09-11 | Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150 |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
+| `SPEC-INFO-004` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a2f2449 | 2026-09-11 | Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150 |
 | `SPEC-RES-003` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s34 | 3c3e836 | 2026-09-11 | Schema 34 slot release: native stall test passes and fails with the rule off; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `SPEC-RES-006` | AWAITING HUMAN ACCEPTANCE | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | SPEC-RES-006.INSPECT: click shows remaining Matter; exhausted stub 30%/80% and minimap mark; FieldHudAuthority green; rendered chain did not stage it |
 | `SPEC-TUT-008` | AGENT VERIFIED | PKG-REND | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/readiness-review-8 | 46d841c | 2026-09-11 | All ten readiness lessons earnable; lessons 6-10 each committed in a rendered practice run (readiness review driver); practice-mode gate and staging defects repaired; owner play open |
 | `SPEC-UI-008` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged |
 | `TBR-SCP-012` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-17 | 34ca1a0 | 2026-09-11 | First bounded rule landed: opponent Future Well commands withheld in authored campaign operations (bridge, ECHOES_AI_WELL_DOCTRINE); per-mission doctrine remains D7 |
 | `TBR-STR-001` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Owner Go 2026-09-11, option A authored as SPEC-CMB-013 and implemented; deployed Bulwark exempt |
-| `TBR-STR-002` | OPEN | NONE | — | 34ca1a0 | 2026-09-11 | Owner decision; design and recommendation in Docs/StrategicDepthDesign.md (2026-09-11) |
+| `TBR-STR-002` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a2f2449 | 2026-09-11 | Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150 |
 | `TBR-STR-003` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Owner delegation 2026-09-11; option A implemented |
 | `TBR-STR-004` | OPEN | NONE | — | 34ca1a0 | 2026-09-11 | Owner decision; design and recommendation in Docs/StrategicDepthDesign.md (2026-09-11) |
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
 | `TBR-STR-006` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a0e8c04 | 2026-09-11 | Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## Height-band sight lands (inert until a map sets bands) — TBR-STR-002, SPEC-INFO-004, SPEC-BAL-011, 2026-09-11
+
+Rule B built as height bands, as planned in the design. `Simulation::UpdateVisibility` skips any tile on a
+higher band than the tile the viewer stands on; level and downhill sight are unchanged, and a friend
+standing higher shares its sight. Bands live in their own per-tile array (`SetHeightBand`, `HeightBandAt`)
+and are saved in the spare high bits of each terrain byte (0x40 low, 0x80 high), so the snapshot layout and
+version (31) are unchanged, every existing save and replay reproduces byte for byte (a map without bands
+writes the same bytes), and an older build refuses a banded save as invalid terrain instead of misreading
+it. A byte claiming both bands is refused. The first attempt wrote terrain one byte at a time and broke
+eight replay checksums, because the checksum hasher treats one block differently from single bytes; the
+encoded terrain is written as one block, as before. The snapshot loader's hand-kept version list is also
+replaced by a range check (the same latent bug as the replay list).
+
+No map sets bands in this commit; the rule is inert in play until Glass Scar's preset marks rows 30–34 as
+low ground, which lands separately after an Unreal run.
+
+**BAL-STR-3 (native, 30 seeds each, 10 against 10).** Defender wins: no bands 0/30, crossing blind 30/30,
+two flank scouts on the rim 0/30 (11 attackers blind 18/30; 12 attackers 0/30). Crossing unscouted low
+ground turns a force that always wins into one that always loses, and scouting restores it completely. An
+earlier probe with one scout at the map edge showed no effect because it saw only the western defenders;
+that result was a placement artifact. Native "height bands block uphill sight" and "BAL-STR-3 trench
+crossing rewards scouting" pass.
 
 ## Unreal suite on schema 34 (a0e8c04) — 2026-09-11, 21:43Z
 
@@ -5807,3 +5832,6 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T21:36Z — `TBR-STR-006` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a0e8c04; Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending
 - 2026-09-11T21:36Z — `SPEC-BAL-009` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a0e8c04; Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending
 - 2026-09-11T21:45Z — `SPEC-RES-003` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s34; commit 3c3e836; Schema 34 slot release: native stall test passes and fails with the rule off; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat)
+- 2026-09-11T21:49Z — `TBR-STR-002` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a2f2449; Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150
+- 2026-09-11T21:49Z — `SPEC-INFO-004` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a2f2449; Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150
+- 2026-09-11T21:49Z — `SPEC-BAL-011` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a2f2449; Height-band sight (inert until a map sets bands); BAL-STR-3 blind 30/30, scouted 0/30, flat 0/30; native 150/150

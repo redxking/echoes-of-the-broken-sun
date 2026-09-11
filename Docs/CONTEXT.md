@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-11 21:45 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-11 21:49 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `3c3e836` (upstream `50dc165`); 355 dirty paths, of which non-asset: `Docs/RequirementsState.md`.
+- Branch `main` at `a2f2449` (upstream `50dc165`); 360 dirty paths, of which non-asset: `Docs/Requirements.md`, `Docs/RequirementsState.md`, `Docs/StrategicDepthDesign.md`, `Source/EchoesSimCore/Private/Simulation.cpp`, `Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -25,10 +25,10 @@ Read this, then fetch only the requirement records you touch:
 
 ## Newest RequirementsState entries
 
+- Height-band sight lands (inert until a map sets bands) — TBR-STR-002, SPEC-INFO-004, SPEC-BAL-011, 2026-09-11
 - Unreal suite on schema 34 (a0e8c04) — 2026-09-11, 21:43Z
 - Role bodies land under schema 35; BAL-STR-1 passes — TBR-STR-006, SPEC-BAL-009, 2026-09-11
 - Unreal suite on 50dc165 + 3a6a2be, and the role-body package held back — 2026-09-11, 21:30Z
-- Chokepoint sweep: where prepared ground stops holding — SPEC-BAL-009, 2026-09-11
 
 ## Recently recorded state rows
 
@@ -37,7 +37,7 @@ Read this, then fetch only the requirement records you touch:
 - `TBR-STR-005` IN PROGRESS · SRC · 2026-09-11
 - `TBR-STR-004` OPEN · NONE · 2026-09-11
 - `TBR-STR-003` IMPLEMENTED · SRC · 2026-09-11
-- `TBR-STR-002` OPEN · NONE · 2026-09-11
+- `TBR-STR-002` IMPLEMENTED · SRC · 2026-09-11
 - `TBR-STR-001` IMPLEMENTED · SRC · 2026-09-11
 - `TBR-SCP-012` IN PROGRESS · PKG-AUTO · 2026-09-11
 
