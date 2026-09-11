@@ -170,7 +170,7 @@ if ! grep -Eq '\[ECHOES_ROSTER_READY\].*revision=roster-silhouette-v2.*assets=24
   exit 11
 fi
 
-if ! grep -Eq '\[ECHOES_WORLD_SURFACE_READY\].*revision=world-surface-textured-v7.*action=(created|repaired|reused).*instancedStaticMeshes=true' "$log"; then
+if ! grep -Eq '\[ECHOES_WORLD_SURFACE_READY\].*revision=world-surface-textured-v8.*action=(created|repaired|reused).*instancedStaticMeshes=true' "$log"; then
   print -u2 "The world-surface material is not qualified for instanced terrain."
   print -u2 "Inspect: $log"
   exit 10
