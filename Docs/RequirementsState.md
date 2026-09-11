@@ -39,7 +39,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `SPEC-BAL-009` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a0e8c04 | 2026-09-11 | Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending |
 | `SPEC-CMB-013` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Firing lanes (schema 33): native 145/145 x3; editor build green; Unreal 137/139 with the 2 Mission 11 failures reproduced with lanes stubbed out (not caused by this slice) |
 | `SPEC-HUD-004` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
-| `SPEC-RES-003` | AGENT VERIFIED | SRC | — | 3a6a2be | 2026-09-11 | Schema 34: unreachable slot holder releases the extraction slot; native stall test passes and fails with the rule off; Unreal run pending |
+| `SPEC-RES-003` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s34 | 3c3e836 | 2026-09-11 | Schema 34 slot release: native stall test passes and fails with the rule off; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat) |
 | `SPEC-RES-006` | AWAITING HUMAN ACCEPTANCE | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | SPEC-RES-006.INSPECT: click shows remaining Matter; exhausted stub 30%/80% and minimap mark; FieldHudAuthority green; rendered chain did not stage it |
 | `SPEC-TUT-008` | AGENT VERIFIED | PKG-REND | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/readiness-review-8 | 46d841c | 2026-09-11 | All ten readiness lessons earnable; lessons 6-10 each committed in a rendered practice run (readiness review driver); practice-mode gate and staging defects repaired; owner play open |
 | `SPEC-UI-008` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged |
@@ -51,6 +51,13 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `TBR-STR-005` | IN PROGRESS | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | BAL-STR-1 harness built; first measurement 0/60 both modes; 70% bar not claimed |
 | `TBR-STR-006` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | a0e8c04 | 2026-09-11 | Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending |
 | `TBR-UX-001` | OPEN | NONE | — | 7c86d61 | 2026-09-11 | Owner decision; recommendation recorded 2026-09-11: command-first QWE/ASD/ZXC grid, WASD camera as preset |
+
+## Unreal suite on schema 34 (a0e8c04) — 2026-09-11, 21:43Z
+
+`BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s34`: editor build green, 138/139, no
+"Failed to find" asset errors. The only failure is `Echoes.Runtime.Gameplay.CompleteSkirmishDefeat`, the
+same long-standing, unattributed failure as on 3a6a2be. The walled-off slot release (d51459e, SPEC-RES-003)
+breaks nothing in the Unreal suite.
 
 ## Role bodies land under schema 35; BAL-STR-1 passes — TBR-STR-006, SPEC-BAL-009, 2026-09-11
 
@@ -5799,3 +5806,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T21:28Z — `SPEC-BAL-009` → **IN PROGRESS**; class SRC; evidence —; commit d51459e; Sweep: chokepoint holds to 1.2x (current) / 1.3x (role bodies), never 1.6x; bar amended to 1.3x; TBR-STR-006 confirmed as the change that meets it
 - 2026-09-11T21:36Z — `TBR-STR-006` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a0e8c04; Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending
 - 2026-09-11T21:36Z — `SPEC-BAL-009` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z; commit a0e8c04; Role bodies under schema 35; BAL-STR-1 60/60 at 13 vs 10, control 7/60; native 148/148; Unreal pending
+- 2026-09-11T21:45Z — `SPEC-RES-003` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-s34; commit 3c3e836; Schema 34 slot release: native stall test passes and fails with the rule off; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat)

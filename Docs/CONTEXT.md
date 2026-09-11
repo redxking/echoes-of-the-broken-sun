@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-11 21:36 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-11 21:45 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `4155bdd` (upstream `50dc165`); 356 dirty paths, of which non-asset: `Docs/DeliveryPlan.md`, `Docs/StrategicDepthDesign.md`.
+- Branch `main` at `3c3e836` (upstream `50dc165`); 355 dirty paths, of which non-asset: `Docs/RequirementsState.md`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -25,10 +25,10 @@ Read this, then fetch only the requirement records you touch:
 
 ## Newest RequirementsState entries
 
+- Unreal suite on schema 34 (a0e8c04) — 2026-09-11, 21:43Z
 - Role bodies land under schema 35; BAL-STR-1 passes — TBR-STR-006, SPEC-BAL-009, 2026-09-11
 - Unreal suite on 50dc165 + 3a6a2be, and the role-body package held back — 2026-09-11, 21:30Z
 - Chokepoint sweep: where prepared ground stops holding — SPEC-BAL-009, 2026-09-11
-- Walled-off slot holder releases the extraction slot — SPEC-RES-003, schema 34, 2026-09-11
 
 ## Recently recorded state rows
 
