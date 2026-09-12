@@ -6275,6 +6275,40 @@ Status: D2 stays the first unfinished package; these five are the next repairs; 
 below as they land.
 
 
+## REL-AI-024 denial play: written, unmeasurable here, not committed — 2026-09-12
+
+The cheap counterplay the rules already allow: a Preserve Well pays its holder only while no hostile body
+stands inside the capture radius, so presence stops the income outright, with no capture, no 300-tick timer
+and no need to break 100,000 hit points. Written in a scratch export of HEAD, compiled clean under
+warnings-as-errors, and deliberately kept out of the working tree while the simulation lane held
+uncommitted migration work there. **Not committed**, because it cannot be measured with the tooling that
+exists.
+
+**Why it cannot be measured natively.** `SetupTournamentMap` gives each seat its own Well about five tiles
+from its Core, and an Adaptive seat commits it to Preserve long before any fighter exists, so the rule's
+precondition (this seat has no Well income) never holds. Established rather than assumed: a counter at the
+top of the block reports it reached 13,289 and 7,649 times per seat in the Meridian mirror, 20,156 and
+23,438 in Kharuun versus Meridian, 24,524 and 27,370 in the Choir mirror, while the no-income counter stays
+at zero in every pairing. The branch runs constantly and correctly declines. A 1,000-match matrix
+(`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-11-denial.json`) is accordingly identical to the baseline in
+every condition, 188, 182, 182 and 156 terminal, same 20 stalls, same rules digest.
+
+**The near miss worth recording.** That identical result was first read as "the rule is inert, which is
+fine". It is the same shape as a stale binary or a build with the assertion missing, both of which bit this
+session earlier, and the only reason it was not reported as a clean null is that the binaries were compared
+and the branch instrumented. An unfired branch and a correctly declining branch produce the same numbers.
+
+**What measuring it would need.** A map with one contested Well, which is Glass Scar rather than the
+synthetic harness, so the measurement is an Unreal scenario rather than a native matrix. Recorded as the
+prerequisite for any future attempt; the scratch implementation is kept as evidence rather than as a
+pending change.
+
+**Method correction from this slice.** An earlier baseline comparison here set 916 of 936 against the older
+807 of 1,000 as though it were an improvement. It is not comparable: the older figure came from the
+pre-repair harness sampling Adaptive only with seat 0 always planning first, while the current harness
+samples conditions across four personality pairings and both planning orders. Any future planner change is
+to be judged against a baseline taken with the same harness, broken out by condition.
+
 ## REL-AI-006 measured: the muster is a regression — 2026-09-12
 
 `BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-9.json`, built from an export of this lane's committed state
