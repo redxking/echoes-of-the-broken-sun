@@ -149,6 +149,13 @@ void ResignNetworkPacket(std::vector<std::uint8_t>& bytes) {
              NetworkCrc32(bytes, bytes.size() - 4));
 }
 
+// The absolute offset of currentTick_ inside the payload. It sits after the
+// rules block, so schema 32's two new fields move it from 2407 to 2419.
+constexpr std::size_t kSnapshotCurrentTickAbsoluteOffset = 2419;
+// currentTick_ is a U64; nextEntityId_ is the U32 immediately after it.
+constexpr std::size_t kSnapshotNextEntityIdAbsoluteOffset =
+    kSnapshotCurrentTickAbsoluteOffset + 8;
+
 std::size_t SnapshotV21EntityCountOffset(std::size_t mapTileCount) {
     // Snapshot v21 header/rules/research/player/sequence fields plus terrain and four fog grids.
     return 1862 + 5 * mapTileCount;
@@ -166,6 +173,14 @@ std::size_t SnapshotV22EntityCountOffset(std::size_t mapTileCount) {
 std::size_t SnapshotV22FirstEntityOffset(std::size_t mapTileCount) {
     return SnapshotV22EntityCountOffset(mapTileCount) + 4;
 }
+
+// Snapshot v32 carries the authored Future Well capture radius and capture
+// duration in the rules block (I32 + U64). The rules precede the terrain and
+// fog grids, so every later offset shifts by a fixed twelve bytes whatever the
+// map size. Measured, not assumed: with the fields set to sentinels they are
+// found at payload offset 1985 on a 16x16 map, well ahead of that map's v22
+// base of 3878.
+constexpr std::size_t kSnapshotV32RulesGrowth = 12;
 
 std::size_t SnapshotV23EntityCountOffset(std::size_t mapTileCount) {
     // Snapshot v23 adds the protected-Command-Core player mask.
@@ -204,13 +219,24 @@ std::size_t SerializedSpanEnd(const std::vector<std::uint8_t>& bytes,
     return offset + count * recordBytes;
 }
 
-std::size_t SnapshotV25MemoryBlockOffset(std::size_t mapTileCount) {
-    return SnapshotV24EntityCountOffset(mapTileCount);
+// Schema 32 grew the rules block by twelve bytes ahead of the terrain and fog
+// grids. Whether those bytes are present is a property of THIS payload, not of
+// the map: the downgrade helpers below hand back v31 and older bytes that must
+// be walked without the growth. Applying it in the arithmetic helpers shifted
+// every downgraded payload and broke the migration tests.
+std::size_t SnapshotRulesGrowthFor(const std::vector<std::uint8_t>& bytes) {
+    return ReadU32(bytes, 4) >= 32U ? kSnapshotV32RulesGrowth : 0U;
+}
+
+std::size_t SnapshotV25MemoryBlockOffset(const std::vector<std::uint8_t>& bytes,
+                                         std::size_t mapTileCount) {
+    return SnapshotV24EntityCountOffset(mapTileCount) +
+           SnapshotRulesGrowthFor(bytes);
 }
 
 std::size_t SnapshotV25EntityCountOffset(const std::vector<std::uint8_t>& bytes,
                                          std::size_t mapTileCount) {
-    std::size_t offset = SnapshotV25MemoryBlockOffset(mapTileCount);
+    std::size_t offset = SnapshotV25MemoryBlockOffset(bytes, mapTileCount);
     for (std::size_t player = 0; player < 4; ++player) {
         REQUIRE(ReadU32(bytes, offset) == mapTileCount);
         offset = SerializedSpanEnd(bytes, offset + 4U, mapTileCount, 1U);
@@ -369,6 +395,32 @@ std::size_t SnapshotSchema30AppendOffset(
     return offset;
 }
 
+// Schema 32 inserts the capture geometry INSIDE the rules block rather than
+// appending at the tail, so downgrading splices the interior bytes out instead
+// of truncating. The offset is a property of the rules layout, not of the map.
+constexpr std::size_t kSnapshotV32CaptureGeometryOffset = 1985;
+
+std::vector<std::uint8_t> ConvertSnapshotV32ToV31(
+    const std::vector<std::uint8_t>& current) {
+    REQUIRE(ReadU32(current, 4) == 32);
+    REQUIRE(current.size() >
+            kSnapshotV32CaptureGeometryOffset + kSnapshotV32RulesGrowth);
+    std::vector<std::uint8_t> prior(
+        current.begin(),
+        current.begin() +
+            static_cast<std::ptrdiff_t>(kSnapshotV32CaptureGeometryOffset));
+    prior.insert(prior.end(),
+                 current.begin() +
+                     static_cast<std::ptrdiff_t>(
+                         kSnapshotV32CaptureGeometryOffset +
+                         kSnapshotV32RulesGrowth),
+                 current.end());
+    WriteU32(prior, 4, 31);
+    ResignSnapshot(prior);
+    REQUIRE(Simulation::LoadSnapshot(prior).has_value());
+    return prior;
+}
+
 std::vector<std::uint8_t> ConvertSnapshotV31ToV30(
     const std::vector<std::uint8_t>& current, std::size_t mapTileCount) {
     REQUIRE(ReadU32(current, 4) == 31);
@@ -496,7 +548,10 @@ std::vector<std::uint8_t> ConvertSnapshotV25ToV24(
     const std::vector<std::uint8_t>& current,
     std::size_t mapTileCount) {
     REQUIRE(ReadU32(current, 4) == 25);
-    const std::size_t memoryBegin = SnapshotV25MemoryBlockOffset(mapTileCount);
+    // `current` is asserted v25 above, so the schema-32 rules growth is absent
+    // and SnapshotRulesGrowthFor correctly contributes nothing here.
+    const std::size_t memoryBegin =
+        SnapshotV25MemoryBlockOffset(current, mapTileCount);
     const std::size_t memoryEnd =
         SnapshotV25EntityCountOffset(current, mapTileCount);
     std::vector<std::uint8_t> prior = current;
@@ -3204,7 +3259,7 @@ void TestFutureWellSnapshotMigrationAndReplay() {
 
     const std::vector<std::uint8_t> v28 =
         ConvertSnapshotV29ToV28(
-            ConvertSnapshotV30ToV29(ConvertSnapshotV31ToV30(snapshot, kMapTiles), kMapTiles), kMapTiles);
+            ConvertSnapshotV30ToV29(ConvertSnapshotV31ToV30(ConvertSnapshotV32ToV31(snapshot), kMapTiles), kMapTiles), kMapTiles);
     REQUIRE(Simulation::LoadSnapshot(v28, &error).has_value());
     const std::vector<std::uint8_t> v27 =
         ConvertSnapshotV28ToV27(v28, kMapTiles);
@@ -3463,7 +3518,8 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity state is invalid");
 
     std::vector<std::uint8_t> excessiveTick = baseline;
-    WriteU64(excessiveTick, 2407, std::numeric_limits<std::uint64_t>::max());
+    WriteU64(excessiveTick, kSnapshotCurrentTickAbsoluteOffset,
+             std::numeric_limits<std::uint64_t>::max());
     ResignSnapshot(excessiveTick);
     REQUIRE(!Simulation::LoadSnapshot(excessiveTick, &error).has_value());
 
@@ -3485,7 +3541,10 @@ void TestSnapshotAdversarialBoundsAndIdExhaustion() {
     REQUIRE(error == "snapshot entity count is invalid");
 
     std::vector<std::uint8_t> exhaustedIds = baseline;
-    WriteU32(exhaustedIds, 2415, std::numeric_limits<std::uint32_t>::max());
+    // nextEntityId_ follows currentTick_, so schema 32's rules growth moves it
+    // with everything else after the rules block.
+    WriteU32(exhaustedIds, kSnapshotNextEntityIdAbsoluteOffset,
+             std::numeric_limits<std::uint32_t>::max());
     ResignSnapshot(exhaustedIds);
     std::optional<Simulation> exhausted =
         Simulation::LoadSnapshot(exhaustedIds, &error);
@@ -4992,7 +5051,8 @@ void TestCommandResolutionReceiptRetentionAndBounds() {
     REQUIRE(error == "snapshot command resolution receipt is invalid");
 
     std::vector<std::uint8_t> expiredReceipt = resolvedSnapshot;
-    constexpr std::size_t kSnapshotCurrentTickOffset = 2407;
+    constexpr std::size_t kSnapshotCurrentTickOffset =
+        kSnapshotCurrentTickAbsoluteOffset;
     REQUIRE(ReadU64(expiredReceipt, kSnapshotCurrentTickOffset) == 1);
     WriteU64(expiredReceipt, kSnapshotCurrentTickOffset,
              kCommandResolutionReceiptRetentionTicks + 1);
@@ -10835,7 +10895,7 @@ void TestExplicitHostilityAndLegacyReplay() {
         REQUIRE(!Simulation::LoadSnapshot(bad, &error).has_value());
     }
     const auto v28 = ConvertSnapshotV29ToV28(
-        ConvertSnapshotV30ToV29(ConvertSnapshotV31ToV30(snapshot, 32 * 32), 32 * 32), 32 * 32);
+        ConvertSnapshotV30ToV29(ConvertSnapshotV31ToV30(ConvertSnapshotV32ToV31(snapshot), 32 * 32), 32 * 32), 32 * 32);
     const auto legacy = ConvertSnapshotV28ToV27(v28, 32 * 32);
     const auto generic = Simulation::LoadSnapshot(legacy, &error);
     const auto mission = Simulation::LoadSnapshot(legacy, &error, config.hostilityMasks);
@@ -10884,7 +10944,7 @@ void TestExplicitHostilityAndLegacyReplay() {
     REQUIRE(!unsafeLegacy.Projectiles().empty());
     const auto unsafeV28 = ConvertSnapshotV29ToV28(
         ConvertSnapshotV30ToV29(
-            ConvertSnapshotV31ToV30(unsafeLegacy.SaveSnapshot(), 32 * 32), 32 * 32),
+            ConvertSnapshotV31ToV30(ConvertSnapshotV32ToV31(unsafeLegacy.SaveSnapshot()), 32 * 32), 32 * 32),
         32 * 32);
     const auto unsafeBytes = ConvertSnapshotV28ToV27(unsafeV28, 32 * 32);
     auto sanitized = Simulation::LoadSnapshot(unsafeBytes, &error, config.hostilityMasks);
@@ -10913,7 +10973,7 @@ void TestExplicitHostilityAndLegacyReplay() {
     oldReplay.initialSnapshot = ConvertSnapshotV28ToV27(
         ConvertSnapshotV29ToV28(
             ConvertSnapshotV30ToV29(
-                ConvertSnapshotV31ToV30(currentReplay.initialSnapshot, 32 * 32), 32 * 32),
+                ConvertSnapshotV31ToV30(ConvertSnapshotV32ToV31(currentReplay.initialSnapshot), 32 * 32), 32 * 32),
             32 * 32),
         32 * 32);
     oldReplay.finalChecksum = 17906090260384254123ULL;
@@ -11019,7 +11079,7 @@ void TestAuthenticSchema24And25ReplayCompatibility() {
     schema28Replay.version = kForfeitReplayVersion;
     schema28Replay.initialSnapshot = ConvertSnapshotV29ToV28(
         ConvertSnapshotV30ToV29(
-            ConvertSnapshotV31ToV30(schema28World.SaveSnapshot(), 16 * 16), 16 * 16),
+            ConvertSnapshotV31ToV30(ConvertSnapshotV32ToV31(schema28World.SaveSnapshot()), 16 * 16), 16 * 16),
         16 * 16);
     schema28Replay.finalTick = schema28World.CurrentTick() + 100;
     std::string error;

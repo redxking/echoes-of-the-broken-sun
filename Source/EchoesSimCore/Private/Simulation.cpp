@@ -633,6 +633,10 @@ constexpr std::int32_t kScarredMovementPercent = 85;
            well.preserveIntervalTicks > 0 &&
            well.preserveIntervalTicks <= kMaximumSupportedTick &&
            well.preserveVisionTiles >= 0 &&
+           well.captureRadiusRaw > 0 &&
+           well.captureRadiusRaw <= 64 * kFixedScale &&
+           well.captureRequiredTicks > 0 &&
+           well.captureRequiredTicks <= kMaximumSupportedTick &&
            well.preserveVisionTiles <= kMaximumVisionTiles &&
            well.reshapeDawnCost >= 0 && well.reshapeDurationMinimumTicks > 0 &&
            well.reshapeDurationMinimumTicks <= well.reshapeDurationMaximumTicks &&
@@ -6749,7 +6753,11 @@ bool Simulation::IsFutureWellZoneMember(const Entity& well,
         entity.owner == kNeutralPlayer || !IsInsideMap(entity.position)) {
         return false;
     }
-    const std::int64_t radius = kFutureWellCaptureRadiusRaw;
+    // Since snapshot schema 32 this is authored (future_wells.json
+    // capture_radius_cm). Pre-32 recordings replay against the constant.
+    const std::int64_t radius = legacyWellCaptureGeometrySemantics_
+                                    ? kFutureWellCaptureRadiusRaw
+                                    : config_.rules.futureWell.captureRadiusRaw;
     return DistanceSquaredRaw(well.position, entity.position) <=
            static_cast<std::uint64_t>(radius * radius);
 }
@@ -6961,10 +6969,14 @@ void Simulation::ProcessFutureWellLifecycles() {
             continue;
         }
         well.wellPendingChoice = captureChoices[contender];
-        if (well.wellCaptureProgress < kFutureWellCaptureRequiredTicks) {
+        const Tick requiredCaptureTicks =
+            legacyWellCaptureGeometrySemantics_
+                ? kFutureWellCaptureRequiredTicks
+                : config_.rules.futureWell.captureRequiredTicks;
+        if (well.wellCaptureProgress < requiredCaptureTicks) {
             ++well.wellCaptureProgress;
         }
-        if (well.wellCaptureProgress == kFutureWellCaptureRequiredTicks) {
+        if (well.wellCaptureProgress == requiredCaptureTicks) {
             CompleteFutureWellCapture(well);
         }
     }
@@ -10129,6 +10141,10 @@ void Simulation::WriteSnapshotPayload(Writer& writer, std::uint32_t version) con
             writer.I32(archetype.footprintHalfExtentRaw);
         }
     }
+    if (version >= kFutureWellCaptureGeometrySnapshotVersion) {
+        writer.I32(config_.rules.futureWell.captureRadiusRaw);
+        writer.U64(config_.rules.futureWell.captureRequiredTicks);
+    }
     writer.I32(config_.rules.futureWell.harvestImmediateDawn);
     writer.I32(config_.rules.futureWell.preserveDawnPerInterval);
     writer.U64(config_.rules.futureWell.preserveIntervalTicks);
@@ -10622,6 +10638,18 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                 return std::nullopt;
             }
         }
+    }
+    if (version >= kFutureWellCaptureGeometrySnapshotVersion) {
+        if (!reader.I32(config.rules.futureWell.captureRadiusRaw) ||
+            !reader.U64(config.rules.futureWell.captureRequiredTicks)) {
+            SetError(error, "snapshot Well capture geometry is truncated");
+            return std::nullopt;
+        }
+    } else {
+        // Pre-32 snapshots predate authored capture geometry and must replay
+        // against the constants they were recorded with.
+        config.rules.futureWell.captureRadiusRaw = kFutureWellCaptureRadiusRaw;
+        config.rules.futureWell.captureRequiredTicks = 300;
     }
     if (!reader.I32(config.rules.futureWell.harvestImmediateDawn) ||
         !reader.I32(config.rules.futureWell.preserveDawnPerInterval) ||
@@ -11773,7 +11801,12 @@ std::optional<Simulation> Simulation::LoadSnapshot(
                     capturePlayer != kNeutralPlayer &&
                     pendingChoice > static_cast<std::uint8_t>(FutureWellChoice::Dormant) &&
                     pendingChoice <= static_cast<std::uint8_t>(FutureWellChoice::Reshape) &&
-                    progress < kFutureWellCaptureRequiredTicks &&
+                    // LoadSnapshot is static: the subject is the `config` it
+                    // just read, which already carries the right value for
+                    // both eras — the payload's for schema 32 and up, and the
+                    // historical constant for older snapshots, set by the
+                    // guarded read above. No legacy ternary is needed here.
+                    progress < config.rules.futureWell.captureRequiredTicks &&
                     (entity.wellChoice == FutureWellChoice::Dormant ||
                      (entity.wellChoice == FutureWellChoice::Preserve &&
                       entity.owner != capturePlayer)) && protocolTicks == 0;
@@ -12174,6 +12207,7 @@ void Simulation::CaptureReplayBaseline() {
     legacyUnreachableSlotReplaySemantics_ = false;
     legacyRoleBodyReplaySemantics_ = false;
     legacyIdleDefensiveFireSemantics_ = false;
+    legacyWellCaptureGeometrySemantics_ = false;
     replayForfeitingPlayer_ = kNeutralPlayer;
 }
 
@@ -12226,6 +12260,8 @@ bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
         prefix.version < kRoleBodyReplayVersion;
     restored.legacyIdleDefensiveFireSemantics_ =
         prefix.version < kIdleDefensiveFireReplayVersion;
+    restored.legacyWellCaptureGeometrySemantics_ =
+        prefix.version < kFutureWellCaptureGeometryReplayVersion;
     restored.ResolveAegisPower();
     if (replayed->StateChecksum() != restored.StateChecksum()) {
         SetError(error, "replay prefix state does not match restored state");
@@ -12312,6 +12348,8 @@ std::optional<Simulation> Simulation::BeginReplaySimulation(
         replay.version < kRoleBodyReplayVersion;
     simulation->legacyIdleDefensiveFireSemantics_ =
         replay.version < kIdleDefensiveFireReplayVersion;
+    simulation->legacyWellCaptureGeometrySemantics_ =
+        replay.version < kFutureWellCaptureGeometryReplayVersion;
     // Loading a save applies current network rules. Playback must restore the
     // original rules before its first checksum, including zero-tick records.
     simulation->ResolveAegisPower();

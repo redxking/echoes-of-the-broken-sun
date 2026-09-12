@@ -6,6 +6,46 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## Authored Well capture geometry now reaches the simulation (snapshot 32 / replay 37) — 2026-09-12, 02:10Z
+
+Closes the open finding recorded earlier tonight. `capture_radius_cm` and `capture_ticks` were validated by
+the content compiler and read into the catalog, then dropped before the rules copy, so the simulation used
+its own constants whatever `future_wells.json` said. They now reach it.
+
+**What landed.** `FutureWellRules` gains `captureRadiusRaw` and `captureRequiredTicks`, defaulting to the
+constants they replace (4.2 tiles, 300 ticks) so nothing moves where nothing authors them. Snapshot schema
+**32** and replay schema **37**, with `legacyWellCaptureGeometrySemantics_` wired at the three usual sites and
+guarded read/write so pre-32 recordings replay against their historical constants. Validator bounds added.
+All four consumers redirected (the contest radius and three capture-progress comparisons), and
+`EchoesContentSubsystem` now copies both authored values through with the cm-to-raw conversion its
+neighbours already use. `kFutureWellCaptureRadiusRaw` stays a constant, per the D3 lane's call: one SimCore
+use, one bridge use, no serialisation, and the bridge doctrine is about the shipped default rather than
+whatever a loaded recording carried.
+
+**The hazard, which is the part worth keeping.** The rules block is written *before* the terrain and fog
+grids, so two inserted fields shifted every later offset by exactly twelve bytes and broke **fourteen**
+native tests. The drift detector in `SnapshotV25EntityCountOffset` caught it precisely as its comment
+promises. Three classes of repair:
+
+1. **The growth belongs at the byte-walking layer, not in the arithmetic helpers.** My first attempt added it
+   inside `SnapshotV24EntityCountOffset`, which over-shifted every *downgraded* payload, because the
+   `Convert*` steps hand back v31-and-older bytes that must be walked without it. It now comes from
+   `SnapshotRulesGrowthFor(bytes)`, which reads the payload's own version.
+2. **Two absolute offsets moved:** `currentTick_` 2407 → 2419, and `nextEntityId_` with it, now named
+   constants rather than literals. The research offsets at 2354/2406 do **not** move: that converter asserts
+   version 22 on entry, so it predates schema 32. Checked, not assumed.
+3. **A new `ConvertSnapshotV32ToV31`** splices the twelve interior bytes out — unlike the v31 step, this
+   insert is mid-payload rather than appended — chained ahead of it at five call sites.
+
+**Located by construction, not arithmetic.** The fields were found by setting sentinel values and searching
+the payload: offset 1985 on a 16x16 map, well ahead of that map's v22 base of 3878. After a night of
+instrument errors, computing the offset by hand was not worth the risk.
+
+**Verified: 150/150 native, all three configurations** (optimized, debug, address+UB sanitizers), on a tree
+whose base includes the D3 lane's committed muster `41a62eb`. **The bridge half is not yet verified**: 
+`EchoesContentSubsystem.cpp` needs an editor build, which the D3 lane will cover in one combined full suite
+over both lanes, read against its 140/140 baseline. Until that runs, this slice's Unreal standing is unproven.
+
 ## Open finding: authored Well capture geometry is inert — 2026-09-12, 01:05Z (folded)
 
 Reported by this lane; the D3 lane then verified it independently from its own reading and recorded the
