@@ -6,6 +6,73 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## Retraction: the degenerate-sample reading was right; my diagnosis of it was wrong four times — 2026-09-12, 00:45Z
+
+`3ba825b` flags a sentence of mine as disputed and says the retraction belongs to this lane. Here it is,
+with the disputed reading **restored**: the D3 lane's original conclusion was correct and my objections to
+it were not. Evidence: `BuildArtifacts/Evidence/authored-rules-degeneracy-20260912T002357Z`.
+
+**The durable point first, because it outlives tonight's fixes.** The random seed reaches gameplay through
+exactly one door: `StatelessAiValueFor` (Simulation.cpp:727) hashes `PlayerView::DecisionSeed()`, and its
+only consumer is the fallback wander at Simulation.cpp:10018, reached solely when a unit has no task at all.
+So per-seed variation in this harness measures *idleness*, not diversity. Every planner improvement will
+shrink the harness's apparent sample spread, and a report quoting Wilson intervals over replays will read
+rising competence as falling confidence. That inversion is a property of the measurement, not the game.
+
+**The mechanism, measured end to end.** A category bisect (`ruleset-category-bisect.txt`) reverting one
+authored group at a time to `DefaultSimulationRules` names the **Worker archetype** and nothing else:
+workers alone restore variation (Meridian distinct=3, Kharuun distinct=2) while soldiers, heavy, scouts,
+cores, producers and non-archetype all stay at distinct=1 — the last row exonerating `futureWell`,
+`choirCoherence` and research entirely. Reverting workers drives matches into the 12,000-tick cap, so the
+chain is: worse worker economy, seats starve, units run out of work, idle units reach the wander branch,
+the seed enters, matches diverge. Under authored rules workers stay productive, nothing idles, the branch
+is never reached, and the match replays identically.
+
+**Read the direction correctly.** The authored ruleset is the *healthier* one. I earlier called this a rules
+defect more serious than a fixture bug; that was wrong. The defect is the matrix treating 111 replays of a
+deterministic function as 111 samples. Four of nine pairings — both metal mirrors and Meridian/Kharuun both
+ways — carry the information of one match each, confirmed by probes that reproduce
+`balance_matrix_report.json` tick-for-tick (10,194 / 8,644 / 12,000 / 7,953) and again at HEAD after
+`cff9ba3` (`pairing-table-at-HEAD-cff9ba3.txt`).
+
+**Four claims of mine, withdrawn.**
+1. *"Choir is the Reshape faction and so the only one reaching the RNG."* Wrong twice: the planner routes
+   Choir to Preserve explicitly, and Reshape needs the Raider personality, which the matrix never uses.
+2. *"The RNG is unconsumed, therefore the seed is inert."* The RNG genuinely never advances, but the seed
+   reaches play through the hash above. The inference did not follow.
+3. *"Two seeds diverge at tick 1 in every pairing, so the degenerate reading is in question."* An instrument
+   artifact: `WriteSnapshotPayload` serialises `config_.randomSeed`, so any two seeds differ at tick 1 by
+   construction. I had criticised the same error in the D3 lane's checksum argument an hour earlier. The
+   retraction I built on it was itself wrong, and `3ba825b`'s dispute rests on it — hence this restoration.
+4. *"Fighters reaching the wander branch explain the Choir spread."* `marchTarget` falls back to the mirror
+   of the seat's own Core whenever one exists, and losing it ends the match, so fighters never wander.
+
+**What survives from the D3 lane's original entry, unqualified:** the four pairings are one match replayed;
+distinct checksums prove nothing (the hash carries the seed); the flagged asymmetries are single outcomes
+rather than rates, so "Kharuun seat 0 converts 0 of 111" is one *stalled* match replayed at the tick budget;
+Wilson intervals must not be cited where the effective n is 1; and SPEC-BAL-006 cannot catch this, since
+replaying one seed and expecting identical results is what a degenerate harness produces by definition.
+`spawn_fairness` already reads 71.3% with `passed: false`, so SPEC-BAL-004 is red now, not newly exposed.
+
+**Attribution.** The wander branch was measured by the D3 lane with a counter at the site itself, split by
+seat and by worker versus fighter: zero in both metal pairings, 21/20 in the Choir mirror and all of them
+idle workers. This lane's independent check agrees after two failed attempts of its own (a stale binary,
+then a classifier that counted scout-target moves as wanders); counting fighters only, it reads zero in all
+three mirrors, which is what agreement looks like against a counter reporting no fighters.
+
+**Consequence for the repair, and a recommendation withdrawn.** I advised spawn jitter first. I withdraw
+that: jitter would manufacture spread while leaving the property untouched, the same failure I warned
+against for seat alternation. The D3 lane's ranking is better and is adopted here — vary personality
+pairings first (Adaptive on both seats is itself why Reshape is never reached), then authored alternate
+spawn tiles, then openings, reporting outcomes per condition instead of intervals over replays. Seat order
+should be alternated but *reported* rather than smoothed: seat 0 winning every symmetric race because
+`RunMatch` queues its commands first each planning tick is a finding about the game, not noise to average.
+
+**Scope of the damage.** No balance claim may be drawn from the four degenerate pairings. This lane's own
+strategic-depth results are unaffected: BAL-STR-1 (60/60) and BAL-STR-3 (30/30) run in separate harnesses
+in `SimCoreTests.cpp` with explicit per-seed jitter (`jitterX`/`jitterY`), which exist precisely because the
+simulation varies nothing on its own. `TBR-STR-007` must not cite slot-0 win rates.
+
 ## State vocabulary
 
 Agent-assignable: `OPEN` → `IN PROGRESS` → `IMPLEMENTED` → `AGENT VERIFIED` → `EVIDENCE READY` →

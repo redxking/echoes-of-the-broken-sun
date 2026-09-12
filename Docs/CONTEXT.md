@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-11 23:49 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-12 00:38 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `61e6df1` (upstream `50dc165`); 355 dirty paths, of which non-asset: `Docs/RequirementsState.md`.
+- Branch `main` at `6d1d1d1` (upstream `50dc165`); 355 dirty paths, of which non-asset: `Docs/RequirementsState.md`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -25,10 +25,10 @@ Read this, then fetch only the requirement records you touch:
 
 ## Newest RequirementsState entries
 
+- Retraction: the degenerate-sample reading was right; my diagnosis of it was wrong four times — 2026-09-12, 00:45Z
 - DefeatTickBudget restored to 60,000 from a measured run — 2026-09-11, 23:50Z
 - CompleteSkirmishDefeat passes: the cause was an opponent blind to a claimed Well — 2026-09-11, 23:40Z
 - Predictions on record before the D3 lane's Well-scan fix is measured — 2026-09-11, 23:30Z
-- The Well is a Dawn monopoly, and that strains Well neutrality — TBR-STR-008, 2026-09-11, 23:20Z
 
 ## Recently recorded state rows
 
