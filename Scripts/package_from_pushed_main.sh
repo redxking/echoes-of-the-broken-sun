@@ -52,7 +52,7 @@ for name in $(env | /usr/bin/sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\1/p'); do unse
 ( cd "$worktree" && env "${unset_flags[@]}" ECHOES_BUILD_ARTIFACT_ROOT="$project_root/BuildArtifacts" \
     /bin/zsh "$worktree/Scripts/package_macos.sh" ) >> "$evidence/run.log" 2>&1
 package_status=$?
-print "exit_code=$status" >> "$evidence/run.log"
+print "exit_code=$package_status" >> "$evidence/run.log"
 print "completed_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$evidence/run.log"
 
 # D1 requires the removal verification to be recorded. The package's own provenance JSON

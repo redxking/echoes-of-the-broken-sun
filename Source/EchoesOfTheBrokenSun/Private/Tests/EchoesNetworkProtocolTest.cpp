@@ -92,15 +92,15 @@ bool FEchoesNetworkProtocolTest::RunTest(const FString& Parameters)
 
     const CompatibilityManifest ClientManifest =
         echoes::network::BuildCompatibilityManifest();
-    // SHA-256("EchoesOfTheBrokenSun:0.93.0:protocol-5:snapshot-32:view-3").
+    // SHA-256("EchoesOfTheBrokenSun:0.93.0:protocol-5:snapshot-33:view-3").
     // Keep the compatibility identity aligned with the current native snapshot schema.
     constexpr Digest256 ExpectedBuildId{
-    0xe4, 0xcf, 0xba, 0xff, 0xf0, 0x45, 0x9d, 0x84,
-    0xad, 0xcc, 0xb7, 0xa5, 0xf7, 0x8f, 0x6a, 0x13,
-    0xae, 0x10, 0xcf, 0xbd, 0xdb, 0xe9, 0x97, 0x0c,
-    0x8f, 0xa6, 0xa4, 0x67, 0x06, 0xd9, 0xf3, 0xba
-};
-    TestTrue(TEXT("Compatibility identity is bound to version 0.93.0 and schema 32"),
+        0x1e, 0x9b, 0xe7, 0x45, 0x69, 0x3b, 0x85, 0xe0,
+        0x72, 0x33, 0xd0, 0x6e, 0x0e, 0x3f, 0x38, 0xfa,
+        0x36, 0x6c, 0xf1, 0x29, 0xf4, 0xfb, 0x3c, 0x3f,
+        0x11, 0x76, 0x9c, 0x88, 0x4e, 0x33, 0x6e, 0x63
+    };
+    TestTrue(TEXT("Compatibility identity is bound to version 0.93.0 and schema 33"),
              ClientManifest.buildIdSha256 == ExpectedBuildId);
     TestTrue(TEXT("Current engine advertises targeted construction assist semantics"),
         (ClientManifest.serializationFeatureFlags & kMaintenanceCommandSemanticsFeature) != 0);
