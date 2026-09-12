@@ -8,7 +8,7 @@ Read this, then fetch only the requirement records you touch:
 
 ## Checkout
 
-- Branch `claude/parallel-work-options-i3bt00` at `19f866c` (upstream `19f866c`); 9 dirty paths, of which non-asset: `Docs/CONTEXT.md`, `Docs/DeliveryPlan.md`, `Docs/RequirementsState.md`, `Source/EchoesOfTheBrokenSun/Private/EchoesSimulationSubsystem.cpp`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesGlassScarTest.cpp`, `Source/EchoesSimCore/Private/Simulation.cpp`, `Source/EchoesSimCore/Public/EchoesSimCore/Simulation.h`.
+- Branch `claude/parallel-work-options-i3bt00` at `85d3704` (upstream `19f866c`); 0 dirty paths.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
