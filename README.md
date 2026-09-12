@@ -1,5 +1,11 @@
 # Echoes of the Broken Sun
 
+> ## ⚠️ This project has been archived
+>
+> Development of *Echoes of the Broken Sun* has moved to the **Unity Engine**.
+> This Unreal Engine repository is archived and read-only. **No further updates will be made to this repo.**
+
+
 *A science-fantasy real-time strategy game about the cost of making one future real.*
 
 Created by Angelis Pseftis.
