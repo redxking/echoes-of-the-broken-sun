@@ -6358,6 +6358,23 @@ inert there: `SetupTournamentMap` gives each seat a Well about five tiles from i
 tiles of worker sight, so a visible Well always qualifies and the walker never fires. A full Unreal suite on
 this commit is running; until it reports, this slice's Unreal standing is the long-run test alone.
 
+**Authored Well capture geometry is inert (verified here, reported by the strategy-validation lane).** Two
+of the seven authored Future Well numbers never reach the simulation. `EchoesContentSubsystem.cpp` reads
+and validates `capture_radius_cm` and `capture_ticks` into the catalog (lines 1142 and 1143) and they stop
+there: the rules copy at 728 to 736 writes the harvest dawn, the preserve dawn and interval, the preserve
+vision radius (converted by `DivideAndRoundUp`, line 731) and the reshape cost and duration, and never
+touches capture. So the simulation uses its own constants, 4.2 tiles and 300 ticks, whatever the JSON says.
+Checked in this lane's own reading rather than accepted on report. There is no behavioural bug today
+because the values agree (420 cm against `21 * kFixedScale / 5`, 300 against 300), but an owner widening
+the capture radius in `future_wells.json` would see no effect and no error. This matters more than it did
+this morning: capture radius is now also the radius at which presence contests a Well, which is the
+counterplay the Dawn economy rests on, and this lane has just exposed that constant publicly so the
+campaign doctrine can withhold an approach. Wiring the two fields through is a replay schema bump, because
+`preserveVisionTiles` is serialised into the snapshot and read back, so it belongs to the simulation lane
+and to an owner decision rather than to this slice; it is recorded here with the line numbers so it is not
+lost. The constant stays a constant rather than an accessor: one use in SimCore, one in the bridge, no
+serialisation.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
