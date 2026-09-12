@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-12 00:54 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-12 02:44 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `a94131e` (upstream `50dc165`); 355 dirty paths, of which non-asset: `Docs/DeliveryPlan.md`.
+- Branch `claude/chat-sessions-overview-pytzbh` at `14dc8ca`; 0 dirty paths.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -27,8 +27,8 @@ Read this, then fetch only the requirement records you touch:
 
 - Open finding: authored Well capture geometry is inert — 2026-09-12, 01:05Z (folded)
 - Retraction: the degenerate-sample reading was right; my diagnosis of it was wrong four times — 2026-09-12, 00:45Z
+- Owner rulings, 2026-09-12: all outstanding decisions granted
 - DefeatTickBudget restored to 60,000 from a measured run — 2026-09-11, 23:50Z
-- CompleteSkirmishDefeat passes: the cause was an opponent blind to a claimed Well — 2026-09-11, 23:40Z
 
 ## Recently recorded state rows
 
