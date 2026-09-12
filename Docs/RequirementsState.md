@@ -6,6 +6,36 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## Main published: 20 commits pushed under the granted authority — 2026-09-12, 09:10Z
+
+`14dc8ca..840f8c3` pushed to `origin/main`; the checkout is now 0 ahead, 0 behind. This discharges the
+owner's 2026-09-12 push ruling and the one reservation recorded beside it.
+
+**Why the reservation no longer applies.** The bound on that ruling was explicit: "push authority is not a
+reason to publish unverified work", naming the muster (`41a62eb`) as committed, native-verified and
+deliberately unpushed until it had an Unreal suite. It never needed one — the muster was measured as a
+regression (576 decisive against 807) and reverted in `17ed997`, so nothing in the pushed range carries an
+unverified planner change.
+
+**What verifies the pushed code.** `BuildArtifacts/Evidence/combined-suite-20260912T025358Z` at `21ee8e7`:
+editor build `Result: Succeeded`, Unreal automation **139 Echoes tests, 0 warnings, 0 errors**, save
+isolation boundary passed, content pack validated (SHA-256 `0460f5e2…`), 12 soak-wrapper tests OK. The two
+commits after it (`840f8c3` and the record edits) touch `Docs/` only — checked with `git diff --stat
+21ee8e7 840f8c3`, not assumed from the subject lines.
+
+**What the suite verdict covers, stated the way the previous correction requires.** The run's own
+`dirty-tracked-at-launch.txt` records 9 modified `Content/Art/Generated/Materials` assets, and the tree also
+carried 345 untracked files (343 narrative audio). The verdict is therefore "`21ee8e7` plus that asset
+churn", not the commit alone. Nothing in that churn compiles into the module, but the distinction is the one
+this lane got wrong earlier today and it is not restated loosely here.
+
+**Consequence.** The packaging route is unblocked: `package_macos.sh` requires a detached clean worktree at
+a pushed `origin/main`, which now exists at `840f8c3`.
+
+**Not done, deliberately.** The outside agent's 352 dirty or untracked `Content` entries and the two stray
+`patch_sh_*.py` scripts are untouched and unstaged, per the owner's bound on the blanket grant. `stash@{0}`
+is untouched. Nothing was swept into the pushed range: the push moved existing commits only.
+
 ## Splicing a signed buffer invalidates its signature — 2026-09-12, 05:55Z
 
 **Both campaign tests pass. 3 succeeded, 0 failed**, including
