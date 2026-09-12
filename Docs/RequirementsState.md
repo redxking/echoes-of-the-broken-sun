@@ -6,6 +6,57 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## Snapshot 32 fallout in the Unreal suite: seven pins and one shared payload walk — 2026-09-12, 04:05Z
+
+The combined suite came back 133 of 140 after `0b3a68d`. All seven failures were downstream of the schema
+bump, and the shape of them is the part worth keeping.
+
+**The tripwires fired correctly and pointed at the wrong place.** The D3 lane proposed a split from the
+failure names, which was the reasonable inference, and it would have left five tests red. Two of the failing
+campaign tests, `FutureThatWon` and `NoNeutralLedger`, do contain literal pins — I first reported they did
+not, having trusted a grep pattern that missed a two-line form, and **absence of grep hits is not absence** —
+but the pins were not why the other three failed. `EchoesSnapshotMigrationTestHelpers.h` walks the payload
+and ends on `if (Cursor != PayloadEnd) return false`, and `ResolveEmbeddedSnapshotSchema26Append` refused any
+version above 31 outright. The D3 lane's formulation is the one to remember: **a loud version pin tells you a
+version moved, not what that version is load-bearing for.**
+
+**What landed.**
+- The append walk accepts schema 32. Schema 32 appends nothing — its two fields are interior to the rules
+  block — so the 26..31 append structure is byte-identical and only the upper bound moves.
+- `ConvertEmbeddedSnapshotV32ToV31` heads the downgrade chain. **It is an interior splice, and the precedent
+  is already in the file**: `ConvertEmbeddedSnapshotToV22` removes the memory ledger from the middle, and
+  `ConvertEmbeddedSnapshotV23ToV22` removes one interior byte at a fixed offset. Recorded explicitly at the
+  D3 lane's request, because the next person will otherwise assume a trailing append is the only safe shape.
+  It **refuses** conversion when the authored geometry differs from the historical constants rather than
+  silently downgrading to them, matching how the schema-31 step refuses a live Bulwark commitment.
+- The splice offset is **measured, not hardcoded**, by a probe that stamps sentinels and finds them —
+  following `EmbeddedSnapshotTerrainGridOffset`, whose own comment says a literal "would silently rot the
+  next time the rules table gains a field". That is exactly what this change was, and it is why **no offset
+  needed changing anywhere**: the helper self-corrected. Verified map-independent across 2x2, 16x16, 48x32
+  and 64x64 before writing the splice, since 1985 had been measured on one map only.
+- A twelve-byte term in `ExpectedNativeToV22Shrink` in both mission tests.
+- Seven literal pins moved across six files, and the `ProtocolAdmission` digest recomputed by reading the
+  same sources the content test reads. `NoNeutralLedger`'s assertion was already stale before this bump,
+  labelled "advances to thirty" while asserting 31, so it had rotted through an earlier bump unnoticed; the
+  spelled-out number is gone.
+
+**Stated explicitly rather than left implied, because someone will otherwise "fix" them:**
+`EchoesMatchReplayTest` is symbolic against `kReplayVersion`/`kLegacyReplayVersion` and needs nothing;
+`FutureThatWon`'s `kSnapshotVersion + 1` rejection case stays correct because 33 remains unsupported; and
+the second `Memcmp` in both mission tests compares the envelope ledger *before* the snapshot, which the
+interior splice sits after.
+
+**A schema bump has at least four binding classes beyond the loader and its legacy flag**, all four found the
+hard way tonight: (1) the build identity material **and** its SHA-256 digest, (2) native offset walkers in
+`SimCoreTests.cpp`, (3) Unreal literal version pins, and (4) **shared test helpers that parse the payload by
+construction** — the fourth is the D3 lane's addition and the one that actually caused the surprise. The next
+bump should start from this list.
+
+**Verified: the editor builds and links.** `Result: Succeeded`, 64 seconds; the adaptive build excluded all
+seven touched test files from the unity blob, so each compiled individually. **This is a compile, not a
+suite.** The D3 lane runs the combined suite over both lanes next, and until it reports, the Unreal standing
+of this work is unproven.
+
 ## The balance matrix samples conditions instead of replays — 2026-09-12, 03:20Z
 
 Repairs the defect recorded in the degeneracy retraction: the matrix treated 1,000 runs of a deterministic

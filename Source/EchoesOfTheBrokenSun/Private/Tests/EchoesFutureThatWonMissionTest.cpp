@@ -357,11 +357,12 @@ bool FEchoesFutureThatWonMissionTest::RunTest(const FString& Parameters)
         TEXT("Campaign persistence uses the current schema"),
         FEchoesCampaignProgress::SchemaVersion,
         static_cast<uint16>(2));
-    // Schema 30 extends schema 29 with Link repair/construction identity.
+    // Schema 32 carries the authored Future Well capture geometry in the rules
+    // block. This pins the native snapshot schema only.
     TestEqual(
         TEXT("Mission 12 accepts the current simulation snapshot schema"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(31));
+        static_cast<uint32>(32));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();

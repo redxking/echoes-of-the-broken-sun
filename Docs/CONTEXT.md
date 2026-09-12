@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-12 01:45 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-12 02:00 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `c1b793f` (upstream `14dc8ca`); 355 dirty paths, of which non-asset: `Docs/RequirementsState.md`.
+- Branch `main` at `af9a50e` (upstream `14dc8ca`); 363 dirty paths, of which non-asset: `Docs/RequirementsState.md`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesAssemblyOfTheMissingMissionTest.cpp`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesBrokenSunMissionTest.cpp`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesFutureThatWonMissionTest.cpp`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesNetworkProtocolTest.cpp`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesNoNeutralLedgerMissionTest.cpp`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesResearchTest.cpp`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesSeveralVoicesOneCommandMissionTest.cpp`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -25,10 +25,10 @@ Read this, then fetch only the requirement records you touch:
 
 ## Newest RequirementsState entries
 
+- Snapshot 32 fallout in the Unreal suite: seven pins and one shared payload walk — 2026-09-12, 04:05Z
 - The balance matrix samples conditions instead of replays — 2026-09-12, 03:20Z
 - Open finding: CanonicalRulesPack is unbound, unlike the build identity beside it — 2026-09-12, 03:10Z
 - TBR-STR-007 measured: no single authored field fixes prepared ground — 2026-09-12, 02:55Z
-- The schema bump broke the content gate, and the gate was right — 2026-09-12, 02:35Z
 
 ## Recently recorded state rows
 

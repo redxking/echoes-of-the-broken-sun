@@ -2062,11 +2062,11 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
     EEchoesCampaignMapCheckpointFailure MapFailure{};
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         NativeLayout;
-    // The checkpoint saved just above is native schema 31. The shared helpers
+    // The checkpoint saved just above is native schema 32. The shared helpers
     // prove its production state is losslessly representable at 28, then remove
     // hostility and lifecycle state before the older migration chain.
     TestTrue(
-        TEXT("The Mission 15 schema-31 checkpoint exposes bounded receipt, lifecycle, hostility, and production blocks"),
+        TEXT("The Mission 15 schema-32 checkpoint exposes bounded receipt, lifecycle, hostility, and production blocks"),
         FFileHelper::LoadFileToArray(NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, NativeCheckpoint, MapFailure) &&
             ExtractReplayCheckpointPayloadForTest(NativeCheckpoint, Feedback) &&
@@ -2247,9 +2247,12 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
         static_cast<uint64>(NativeLayout.Schema29AppendSize) +
         static_cast<uint64>(NativeLayout.Schema30AppendSize) +
         static_cast<uint64>(NativeLayout.Schema31AppendSize) +
+        // Schema 32 spliced twelve interior bytes of authored capture geometry
+        // out of the rules block on the way down.
+        12ULL +
         static_cast<uint64>(NativeLayout.PendingCommandCount);
     TestTrue(
-        TEXT("The Mission 15 checkpoint converts through every schema from 31 to its synthetic schema-22 shape"),
+        TEXT("The Mission 15 checkpoint converts through every schema from 32 to its synthetic schema-22 shape"),
         EchoesSnapshotMigrationTestHelpers::
                 ConvertMission15EnvelopeSnapshotToV22(V22Checkpoint) &&
             EchoesSnapshotMigrationTestHelpers::Mission15SnapshotVersion(
@@ -2517,16 +2520,16 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
                 EEchoesFinalResolution::ControlledStabilization &&
             Objective.BrokenSunFinalResolution ==
                 EEchoesFinalResolution::None);
-    // Resaving writes native schema 31; the replay envelope is untouched here
+    // Resaving writes native schema 32; the replay envelope is untouched here
     // and stays at its independent replay schema.
     TestTrue(
-        TEXT("The legacy-loaded Mission 15 state resaves as native schema 31"),
+        TEXT("The legacy-loaded Mission 15 state resaves as native schema 32"),
         Bridge->QuickSaveScenario(Feedback));
     TArray<uint8> ResavedNativePrimary;
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         ResavedNativeLayout;
     TestTrue(
-        TEXT("The Mission 15 primary records native schema 31 after legacy load"),
+        TEXT("The Mission 15 primary records native schema 32 after legacy load"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, ResavedNativePrimary, MapFailure) &&
@@ -2558,11 +2561,11 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
             Bridge->GetBrokenSunPhase() ==
                 EEchoesBrokenSunPhase::ChooseFinalResolution);
     TArray<uint8> RetainedV22Backup;
-    // Only the resave moved to native schema 31. The retained backup is
+    // Only the resave moved to native schema 32. The retained backup is
     // the deliberately built schema-22 generation this test loaded, so it
     // stays at 22: that is the backward-compatibility coverage.
     TestTrue(
-        TEXT("The first schema-31 resave retains the valid schema-22 Mission 15 generation"),
+        TEXT("The first schema-32 resave retains the valid schema-22 Mission 15 generation"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope,
             *(QuickSavePath + TEXT(".bak"))) &&

@@ -228,6 +228,36 @@ inline int32 EmbeddedSnapshotTerrainGridOffset()
     return Measured;
 }
 
+// Where schema 32's authored capture-geometry fields sit inside the rules
+// block, MEASURED from a snapshot this build writes rather than written as a
+// literal, for the same reason the terrain grid offset is measured: a literal
+// would rot the next time the rules table gains a field. The probe stamps
+// sentinel values and finds them. Confirmed map-independent when this landed
+// (2x2, 16x16, 48x32 and 64x64 all report the same offset), which is expected
+// since the rules precede the grids, but the measurement is what keeps it true.
+inline int32 EmbeddedSnapshotCaptureGeometryOffset()
+{
+    static const int32 Measured = []() -> int32
+    {
+        echoes::sim::SimulationConfig ProbeConfig{2, 2, 20, 1};
+        ProbeConfig.rules.futureWell.captureRadiusRaw = 0x1234;
+        ProbeConfig.rules.futureWell.captureRequiredTicks = 0x5678;
+        const echoes::sim::Simulation Probe(ProbeConfig);
+        const std::vector<std::uint8_t> Snapshot = Probe.SaveSnapshot();
+        for (std::size_t Index = 0; Index + 6 <= Snapshot.size(); ++Index)
+        {
+            if (Snapshot[Index] == 0x34 && Snapshot[Index + 1] == 0x12 &&
+                Snapshot[Index + 2] == 0x00 && Snapshot[Index + 3] == 0x00 &&
+                Snapshot[Index + 4] == 0x78 && Snapshot[Index + 5] == 0x56)
+            {
+                return static_cast<int32>(Index);
+            }
+        }
+        return INDEX_NONE;
+    }();
+    return Measured;
+}
+
 // Walks the fog and memory grids of one embedded snapshot and records where the
 // schema-25 memory ledgers live. The walk asserts that every grid declares
 // exactly the map's tile count, so a layout drift fails here rather than
@@ -374,7 +404,10 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
     int64 Cursor = static_cast<int64>(Layout.MemoryLedgerOffset) +
         Layout.MemoryLedgerSize;
     const uint32 Version = ReadUint32(Envelope, Layout.SnapshotOffset + 4);
-    if (Version < 26U || Version > 31U)
+    // Schema 32 appends nothing: its two capture-geometry fields are interior
+    // to the rules block, ahead of the grids, so the 26..31 append structure
+    // is byte-identical and only the accepted upper bound moves.
+    if (Version < 26U || Version > 32U)
     {
         return false;
     }
@@ -805,6 +838,64 @@ inline bool InspectEmbeddedSnapshot(
 // IDs are synthesized by the old-save migration; they are not historical IDs.
 // Commitments cannot be represented by schema30. Refuse the entire conversion
 // rather than silently deleting a pending deployment or packing operation.
+// Schema 32 carries the authored Future Well capture radius and duration in the
+// rules block. Unlike every step below, this is an INTERIOR splice rather than a
+// trailing RemoveAt, because the fields precede the grids instead of being
+// appended; ConvertEmbeddedSnapshotV23ToV22 is the precedent, removing one
+// interior byte at a fixed offset from the snapshot start.
+//
+// Schema 31 cannot represent authored geometry. A checkpoint whose values differ
+// from the historical constants is REFUSED rather than quietly downgraded to
+// them, the same way the schema-31 step refuses a live Bulwark commitment.
+inline bool ConvertEmbeddedSnapshotV32ToV31(
+    TArray<uint8>& Envelope, int32 FixedHeaderSize, int32 LedgerLengthOffset,
+    int32 SnapshotLengthOffset,
+    const echoes::sim::PlayerHostilityMasks& LegacyHostilityMasks =
+        echoes::sim::kDefaultHostilityMasks)
+{
+    constexpr int32 SnapshotVersionOffset = 4;
+    constexpr int32 CaptureGeometryBytes = 12;
+    FEmbeddedSnapshotLayout Layout;
+    if (!InspectEmbeddedSnapshot(Envelope, FixedHeaderSize, LedgerLengthOffset,
+            SnapshotLengthOffset, Layout, 32U, LegacyHostilityMasks))
+    {
+        return false;
+    }
+    const int32 GeometryOffset = EmbeddedSnapshotCaptureGeometryOffset();
+    if (GeometryOffset == INDEX_NONE ||
+        static_cast<int64>(Layout.SnapshotLength) <=
+            static_cast<int64>(GeometryOffset) + CaptureGeometryBytes)
+    {
+        return false;
+    }
+    std::string Error;
+    const auto Original = echoes::sim::Simulation::LoadSnapshot(
+        std::span<const uint8>(Envelope.GetData() + Layout.SnapshotOffset,
+            Layout.SnapshotLength), &Error, LegacyHostilityMasks);
+    if (!Original.has_value() || !Error.empty()) return false;
+    const auto& Well = Original->Config().rules.futureWell;
+    if (Well.captureRadiusRaw != echoes::sim::kFutureWellCaptureRadiusRaw ||
+        Well.captureRequiredTicks != 300U)
+    {
+        return false;
+    }
+    TArray<uint8> Working = Envelope;
+    Working.RemoveAt(Layout.SnapshotOffset + GeometryOffset,
+        CaptureGeometryBytes, EAllowShrinking::No);
+    const uint32 Length = Layout.SnapshotLength - CaptureGeometryBytes;
+    WriteUint32(Working, SnapshotLengthOffset, Length);
+    WriteUint32(Working, Layout.SnapshotOffset + SnapshotVersionOffset, 31U);
+    if (!ResignEmbeddedSnapshot(Working, Layout.SnapshotOffset, Length)) return false;
+    UpdateEnvelopeChecksum(Working);
+    if (!IsLoadableEmbeddedSnapshot(Working, Layout.SnapshotOffset, Length, 31U,
+            LegacyHostilityMasks))
+    {
+        return false;
+    }
+    Envelope = MoveTemp(Working);
+    return true;
+}
+
 inline bool ConvertEmbeddedSnapshotV31ToV30(
     TArray<uint8>& Envelope, int32 FixedHeaderSize, int32 LedgerLengthOffset,
     int32 SnapshotLengthOffset,
@@ -1306,7 +1397,10 @@ inline bool ConvertEmbeddedSnapshotToV22(
     constexpr uint32 ReceiptSnapshotVersion = 24U;
     constexpr uint32 ReceiptFreeSnapshotVersion = 23U;
     TArray<uint8> Source = Envelope;
-    if (!ConvertEmbeddedSnapshotV31ToV30(
+    if (!ConvertEmbeddedSnapshotV32ToV31(
+            Source, FixedHeaderSize, LedgerLengthOffset, SnapshotLengthOffset,
+            LegacyHostilityMasks) ||
+        !ConvertEmbeddedSnapshotV31ToV30(
             Source, FixedHeaderSize, LedgerLengthOffset, SnapshotLengthOffset,
             LegacyHostilityMasks) ||
         !ConvertEmbeddedSnapshotV30ToV29(
@@ -1433,6 +1527,8 @@ inline bool ConvertEmbeddedSnapshotToV22(
     const uint64 ExpectedShrink = 5ULL +
         static_cast<uint64>(Layout.ReceiptCount) * 19ULL +
         static_cast<uint64>(Layout.MemoryLedgerSize);
+    // Layout is measured at 25U, after the schema-32 splice already ran, so
+    // the twelve capture-geometry bytes are not part of this delta.
     if (static_cast<uint64>(Source.Num() - Working.Num()) !=
         ExpectedShrink)
     {

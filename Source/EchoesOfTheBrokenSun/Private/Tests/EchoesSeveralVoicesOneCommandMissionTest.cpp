@@ -289,10 +289,10 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TestEqual(TEXT("Mission 14 uses the current campaign schema"),
               FEchoesCampaignProgress::SchemaVersion,
               static_cast<uint16>(2));
-    // Schema 29 persists production queues, invested costs and rally routes.
-    TestEqual(TEXT("Mission 14 writes native snapshot schema 31"),
+    // Schema 32 carries the authored Future Well capture geometry.
+    TestEqual(TEXT("Mission 14 writes native snapshot schema 32"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(31));
+              static_cast<uint32>(32));
 
     FString Feedback;
     FEchoesCampaignProgress ThirteenRecords =
@@ -695,7 +695,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         NativeLayout;
     TestTrue(
-        TEXT("The Mission 14 schema-31 checkpoint exposes bounded receipt, lifecycle, hostility, and production blocks"),
+        TEXT("The Mission 14 schema-32 checkpoint exposes bounded receipt, lifecycle, hostility, and production blocks"),
         FFileHelper::LoadFileToArray(NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, NativeCheckpoint, MapFailure) &&
             ExtractReplayCheckpointPayloadForTest(NativeCheckpoint, Feedback) &&
@@ -953,7 +953,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
                 ProtectedCoreSnapshot);
             // The source here is the checkpoint just written by this run, so
-            // it carries native schema 31. Replay versioning is independent.
+            // it carries native schema 32. Replay versioning is independent.
             bProtectedCoreSourceLoadable =
                 EchoesSnapshotMigrationTestHelpers::
                     IsLoadableEmbeddedSnapshot(
@@ -1108,9 +1108,12 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         static_cast<uint64>(NativeLayout.Schema29AppendSize) +
         static_cast<uint64>(NativeLayout.Schema30AppendSize) +
         static_cast<uint64>(NativeLayout.Schema31AppendSize) +
+        // Schema 32 spliced twelve interior bytes of authored capture geometry
+        // out of the rules block on the way down.
+        12ULL +
         static_cast<uint64>(NativeLayout.PendingCommandCount);
     TestTrue(
-        TEXT("The Mission 14 checkpoint converts through every schema from 31 to its synthetic schema-22 shape"),
+        TEXT("The Mission 14 checkpoint converts through every schema from 32 to its synthetic schema-22 shape"),
         EchoesSnapshotMigrationTestHelpers::
                 ConvertMission14EnvelopeSnapshotToV22(V22Checkpoint) &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
@@ -1185,10 +1188,10 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TArray<uint8> ResavedNativePrimary;
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         ResavedNativeLayout;
-    // Resaving writes native schema 31. The retained backup is a genuine
+    // Resaving writes native schema 32. The retained backup is a genuine
     // migration fixture and stays at schema 22.
     TestTrue(
-        TEXT("The legacy-loaded Mission 14 state resaves natively as schema 31"),
+        TEXT("The legacy-loaded Mission 14 state resaves natively as schema 32"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, ResavedNativePrimary, MapFailure) &&
@@ -1201,7 +1204,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
                 ResavedNativePrimary) == echoes::sim::kSnapshotVersion);
     TArray<uint8> RetainedV22Backup;
     TestTrue(
-        TEXT("The first schema-31 resave retains the valid schema-22 Mission 14 generation"),
+        TEXT("The first schema-32 resave retains the valid schema-22 Mission 14 generation"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope,
             *(QuickSavePath + TEXT(".bak"))) &&
