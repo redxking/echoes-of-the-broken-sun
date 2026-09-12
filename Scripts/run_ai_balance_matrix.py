@@ -108,6 +108,38 @@ def main() -> int:
     battery = data.get("ai_competence_battery", {})
     terminal_matches = data.get("authoritative_terminal_matches", 0)
     actionable_stalls = data.get("actionable_stalls", 0)
+    sampling = data.get("condition_sampling", {})
+    cond_rows = sampling.get("rows", [])
+    degenerate_rows = [r for r in cond_rows if r.get("degenerate")]
+
+    # A condition is a faction pair, a personality pair and a planning
+    # order; its matches differ only by seed. The simulation is
+    # deterministic and the seed reaches play through one fallback branch
+    # a tasked planner never enters, so a condition whose matches all end
+    # on the same tick is ONE observation replayed. Reporting an interval
+    # over such rows states a precision that does not exist.
+    if degenerate_rows:
+        degenerate_table = "\n".join(
+            "| `{}` | {} | {} | {} | {} | {} |".format(
+                r["condition"], r["matches"], r["distinct_finishing_ticks"],
+                r["seat0_wins"], r["seat1_wins"], r["unresolved"])
+            for r in sorted(degenerate_rows, key=lambda r: r["condition"]))
+    else:
+        degenerate_table = "| _none_ | | | | | |"
+
+    seat_split = {}
+    for r in cond_rows:
+        if r.get("degenerate"):
+            continue
+        order = "seat1-first" if r["condition"].endswith("seat1-first") else "seat0-first"
+        agg = seat_split.setdefault(order, {"seat0": 0, "seat1": 0})
+        agg["seat0"] += r["seat0_wins"]
+        agg["seat1"] += r["seat1_wins"]
+    seat_rows = "\n".join(
+        "| {} | {} | {} |".format(order, v["seat0"], v["seat1"])
+        for order, v in sorted(seat_split.items()))
+    if not seat_rows:
+        seat_rows = "| _no sampled conditions_ | | |"
 
     md_content = f"""# Headless AI Match Diagnostic Report
 
@@ -142,6 +174,38 @@ def main() -> int:
 - **Replay scope:** Duplicate execution {'matched' if determinism.get('passed') else 'diverged'}. This is deterministic rerun evidence, not full replay-path qualification.
 - **Competence scope:** {battery.get('implemented_checks', 0)}/{battery.get('required_checks', 4)} required checks are implemented. Focus fire, reconnaissance, and saturation remain unproven here.
 - **Revision:** Diagnostic generated from commit `{git_commit}`. A commit label does not qualify incomplete evidence.
+
+---
+
+## 3. Condition Sampling (read before quoting any rate above)
+
+Matches are not samples. A **condition** is a faction pair, a personality
+pair and a planning order; matches within one differ only by seed. The
+simulation is deterministic and the seed reaches gameplay through a single
+fallback branch a tasked planner never enters, so a condition whose matches
+all finish on the same tick is **one observation replayed**, however many
+matches it contains.
+
+| Conditions | Degenerate | Matches in degenerate conditions | Effective observations |
+|---|---|---|---|
+| {sampling.get('conditions', 0)} | {sampling.get('degenerate_conditions', 0)} | {sampling.get('degenerate_matches', 0)} | {sampling.get('effective_observations', 0)} |
+
+Every rate and interval in section 1 excludes the degenerate rows below.
+
+| Degenerate condition | Matches | Distinct finishing ticks | Seat 0 | Seat 1 | Unresolved |
+|---|---|---|---|---|---|
+{degenerate_table}
+
+### Planning order, reported rather than smoothed
+
+Seat 0's commands were queued first on every planning tick, and in a
+symmetric race that alone decided the winner. Order is now varied across
+conditions and reported: a large gap between these rows is a finding about
+the game, not noise to average away.
+
+| Planning order | Seat 0 wins | Seat 1 wins |
+|---|---|---|
+{seat_rows}
 """
 
     with open(report_md, "w", encoding="utf-8") as f:

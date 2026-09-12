@@ -6,6 +6,38 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## The balance matrix samples conditions instead of replays — 2026-09-12, 03:20Z
+
+Repairs the defect recorded in the degeneracy retraction: the matrix treated 1,000 runs of a deterministic
+function as 1,000 samples and reported Wilson intervals over replays.
+
+**Conditions are now the sampling unit.** A condition is a faction pair, a personality pair and a planning
+order: 9 x 4 x 2 = 72. Matches within one differ only by seed. Personality pairings vary deliberately
+(the D3 lane's ranking, adopted as theirs) rather than every seat running Adaptive, and **Raider is included
+on purpose** — it is the only personality that commits Reshape, so without it no seat ever exercises the
+Well's third protocol or the simulation's only RNG consumer.
+
+**A degeneracy screen runs before any statistic.** If every match in a condition finishes on the same tick,
+the seed changed nothing and the condition is one observation replayed; those rows are excluded from every
+rate and interval, and the exclusion is counted in the report. Measured on 216 matches: **72 conditions, 64
+degenerate, 192 matches carrying 64 observations.** The pathology is now visible in the output rather than
+inferred from a probe.
+
+**Planning order is reported, not smoothed.** `RunMatch` queued seat 0 first on every planning tick, and in
+a symmetric race that alone decided the winner. The order now alternates across conditions and appears as a
+dimension in the report, because it is a finding about the game rather than noise to average away.
+
+**Two defects of my own, found by running the thing.** The duplicate-rerun check (`SPEC-BAL-006`) hardcoded
+Adaptive and seat-0-first, so once conditions varied it replayed a *different* condition and reported
+`DETERMINISM VIOLATION` on a seed where none existed; it now carries the sampled match's own inputs and
+reads **10/10 matched**. And excluding degenerate rows made an empty sample reachable, which the summary
+rendered as `0.0% ± 0.0% [FAIL]` — asserting a measurement never taken. Empty samples now read `NO SAMPLE`,
+in the spawn line, the three matchup lines and the strategy-primacy line.
+
+**Verified:** builds under `-Wall -Wextra -Werror`, 216-match run, 216/216 terminal, determinism 10/10.
+The harness remains diagnostic (`overall_passed` stays false): one synthetic map, one of four competence
+checks implemented. This repair makes its numbers honest, not sufficient.
+
 ## Open finding: CanonicalRulesPack is unbound, unlike the build identity beside it — 2026-09-12, 03:10Z
 
 Found while checking what obligations a content edit would carry, before proposing the (subsequently
@@ -31,10 +63,11 @@ find it. The rules pack has the same hazard and no such gate. The fix is small: 
 `test_build_identity.py`, or add a sibling, to read `Content/Data/Generated/EchoesContentPack.json.sha256`
 and assert the declared `CanonicalRulesPack` bytes equal it.
 
-**Not implemented here.** `EchoesNetworkSession.cpp` is the network lane's file and adding a gate to another
-lane's constant unannounced is the same discourtesy the D3 lane declined when it found my stale build
-identity and left it for me. Flagged to that lane; recorded for the owner. No behavioural defect exists
-today — the digests agree — so this is a missing guard rather than a bug.
+**Not implemented here**, and closed by the D3 lane within the hour as `0002f72`, which adds the binding to
+`test_build_identity.py` and shows it falsifiable: it passes on the tree, and a single perturbed nibble of
+the generated hash makes it fail. Left for that lane deliberately, since adding a gate to another lane's
+constant unannounced is the same discourtesy it declined when it found my stale build identity. No
+behavioural defect existed — the digests agreed — so this was a missing guard rather than a bug.
 
 ## TBR-STR-007 measured: no single authored field fixes prepared ground — 2026-09-12, 02:55Z
 
