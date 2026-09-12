@@ -29,7 +29,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | ID | State | Class | Evidence | Commit | Date | Note |
 |---|---|---|---|---|---|---|
 | `REL-AI-006` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-7.json | b06254b | 2026-09-11 | Threshold-based massing measured: 114 of 1000 matches changed, zero conversions, branch never fires when saturated; needs muster point and synchronised release |
-| `REL-AI-022` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-2.json | 34ca1a0 | 2026-09-11 | Content-rules matrix 778/1000 terminal after the deposit-expansion planner; Meridian dominant, Kharuun never beats it; numbers diagnostic only (synthetic map, Adaptive only, concurrent lanes change) |
+| `REL-AI-022` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-8.json | bd3215c | 2026-09-11 | 807/1000 after the retreat fix; mirror win rates unusable until the harness alternates planning order, since seat 0 plans first every tick |
 | `REL-AI-031` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-well-contest | b62f426 | 2026-09-11 | Opponent contests a Well claimed by another player; CompleteSkirmishDefeat finishes at tick 9824 after failing in every suite |
 | `REL-ECO-010` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | [INSUFFICIENT_DAWN]/[INSUFFICIENT_MATTER] refusals name unit, price, holding and source; Gameplay.ProductionRefusalText |
 | `REL-ECO-011` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Ceiling 120 and committed band implemented (schema 33); native committed-band test; HUD label compiled natively, editor rerun owed |
@@ -6177,6 +6177,23 @@ already being obeyed is not re-sent. Measured on the same probes: attack-moves 3
 of 12, and the Meridian mirror that had never produced a result now ends in a Corefall for seat 0. Native
 150/150 (`test_sim-26.log`). A full matrix re-run is owed and the numbers here are single-seed probes.
 
+**Matrix after the retreat fix: 807 of 1,000, and the distribution matters more than the headline.**
+`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-8.json`. Conversions rise from 557 to 807 and the mirrors that had
+never produced a result now finish: Meridian 112 of 112, Kharuun 111 of 111. Read the spread before
+claiming that as balance, on the strategy-validation lane's advice, and it says something else. In four
+pairings (both metal mirrors, Meridian vs Kharuun both ways) **every match ends on exactly the same tick**
+(Kharuun mirror 7,953; Meridian vs Kharuun 8,644; Meridian mirror 10,194) **and seat 0 wins 100% of them**.
+The matches are not duplicates: all 111 seeds and all 111 final checksums per pairing are distinct, so the
+seed perturbs the state without moving the timeline. The likely cause is the harness rather than the game:
+`RunMatch` generates and queues seat 0's commands before seat 1's on every planning tick, so a symmetric
+race is decided by planning order. That also puts the report's own Spawn Symmetry check (60.1% slot-0) in
+doubt as a measure of the game. Choir is the counter-example and behaves like a real distribution: the
+Choir mirror spreads 8,619 to 11,984 with a 66% seat-0 rate, and converts only 29 of 111. Two open
+asymmetries: Kharuun in seat 0 against Meridian still never converts (0 of 111) while Meridian in seat 0
+against Kharuun always does, and Choir in seat 0 loses every decided match against both metal factions.
+The retreat fix is real and the mirrors resolving is real; the win rates are not yet evidence about
+faction balance, and should not be quoted as such until the harness alternates planning order.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
@@ -6536,3 +6553,4 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T23:23Z — `TBR-STR-008` → **OPEN**; class SRC; evidence —; commit 44b071c; Owner decision: a Well-less seat buys 1 fighter total while a Preserve holder earns ~33 in 17 minutes; strains SPEC-WEL-002 / REL-WEL-018 neutrality
 - 2026-09-11T23:37Z — `REL-AI-031` → **IMPLEMENTED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-well-contest; commit b62f426; Opponent contests a Well claimed by another player; CompleteSkirmishDefeat finishes at tick 9824 after failing in every suite
 - 2026-09-11T23:45Z — `SPEC-CMB-013` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-budget; commit d3a90de; Strategic depth complete: firing lanes, committed band, role bodies, height bands and Glass Scar low ground verified; Defeat budget restored to 60,000 at a measured 13,265
+- 2026-09-12T00:03Z — `REL-AI-022` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-8.json; commit bd3215c; 807/1000 after the retreat fix; mirror win rates unusable until the harness alternates planning order, since seat 0 plans first every tick
