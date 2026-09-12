@@ -6155,6 +6155,26 @@ probe was misleading and should not have been given weight; it used one seed sha
 while the matrix uses per-pairing seeds. The instrumentation result stands (the release does fire) but
 "the release fires" was never evidence that the rule helps.
 
+**Reverted.** 41a62eb is reverted rather than iterated on: a rule that has now failed twice should not sit
+committed on main while a third version is attempted. Native 150/150 after the revert, with the simulation
+lane's capture-geometry work untouched.
+
+**The mechanism, from unit dumps rather than from the counters.** The muster recalls forward units. On the
+matrix mirror seed, three of seat 1's units at full 260 health stood at (22,23), (29,25) and (30,26) with
+Move orders to (48,48), their own muster tile six tiles from their Core: they had advanced to mid-map and
+were walking home. A unit finishes an advance, becomes order-less while forward, fails the assembled test,
+and is sent all the way back. It is a treadmill, and the same defect class as the retreat oscillation fixed
+earlier in this slice, a homeward order issued to units that are already far forward.
+
+**The instrumentation lesson is the durable part.** The branch counters said the rule worked, six assembled,
+four release passes, eight wave joins, and they were accurate and useless: releasing is not advancing. This
+lane nearly reported those counters as success, and it took position dumps to see the treadmill. A counter
+at a branch proves the branch runs; it says nothing about whether running it helps.
+
+**What a third attempt needs.** A gate so a forward unit never walks back, on the same principle as the
+retreat fix (a unit closer to the enemy than to its own Core fights where it stands), and a matrix in a
+scratch build that beats 807 before anything is committed.
+
 ## REL-AI-006: a muster with a synchronised release — 2026-09-12
 
 Owner: "All is granted. You continue with all your recommendations." Second attempt at cohesion, after the
