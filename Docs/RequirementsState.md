@@ -9,8 +9,18 @@ Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are neve
 ## Splicing a signed buffer invalidates its signature — 2026-09-12, 05:55Z
 
 **Both campaign tests pass. 3 succeeded, 0 failed**, including
-`TheBrokenSunAlternateResolutionPersistence`, on a clean tree with every diagnostic scaffold removed and
-zero `DIAG` residue in the log. Evidence: `BuildArtifacts/Evidence/schema32-clean-20260912T025003Z`.
+`TheBrokenSunAlternateResolutionPersistence`, with every diagnostic scaffold removed and zero `DIAG`
+residue in the log.
+
+**Correction: "a clean tree" was wrong, and the error is instructive.** Every tree check in this slice ran
+`git status --short | grep -v Content/`. That filter answers "is any of MY work uncommitted", and I reported
+its output as "what a build from this working tree picks up" — a different question the filter structurally
+cannot answer. Unfiltered, the tree carries **9 modified tracked assets** (all
+`Content/Art/Generated/Materials`) and **345 untracked files**, 343 of them narrative audio under
+`Content/Audio/Source/Narrative`. That churn is the art and audio lane's and nothing compiles it into the
+module, but the run verified `21ee8e7` **plus** those asset changes, not the commit alone, and the D3 lane is
+right to record its combined-suite verdict that way. Caught by that lane, not by me; I had stated the
+filtered view as a verification, including the phrase "checked rather than asserted". Evidence: `BuildArtifacts/Evidence/schema32-clean-20260912T025003Z`.
 Artefact currency checked rather than argued: sources 22:48:45, `Binaries/Mac/libUnrealEditor-
 EchoesOfTheBrokenSun.dylib` linked 22:50:03.
 
