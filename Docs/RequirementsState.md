@@ -6380,6 +6380,22 @@ strategy-validation lane's suggestion and accepted here: the campaign tests asse
 protocol still pays, which passes for the wrong reason if a future command type reaches the Well by another
 door, so they should assert the approach itself is withheld.
 
+**The campaign tests now assert the approach is withheld, and the assertion is shown to be falsifiable.**
+Suggested by the strategy-validation lane and taken here: `Campaign.NoNeutralLedger` asserted only that
+Mission 11's recorded protocol still pays, which would pass for the wrong reason if some future command
+type reached the Well by another door, exactly as this lane's remembered-Well walk did through a Move.
+The test's tick helper now samples the recorded Well on every driven tick and the test asserts it is never
+contested, which is the observable form of "the approach is withheld" rather than a restatement of the
+outcome. Scoped honestly in the test's own comment: it covers the ticks this test drives, not the whole
+mission. Verified in two runs rather than assumed from a green result, because a passing Unreal assertion
+logs nothing and cannot be told from one that never ran: `BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-well-assertion`
+builds with the assertion compiled in and both campaign tests pass, and
+`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-inversion-check` inverts it and `Campaign.NoNeutralLedger` fails
+with the inversion message, proving the sampler executes and that the sampled value is genuinely false.
+The restored source is identical to the build that passed. One false start is recorded so nobody cites it:
+an earlier edit script raised before writing the file, so a run reporting two passes was built without any
+assertion in it and is evidence of nothing.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's

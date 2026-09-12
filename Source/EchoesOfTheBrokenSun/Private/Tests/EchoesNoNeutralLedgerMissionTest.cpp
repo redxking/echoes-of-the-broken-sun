@@ -742,8 +742,33 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
         return false;
     }
 
-    const auto TickUntil = [Bridge](const TFunction<bool()>& Predicate,
-                                    int32 MaximumTicks)
+    // The doctrine that leaves an authored operation's recorded Well alone has
+    // to hold against every command type, not only the Future Well command it
+    // was written for. A worker that merely walks into the capture radius
+    // contests the Well and stops its income, which is how the planner's
+    // remembered-Well walk broke this mission while the protocol assertions
+    // below still described the intended end state. Sampling each driven tick
+    // is the observable form of "the approach is withheld too".
+    bool bRecordedWellEverContested = false;
+    const auto SampleRecordedWell =
+        [Bridge, &Start, &bRecordedWellEverContested]()
+    {
+        const echoes::sim::Simulation* Current = Bridge->GetSimulation();
+        if (Current == nullptr)
+        {
+            return;
+        }
+        const echoes::sim::Entity* RecordedWell =
+            Current->FindEntity(Start.NoNeutralWellId);
+        if (RecordedWell != nullptr &&
+            Current->IsFutureWellContested(*RecordedWell))
+        {
+            bRecordedWellEverContested = true;
+        }
+    };
+    const auto TickUntil = [Bridge, &SampleRecordedWell](
+                               const TFunction<bool()>& Predicate,
+                               int32 MaximumTicks)
     {
         for (int32 TickIndex = 0; TickIndex < MaximumTicks; ++TickIndex)
         {
@@ -752,6 +777,7 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
                 return true;
             }
             Bridge->Tick(0.05f);
+            SampleRecordedWell();
         }
         return Predicate();
     };
@@ -1068,6 +1094,13 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
                 EEchoesCampaignMissionId::NoNeutralLedger)->WellChoice ==
                 FutureWellChoice::Preserve);
     }
+
+    // Scoped honestly: this covers the ticks this test drives, not the whole
+    // mission, and it fails if any hostile body enters the recorded Well's
+    // capture radius, which is what stops its income.
+    TestFalse(
+        TEXT("The opponent never contests the recorded Well in an authored operation"),
+        bRecordedWellEverContested);
 
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);
