@@ -6018,6 +6018,35 @@ Status: D2 stays the first unfinished package; these five are the next repairs; 
 below as they land.
 
 
+## Owner rulings, 2026-09-12: all outstanding decisions granted
+
+Owner: "All is granted. You continue with all your recommendations." Recorded as decisions rather than
+left implicit, with the ones this lane may not decide alone named as such.
+
+- **Push authorised.** `main` is published to `origin`. The packaging route (`package_macos.sh`, detached
+  worktree at pushed `origin/main`) is unblocked as a consequence.
+- **TBR-UX-001 (control scheme): the recorded recommendation is adopted** — a command-first QWE/ASD/ZXC
+  grid with WASD as a camera preset. No code in this slice; it governs the input work when it is taken up.
+- **Future Wells stay fog-hidden discoveries.** The alternative was to publish them as known map objectives
+  from the start. The conservative reading is ruled in because the AI reaches them without it: a seat that
+  owns no Well walks a worker to one it has already seen (cff9ba3), which uses the seat's own scoped memory
+  and changes nothing about fog, and the long run now reports `wellCheckpoint=restored` on all three
+  scenarios. Revisit only if a map authors a Well no seat ever sees even once.
+- **Authored capture geometry is to be wired through, with the replay schema bump it needs.**
+  `capture_radius_cm` and `capture_ticks` are validated into the catalog and never copied into the rules,
+  so editing them does nothing silently. The bump belongs to the simulation lane, which offered to do it
+  properly with the legacy-flag pattern; this ruling authorises it.
+- **TBR-STR-007 (prepared ground as a tripwire) and TBR-STR-008 (the Dawn monopoly) stay with the
+  strategy-validation lane.** They are balance changes with roster and cost consequences, and deciding them
+  numerically from this lane without its measurements would be guessing. The authority to act is granted;
+  the analysis is theirs.
+- **The outside agent's leftovers are left untouched.** 352 dirty or untracked Content entries and two
+  stray `patch_sh_*.py` scripts remain in the working tree. None of it is this lane's and none is staged;
+  it stays for whoever owns it rather than being swept into a commit.
+- **Continuing work, in order:** REL-AI-006 cohesion as a real muster with a synchronised release (the
+  threshold version is measured as changing 114 matches and converting none), then the unimplemented Well
+  denial play, then the Choir Dawn economy.
+
 ## D3 Meridian slice — fifth slice: the opponent finds and spreads over deposits — 2026-09-11
 
 Owner order: "proceed as you see fit"; then, mid-task: "the AI should be playing like a human as much as
