@@ -6375,6 +6375,21 @@ and to an owner decision rather than to this slice; it is recorded here with the
 lost. The constant stays a constant rather than an accessor: one use in SimCore, one in the bridge, no
 serialisation.
 
+**Full Unreal suite green at 140 of 140, and the campaign Well doctrine now covers the approach.**
+`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-approach-doctrine` on 6d1d1d1: zero failures, the first fully clean
+suite since the retreat fix. It closes the regression this lane caused and recorded two commits ago: the
+remembered-Well walk emits a Move, the doctrine withheld only Future Well commands, and since a Well is
+contested by any hostile body inside the capture radius, a worker merely arriving stopped the recorded
+Well's income and failed `Campaign.FreshJourney` and `Campaign.NoNeutralLedger` on Mission 11's protocol.
+Presence is not capture, and the doctrine now withholds both in an authored operation. Both paths are
+observed in the run rather than inferred: `[ECHOES_AI_WELL_DOCTRINE] ... reason=authored-operation-approach`
+on mission 8 and `reason=authored-operation` on mission 11. The Well walk still does its job where it is
+wanted: all three long-run scenarios report `wellCheckpoint=restored`, including the Glass Scar scenario
+that reported `missing` before this slice. Native stands at 150/150. Owed next, from the
+strategy-validation lane's suggestion and accepted here: the campaign tests assert that the recorded
+protocol still pays, which passes for the wrong reason if a future command type reaches the Well by another
+door, so they should assert the approach itself is withheld.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
