@@ -28,6 +28,20 @@ SIMULATION_HEADER = (
 )
 
 
+def resolve_constant(source: str, name: str) -> str | None:
+    """Read an integer constant that may be declared as a literal or as a
+    one-level alias of another constant in the same header."""
+    for _ in range(2):
+        match = re.search(rf"{re.escape(name)}\s*=\s*([A-Za-z_][A-Za-z0-9_]*|\d+)\s*;", source)
+        if match is None:
+            return None
+        value = match.group(1)
+        if value.isdigit():
+            return value
+        name = value
+    return None
+
+
 class BuildIdentityTests(unittest.TestCase):
     def test_build_identity_tracks_product_and_snapshot_versions(self) -> None:
         config = configparser.ConfigParser(strict=False)
@@ -45,11 +59,14 @@ class BuildIdentityTests(unittest.TestCase):
         material = material_match.group(1)
 
         snapshot_header = SIMULATION_HEADER.read_text(encoding="utf-8")
-        snapshot_match = re.search(
-            r"kSnapshotVersion\s*=\s*(\d+)\s*;", snapshot_header
-        )
-        self.assertIsNotNone(snapshot_match)
-        snapshot_version = snapshot_match.group(1)
+        # The schema constants are written as a named era constant plus an
+        # alias (kReplayVersion has been an alias for some time, and
+        # kSnapshotVersion became one at schema 32). Resolve one level of
+        # aliasing rather than requiring the declaration to be a bare literal:
+        # naming the era is the more readable form and the test should follow
+        # the source, not the source bend to suit a regex.
+        snapshot_version = resolve_constant(snapshot_header, "kSnapshotVersion")
+        self.assertIsNotNone(snapshot_version)
         protocol_header = SIMULATION_HEADER.with_name("NetworkProtocol.h").read_text(encoding="utf-8")
         protocol_match = re.search(r"kProtocolVersion\s*=\s*(\d+)\s*;", protocol_header)
         self.assertIsNotNone(protocol_match)

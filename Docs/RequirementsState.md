@@ -6,6 +6,34 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## The schema bump broke the content gate, and the gate was right — 2026-09-12, 02:35Z
+
+`0b3a68d` moved the snapshot schema 31 to 32 without moving the build identity that binds it.
+`Scripts/build_editor.sh` runs `Scripts/test_content.sh` first and exits under `set -e`, so
+`Tests/Content/test_build_identity.py` failing meant **no compiler ran at all** and neither lane had an
+Unreal verdict. The D3 lane found it, declined to patch it, and was right to: silently recomputing another
+lane's build digest is not something to do without its owner knowing.
+
+**Two faults, both mine.** `EchoesNetworkSession.cpp` still declared `BuildIdentityMaterial` as
+`...:snapshot-31:view-3`, and the same test binds its SHA-256 in `BuildId`, so material and digest move
+together. Separately the test resolved the schema with `kSnapshotVersion\s*=\s*(\d+)\s*;`, which returned
+`None` once my declaration aliased `kSnapshotVersion` to `kFutureWellCaptureGeometrySnapshotVersion` across
+two lines — so it failed before the equality was ever evaluated.
+
+**Fixed by teaching the test, not by bending the source.** The header already aliases `kReplayVersion` to a
+named era constant, so aliasing is the house style and naming the era is more readable than a bare literal.
+The test now resolves one level of aliasing. Material is `snapshot-32` and the digest is recomputed to
+`e4cfbafff0459d84adccb7a5f78f6a13ae10cfbddbe9970c8fa6a46706d9f3ba`; both were composed by reading the same
+sources the test reads, so the material is right by construction rather than by transcription.
+
+**Verified:** `zsh Scripts/test_content.sh` exits 0, twelve suites pass, content SHA-256
+`0460f5e2fc180238fc71364af138cce3fe1943ef2942af19a66eb2cc1de356e1`. Note for the next person: that script is
+zsh (`${0:A:h:h}`); invoking it with bash fails on an unbound variable that has nothing to do with content.
+
+**Worth keeping.** A schema bump has a fourth obligation beyond the loader, the tests and the legacy flag:
+the build identity that stops mismatched builds negotiating compatibility. The content gate caught it before
+a single file compiled, which is the cheapest possible place to find it.
+
 ## Authored Well capture geometry now reaches the simulation (snapshot 32 / replay 37) — 2026-09-12, 02:10Z
 
 Closes the open finding recorded earlier tonight. `capture_radius_cm` and `capture_ticks` were validated by
