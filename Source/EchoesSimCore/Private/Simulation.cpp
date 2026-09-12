@@ -6753,13 +6753,17 @@ bool Simulation::IsFutureWellZoneMember(const Entity& well,
         entity.owner == kNeutralPlayer || !IsInsideMap(entity.position)) {
         return false;
     }
-    // Since snapshot schema 32 this is authored (future_wells.json
-    // capture_radius_cm). Pre-32 recordings replay against the constant.
-    const std::int64_t radius = legacyWellCaptureGeometrySemantics_
-                                    ? kFutureWellCaptureRadiusRaw
-                                    : config_.rules.futureWell.captureRadiusRaw;
+    const std::int64_t radius = FutureWellCaptureRadiusRaw();
     return DistanceSquaredRaw(well.position, entity.position) <=
            static_cast<std::uint64_t>(radius * radius);
+}
+
+std::int64_t Simulation::FutureWellCaptureRadiusRaw() const {
+    // Since snapshot schema 32 this is authored (future_wells.json
+    // capture_radius_cm). Pre-32 recordings replay against the constant.
+    return legacyWellCaptureGeometrySemantics_
+               ? kFutureWellCaptureRadiusRaw
+               : config_.rules.futureWell.captureRadiusRaw;
 }
 
 bool Simulation::IsFutureWellContested(const Entity& well) const {
@@ -8272,6 +8276,7 @@ std::optional<PlayerView> Simulation::CreatePlayerView(PlayerId player) const {
     view.productionRequiresNetworkPower_ =
         !legacyLinkReplaySemantics_ && !legacyPoweredProductionReplaySemantics_;
     view.firingLanesEnforced_ = !legacyFiringLaneReplaySemantics_;
+    view.futureWellCaptureRadiusRaw_ = FutureWellCaptureRadiusRaw();
     view.player_ = *playerState;
     view.decisionSeed_ = config_.randomSeed;
     view.populationUsed_ = PopulationUsed(player);
@@ -8481,6 +8486,11 @@ std::vector<Command> Simulation::GenerateAiCommands(
     AiPersonality personality) {
     std::vector<Command> commands{};
     std::set<EntityId> wellsAssignedThisBatch;
+    // REL-AI-024. Orders queued in this batch have not executed, so a
+    // guard that reads entity state alone sees no denier and sends every
+    // idle body to the same Well. Same hazard, same fix as
+    // `wellsAssignedThisBatch`.
+    std::set<EntityId> denialsAssignedThisBatch;
     if (!IsValidAiPersonality(personality)) {
         return commands;
     }
@@ -9877,6 +9887,110 @@ std::vector<Command> Simulation::GenerateAiCommands(
             }
             if (nearestEnemy == nullptr) {
                 nearestEnemy = nearestWell;
+            }
+            // REL-AI-024 denial. A Preserve Well pays its holder only while no
+            // hostile body stands inside its capture radius: ApplyPreserveIncome
+            // skips a contested Well, and UpdateVisibility withholds its vision
+            // bonus too. Presence alone therefore stops the income outright, with
+            // no capture, no 300-tick protocol, and no need to break 100,000 hit
+            // points. A seat with no Well income of its own sends one combat unit
+            // to stand in the nearest visible enemy Well that has begun paying.
+            //
+            // Two properties are deliberate. It pushes a unit FORWARD, unlike the
+            // muster reverted in `17ed997` for recalling forward units at a cost
+            // of 231 decisive matches, so it cannot reproduce that treadmill. And
+            // an arrived denier HOLDS: without that, the attack scan below would
+            // take it off the Well the moment it arrived, the income would resume,
+            // and the same unit would be sent out again next plan — an oscillation
+            // that denies nothing and walks a unit back and forth forever.
+            if (playerState != nullptr) {
+                bool seatHoldsPreserveWell = false;
+                for (const Entity& owned : entities_) {
+                    if (owned.owner == player &&
+                        owned.type == EntityType::FutureWell &&
+                        owned.hitPoints > 0 &&
+                        owned.wellChoice == FutureWellChoice::Preserve) {
+                        seatHoldsPreserveWell = true;
+                        break;
+                    }
+                }
+                const Entity* denialTarget = nullptr;
+                std::uint64_t denialDistance =
+                    std::numeric_limits<std::uint64_t>::max();
+                if (!seatHoldsPreserveWell) {
+                    for (const Entity& candidate : entities_) {
+                        // Contested Wells stay eligible on purpose. Excluding
+                        // them would drop the target the instant our own denier
+                        // arrived, and the unit would fall through to the attack
+                        // scan and leave — the oscillation the hold prevents.
+                        if (candidate.type != EntityType::FutureWell ||
+                            candidate.wellChoice != FutureWellChoice::Preserve ||
+                            candidate.wellActivationTick == 0 ||
+                            candidate.hitPoints <= 0 ||
+                            !config_.IsHostile(player, candidate.owner) ||
+                            !IsEntityVisibleTo(player, candidate.id)) {
+                            continue;
+                        }
+                        const std::uint64_t distance =
+                            DistanceSquaredRaw(actor.position, candidate.position);
+                        if (distance < denialDistance ||
+                            (distance == denialDistance &&
+                             (denialTarget == nullptr ||
+                              candidate.id < denialTarget->id))) {
+                            denialTarget = &candidate;
+                            denialDistance = distance;
+                        }
+                    }
+                }
+                if (denialTarget != nullptr) {
+                    // From the view, not the rules table: under a pre-32
+                    // replay the enforced radius is the old constant, and a
+                    // planner that aimed at the authored one would judge a
+                    // denier committed when the contest test disagreed.
+                    const std::int64_t denialRadius =
+                        view.FutureWellCaptureRadiusRaw();
+                    const std::uint64_t denialZone =
+                        static_cast<std::uint64_t>(denialRadius * denialRadius);
+                    const auto committedToDenial = [&](const Entity& unit) {
+                        return DistanceSquaredRaw(denialTarget->position,
+                                                  unit.position) <= denialZone ||
+                               (unit.order.type == OrderType::Move &&
+                                DistanceSquaredRaw(denialTarget->position,
+                                                   unit.order.destination) <=
+                                    denialZone);
+                    };
+                    if (committedToDenial(actor)) {
+                        // Standing on the income, or walking onto it. Issue
+                        // nothing: the ground is the whole play.
+                        continue;
+                    }
+                    bool mateCommittedToDenial =
+                        denialsAssignedThisBatch.count(denialTarget->id) != 0;
+                    for (const Entity& mate : entities_) {
+                        if (mateCommittedToDenial) {
+                            break;
+                        }
+                        if (mate.owner != player || mate.id == actor.id ||
+                            mate.hitPoints <= 0 ||
+                            !IsBarracksUnitType(mate.type)) {
+                            continue;
+                        }
+                        if (committedToDenial(mate)) {
+                            mateCommittedToDenial = true;
+                            break;
+                        }
+                    }
+                    if (!mateCommittedToDenial) {
+                        // One denier at a time. The rest of the force keeps
+                        // fighting; this is counterplay, not a commitment.
+                        command.type = CommandType::Move;
+                        command.target = 0;
+                        command.position = denialTarget->position;
+                        denialsAssignedThisBatch.insert(denialTarget->id);
+                        commands.push_back(command);
+                        continue;
+                    }
+                }
             }
             if (nearestEnemy != nullptr) {
                 command.type = CommandType::Attack;

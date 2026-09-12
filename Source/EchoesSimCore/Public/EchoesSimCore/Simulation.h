@@ -1093,6 +1093,16 @@ public:
     [[nodiscard]] bool FiringLanesEnforced() const {
         return firingLanesEnforced_;
     }
+    /** The Future Well capture radius this simulation is actually enforcing,
+     * in raw fixed-point units. Resolved here rather than read from the rules
+     * table because a pre-schema-32 recording replays against the constant
+     * while current rules use the authored `capture_radius_cm`. A planner or
+     * a HUD that read the rules table directly would disagree with the
+     * contest test in exactly those replays. Transient: never serialized,
+     * never hashed. */
+    [[nodiscard]] std::int64_t FutureWellCaptureRadiusRaw() const {
+        return futureWellCaptureRadiusRaw_;
+    }
     /** SPEC-CMB-013: the visible allied body blocking attacker's lane to
      * target, or 0. Same geometry as the authoritative rule; allied bodies
      * are always visible to their own seat, so the answer is exact. */
@@ -1172,6 +1182,7 @@ private:
     bool usesBulwarkCommitmentRules_ = true;
     bool productionRequiresNetworkPower_ = true;
     bool firingLanesEnforced_ = true;
+    std::int64_t futureWellCaptureRadiusRaw_ = kFutureWellCaptureRadiusRaw;
     PlayerState player_{};
     std::uint64_t decisionSeed_ = 0;
     std::int32_t populationUsed_ = 0;
@@ -1365,6 +1376,12 @@ public:
     [[nodiscard]] bool IsCollapsedFutureWell(const Entity& entity) const;
     [[nodiscard]] bool IsOperationalFutureWell(const Entity& entity) const;
     [[nodiscard]] bool IsFutureWellContested(const Entity& entity) const;
+    /** The Future Well capture radius in raw fixed-point units, resolved
+     * against the replay's own semantics. Since snapshot schema 32 the
+     * figure is authored (`future_wells.json` capture_radius_cm); pre-32
+     * recordings replay against the constant. Every caller goes through
+     * here so the two semantics cannot drift apart at one site only. */
+    [[nodiscard]] std::int64_t FutureWellCaptureRadiusRaw() const;
     /** SPEC-CMB-013 firing lanes: the nearest allied mobile body whose
      * footprint intersects the straight segment from attacker to target, or 0
      * when the lane is clear. Deployed Bulwark shields never block. Public so

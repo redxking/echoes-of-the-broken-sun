@@ -6,6 +6,96 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## A skirmish quicksave would not load while a mineral cover stood — 2026-09-12, 11:40Z
+
+Found by exposure, while implementing something else. `ValidateSkirmishSnapshotBinding` required a
+checkpoint's blocked tiles to equal the **authored map preset's** exactly. The simulation legitimately
+mutates terrain, so that is an invariant the game itself breaks: a Kharuun HeavyUnit's temporary mineral
+cover blocks the tile it stands on and reverts it when the cover dies. **Any skirmish checkpoint taken
+while a cover stood was rejected as not matching its own battlefield** — a save the player made,
+refused on load. `REL-SAV-005` is IMPLEMENTED, not verified: no regression test covers the fix
+directly, because the validator is a file-static in the Unreal layer.
+
+**Attribution was established, not argued.** A planner change of mine made
+`Echoes.Runtime.Gameplay.CompleteSkirmishDefeat` fail. HEAD-built editor passes that test, my build
+fails it, same working tree minutes apart (`single-head/`, `single-mine/`). So the failure was mine —
+and the defect was not. My change moved a HeavyUnit; a cover happened to be standing at tick 9810.
+
+**Mechanism confirmed by instrumenting, after one plausible theory.** I could have stopped at "cover
+mutates terrain, therefore mismatch" — it was right. A diagnostic in the validator settled it in one
+run instead: `tile=13,10 expectedBlocked=0 snapshotBlocked=1 coverOnTile=1`. Scaffold removed, zero
+`DIAG` residue. The permanent error message now names the tile and both states; the bare original cost
+a build-and-rerun cycle to become diagnosable.
+
+**Enumerating every `SetTerrainTile` site before fixing found a second legitimate delta**, which
+stopping at the first cause would have missed: `ResolveExpiredReshapes` reopens a tile to free a unit
+trapped in an all-blocked pocket, leaving the snapshot *unblocked* where the preset is blocked. Reshape
+scarring (Open → Scarred) touches neither. The fix forgives a tile only when it is blocked in the
+snapshot, open in the preset, **and** carries a live cover entity at that exact tile, so a checkpoint
+recovered against the wrong map still fails. **The reopen case is left unhandled and documented in the
+code** rather than widened away: forgiving missing blocked tiles in general is most of what the check
+is for, and doing it properly needs a recorded runtime-terrain delta in the snapshot.
+
+## REL-AI-024 denial play: implemented, measured, and undecided — 2026-09-12, 11:40Z
+
+Owner ordered this next after the muster. It is written, it works, and **the measurement cannot decide
+whether it earns its place.** Recorded that way rather than as a result.
+
+**The rule was already there and nothing exercised it.** `ApplyPreserveIncome` skips a contested Well
+and `UpdateVisibility` withholds its vision bonus, so presence alone stops the income — no capture, no
+300-tick protocol, no breaking 100,000 hit points. That is `SPEC-WELLP-002`'s "control remains
+completely contestable", and it had no test and no structured state row. It has both now: income stops
+while a hostile body stands inside the radius, the Well is neither captured nor damaged, and the income
+resumes when the body leaves. `SPEC-WELLP-002` → AGENT VERIFIED.
+
+**Two defects in the retained patch, both found by instrumenting rather than reasoning.** A probe
+printing the planner's actual commands showed the retained version ordering *both* soldiers onto the
+same Well: its one-denier guard read entity state, but orders queued in the same batch have not
+executed. Fixed with `denialsAssignedThisBatch`, the idiom `wellsAssignedThisBatch` already uses for
+this exact hazard. The second: an arrived denier fell through to the attack scan, left the Well,
+restarted the income, and was re-sent next plan. It now holds.
+
+**The planner is deliberately static** — `GenerateAiCommands(const PlayerView&, …)` takes the player's
+view, not the simulation, so my first draft failed to compile for calling simulation members. That
+isolation is a feature and it caught a real bug: the resolved Well capture radius is now exposed on
+`PlayerView`, beside `FiringLanesEnforced()` and `ProductionRequiresNetworkPower()`, so the planner and
+the contest test cannot disagree under a pre-schema-32 replay.
+
+**Correction to `d3-meridian-20260911T161144Z/denial-play-unmeasurable`.** That record concludes the
+precondition "never holds" on the tournament map and that only an Unreal Glass Scar scenario can
+measure the play. **The first half is wrong as written.** Opportunity arises in 43 of 72 tournament
+matches. The earlier zero is explained by that record's own text — an *Adaptive* seat commits its Well
+to Preserve early — and the harness now samples four personality pairings, three of which often never
+do. A finding true of Adaptive-only sampling was written as a general one, the same shape as the
+"clean tree" correction earlier today. Its *preference* for Glass Scar was right for a reason it did
+not give: one central contested Well converts opportunity to denial at ~49% of samples against ~14%.
+
+**Measured A/B against HEAD's planner**, same harness, observer, seeds and map; baseline built from
+`git show HEAD:` sources carrying zero occurrences of the denial code, checked. Observer is
+state-based and planner-independent, opportunity and achievement counted apart because a rule that is
+unreachable and a rule that declines produce identical outcomes.
+
+At 936 matches on Glass Scar: denial time +7.3%, terminal 861 → 872, stalls 75 → 64. **That aggregate
+is not usable.** 58 of 72 conditions are degenerate — all 13 seeds finish on the identical tick — so
+those rows carry one observation, not thirteen. Across the 14 conditions non-degenerate in both runs
+the sign reverses (stalls 55 → 64) with per-condition deltas of −5, −1, +1, +1, +2, +2, +3, +3, +3 and
+no consistent direction. Either number reported alone would be sampling noise presented as a finding.
+
+**Also worth keeping: most "achieved" time is not the play.** The tournament baseline scores 1,134
+denial samples with no denial code at all, because a Well sits five tiles from its owner's Core and an
+attacking army stands inside the radius anyway. Without the A/B the changed run's 1,788 would have read
+as the play working.
+
+**Left in the tree, not reverted.** It is not the muster (a measured 576 against 807). Suites are green
+with it in: Unreal 139/139, native 152/152 in three configurations. Reverting it would also leave the
+`REL-SAV-005` fix unexercised by any suite. `REL-AI-024` → IN PROGRESS.
+
+**TBR-STR-009 — the Glass Scar condition set cannot decide a planner change.** Deciding this play, or
+any other, needs non-degenerate conditions. The cause is already recorded in
+`authored-rules-degeneracy-20260912T002357Z`: the seed reaches play only through the wander fallback,
+which a tasked planner never reaches, so more seeds will not help. Varying an authored opening — spawn
+tiles, starting force, or deposit layout — per condition is the lever. That is the harness lane's work.
+
 ## Main published: 20 commits pushed under the granted authority — 2026-09-12, 09:10Z
 
 `14dc8ca..840f8c3` pushed to `origin/main`; the checkout is now 0 ahead, 0 behind. This discharges the
@@ -498,11 +588,13 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 |---|---|---|---|---|---|---|
 | `REL-AI-006` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-7.json | b06254b | 2026-09-11 | Threshold-based massing measured: 114 of 1000 matches changed, zero conversions, branch never fires when saturated; needs muster point and synchronised release |
 | `REL-AI-022` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-8.json | bd3215c | 2026-09-11 | 807/1000 after the retreat fix; mirror win rates unusable until the harness alternates planning order, since seat 0 plans first every tick |
+| `REL-AI-024` | IN PROGRESS | SRC | BuildArtifacts/Evidence/rel-ai-024-denial-20260912T104957Z | 24d7055 | 2026-09-12 | Denial play implemented and measured A/B against HEAD on two maps. Undecided: 58/72 Glass Scar conditions are degenerate, so the 936-match aggregate is replays; the 14 comparable conditions reverse the sign with no consistent direction. Not a regression, not a demonstrated gain. |
 | `REL-AI-031` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-well-contest | b62f426 | 2026-09-11 | Opponent contests a Well claimed by another player; CompleteSkirmishDefeat finishes at tick 9824 after failing in every suite |
 | `REL-ECO-010` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | [INSUFFICIENT_DAWN]/[INSUFFICIENT_MATTER] refusals name unit, price, holding and source; Gameplay.ProductionRefusalText |
 | `REL-ECO-011` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Ceiling 120 and committed band implemented (schema 33); native committed-band test; HUD label compiled natively, editor rerun owed |
 | `REL-FAC-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | REL-FAC-002.PROD authored and implemented: Foundry produces only while network-powered; replay schema 32; native+Unreal+rendered green; uncommitted |
 | `REL-FAC-028` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z | 34ca1a0 | 2026-09-11 | Authored optic mesh generated via asset pipeline and integrated in C++ in place of placeholder cube |
+| `REL-SAV-005` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/rel-ai-024-denial-20260912T104957Z | 24d7055 | 2026-09-12 | Defect found and fixed: ValidateSkirmishSnapshotBinding required checkpoint blocked tiles to equal the authored preset, so any skirmish save taken while a Kharuun mineral cover stood refused to load. Narrow cover exemption added; the ResolveExpiredReshapes reopen case stays unhandled and is documented in code. No regression test covers the fix directly. |
 | `REL-UI-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
 | `SPEC-BAL-009` | AGENT VERIFIED | SRC | — | 85eaf3c | 2026-09-11 | Re-measured on schema 36 (85eaf3c): unchanged, 60/60 vs 7/60 control; harness units all carry explicit orders so idle return fire does not apply |
@@ -516,6 +608,7 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `SPEC-STANCE-002` | AGENT VERIFIED | PKG-AUTO | — | 2bd56de | 2026-09-11 | Defensive default answers threats via idle return fire (schema 36); verified in the D3 lane's full suite |
 | `SPEC-TUT-008` | AGENT VERIFIED | PKG-REND | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/readiness-review-8 | 46d841c | 2026-09-11 | All ten readiness lessons earnable; lessons 6-10 each committed in a rendered practice run (readiness review driver); practice-mode gate and staging defects repaired; owner play open |
 | `SPEC-UI-008` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-1 | 7c86d61 | 2026-09-11 | F15: completed-but-unpowered Foundry drawn dark and cold; other leaves unchanged |
+| `SPEC-WELLP-002` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/rel-ai-024-denial-20260912T104957Z | 24d7055 | 2026-09-12 | Preserve contestability proven by test: a hostile body inside the capture radius stops the income, the Well is neither captured nor damaged, and the income resumes when the body leaves. Native 152/152 in three configurations. |
 | `TBR-SCP-012` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-17 | 34ca1a0 | 2026-09-11 | First bounded rule landed: opponent Future Well commands withheld in authored campaign operations (bridge, ECHOES_AI_WELL_DOCTRINE); per-mission doctrine remains D7 |
 | `TBR-STR-001` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Owner Go 2026-09-11, option A authored as SPEC-CMB-013 and implemented; deployed Bulwark exempt |
 | `TBR-STR-002` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar | df85574 | 2026-09-11 | Glass Scar rows 30-34 wired as low ground; Unreal 138/139 (only the unattributed CompleteSkirmishDefeat); runtime proof that a crossing unit is blind to the rim |
@@ -7311,3 +7404,6 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-11T23:37Z — `REL-AI-031` → **IMPLEMENTED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-well-contest; commit b62f426; Opponent contests a Well claimed by another player; CompleteSkirmishDefeat finishes at tick 9824 after failing in every suite
 - 2026-09-11T23:45Z — `SPEC-CMB-013` → **AGENT VERIFIED**; class PKG-AUTO; evidence BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-budget; commit d3a90de; Strategic depth complete: firing lanes, committed band, role bodies, height bands and Glass Scar low ground verified; Defeat budget restored to 60,000 at a measured 13,265
 - 2026-09-12T00:03Z — `REL-AI-022` → **IN PROGRESS**; class PKG-AUTO; evidence BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-8.json; commit bd3215c; 807/1000 after the retreat fix; mirror win rates unusable until the harness alternates planning order, since seat 0 plans first every tick
+- 2026-09-12T11:36Z — `SPEC-WELLP-002` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/rel-ai-024-denial-20260912T104957Z; commit 24d7055; Preserve contestability proven by test: a hostile body inside the capture radius stops the income, the Well is neither captured nor damaged, and the income resumes when the body leaves. Native 152/152 in three configurations.
+- 2026-09-12T11:36Z — `REL-SAV-005` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/rel-ai-024-denial-20260912T104957Z; commit 24d7055; Defect found and fixed: ValidateSkirmishSnapshotBinding required checkpoint blocked tiles to equal the authored preset, so any skirmish save taken while a Kharuun mineral cover stood refused to load. Narrow cover exemption added; the ResolveExpiredReshapes reopen case stays unhandled and is documented in code. No regression test covers the fix directly.
+- 2026-09-12T11:36Z — `REL-AI-024` → **IN PROGRESS**; class SRC; evidence BuildArtifacts/Evidence/rel-ai-024-denial-20260912T104957Z; commit 24d7055; Denial play implemented and measured A/B against HEAD on two maps. Undecided: 58/72 Glass Scar conditions are degenerate, so the 936-match aggregate is replays; the 14 comparable conditions reverse the sign with no consistent direction. Not a regression, not a demonstrated gain.
