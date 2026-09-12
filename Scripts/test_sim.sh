@@ -9,6 +9,7 @@ trap 'rm -rf "${build_dir}"' EXIT
 cxx="${CXX:-clang++}"
 common_flags=(
     -std=c++20
+    -DECHOES_RESHAPE_CHECKPOINT_EMBEDDED
     -Wall
     -Wextra
     -Wpedantic
@@ -19,7 +20,13 @@ sources=(
     "${project_dir}/Source/EchoesSimCore/Private/Simulation.cpp"
     "${project_dir}/Source/EchoesSimCore/Private/NetworkProtocol.cpp"
     "${project_dir}/Tests/Native/SimCoreTests.cpp"
+    "${project_dir}/Tests/Native/ReshapeCheckpointRegression.cpp"
 )
+
+test_args=()
+if [[ -n "${ECHOES_SIM_TEST_FILTER:-}" ]]; then
+    test_args+=(--filter "$ECHOES_SIM_TEST_FILTER")
+fi
 
 run_configuration() {
     local name="$1"
@@ -28,7 +35,7 @@ run_configuration() {
 
     echo "== ${name} =="
     "${cxx}" "${common_flags[@]}" "$@" "${sources[@]}" -o "${executable}"
-    "${executable}"
+    "${executable}" "${test_args[@]}"
 }
 
 run_configuration optimized -O2
@@ -44,4 +51,4 @@ sanitized_executable="${build_dir}/echoes_sim_tests_sanitized"
     "${sources[@]}" \
     -o "${sanitized_executable}"
 # LeakSanitizer is unavailable in Apple's macOS AddressSanitizer runtime.
-ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1 "${sanitized_executable}"
+ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1 "${sanitized_executable}" "${test_args[@]}"

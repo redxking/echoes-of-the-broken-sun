@@ -290,9 +290,9 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
               FEchoesCampaignProgress::SchemaVersion,
               static_cast<uint16>(2));
     // Schema 32 carries the authored Future Well capture geometry.
-    TestEqual(TEXT("Mission 14 writes native snapshot schema 32"),
+    TestEqual(TEXT("Mission 14 writes native snapshot schema 33"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(32));
+              static_cast<uint32>(33));
 
     FString Feedback;
     FEchoesCampaignProgress ThirteenRecords =
@@ -695,7 +695,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         NativeLayout;
     TestTrue(
-        TEXT("The Mission 14 schema-32 checkpoint exposes bounded receipt, lifecycle, hostility, and production blocks"),
+        TEXT("The Mission 14 schema-33 checkpoint exposes bounded receipt, lifecycle, hostility, and production blocks"),
         FFileHelper::LoadFileToArray(NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, NativeCheckpoint, MapFailure) &&
             ExtractReplayCheckpointPayloadForTest(NativeCheckpoint, Feedback) &&
@@ -757,7 +757,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TArray<uint8> LosslessV28Projection = NativeCheckpoint;
     TestTrue(
         TEXT("Mission 14 production state is losslessly representable by schema 28"),
-        // NativeCheckpoint is schema 32, so the hand-assembled chain starts a
+        // NativeCheckpoint is schema 33, so the hand-assembled chain starts a
         // step earlier than it used to; the V31 step inspects at 31 and would
         // refuse a 32 payload outright.
         EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV32ToV31(
@@ -779,7 +779,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
                     NativeLayout.Schema31AppendSize +
                     // Schema 32's twelve interior capture-geometry bytes go
                     // with the projection now that it starts at 32.
-                    12 +
+                    12 + NativeLayout.Schema33AppendSize +
                     static_cast<int32>(NativeLayout.PendingCommandCount));
     // The projection is proven; the shipped opponent resumes for the rest of
     // the mission so later assertions see the ordinary doctrine.
@@ -961,7 +961,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             EchoesSnapshotMigrationTestHelpers::UpdateEnvelopeChecksum(
                 ProtectedCoreSnapshot);
             // The source here is the checkpoint just written by this run, so
-            // it carries native schema 32. Replay versioning is independent.
+            // it carries native schema 33. Replay versioning is independent.
             bProtectedCoreSourceLoadable =
                 EchoesSnapshotMigrationTestHelpers::
                     IsLoadableEmbeddedSnapshot(
@@ -1097,7 +1097,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
             ZeroReceiptNative.Num() - ZeroReceiptV22.Num() ==
                 // Includes schema 32's twelve interior capture-geometry bytes,
                 // spliced out at the head of the shared chain.
-                5 + 12 + NativeLayout.MemoryLedgerSize +
+                5 + 12 + NativeLayout.Schema33AppendSize + NativeLayout.MemoryLedgerSize +
                     NativeLayout.Schema26AppendSize +
                     NativeLayout.Schema27AppendSize +
                     NativeLayout.Schema28AppendSize +
@@ -1120,10 +1120,10 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         static_cast<uint64>(NativeLayout.Schema31AppendSize) +
         // Schema 32 spliced twelve interior bytes of authored capture geometry
         // out of the rules block on the way down.
-        12ULL +
+        12ULL + static_cast<uint64>(NativeLayout.Schema33AppendSize) +
         static_cast<uint64>(NativeLayout.PendingCommandCount);
     TestTrue(
-        TEXT("The Mission 14 checkpoint converts through every schema from 32 to its synthetic schema-22 shape"),
+        TEXT("The Mission 14 checkpoint converts through every schema from 33 to its synthetic schema-22 shape"),
         EchoesSnapshotMigrationTestHelpers::
                 ConvertMission14EnvelopeSnapshotToV22(V22Checkpoint) &&
             EchoesSnapshotMigrationTestHelpers::Mission14SnapshotVersion(
@@ -1198,10 +1198,10 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TArray<uint8> ResavedNativePrimary;
     EchoesSnapshotMigrationTestHelpers::FEmbeddedSnapshotLayout
         ResavedNativeLayout;
-    // Resaving writes native schema 32. The retained backup is a genuine
+    // Resaving writes native schema 33. The retained backup is a genuine
     // migration fixture and stays at schema 22.
     TestTrue(
-        TEXT("The legacy-loaded Mission 14 state resaves natively as schema 32"),
+        TEXT("The legacy-loaded Mission 14 state resaves natively as schema 33"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope, *QuickSavePath) &&
             FEchoesCampaignMapCheckpoint::Inspect(NativeMapEnvelope, MapIdentity, ResavedNativePrimary, MapFailure) &&
@@ -1214,7 +1214,7 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
                 ResavedNativePrimary) == echoes::sim::kSnapshotVersion);
     TArray<uint8> RetainedV22Backup;
     TestTrue(
-        TEXT("The first schema-32 resave retains the valid schema-22 Mission 14 generation"),
+        TEXT("The first schema-33 resave retains the valid schema-22 Mission 14 generation"),
         FFileHelper::LoadFileToArray(
             NativeMapEnvelope,
             *(QuickSavePath + TEXT(".bak"))) &&

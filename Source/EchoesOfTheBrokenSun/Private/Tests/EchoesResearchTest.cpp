@@ -31,10 +31,10 @@ bool FEchoesResearchTest::RunTest(const FString& Parameters)
     // the historical cutoffs stay fixed so old research/production histories
     // retain their original rules. The current-version pin is a literal on
     // purpose: an unannounced bump must fail here rather than pass silently.
-    TestEqual(TEXT("Research interruption uses snapshot schema 32"),
-              echoes::sim::kSnapshotVersion, 32U);
-    TestEqual(TEXT("Current replay version is 37 (authored Well capture geometry)"),
-              echoes::sim::kReplayVersion, 37U);
+    TestEqual(TEXT("Research interruption uses snapshot schema 33"),
+              echoes::sim::kSnapshotVersion, 33U);
+    TestEqual(TEXT("Current replay version is 38 (Reshape terrain history)"),
+              echoes::sim::kReplayVersion, 38U);
     TestEqual(TEXT("Construction-assist cutoff remains replay 29"),
               echoes::sim::kMaintenanceReplayVersion, 29U);
     TestEqual(TEXT("Historical Bulwark commitment cutoff remains replay 28"),

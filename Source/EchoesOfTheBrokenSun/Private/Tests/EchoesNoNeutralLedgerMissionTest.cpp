@@ -321,7 +321,7 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
     TestEqual(
         TEXT("Simulation snapshot schema is the current native schema"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(32));
+        static_cast<uint32>(33));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();

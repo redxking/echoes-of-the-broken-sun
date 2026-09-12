@@ -19,6 +19,8 @@
 #include <utility>
 #include <vector>
 
+void RunReshapeCheckpointRegression();
+
 namespace {
 
 using namespace echoes::sim;
@@ -403,6 +405,19 @@ constexpr std::size_t kSnapshotV32CaptureGeometryOffset = 1985;
 
 std::vector<std::uint8_t> ConvertSnapshotV32ToV31(
     const std::vector<std::uint8_t>& current) {
+    // Schema 33 appends Reshape recovery history. A downgrade is lossless
+    // only when that history is empty; never silently discard populated state.
+    if (ReadU32(current, 4) == 33) {
+        const auto parsed = Simulation::LoadSnapshot(current);
+        REQUIRE(parsed.has_value());
+        REQUIRE(parsed->ReopenedReshapeTerrain().empty());
+        REQUIRE(current.size() >= 12);
+        std::vector<std::uint8_t> v32 = current;
+        v32.erase(v32.end() - 12, v32.end() - 8);
+        WriteU32(v32, 4, 32);
+        ResignSnapshot(v32);
+        return ConvertSnapshotV32ToV31(v32);
+    }
     REQUIRE(ReadU32(current, 4) == 32);
     REQUIRE(current.size() >
             kSnapshotV32CaptureGeometryOffset + kSnapshotV32RulesGrowth);
@@ -11947,6 +11962,7 @@ int main(int argc, char** argv) {
         {"masked corridor mover still leaves", TestMaskedCorridorMoverStillLeaves},
         {"authentic schema29 zero-tick network replay",
          TestAuthenticSchema29ZeroTickNetworkReplay},
+        {"Reshape checkpoint history and recovery", RunReshapeCheckpointRegression},
     };
 
     std::size_t passed = 0;

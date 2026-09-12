@@ -1683,6 +1683,23 @@ std::int8_t Simulation::HeightBandAt(std::int32_t tileX, std::int32_t tileY) con
 bool Simulation::SetTerrainTile(std::int32_t tileX,
                                 std::int32_t tileY,
                                 Terrain terrain) {
+    if (!SetTerrainTilePreservingHistory(tileX, tileY, terrain)) {
+        return false;
+    }
+    loadedSnapshotVersion_ = kSnapshotVersion;
+    // An explicit authored/scenario edit cannot inherit an earlier runtime
+    // exception, even when it writes the same value.
+    const auto tile = static_cast<std::uint32_t>(
+        tileY * config_.mapWidthTiles + tileX);
+    std::erase_if(reopenedReshapeTerrain_, [tile](const auto& record) {
+        return record.tileIndex == tile;
+    });
+    return true;
+}
+
+bool Simulation::SetTerrainTilePreservingHistory(std::int32_t tileX,
+                                                std::int32_t tileY,
+                                                Terrain terrain) {
     if (tileX < 0 || tileY < 0 || tileX >= config_.mapWidthTiles ||
         tileY >= config_.mapHeightTiles || !IsValidTerrain(terrain)) {
         return false;
@@ -1694,6 +1711,38 @@ bool Simulation::SetTerrainTile(std::int32_t tileX,
         pathFieldCache_.clear();
     }
     return true;
+}
+
+Terrain Simulation::TerrainWithoutMineralCoverAt(std::int32_t tileX,
+                                                std::int32_t tileY) const {
+    const Terrain ground = TerrainAt(tileX, tileY);
+    if (ground == Terrain::Blocked) {
+        for (const Entity& entity : entities_) {
+            if (entity.temporaryMineralCover && entity.hitPoints > 0 &&
+                entity.position.x.FloorToInt() == tileX &&
+                entity.position.y.FloorToInt() == tileY) {
+                return entity.mineralCoverUnderlyingTerrain;
+            }
+        }
+    }
+    return ground;
+}
+
+Terrain Simulation::CheckpointBindingTerrainAt(std::int32_t tileX,
+                                               std::int32_t tileY) const {
+    if (tileX < 0 || tileY < 0 || tileX >= config_.mapWidthTiles ||
+        tileY >= config_.mapHeightTiles) {
+        return Terrain::Blocked;
+    }
+    const Terrain ground = TerrainWithoutMineralCoverAt(tileX, tileY);
+    const auto tile = static_cast<std::uint32_t>(
+        tileY * config_.mapWidthTiles + tileX);
+    const auto record = std::lower_bound(reopenedReshapeTerrain_.begin(),
+        reopenedReshapeTerrain_.end(), tile, [](const auto& entry, auto index) {
+            return entry.tileIndex < index;
+        });
+    return ground != Terrain::Blocked && record != reopenedReshapeTerrain_.end() &&
+            record->tileIndex == tile ? Terrain::Blocked : ground;
 }
 
 Terrain Simulation::TerrainAt(std::int32_t tileX, std::int32_t tileY) const {
@@ -5831,7 +5880,7 @@ CommandResolutionOutcome Simulation::ApplyCommand(const Command& command) {
             actor->mineralCoverCooldownUntilTick = std::min(
                 kMaximumSupportedTick,
                 currentTick_ + rules.cooldownTicks);
-            (void)SetTerrainTile(tileX, tileY, Terrain::Blocked);
+            (void)SetTerrainTilePreservingHistory(tileX, tileY, Terrain::Blocked);
             entities_.push_back(cover);
             MarkStructureOccupancyDirty();
             outcome = CommandResolutionOutcome::Applied;
@@ -6861,7 +6910,7 @@ void Simulation::CollapseFutureWell(Entity& well) {
                     static_cast<std::uint64_t>(kFutureWellScarRadiusRaw) *
                         kFutureWellScarRadiusRaw &&
                 TerrainAt(tileX, tileY) == Terrain::Open) {
-                (void)SetTerrainTile(tileX, tileY, Terrain::Scarred);
+                (void)SetTerrainTilePreservingHistory(tileX, tileY, Terrain::Scarred);
             }
         }
     }
@@ -7342,7 +7391,7 @@ void Simulation::RemoveDestroyedEntities() {
         const std::int32_t tileX = entity.position.x.FloorToInt();
         const std::int32_t tileY = entity.position.y.FloorToInt();
         if (TerrainAt(tileX, tileY) == Terrain::Blocked) {
-            (void)SetTerrainTile(
+            (void)SetTerrainTilePreservingHistory(
                 tileX, tileY, entity.mineralCoverUnderlyingTerrain);
         }
     }
@@ -7438,13 +7487,15 @@ void Simulation::ClearInvalidOrders() {
 }
 
 void Simulation::ResolveExpiredReshapes() {
-    std::vector<Vec2> expiredCenters{};
+    std::vector<ReshapeTerrainReopening> expiredCenters{};
     for (Entity& entity : entities_) {
         if (entity.type == EntityType::FutureWell &&
             entity.wellChoice == FutureWellChoice::Reshape &&
             entity.reshapeUntilTick != 0 &&
             currentTick_ >= entity.reshapeUntilTick) {
-            expiredCenters.push_back(entity.position);
+            expiredCenters.push_back({0, entity.id,
+                entity.position.x.FloorToInt(), entity.position.y.FloorToInt(),
+                entity.reshapeUntilTick});
             entity.reshapeUntilTick = 0;
         }
     }
@@ -7462,14 +7513,14 @@ void Simulation::ResolveExpiredReshapes() {
         if (TerrainAt(tileX, tileY) != Terrain::Blocked) {
             continue;
         }
-        const bool affected = std::any_of(
-            expiredCenters.begin(), expiredCenters.end(), [&](Vec2 center) {
+        const auto affected = std::find_if(
+            expiredCenters.begin(), expiredCenters.end(), [&](const auto& center) {
                 return Abs64(static_cast<std::int64_t>(tileX) -
-                             center.x.FloorToInt()) <= 1 &&
+                             center.wellTileX) <= 1 &&
                        Abs64(static_cast<std::int64_t>(tileY) -
-                             center.y.FloorToInt()) <= 1;
+                             center.wellTileY) <= 1;
             });
-        if (!affected) {
+        if (affected == expiredCenters.end()) {
             continue;
         }
 
@@ -7519,7 +7570,20 @@ void Simulation::ResolveExpiredReshapes() {
             // Enclosed pockets and invalid all-blocked maps still resolve
             // deterministically without leaving an entity in an inescapable
             // cell: the unit stays exactly where it is and its ground reopens.
-            (void)SetTerrainTile(tileX, tileY, Terrain::Open);
+            const Terrain permanentGround = TerrainWithoutMineralCoverAt(tileX, tileY);
+            (void)SetTerrainTilePreservingHistory(tileX, tileY, Terrain::Open);
+            if (permanentGround == Terrain::Blocked) {
+                ReshapeTerrainReopening record = *affected;
+                record.tileIndex = static_cast<std::uint32_t>(
+                    tileY * config_.mapWidthTiles + tileX);
+                const auto insertion = std::lower_bound(reopenedReshapeTerrain_.begin(),
+                    reopenedReshapeTerrain_.end(), record.tileIndex,
+                    [](const auto& entry, auto tile) { return entry.tileIndex < tile; });
+                if (insertion == reopenedReshapeTerrain_.end() ||
+                    insertion->tileIndex != record.tileIndex) {
+                    reopenedReshapeTerrain_.insert(insertion, record);
+                }
+            }
         }
         // MOV-004 preserves the order rather than cancelling it. The route is
         // recalculated on the next tick; while no route exists the unit holds
@@ -7610,7 +7674,7 @@ void Simulation::ResolveMineralCovers() {
             const std::int32_t tileX = entity.position.x.FloorToInt();
             const std::int32_t tileY = entity.position.y.FloorToInt();
             if (TerrainAt(tileX, tileY) == Terrain::Blocked) {
-                (void)SetTerrainTile(
+                (void)SetTerrainTilePreservingHistory(
                     tileX, tileY, entity.mineralCoverUnderlyingTerrain);
             }
         }
@@ -10522,6 +10586,16 @@ void Simulation::WriteSnapshotPayload(Writer& writer, std::uint32_t version) con
             writer.U64(entity.deploymentTransitionUntilTick);
         }
     }
+    if (version >= kReshapeTerrainHistorySnapshotVersion) {
+        writer.U32(static_cast<std::uint32_t>(reopenedReshapeTerrain_.size()));
+        for (const auto& record : reopenedReshapeTerrain_) {
+            writer.U32(record.tileIndex);
+            writer.U32(record.wellId);
+            writer.I32(record.wellTileX);
+            writer.I32(record.wellTileY);
+            writer.U64(record.expiryTick);
+        }
+    }
 }
 
 std::vector<std::uint8_t> Simulation::SaveSnapshot(
@@ -10802,6 +10876,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
         return std::nullopt;
     }
     Simulation simulation(config);
+    simulation.loadedSnapshotVersion_ = version;
     if (!reader.U64(simulation.currentTick_) ||
         !reader.U32(simulation.nextEntityId_) ||
         !reader.U64(simulation.rng_.state) ||
@@ -12207,6 +12282,46 @@ std::optional<Simulation> Simulation::LoadSnapshot(
             entity.deploymentTransitionUntilTick = until;
         }
     }
+    if (version >= kReshapeTerrainHistorySnapshotVersion) {
+        std::uint32_t count = 0;
+        constexpr std::size_t kSerializedReopeningBytes = 24;
+        if (!reader.U32(count) || count > serializedTileCount ||
+            count > reader.Remaining() / kSerializedReopeningBytes) {
+            SetError(error, "snapshot Reshape terrain history count is invalid");
+            return std::nullopt;
+        }
+        simulation.reopenedReshapeTerrain_.reserve(count);
+        for (std::uint32_t index = 0; index < count; ++index) {
+            if (IsCancelledAtInterval()) return std::nullopt;
+            ReshapeTerrainReopening record{};
+            if (!reader.U32(record.tileIndex) || !reader.U32(record.wellId) ||
+                !reader.I32(record.wellTileX) || !reader.I32(record.wellTileY) ||
+                !reader.U64(record.expiryTick) ||
+                record.tileIndex >= serializedTileCount || record.wellId == 0 ||
+                record.wellId >= simulation.nextEntityId_ ||
+                record.wellTileX < 0 || record.wellTileX >= config.mapWidthTiles ||
+                record.wellTileY < 0 || record.wellTileY >= config.mapHeightTiles ||
+                record.expiryTick == 0 || record.expiryTick > simulation.currentTick_ ||
+                (!simulation.reopenedReshapeTerrain_.empty() &&
+                 simulation.reopenedReshapeTerrain_.back().tileIndex >= record.tileIndex)) {
+                SetError(error, "snapshot Reshape terrain history record is invalid");
+                return std::nullopt;
+            }
+            const auto x = static_cast<std::int32_t>(record.tileIndex % config.mapWidthTiles);
+            const auto y = static_cast<std::int32_t>(record.tileIndex / config.mapWidthTiles);
+            const Entity* well = simulation.FindEntity(record.wellId);
+            if (Abs64(static_cast<std::int64_t>(x) - record.wellTileX) > 1 ||
+                Abs64(static_cast<std::int64_t>(y) - record.wellTileY) > 1 ||
+                simulation.TerrainWithoutMineralCoverAt(x, y) == Terrain::Blocked ||
+                (well != nullptr && (well->type != EntityType::FutureWell ||
+                    well->position.x.FloorToInt() != record.wellTileX ||
+                    well->position.y.FloorToInt() != record.wellTileY))) {
+                SetError(error, "snapshot Reshape terrain history is inconsistent");
+                return std::nullopt;
+            }
+            simulation.reopenedReshapeTerrain_.push_back(record);
+        }
+    }
     if (!reader.AtEnd()) {
         SetError(error, "snapshot contains trailing payload data");
         return std::nullopt;
@@ -12232,6 +12347,7 @@ std::optional<Simulation> Simulation::LoadSnapshot(
 }
 
 void Simulation::CaptureReplayBaseline() {
+    loadedSnapshotVersion_ = kSnapshotVersion;
     if (legacyLinkReplaySemantics_) {
         // Starting a new current-version recording migrates the live state as
         // well as its baseline; otherwise a zero-tick replay already diverges.
@@ -12309,11 +12425,20 @@ bool Simulation::ContinueReplayRecording(const ReplayRecord& prefix,
     restored.legacyWellCaptureGeometrySemantics_ =
         prefix.version < kFutureWellCaptureGeometryReplayVersion;
     restored.ResolveAegisPower();
+    // Pre-33 saves could not retain this observational history. Only an
+    // actually verified replay prefix can reconstruct it; arbitrary unbound
+    // older terrain changes never acquire an exemption during loading.
+    if (prefix.version < kReshapeTerrainHistoryReplayVersion &&
+        restored.loadedSnapshotVersion_ < kReshapeTerrainHistorySnapshotVersion &&
+        restored.reopenedReshapeTerrain_.empty()) {
+        restored.reopenedReshapeTerrain_ = replayed->reopenedReshapeTerrain_;
+    }
     if (replayed->StateChecksum() != restored.StateChecksum()) {
         SetError(error, "replay prefix state does not match restored state");
         return false;
     }
     *this = std::move(restored);
+    loadedSnapshotVersion_ = kSnapshotVersion;
     replayInitialSnapshot_ = prefix.initialSnapshot;
     commandLog_ = prefix.commands;
     replayVersion_ = prefix.version;

@@ -92,6 +92,9 @@ struct FEmbeddedSnapshotLayout final
     int32 Schema30AppendSize = 0;
     int32 Schema31AppendOffset = INDEX_NONE;
     int32 Schema31AppendSize = 0;
+    int32 Schema33AppendOffset = INDEX_NONE;
+    int32 Schema33AppendSize = 0;
+    uint32 Schema33ReopeningCount = 0;
 };
 
 inline constexpr echoes::sim::PlayerHostilityMasks
@@ -212,7 +215,9 @@ inline int32 EmbeddedSnapshotTerrainGridOffset()
             // four measured hostility-mask bytes, and schema-29's empty
             // producer-state count and schema-30 next-ID/entity-count header.
             static_cast<int32>(echoes::sim::kMaximumPlayers) * 4 +
-            4 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 8 + 4 + 4;
+            4 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 8 + 4 + 4 +
+            // Schema 33's empty Reshape terrain-history count.
+            4;
         constexpr int32 SnapshotSignatureSize = 8;
         const echoes::sim::Simulation Probe(
             echoes::sim::SimulationConfig{2, 2, 20, 0});
@@ -284,7 +289,17 @@ inline bool ProjectSnapshotBufferToV31(std::vector<std::uint8_t>& Snapshot)
         (static_cast<std::uint32_t>(Snapshot[SnapshotVersionOffset + 1]) << 8) |
         (static_cast<std::uint32_t>(Snapshot[SnapshotVersionOffset + 2]) << 16) |
         (static_cast<std::uint32_t>(Snapshot[SnapshotVersionOffset + 3]) << 24);
-    if (Version != 32U)
+    if (Version == 33U)
+    {
+        const auto Parsed = echoes::sim::Simulation::LoadSnapshot(Snapshot);
+        if (!Parsed || !Parsed->ReopenedReshapeTerrain().empty() || Snapshot.size() < 12)
+        {
+            return false;
+        }
+        // Empty history count precedes the eight-byte integrity trailer.
+        Snapshot.erase(Snapshot.end() - 12, Snapshot.end() - 8);
+    }
+    else if (Version != 32U)
     {
         return false;
     }
@@ -354,8 +369,9 @@ inline bool ResolveEmbeddedSnapshotMemoryLedger(
     InOutLayout.RememberedObjectCount = 0;
 
     // EmbeddedSnapshotTerrainGridOffset measures the header-and-rules prefix
-    // from a snapshot THIS build writes, so it describes schema 32. Every
-    // schema from 22 to 31 only ever appended at the tail, which is why a
+    // from a snapshot THIS build writes, so it describes the current schema.
+    // Schema 33 only appends terrain history and keeps schema 32's prefix.
+    // Every schema from 22 to 31 only ever appended at the tail, which is why a
     // single measured figure served all of them. Schema 32 is the first to grow
     // the prefix, so a payload below it — including the schema-31 the downgrade
     // splice produces — sits twelve bytes earlier and must be walked as such.
@@ -486,10 +502,9 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
     int64 Cursor = static_cast<int64>(Layout.MemoryLedgerOffset) +
         Layout.MemoryLedgerSize;
     const uint32 Version = ReadUint32(Envelope, Layout.SnapshotOffset + 4);
-    // Schema 32 appends nothing: its two capture-geometry fields are interior
-    // to the rules block, ahead of the grids, so the 26..31 append structure
-    // is byte-identical and only the accepted upper bound moves.
-    if (Version < 26U || Version > 32U)
+    // Schema 32 grows only the prefix; schema 33 appends terrain history after
+    // the unchanged schema-31 commitment block.
+    if (Version < 26U || Version > 33U)
     {
         return false;
     }
@@ -710,6 +725,27 @@ inline bool ResolveEmbeddedSnapshotSchema26Append(
         OutLayout.Schema31AppendOffset = static_cast<int32>(TransitionOffset);
         OutLayout.Schema31AppendSize = static_cast<int32>(Cursor - TransitionOffset);
     }
+    if (Version >= 33U)
+    {
+        constexpr int32 SerializedReopeningSize = 24;
+        const int64 HistoryOffset = Cursor;
+        uint32 HistoryCount = 0;
+        const int64 TileCount = static_cast<int64>(
+            ReadInt32(Envelope, Layout.SnapshotOffset + 8)) *
+            ReadInt32(Envelope, Layout.SnapshotOffset + 12);
+        if (!ReadCount(HistoryCount) || TileCount <= 0 ||
+            static_cast<int64>(HistoryCount) > TileCount ||
+            Cursor + static_cast<int64>(HistoryCount) * SerializedReopeningSize > PayloadEnd)
+        {
+            return false;
+        }
+        Cursor += static_cast<int64>(HistoryCount) * SerializedReopeningSize;
+        if (HistoryOffset > MAX_int32 || Cursor - HistoryOffset > MAX_int32) return false;
+        // The real loader validated each record's semantics before this walk.
+        OutLayout.Schema33AppendOffset = static_cast<int32>(HistoryOffset);
+        OutLayout.Schema33AppendSize = static_cast<int32>(Cursor - HistoryOffset);
+        OutLayout.Schema33ReopeningCount = HistoryCount;
+    }
     if (Cursor != PayloadEnd) return false;
     if (CommandOffset > MAX_int32 || ReceiptOffset > MAX_int32 ||
         AppendOffset > MAX_int32 ||
@@ -929,6 +965,46 @@ inline bool InspectEmbeddedSnapshot(
 // Schema 31 cannot represent authored geometry. A checkpoint whose values differ
 // from the historical constants is REFUSED rather than quietly downgraded to
 // them, the same way the schema-31 step refuses a live Bulwark commitment.
+// A pre-33 projection is lossless only when there is no permanent Reshape
+// reopening history. Prove the old payload reloads and resaves to the exact
+// original current payload; never discard a nonempty history ledger.
+inline bool ConvertEmbeddedSnapshotV33ToV32(
+    TArray<uint8>& Envelope, int32 FixedHeaderSize, int32 LedgerLengthOffset,
+    int32 SnapshotLengthOffset,
+    const echoes::sim::PlayerHostilityMasks& LegacyHostilityMasks =
+        echoes::sim::kDefaultHostilityMasks)
+{
+    FEmbeddedSnapshotLayout Layout;
+    if (!InspectEmbeddedSnapshot(Envelope, FixedHeaderSize, LedgerLengthOffset,
+            SnapshotLengthOffset, Layout, 33U, LegacyHostilityMasks) ||
+        Layout.Schema33AppendOffset == INDEX_NONE || Layout.Schema33AppendSize != 4 ||
+        Layout.Schema33ReopeningCount != 0)
+    {
+        return false;
+    }
+    TArray<uint8> Working = Envelope;
+    Working.RemoveAt(Layout.Schema33AppendOffset, Layout.Schema33AppendSize, EAllowShrinking::No);
+    const uint32 Length = Layout.SnapshotLength - Layout.Schema33AppendSize;
+    WriteUint32(Working, SnapshotLengthOffset, Length);
+    WriteUint32(Working, Layout.SnapshotOffset + 4, 32U);
+    if (!ResignEmbeddedSnapshot(Working, Layout.SnapshotOffset, Length)) return false;
+    UpdateEnvelopeChecksum(Working);
+    std::string Error;
+    const auto Migrated = echoes::sim::Simulation::LoadSnapshot(
+        std::span<const uint8>(Working.GetData() + Layout.SnapshotOffset, Length),
+        &Error, LegacyHostilityMasks);
+    if (!Migrated || !Error.empty()) return false;
+    const auto Resaved = Migrated->SaveSnapshot();
+    if (Resaved.size() != Layout.SnapshotLength ||
+        FMemory::Memcmp(Resaved.data(), Envelope.GetData() + Layout.SnapshotOffset,
+            Layout.SnapshotLength) != 0)
+    {
+        return false;
+    }
+    Envelope = MoveTemp(Working);
+    return true;
+}
+
 inline bool ConvertEmbeddedSnapshotV32ToV31(
     TArray<uint8>& Envelope, int32 FixedHeaderSize, int32 LedgerLengthOffset,
     int32 SnapshotLengthOffset,
@@ -937,8 +1013,19 @@ inline bool ConvertEmbeddedSnapshotV32ToV31(
 {
     constexpr int32 SnapshotVersionOffset = 4;
     constexpr int32 CaptureGeometryBytes = kSnapshotCaptureGeometryBytes;
+    // Work on a copy so a successful empty-history projection followed by a
+    // lossy geometry refusal still leaves the caller's envelope untouched.
+    TArray<uint8> Working = Envelope;
+    FEmbeddedSnapshotLayout NativeLayout;
+    if (InspectEmbeddedSnapshot(Working, FixedHeaderSize, LedgerLengthOffset,
+            SnapshotLengthOffset, NativeLayout, 33U, LegacyHostilityMasks) &&
+        !ConvertEmbeddedSnapshotV33ToV32(Working, FixedHeaderSize,
+            LedgerLengthOffset, SnapshotLengthOffset, LegacyHostilityMasks))
+    {
+        return false;
+    }
     FEmbeddedSnapshotLayout Layout;
-    if (!InspectEmbeddedSnapshot(Envelope, FixedHeaderSize, LedgerLengthOffset,
+    if (!InspectEmbeddedSnapshot(Working, FixedHeaderSize, LedgerLengthOffset,
             SnapshotLengthOffset, Layout, 32U, LegacyHostilityMasks))
     {
         return false;
@@ -952,7 +1039,7 @@ inline bool ConvertEmbeddedSnapshotV32ToV31(
     }
     std::string Error;
     const auto Original = echoes::sim::Simulation::LoadSnapshot(
-        std::span<const uint8>(Envelope.GetData() + Layout.SnapshotOffset,
+        std::span<const uint8>(Working.GetData() + Layout.SnapshotOffset,
             Layout.SnapshotLength), &Error, LegacyHostilityMasks);
     if (!Original.has_value() || !Error.empty()) return false;
     const auto& Well = Original->Config().rules.futureWell;
@@ -961,7 +1048,6 @@ inline bool ConvertEmbeddedSnapshotV32ToV31(
     {
         return false;
     }
-    TArray<uint8> Working = Envelope;
     Working.RemoveAt(Layout.SnapshotOffset + GeometryOffset,
         CaptureGeometryBytes, EAllowShrinking::No);
     const uint32 Length = Layout.SnapshotLength - CaptureGeometryBytes;
@@ -1007,7 +1093,7 @@ inline bool ConvertEmbeddedSnapshotV31ToV30(
         std::span<const uint8>(Working.GetData() + Layout.SnapshotOffset, Length),
         &Error, LegacyHostilityMasks);
     if (!Migrated.has_value() || !Error.empty()) return false;
-    // SaveSnapshot always writes kSnapshotVersion, so the resave is schema 32
+    // SaveSnapshot always writes kSnapshotVersion, so the resave is schema 33
     // while the input it must reproduce is schema 31. Project it down first;
     // the invariant being asserted (the downgrade lost nothing) is unchanged.
     std::vector<std::uint8_t> Resaved = Migrated->SaveSnapshot();
@@ -1470,6 +1556,9 @@ inline bool ConvertEmbeddedSnapshotV23ToV22(
 // Walks a checkpoint this build just wrote down every schema step it supports,
 // stopping at a synthetic schema-22 shape:
 //
+//   33 -> 32   require empty permanent Reshape reopening history
+//   32 -> 31   require historical capture geometry and drop its rules fields
+//   31 -> 30   require no live Bulwark deployment or packing commitment
 //   30 -> 29   require representable defaults and synthesize legacy item IDs
 //   29 -> 28   drop only losslessly representable producer/queue state
 //   28 -> 27   drop the four hostility masks (legacy adapter supplies them)

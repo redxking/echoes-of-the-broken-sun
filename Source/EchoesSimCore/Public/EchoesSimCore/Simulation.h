@@ -52,8 +52,11 @@ inline constexpr Tick kCommandResolutionReceiptRetentionTicks = 1200;
 // authored values in future_wells.json finally reach the simulation. Older
 // snapshots do not carry the two fields and keep the historical constants.
 inline constexpr std::uint32_t kFutureWellCaptureGeometrySnapshotVersion = 32;
+// Schema 33 retains the emergency blocked-to-open terrain changes made when
+// Reshape expires under a trapped unit. Older schemas omit this history.
+inline constexpr std::uint32_t kReshapeTerrainHistorySnapshotVersion = 33;
 inline constexpr std::uint32_t kSnapshotVersion =
-    kFutureWellCaptureGeometrySnapshotVersion;
+    kReshapeTerrainHistorySnapshotVersion;
 inline constexpr std::uint32_t kLegacyReplayVersion = 24;
 inline constexpr std::uint32_t kForfeitReplayVersion = 25;
 inline constexpr std::uint32_t kProductionReplayVersion = 26;
@@ -113,8 +116,22 @@ inline constexpr std::uint32_t kIdleDefensiveFireReplayVersion = 36;
 // and the state checksum; older recordings replay against the constants they
 // were made with.
 inline constexpr std::uint32_t kFutureWellCaptureGeometryReplayVersion = 37;
+inline constexpr std::uint32_t kReshapeTerrainHistoryReplayVersion = 38;
 inline constexpr std::uint32_t kReplayVersion =
-    kFutureWellCaptureGeometryReplayVersion;
+    kReshapeTerrainHistoryReplayVersion;
+
+// Historical authority, never included in a visibility-scoped PlayerView.
+// The source center is retained because the Well may later change protocol or
+// be removed; neither invalidates an already permanent terrain change.
+struct ReshapeTerrainReopening final {
+    std::uint32_t tileIndex = 0;
+    EntityId wellId = 0;
+    std::int32_t wellTileX = 0;
+    std::int32_t wellTileY = 0;
+    Tick expiryTick = 0;
+    friend bool operator==(const ReshapeTerrainReopening&,
+                           const ReshapeTerrainReopening&) = default;
+};
 
 // The radius at which a worker captures a Future Well, and at which any
 // hostile body contests one. Exposed because the campaign Well doctrine in the
@@ -1399,6 +1416,12 @@ public:
     PublicFutureWellTelegraphs() const;
 
     bool SetTerrainTile(std::int32_t tileX, std::int32_t tileY, Terrain terrain);
+    [[nodiscard]] std::span<const ReshapeTerrainReopening>
+    ReopenedReshapeTerrain() const { return reopenedReshapeTerrain_; }
+    // Reconstruct permanent terrain before supported runtime deltas, solely
+    // for checkpoint-to-authored-map binding. Gameplay/fog use TerrainAt.
+    [[nodiscard]] Terrain CheckpointBindingTerrainAt(
+        std::int32_t tileX, std::int32_t tileY) const;
     /** TBR-STR-002: set a tile's height band (-1, 0 or +1). Returns false out of range. */
     bool SetHeightBand(std::int32_t tileX, std::int32_t tileY, std::int8_t band);
     [[nodiscard]] std::int8_t HeightBandAt(std::int32_t tileX, std::int32_t tileY) const;
@@ -1816,11 +1839,19 @@ private:
 
     SimulationConfig config_{};
     Tick currentTick_ = 0;
+    // Decode/migration bookkeeping, never simulation authority or payload.
+    // Only a pre-history schema is eligible for replay-proven hydration.
+    std::uint32_t loadedSnapshotVersion_ = kSnapshotVersion;
     EntityId nextEntityId_ = 1;
     ProductionItemId nextProductionItemId_ = 1;
     DeterministicRng rng_{};
     std::array<PlayerState, kMaximumPlayers> players_{};
     std::vector<Terrain> terrain_{};
+    std::vector<ReshapeTerrainReopening> reopenedReshapeTerrain_{};
+    bool SetTerrainTilePreservingHistory(std::int32_t tileX,
+                                        std::int32_t tileY, Terrain terrain);
+    [[nodiscard]] Terrain TerrainWithoutMineralCoverAt(
+        std::int32_t tileX, std::int32_t tileY) const;
     // TBR-STR-002: signed height band per tile (0 plain, -1 low, +1 high).
     // Saved in the spare high bits of each terrain byte, so the snapshot
     // layout and version are unchanged and older saves decode as plain.
