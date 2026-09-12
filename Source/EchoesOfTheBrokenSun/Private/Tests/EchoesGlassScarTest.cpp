@@ -444,6 +444,34 @@ bool FEchoesGlassScarTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Deterministic routing reaches the northern basin"),
              bReachedNorthernBasin);
 
+    // REL-AI-024. The denial play needs a map where one seat can hold the only
+    // Well while the other holds none, and the synthetic balance fixture cannot
+    // produce that: it authors a Well per base, so the precondition was measured
+    // at zero occurrences while the planner branch itself was reached tens of
+    // thousands of times per seat. Glass Scar authors ONE Well, at the centre.
+    // Asserted here, against the scenario the game actually starts, so the
+    // native harness layout that mirrors it is pinned to shipping content
+    // rather than to a transcription that could silently drift.
+    int32 FutureWellCount = 0;
+    echoes::sim::Vec2 FutureWellSite{};
+    for (const echoes::sim::Entity& Entity : Simulation->Entities())
+    {
+        if (Entity.type == echoes::sim::EntityType::FutureWell)
+        {
+            ++FutureWellCount;
+            FutureWellSite = Entity.position;
+        }
+    }
+    TestEqual(TEXT("Glass Scar authors exactly one Future Well"), FutureWellCount, 1);
+    TestTrue(
+        TEXT("Glass Scar's Well stands at the contested centre (32,32)"),
+        FutureWellSite == echoes::sim::Vec2::FromTiles(32, 32));
+    // The radius is what turns presence into denial, so the scenario is checked
+    // for a usable one rather than for the field merely existing.
+    TestTrue(
+        TEXT("Glass Scar resolves a positive Future Well capture radius"),
+        Simulation->FutureWellCaptureRadiusRaw() > 0);
+
     Bridge->StopPrototypeScenario();
     WorldWrapper.ForwardErrorMessages(this);
     return !HasAnyErrors() && !WorldWrapper.HasFailed();

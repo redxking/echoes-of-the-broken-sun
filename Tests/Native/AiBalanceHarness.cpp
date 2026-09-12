@@ -389,6 +389,12 @@ struct MatchRecord {
     // only by seed, so a condition whose finishing ticks are all identical is
     // one match replayed and carries the information of one observation.
     std::string conditionId;
+    // REL-AI-024. Counted apart on purpose: "never reachable" and "reachable
+    // and declined" are indistinguishable in outcomes, and reading an
+    // unchanged matrix as a clean null is the error this measurement exists
+    // to avoid.
+    std::int64_t denialOpportunityTicks = 0;
+    std::int64_t denialAchievedTicks = 0;
 };
 
 struct MaterialProgressState {
@@ -513,6 +519,23 @@ inline std::string PersonalityToString(AiPersonality p) {
     }
 }
 
+// REL-AI-024. The denial play needs a seat that holds no Well while its
+// opponent holds one that pays, and `SetupTournamentMap` cannot produce that
+// state: it gives each seat its own Well five tiles from its Core, so the
+// precondition "this seat has no Well income" was measured at zero occurrences
+// across three pairings while the planner branch itself was reached 13,289 to
+// 27,370 times per seat (evidence
+// d3-meridian-20260911T161144Z/denial-play-unmeasurable).
+//
+// Glass Scar authors ONE Future Well, at the centre of the map. That is the
+// contested-Well layout the measurement needs, and it is an authored shipping
+// map rather than a fixture invented to make a rule fire.
+enum class MapLayout { TournamentSymmetric, GlassScar };
+
+const char* MapLayoutId(MapLayout layout) {
+    return layout == MapLayout::GlassScar ? "GlassScar64" : "TournamentSymmetric64";
+}
+
 void SetupTournamentMap(Simulation& sim, Faction f0, Faction f1) {
     sim.AddPlayer(0, f0, ResourcePool{800, 350});
     sim.AddPlayer(1, f1, ResourcePool{800, 350});
@@ -543,20 +566,122 @@ void SetupTournamentMap(Simulation& sim, Faction f0, Faction f1) {
     sim.SpawnResourceNode(Vec2::FromTiles(32, 36), 6000);
 }
 
+// Transcribed from Content/World/Source/GlassScar/glass_scar_map_pack_v1.json
+// (deployment.local_spawns / opponent_spawns, resources.matter_deposits,
+// objectives.future_well) and from the force the runtime actually spawns for
+// this map in EchoesSimulationSubsystem::StartScenario, including the node
+// amount (1500) and starting pools (500 material, 30 Dawn). Kept in that order
+// so a divergence from the shipping scenario is a readable diff, not a hunt.
+void SetupGlassScarMap(Simulation& sim, Faction f0, Faction f1) {
+    sim.AddPlayer(0, f0, ResourcePool{500, 30});
+    sim.AddPlayer(1, f1, ResourcePool{500, 30});
+
+    sim.SpawnEntity(0, f0, EntityType::CommandCore, Vec2::FromTiles(10, 10));
+    sim.SpawnEntity(0, f0, EntityType::Barracks, Vec2::FromTiles(14, 10));
+    sim.SpawnEntity(0, f0, EntityType::Dropoff, Vec2::FromTiles(6, 17));
+    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(8, 13));
+    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(11, 14));
+    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(14, 13));
+    sim.SpawnEntity(0, f0, EntityType::Soldier, Vec2::FromTiles(6, 8));
+    sim.SpawnEntity(0, f0, EntityType::Soldier, Vec2::FromTiles(12, 7));
+    sim.SpawnEntity(0, f0, EntityType::Soldier, Vec2::FromTiles(16, 10));
+    sim.SpawnEntity(0, f0, EntityType::HeavyUnit, Vec2::FromTiles(7, 6));
+    sim.SpawnEntity(0, f0, EntityType::ScoutUnit, Vec2::FromTiles(15, 6));
+    sim.SpawnEntity(0, f0, EntityType::UtilityStructure, Vec2::FromTiles(6, 11));
+
+    sim.SpawnEntity(1, f1, EntityType::CommandCore, Vec2::FromTiles(54, 54));
+    sim.SpawnEntity(1, f1, EntityType::Barracks, Vec2::FromTiles(50, 54));
+    sim.SpawnEntity(1, f1, EntityType::Dropoff, Vec2::FromTiles(58, 48));
+    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(51, 51));
+    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(54, 50));
+    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(56, 51));
+    sim.SpawnEntity(1, f1, EntityType::Soldier, Vec2::FromTiles(50, 57));
+    sim.SpawnEntity(1, f1, EntityType::Soldier, Vec2::FromTiles(54, 58));
+    sim.SpawnEntity(1, f1, EntityType::HeavyUnit, Vec2::FromTiles(57, 58));
+    sim.SpawnEntity(1, f1, EntityType::ScoutUnit, Vec2::FromTiles(49, 58));
+    sim.SpawnEntity(1, f1, EntityType::UtilityStructure, Vec2::FromTiles(58, 53));
+
+    static constexpr std::array<std::pair<std::int32_t, std::int32_t>, 8>
+        kMatterDeposits = {{{16, 16}, {21, 13}, {25, 28}, {33, 22},
+                            {31, 43}, {43, 36}, {47, 50}, {52, 45}}};
+    for (const auto& deposit : kMatterDeposits) {
+        sim.SpawnResourceNode(
+            Vec2::FromTiles(deposit.first, deposit.second), 1500);
+    }
+
+    // objectives.future_well — the single contested Well this measurement needs.
+    sim.SpawnFutureWell(Vec2::FromTiles(32, 32));
+}
+
+// REL-AI-024 measurement, taken from simulation state rather than from planner
+// counters. Two separate facts, because the earlier attempt could not tell them
+// apart: whether the OPPORTUNITY to deny ever arises on this map, and whether
+// the planner CONVERTS it. A rule that is never reachable and a rule that is
+// reachable and declines produce the same match outcome, so they are counted
+// apart here.
+struct DenialObservation {
+    std::int64_t opportunityTicks = 0;  // seat has no Well, foe's Well pays
+    std::int64_t achievedTicks = 0;     // ...and one of our bodies stands in it
+};
+
+DenialObservation ObserveDenial(const Simulation& sim, PlayerId seat) {
+    DenialObservation observation{};
+    const PlayerId foe = seat == 0 ? 1 : 0;
+    bool seatHoldsWell = false;
+    const Entity* foeWell = nullptr;
+    for (const Entity& entity : sim.Entities()) {
+        if (entity.type != EntityType::FutureWell || entity.hitPoints <= 0 ||
+            entity.wellChoice != FutureWellChoice::Preserve) {
+            continue;
+        }
+        if (entity.owner == seat) {
+            seatHoldsWell = true;
+        } else if (entity.owner == foe && entity.wellActivationTick != 0) {
+            foeWell = &entity;
+        }
+    }
+    if (seatHoldsWell || foeWell == nullptr) {
+        return observation;
+    }
+    observation.opportunityTicks = 1;
+    const std::int64_t radius = sim.FutureWellCaptureRadiusRaw();
+    const std::int64_t zone = radius * radius;
+    for (const Entity& unit : sim.Entities()) {
+        if (unit.owner != seat || unit.hitPoints <= 0) {
+            continue;
+        }
+        const std::int64_t dx = static_cast<std::int64_t>(unit.position.x.Raw()) -
+                                foeWell->position.x.Raw();
+        const std::int64_t dy = static_cast<std::int64_t>(unit.position.y.Raw()) -
+                                foeWell->position.y.Raw();
+        if (dx * dx + dy * dy <= zone) {
+            observation.achievedTicks = 1;
+            break;
+        }
+    }
+    return observation;
+}
+
 MatchRecord RunMatch(std::uint64_t seed,
                      Faction f0,
                      Faction f1,
                      AiPersonality p0,
                      AiPersonality p1,
                      Tick maxTicks = 12000,
-                     bool seat1PlansFirst = false) {
+                     bool seat1PlansFirst = false,
+                     MapLayout layout = MapLayout::TournamentSymmetric) {
     // 64x64 matches every shipped preset; the synthetic 48x48 matched none.
     SimulationConfig config{64, 64, 20, seed};
     config.rules = AuthoredRules().rules;
     Simulation sim(config);
-    SetupTournamentMap(sim, f0, f1);
+    if (layout == MapLayout::GlassScar) {
+        SetupGlassScarMap(sim, f0, f1);
+    } else {
+        SetupTournamentMap(sim, f0, f1);
+    }
 
     MatchRecord record{};
+    record.mapId = MapLayoutId(layout);
     record.seed = seed;
     record.seat1PlannedFirst = seat1PlansFirst;
     record.faction0 = FactionToString(f0);
@@ -587,6 +712,11 @@ MatchRecord RunMatch(std::uint64_t seed,
         sim.Step();
         ++ticks;
         if (ticks % sim.Config().ticksPerSecond == 0) {
+            for (PlayerId seat = 0; seat < 2; ++seat) {
+                const DenialObservation observed = ObserveDenial(sim, seat);
+                record.denialOpportunityTicks += observed.opportunityTicks;
+                record.denialAchievedTicks += observed.achievedTicks;
+            }
             const MaterialProgressState current = CaptureMaterialProgress(sim);
             if (!(current == priorProgress)) {
                 lastMaterialProgressTick = ticks;
@@ -686,6 +816,7 @@ int main(int argc, char* argv[]) {
     std::uint64_t baseSeed = 0x8A1A2C3D4E5FULL;
     int requestedThreads = static_cast<int>(std::thread::hardware_concurrency());
     if (requestedThreads <= 0) requestedThreads = 4;
+    MapLayout layout = MapLayout::TournamentSymmetric;
 
     for (int i = 1; i < argc; ++i) {
         std::string_view arg(argv[i]);
@@ -697,6 +828,17 @@ int main(int argc, char* argv[]) {
             baseSeed = std::stoull(argv[++i]);
         } else if (arg == "--threads" && i + 1 < argc) {
             requestedThreads = std::max(1, std::stoi(argv[++i]));
+        } else if (arg == "--map" && i + 1 < argc) {
+            const std::string_view requested(argv[++i]);
+            if (requested == "glass-scar") {
+                layout = MapLayout::GlassScar;
+            } else if (requested == "tournament") {
+                layout = MapLayout::TournamentSymmetric;
+            } else {
+                std::cerr << "Unknown --map " << requested
+                          << " (expected tournament or glass-scar)\n";
+                return 2;
+            }
         }
     }
 
@@ -704,7 +846,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Echoes of the Broken Sun — Headless AI Balance Harness\n";
     std::cout << "SPEC-BAL-001..008 Automated 1,000-Match Validation Matrix\n";
     std::cout << "========================================================\n";
-    std::cout << "Target Matches: " << totalMatches << " | Threads: " << requestedThreads << "\n";
+    std::cout << "Target Matches: " << totalMatches << " | Threads: " << requestedThreads
+              << " | Map: " << MapLayoutId(layout) << "\n";
 
     const auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -786,7 +929,8 @@ int main(int argc, char* argv[]) {
         for (int idx = threadId; idx < totalMatches; idx += requestedThreads) {
             const auto& task = tasks[idx];
             MatchRecord rec = RunMatch(task.seed, task.f0, task.f1, task.p0,
-                                       task.p1, 12000, task.seat1PlansFirst);
+                                       task.p1, 12000, task.seat1PlansFirst,
+                                       layout);
             rec.conditionId = task.conditionId;
             results[idx] = rec;
             const int finished = ++completedTasks;
@@ -813,6 +957,23 @@ int main(int argc, char* argv[]) {
 
     std::cout << "\nBatch simulation completed in " << std::fixed << std::setprecision(2)
               << elapsedSec << "s (" << matchesPerSec << " matches/sec)\n";
+
+    // REL-AI-024 aggregation. Kept beside the batch it summarises so the two
+    // counts cannot be read as one.
+    std::int64_t denialOpportunitySamples = 0;
+    std::int64_t denialAchievedSamples = 0;
+    int denialOpportunityMatches = 0;
+    int denialAchievedMatches = 0;
+    for (const MatchRecord& r : results) {
+        denialOpportunitySamples += r.denialOpportunityTicks;
+        denialAchievedSamples += r.denialAchievedTicks;
+        denialOpportunityMatches += r.denialOpportunityTicks > 0 ? 1 : 0;
+        denialAchievedMatches += r.denialAchievedTicks > 0 ? 1 : 0;
+    }
+    std::cout << "REL-AI-024 denial: opportunity in " << denialOpportunityMatches
+              << "/" << totalMatches << " matches (" << denialOpportunitySamples
+              << " samples); achieved in " << denialAchievedMatches << " matches ("
+              << denialAchievedSamples << " samples)\n";
 
     // 0. Condition summary, and the degeneracy screen that must run FIRST.
     // A condition is a faction pair, a personality pair and a planning order;
@@ -1092,6 +1253,7 @@ int main(int argc, char* argv[]) {
             << static_cast<std::uint64_t>(AuthoredRules().lancerCooldownTicks)
             << "},\n";
         out << "  \"map_grid_tiles\": 64,\n";
+        out << "  \"map_layout\": \"" << MapLayoutId(layout) << "\",\n";
         out << "  \"total_matches\": " << totalMatches << ",\n";
         out << "  \"authoritative_terminal_matches\": "
             << (totalMatches - unresolved) << ",\n";
@@ -1151,6 +1313,24 @@ int main(int argc, char* argv[]) {
                 << "}" << (++emitted == conditions.size() ? "\n" : ",\n");
         }
         out << "    ]\n  },\n";
+        // REL-AI-024. Reported as two counts, never as one rate: matches with
+        // no opportunity say nothing about the play, and collapsing them into
+        // a denominator would hide exactly the case the tournament map was.
+        out << "  \"denial_play\": {\n";
+        out << "    \"sample\": \"one observation per seat per simulated "
+               "second\",\n";
+        out << "    \"matches_with_opportunity\": " << denialOpportunityMatches
+            << ",\n";
+        out << "    \"matches_with_denial_achieved\": " << denialAchievedMatches
+            << ",\n";
+        out << "    \"opportunity_samples\": " << denialOpportunitySamples
+            << ",\n";
+        out << "    \"achieved_samples\": " << denialAchievedSamples << ",\n";
+        out << "    \"note\": \"opportunity = the seat holds no Preserve Well "
+               "while its opponent holds one that has begun paying; achieved = "
+               "one of the seat's bodies also stands inside that Well's capture "
+               "radius, which is what stops the income.\"\n";
+        out << "  },\n";
         out << "  \"matches\": [\n";
         for (std::size_t index = 0; index < results.size(); ++index) {
             const MatchRecord& r = results[index];
@@ -1174,7 +1354,10 @@ int main(int argc, char* argv[]) {
                 << ", \"seat1_planned_first\": "
                 << (r.seat1PlannedFirst ? "true" : "false")
                 << ", \"condition\": \"" << r.conditionId
-                << "\", \"stall_reason\": \"" << r.stallReason << "\"}"
+                << "\", \"denial_opportunity_samples\": "
+                << r.denialOpportunityTicks
+                << ", \"denial_achieved_samples\": " << r.denialAchievedTicks
+                << ", \"stall_reason\": \"" << r.stallReason << "\"}"
                 << (index + 1 == results.size() ? "\n" : ",\n");
         }
         out << "  ],\n";

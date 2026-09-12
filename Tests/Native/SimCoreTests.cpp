@@ -3208,6 +3208,151 @@ void TestSnapshotAndReplay() {
     REQUIRE(reproduced->StateChecksum() == scenario.simulation.StateChecksum());
 }
 
+// REL-AI-024. Two separate claims, deliberately not merged: that presence
+// inside the capture radius stops a Preserve Well's income (the RULE), and
+// that the planner reaches for it (the PLAY). The rule has been in
+// ApplyPreserveIncome throughout; nothing exercised it as counterplay, and an
+// unexercised rule and an absent one look alike from the outside.
+void TestPreserveIncomeStopsWhileContested() {
+    Simulation simulation({20, 20, 20, 0x44454e59414cULL});
+    REQUIRE(simulation.AddPlayer(0, Faction::MeridianCompact, {500, 0}));
+    REQUIRE(simulation.AddPlayer(1, Faction::KharuunAssemblies, {500, 0}));
+    const EntityId worker = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Worker, Vec2::FromTiles(5, 6));
+    const EntityId well = simulation.SpawnFutureWell(Vec2::FromTiles(6, 6));
+    REQUIRE(worker != 0 && well != 0);
+
+    Command preserve = MakeCommand(0, 0, 1, CommandType::FutureWell, worker);
+    preserve.target = well;
+    preserve.wellChoice = FutureWellChoice::Preserve;
+    REQUIRE(simulation.QueueCommand(preserve));
+    simulation.Step(300);
+    REQUIRE(simulation.FindEntity(well)->wellActivationTick == 300);
+
+    const Tick interval = simulation.Config().rules.futureWell.preserveIntervalTicks;
+    const std::int32_t perInterval =
+        simulation.Config().rules.futureWell.preserveDawnPerInterval;
+    REQUIRE(interval > 0 && perInterval > 0);
+
+    // Uncontested: the holder is paid on the interval boundary.
+    const std::int32_t beforePaid = simulation.FindPlayer(0)->resources.dawnshards;
+    simulation.Step(interval);
+    const std::int32_t afterPaid = simulation.FindPlayer(0)->resources.dawnshards;
+    REQUIRE(afterPaid == beforePaid + perInterval);
+
+    // A single hostile body inside the radius, with no capture order and no
+    // attack: standing there is the whole act.
+    const EntityId denier = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Soldier, Vec2::FromTiles(6, 6));
+    REQUIRE(denier != 0);
+    REQUIRE(simulation.IsFutureWellContested(*simulation.FindEntity(well)));
+    const std::int32_t beforeDenied = simulation.FindPlayer(0)->resources.dawnshards;
+    simulation.Step(interval * 3);
+    REQUIRE(simulation.FindPlayer(0)->resources.dawnshards == beforeDenied);
+    // The Well is neither captured nor damaged: denial costs the holder its
+    // income without costing the denier a capture protocol.
+    REQUIRE(simulation.FindEntity(well)->owner == 0);
+    REQUIRE(simulation.FindEntity(well)->wellChoice == FutureWellChoice::Preserve);
+    REQUIRE(simulation.FindEntity(well)->hitPoints ==
+            simulation.FindEntity(well)->maxHitPoints);
+
+    // And it is reversible: remove the body and the income resumes, so the
+    // holder's counter-counterplay is to clear the ground.
+    Command retreat = MakeCommand(simulation.CurrentTick(), 1, 2,
+                                  CommandType::Move, denier);
+    retreat.position = Vec2::FromTiles(18, 18);
+    REQUIRE(simulation.QueueCommand(retreat));
+    simulation.Step(interval * 4);
+    REQUIRE(!simulation.IsFutureWellContested(*simulation.FindEntity(well)));
+    const std::int32_t beforeResumed = simulation.FindPlayer(0)->resources.dawnshards;
+    simulation.Step(interval);
+    REQUIRE(simulation.FindPlayer(0)->resources.dawnshards >= beforeResumed + perInterval);
+}
+
+void TestDenialPlayCommitsOneBodyAndHolds() {
+    Simulation simulation({32, 32, 20, 0x44454e59504cULL});
+    REQUIRE(simulation.AddPlayer(0, Faction::MeridianCompact, {500, 0}));
+    REQUIRE(simulation.AddPlayer(1, Faction::KharuunAssemblies, {500, 0}));
+    // Seat 1 holds the only Well. Seat 0 has combat bodies and no Well of its
+    // own, which is the precondition the tournament fixture could never reach.
+    const EntityId holder = simulation.SpawnEntity(
+        1, Faction::KharuunAssemblies, EntityType::Worker, Vec2::FromTiles(17, 16));
+    const EntityId well = simulation.SpawnFutureWell(Vec2::FromTiles(16, 16));
+    REQUIRE(holder != 0 && well != 0);
+    simulation.SpawnEntity(0, Faction::MeridianCompact, EntityType::CommandCore,
+                           Vec2::FromTiles(6, 6));
+    const EntityId first = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(12, 12));
+    const EntityId second = simulation.SpawnEntity(
+        0, Faction::MeridianCompact, EntityType::Soldier, Vec2::FromTiles(12, 13));
+    REQUIRE(first != 0 && second != 0);
+
+    Command preserve = MakeCommand(0, 1, 1, CommandType::FutureWell, holder);
+    preserve.target = well;
+    preserve.wellChoice = FutureWellChoice::Preserve;
+    REQUIRE(simulation.QueueCommand(preserve));
+    simulation.Step(300);
+    REQUIRE(simulation.FindEntity(well)->wellActivationTick != 0);
+    REQUIRE(simulation.FindEntity(well)->owner == 1);
+
+    const std::int64_t radius = simulation.FutureWellCaptureRadiusRaw();
+    const auto insideZone = [&](EntityId id) {
+        const Entity* unit = simulation.FindEntity(id);
+        if (unit == nullptr) {
+            return false;
+        }
+        const std::int64_t dx = static_cast<std::int64_t>(unit->position.x.Raw()) -
+                                simulation.FindEntity(well)->position.x.Raw();
+        const std::int64_t dy = static_cast<std::int64_t>(unit->position.y.Raw()) -
+                                simulation.FindEntity(well)->position.y.Raw();
+        return dx * dx + dy * dy <= radius * radius;
+    };
+
+    // Exactly one denial Move is issued, not one per idle body: the rest of
+    // the force stays available. Counted rather than asserted as a property,
+    // because "one at a time" is the guard that keeps this counterplay and
+    // not a commitment.
+    int denialMoves = 0;
+    for (const Command& command :
+         simulation.GenerateAiCommands(0, AiPersonality::Adaptive)) {
+        if (command.type == CommandType::Move &&
+            (command.actor == first || command.actor == second) &&
+            command.position == simulation.FindEntity(well)->position) {
+            ++denialMoves;
+        }
+    }
+    REQUIRE(denialMoves == 1);
+
+    // Drive the seat to the Well and keep planning. The income must stop and
+    // must stay stopped: a denier that arrived and then fell through to the
+    // attack scan would leave, restart the income, and be re-sent — the
+    // oscillation this play is written to avoid.
+    bool contestedAtLeastOnce = false;
+    for (int round = 0; round < 400; ++round) {
+        for (const Command& command :
+             simulation.GenerateAiCommands(0, AiPersonality::Adaptive)) {
+            simulation.QueueCommand(command);
+        }
+        simulation.Step(4);
+        if (simulation.IsFutureWellContested(*simulation.FindEntity(well))) {
+            contestedAtLeastOnce = true;
+        }
+    }
+    REQUIRE(contestedAtLeastOnce);
+    REQUIRE(insideZone(first) || insideZone(second));
+
+    const Tick interval = simulation.Config().rules.futureWell.preserveIntervalTicks;
+    const std::int32_t heldBefore = simulation.FindPlayer(1)->resources.dawnshards;
+    for (int round = 0; round < static_cast<int>(interval); ++round) {
+        for (const Command& command :
+             simulation.GenerateAiCommands(0, AiPersonality::Adaptive)) {
+            simulation.QueueCommand(command);
+        }
+        simulation.Step(4);
+    }
+    REQUIRE(simulation.FindPlayer(1)->resources.dawnshards == heldBefore);
+}
+
 void TestFutureWellSnapshotMigrationAndReplay() {
     constexpr std::size_t kEntityBytes = 235;
     constexpr std::size_t kWellActivationOffset = 104;
@@ -11497,6 +11642,10 @@ int main(int argc, char** argv) {
         {"ballistic cover interception and moving-target tracking", TestBallisticCoverAndTrackingRegression},
         {"harvest reservations travel depletion and persistence", TestHarvestReservationRegression},
         {"contact line of sight across attack orders", TestContactLineOfSightRegression},
+        {"preserve income stops while contested",
+         TestPreserveIncomeStopsWhileContested},
+        {"denial play commits one body and holds",
+         TestDenialPlayCommitsOneBodyAndHolds},
         {"fixed tick movement", TestFixedTickMovement},
         {"canonical ordering and determinism", TestCanonicalCommandOrderingAndDeterminism},
         {"gather deliver build and placement", TestGatherDeliverBuildAndPlacement},

@@ -995,6 +995,40 @@ uint16 GTrainingPracticeTargetBit = 0;
             "[LOAD_SKIRMISH_FACTION_MISMATCH] The checkpoint forces do not match its recovered setup.");
         return false;
     }
+    // The authored preset is the reference, but the simulation legitimately
+    // changes terrain while a match runs, so a tile-for-tile identity with the
+    // preset is an invariant the game itself breaks. A Kharuun temporary
+    // mineral cover blocks the tile it stands on and reverts that tile when it
+    // dies or expires, so EVERY skirmish checkpoint taken while a cover stood
+    // failed this check and refused to load. The bug predates the change that
+    // exposed it: it surfaced only when a planner change moved a HeavyUnit and
+    // a cover happened to be standing at the checkpoint tick (tile 13,10,
+    // measured -- see BuildArtifacts/Evidence/rel-ai-024-denial-20260912T104957Z).
+    //
+    // The exemption is deliberately narrow. A tile is forgiven only when it is
+    // blocked in the snapshot, open in the preset, AND carries a live cover
+    // entity at that exact tile, so a checkpoint recovered against the wrong
+    // map still fails.
+    //
+    // One legitimate delta stays UNHANDLED, recorded rather than quietly
+    // widened away: Simulation::ResolveExpiredReshapes reopens a tile when a
+    // unit would otherwise be trapped in an all-blocked pocket, which leaves
+    // the snapshot unblocked where the preset is blocked. Covering that would
+    // mean forgiving missing blocked tiles in general, which is most of what
+    // this check is for. It needs a recorded runtime-terrain delta in the
+    // snapshot to fix properly.
+    TSet<int64> CoverBlockedTiles;
+    for (const echoes::sim::Entity& Entity : Candidate.Entities())
+    {
+        if (!Entity.temporaryMineralCover || Entity.hitPoints <= 0)
+        {
+            continue;
+        }
+        CoverBlockedTiles.Add(
+            static_cast<int64>(Entity.position.y.FloorToInt()) *
+                FEchoesSkirmishSetupModel::MapWidthTiles +
+            Entity.position.x.FloorToInt());
+    }
     for (int32 TileY = 0;
          TileY < FEchoesSkirmishSetupModel::MapHeightTiles;
          ++TileY)
@@ -1010,12 +1044,27 @@ uint16 GTrainingPracticeTargetBit = 0;
                     TileY);
             const bool bSnapshotBlocked =
                 Candidate.TerrainAt(TileX, TileY) == Terrain::Blocked;
-            if (bExpectedBlocked != bSnapshotBlocked)
+            if (bExpectedBlocked == bSnapshotBlocked)
             {
-                OutError = TEXT(
-                    "[LOAD_SKIRMISH_MAP_MISMATCH] The checkpoint terrain does not match its recovered battlefield.");
-                return false;
+                continue;
             }
+            if (!bExpectedBlocked && bSnapshotBlocked &&
+                CoverBlockedTiles.Contains(
+                    static_cast<int64>(TileY) *
+                        FEchoesSkirmishSetupModel::MapWidthTiles + TileX))
+            {
+                continue;
+            }
+            // Name the tile. The bare message above cost a build-and-rerun
+            // cycle to turn into something diagnosable.
+            OutError = FString::Printf(
+                TEXT("[LOAD_SKIRMISH_MAP_MISMATCH] The checkpoint terrain does not match its "
+                     "recovered battlefield: tile %d,%d is %s in the checkpoint and %s in the preset."),
+                TileX,
+                TileY,
+                bSnapshotBlocked ? TEXT("blocked") : TEXT("open"),
+                bExpectedBlocked ? TEXT("blocked") : TEXT("open"));
+            return false;
         }
     }
     return true;
