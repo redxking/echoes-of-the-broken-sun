@@ -228,6 +228,11 @@ inline int32 EmbeddedSnapshotTerrainGridOffset()
     return Measured;
 }
 
+// The bytes schema 32 inserted into the rules block: captureRadiusRaw (I32)
+// and captureRequiredTicks (U64). One named value, used both by the downgrade
+// splice and by the prefix adjustment below, so the two cannot drift apart.
+inline constexpr int32 kSnapshotCaptureGeometryBytes = 4 + 8;
+
 // Where schema 32's authored capture-geometry fields sit inside the rules
 // block, MEASURED from a snapshot this build writes rather than written as a
 // literal, for the same reason the terrain grid offset is measured: a literal
@@ -287,7 +292,23 @@ inline bool ResolveEmbeddedSnapshotMemoryLedger(
     InOutLayout.RememberedTileCount = 0;
     InOutLayout.RememberedObjectCount = 0;
 
-    const int32 TerrainGridOffset = EmbeddedSnapshotTerrainGridOffset();
+    // EmbeddedSnapshotTerrainGridOffset measures the header-and-rules prefix
+    // from a snapshot THIS build writes, so it describes schema 32. Every
+    // schema from 22 to 31 only ever appended at the tail, which is why a
+    // single measured figure served all of them. Schema 32 is the first to grow
+    // the prefix, so a payload below it — including the schema-31 the downgrade
+    // splice produces — sits twelve bytes earlier and must be walked as such.
+    const uint32 PayloadVersion =
+        SnapshotOffset >= 0 && Envelope.Num() >= SnapshotOffset + 8
+            ? ReadUint32(Envelope, SnapshotOffset + 4)
+            : 0U;
+    const int32 MeasuredGridOffset = EmbeddedSnapshotTerrainGridOffset();
+    const int32 TerrainGridOffset =
+        MeasuredGridOffset == INDEX_NONE
+            ? INDEX_NONE
+            : (PayloadVersion >= 32U
+                   ? MeasuredGridOffset
+                   : MeasuredGridOffset - kSnapshotCaptureGeometryBytes);
     if (TerrainGridOffset == INDEX_NONE || SnapshotOffset < 0 ||
         SnapshotLength <= static_cast<uint32>(SnapshotSignatureSize) ||
         SnapshotLength > static_cast<uint32>(MAX_int32) ||
@@ -854,7 +875,7 @@ inline bool ConvertEmbeddedSnapshotV32ToV31(
         echoes::sim::kDefaultHostilityMasks)
 {
     constexpr int32 SnapshotVersionOffset = 4;
-    constexpr int32 CaptureGeometryBytes = 12;
+    constexpr int32 CaptureGeometryBytes = kSnapshotCaptureGeometryBytes;
     FEmbeddedSnapshotLayout Layout;
     if (!InspectEmbeddedSnapshot(Envelope, FixedHeaderSize, LedgerLengthOffset,
             SnapshotLengthOffset, Layout, 32U, LegacyHostilityMasks))

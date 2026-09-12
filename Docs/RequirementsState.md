@@ -6,6 +6,43 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## The one-measured-prefix invariant, and why my twelve-byte terms could not have worked — 2026-09-12, 05:10Z
+
+`8511adb` fixed the chain head — both missions now enter the chain at schema 32 — and the two campaign tests
+still failed, on the arithmetic exactly as predicted. The arithmetic was not the defect.
+
+**`EmbeddedSnapshotTerrainGridOffset()` measures the header-and-rules prefix once**, from a snapshot this
+build writes, and every walk of every payload version uses that single figure. That was sound for ten
+schemas because **22 through 31 only ever appended at the tail**, leaving the prefix identical for all of
+them — the unstated invariant that made one measurement sufficient. Schema 32 is the first to grow the
+prefix itself, so the measured value is right for 32 and **twelve bytes too large for every payload below
+it**, including the schema-31 that this slice's own downgrade splice produces.
+
+So every layout measured on a downgraded payload landed twelve bytes off, and the sums the failing
+assertions check are built from those layout figures. **Correcting the sums could not have helped: I was
+fixing arithmetic downstream of a bad measurement.** Measured rather than reasoned: the fields occupy
+`I32 + U64` = 12 bytes at payload offset 1985, and a 2x2 probe snapshot is 2,740 bytes at schema 32.
+
+**Fixed** by making the prefix version-aware — `ResolveEmbeddedSnapshotMemoryLedger` now reads the payload's
+own version at `SnapshotOffset + 4` and subtracts the capture-geometry size below 32 — and by giving the
+splice and the adjustment **one shared named constant**, `kSnapshotCaptureGeometryBytes`, so they cannot
+drift apart.
+
+**The part worth keeping.** I had already solved this exact hazard on the native side hours earlier:
+`SnapshotRulesGrowthFor(bytes)` in `SimCoreTests.cpp` reads the payload's own version for precisely this
+reason, and that suite has been green throughout. I then wrote the Unreal equivalent version-blind. Same
+hazard, same session, recognised once and not transferred. When a change breaks an offset walker in one test
+layer, **the other layers' walkers have the same problem and should be fixed in the same pass**, not when
+their suite gets around to failing.
+
+There is also a general lesson about the defensive helper: measuring instead of hardcoding protected that
+function against a rules field being *added to the tail of the rules*, which is what its comment anticipates.
+It could not protect against the prefix itself changing size per version, because nothing expressed that
+"the prefix is one constant" was an assumption rather than a fact.
+
+**Editor builds and links** (`Result: Succeeded`, 33s). A targeted run of the two campaign tests follows;
+this entry will be wrong about being fixed if that run disagrees.
+
 ## Snapshot 32, second pass: the mission tests assemble their own chains — 2026-09-12, 04:40Z
 
 `5dbb87e` took the combined suite from 133 of 140 to **138 of 140**. Both remaining failures were mine, in
