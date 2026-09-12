@@ -1,5 +1,6 @@
 #include "EchoesSimCore/Simulation.h"
 #include "EchoesSimCore/NetworkProtocol.h"
+#include "EchoesSimCore/SkirmishMapPresets.h"
 #include "../../Source/EchoesOfTheBrokenSun/Public/EchoesNetworkActionDispatch.h"
 #include "../../Source/EchoesOfTheBrokenSun/Public/EchoesNetworkSnapshotFlow.h"
 #include "../../Source/EchoesOfTheBrokenSun/Public/EchoesGameplayFeedback.h"
@@ -3213,6 +3214,72 @@ void TestSnapshotAndReplay() {
 // that the planner reaches for it (the PLAY). The rule has been in
 // ApplyPreserveIncome throughout; nothing exercised it as counterplay, and an
 // unexercised rule and an absent one look alike from the outside.
+// The shipping battlefields, guarded where it is cheap to guard them. These
+// tables are now read by both the Unreal skirmish model and the headless
+// harness, so an edit here reaches the game and the measurement at once.
+//
+// The invariant that matters is placement on open ground. A structure or unit
+// authored onto blocked terrain has no standing room: it does not fail loudly,
+// it simply never gathers, never builds, or never leaves its tile, and the
+// match quietly degrades into the kind of unresolved stall the balance matrix
+// then reports as a mystery.
+void TestShippingSkirmishPresetsArePlaceable() {
+    for (const SkirmishMapPreset preset : kSkirmishMapPresets) {
+        const auto local = SkirmishLocalSpawnTiles(preset);
+        const auto opponent = SkirmishOpponentSpawnTiles(preset);
+        const auto deposits = SkirmishResourceNodeTiles(preset);
+        const SkirmishTile well = SkirmishFutureWellTile(preset);
+
+        // Positional lists: the force tables index these by position, so a
+        // length drift puts the wrong unit type on the wrong tile in silence.
+        REQUIRE(local.size() == kSkirmishLocalForce.size());
+        REQUIRE(opponent.size() == kSkirmishOpponentForce.size());
+        REQUIRE(deposits.size() == 8);
+
+        REQUIRE(well.x >= 0 && well.y >= 0);
+        REQUIRE(!IsSkirmishBlockedTile(preset, well.x, well.y));
+        for (const SkirmishTile& tile : local) {
+            REQUIRE(!IsSkirmishBlockedTile(preset, tile.x, tile.y));
+        }
+        for (const SkirmishTile& tile : opponent) {
+            REQUIRE(!IsSkirmishBlockedTile(preset, tile.x, tile.y));
+        }
+        for (const SkirmishTile& tile : deposits) {
+            REQUIRE(!IsSkirmishBlockedTile(preset, tile.x, tile.y));
+        }
+
+        // Every battlefield has blocked ground, and none is mostly wall. A
+        // predicate edit that accidentally blocks everything would otherwise
+        // only show up as every match stalling.
+        std::int32_t blocked = 0;
+        for (std::int32_t y = 0; y < kSkirmishMapHeightTiles; ++y) {
+            for (std::int32_t x = 0; x < kSkirmishMapWidthTiles; ++x) {
+                blocked += IsSkirmishBlockedTile(preset, x, y) ? 1 : 0;
+            }
+        }
+        REQUIRE(blocked > 0);
+        REQUIRE(blocked <
+                kSkirmishMapWidthTiles * kSkirmishMapHeightTiles / 4);
+
+        // Out of range reads blocked, so a walker stepping off the grid cannot
+        // find open ground there.
+        REQUIRE(IsSkirmishBlockedTile(preset, -1, 0));
+        REQUIRE(IsSkirmishBlockedTile(preset, 0, -1));
+        REQUIRE(IsSkirmishBlockedTile(preset, kSkirmishMapWidthTiles, 0));
+        REQUIRE(IsSkirmishBlockedTile(preset, 0, kSkirmishMapHeightTiles));
+    }
+
+    // The three battlefields must actually differ; two presets resolving to
+    // the same geometry would make a three-map balance grid report one map
+    // three times.
+    REQUIRE(SkirmishResourceNodeTiles(SkirmishMapPreset::GlassScar) !=
+            SkirmishResourceNodeTiles(SkirmishMapPreset::CrownfallBasin));
+    REQUIRE(SkirmishResourceNodeTiles(SkirmishMapPreset::CrownfallBasin) !=
+            SkirmishResourceNodeTiles(SkirmishMapPreset::SorynConfluence));
+    REQUIRE(SkirmishLocalSpawnTiles(SkirmishMapPreset::GlassScar) !=
+            SkirmishLocalSpawnTiles(SkirmishMapPreset::SorynConfluence));
+}
+
 void TestPreserveIncomeStopsWhileContested() {
     Simulation simulation({20, 20, 20, 0x44454e59414cULL});
     REQUIRE(simulation.AddPlayer(0, Faction::MeridianCompact, {500, 0}));
@@ -11642,6 +11709,8 @@ int main(int argc, char** argv) {
         {"ballistic cover interception and moving-target tracking", TestBallisticCoverAndTrackingRegression},
         {"harvest reservations travel depletion and persistence", TestHarvestReservationRegression},
         {"contact line of sight across attack orders", TestContactLineOfSightRegression},
+        {"shipping skirmish presets are placeable",
+         TestShippingSkirmishPresetsArePlaceable},
         {"preserve income stops while contested",
          TestPreserveIncomeStopsWhileContested},
         {"denial play commits one body and holds",

@@ -1,5 +1,10 @@
 #include "EchoesSkirmishSetup.h"
 
+#include "EchoesSimCore/SkirmishMapPresets.h"
+
+#include <array>
+#include <cstddef>
+
 #include "Containers/Queue.h"
 
 namespace
@@ -692,60 +697,35 @@ FEchoesSkirmishSetup FEchoesSkirmishSetupModel::WithNextGameSpeed(
     return Result;
 }
 
+namespace
+{
+// One definition for all three battlefields now lives in
+// EchoesSimCore/SkirmishMapPresets.h so the headless balance harness reads the
+// same geometry this module does. The harness previously could not see it and
+// measured a synthetic fixture instead.
+[[nodiscard]] echoes::sim::SkirmishMapPreset ToCorePreset(
+    EEchoesSkirmishMapPreset Preset)
+{
+    switch (Preset)
+    {
+        case EEchoesSkirmishMapPreset::GlassScar:
+            return echoes::sim::SkirmishMapPreset::GlassScar;
+        case EEchoesSkirmishMapPreset::CrownfallBasin:
+            return echoes::sim::SkirmishMapPreset::CrownfallBasin;
+        case EEchoesSkirmishMapPreset::SorynConfluence:
+            return echoes::sim::SkirmishMapPreset::SorynConfluence;
+    }
+    return echoes::sim::SkirmishMapPreset::GlassScar;
+}
+}
+
 bool FEchoesSkirmishSetupModel::IsBlockedTile(
     EEchoesSkirmishMapPreset Preset,
     int32 TileX,
     int32 TileY)
 {
-    switch (Preset)
-    {
-        case EEchoesSkirmishMapPreset::GlassScar:
-        {
-            const bool bInScar = TileY >= 30 && TileY <= 34 &&
-                TileX >= 8 && TileX <= 55;
-            const bool bCrossing = (TileX >= 12 && TileX <= 15) ||
-                (TileX >= 29 && TileX <= 35) ||
-                (TileX >= 48 && TileX <= 51);
-            return bInScar && !bCrossing;
-        }
-        case EEchoesSkirmishMapPreset::CrownfallBasin:
-        {
-            const bool bRidge =
-                ((TileX >= 27 && TileX <= 29) ||
-                 (TileX >= 35 && TileX <= 37)) &&
-                TileY >= 6 && TileY <= 57;
-            const bool bGate = (TileY >= 13 && TileY <= 17) ||
-                (TileY >= 30 && TileY <= 34) ||
-                (TileY >= 46 && TileY <= 50);
-            const bool bNorthShelf = TileY >= 39 && TileY <= 41 &&
-                TileX >= 10 && TileX <= 22 &&
-                !(TileX >= 15 && TileX <= 17);
-            const bool bSouthShelf = TileY >= 22 && TileY <= 24 &&
-                TileX >= 42 && TileX <= 54 &&
-                !(TileX >= 47 && TileX <= 49);
-            return (bRidge && !bGate) || bNorthShelf || bSouthShelf;
-        }
-        case EEchoesSkirmishMapPreset::SorynConfluence:
-        {
-            const bool bOuterHorizontal =
-                (TileY == 19 || TileY == 20 || TileY == 43 || TileY == 44) &&
-                TileX >= 20 && TileX <= 43;
-            const bool bOuterVertical =
-                (TileX == 20 || TileX == 21 || TileX == 42 || TileX == 43) &&
-                TileY >= 19 && TileY <= 44;
-            const bool bNorthSouthGate = TileX >= 30 && TileX <= 33;
-            const bool bWestEastGate = TileY >= 30 && TileY <= 33;
-            const bool bRing =
-                (bOuterHorizontal && !bNorthSouthGate) ||
-                (bOuterVertical && !bWestEastGate);
-            const bool bWestShard = TileX >= 9 && TileX <= 16 &&
-                TileY >= 25 && TileY <= 27;
-            const bool bEastShard = TileX >= 47 && TileX <= 54 &&
-                TileY >= 36 && TileY <= 38;
-            return bRing || bWestShard || bEastShard;
-        }
-    }
-    return true;
+    return echoes::sim::IsSkirmishBlockedTile(
+        ToCorePreset(Preset), TileX, TileY);
 }
 
 int32 FEchoesSkirmishSetupModel::ExpectedBlockedTileCount(
@@ -765,114 +745,44 @@ int32 FEchoesSkirmishSetupModel::ExpectedBlockedTileCount(
 FIntPoint FEchoesSkirmishSetupModel::FutureWellTile(
     EEchoesSkirmishMapPreset Preset)
 {
-    switch (Preset)
-    {
-        case EEchoesSkirmishMapPreset::GlassScar: return {32, 32};
-        // MAP-001 fairness correction. The Well sat at 32,39: 35 tiles from the
-        // northwest start and 49 from the southeast one, 28.6% apart against a
-        // 5% ceiling. Because the two starts lie on a northwest-southeast
-        // diagonal, the equidistant locus on this battlefield runs along the
-        // opposing diagonal, and no due-north tile is reachable equally by both
-        // forces. 34,34 is the northernmost equidistant tile inside the central
-        // corridor between the twin ridges (x 30-34) and inside the middle gate
-        // band (y 30-34), so it stays neutral ground, stays north of centre,
-        // and measures 42 tiles from either Command Core.
-        case EEchoesSkirmishMapPreset::CrownfallBasin: return {34, 34};
-        case EEchoesSkirmishMapPreset::SorynConfluence: return {32, 32};
-    }
-    return {-1, -1};
+    const echoes::sim::SkirmishTile Tile =
+        echoes::sim::SkirmishFutureWellTile(ToCorePreset(Preset));
+    return {Tile.x, Tile.y};
 }
 
-// Index 0 is the Command Core and index 2 is the starting Dropoff; MAP-001's
-// "resource travel time" is worker haul time, which is measured to whichever of
-// those two is nearer, so the Dropoff placement is part of the fairness
-// contract and not free decoration. Every Dropoff below is measured, not eyed:
-// see the fairness note above ResourceNodeTiles.
+namespace
+{
+template <std::size_t N>
+[[nodiscard]] TArray<FIntPoint> ToTileArray(
+    const std::array<echoes::sim::SkirmishTile, N>& Tiles)
+{
+    TArray<FIntPoint> Result;
+    Result.Reserve(static_cast<int32>(N));
+    for (const echoes::sim::SkirmishTile& Tile : Tiles)
+    {
+        Result.Add(FIntPoint(Tile.x, Tile.y));
+    }
+    return Result;
+}
+}
+
 TArray<FIntPoint> FEchoesSkirmishSetupModel::LocalSpawnTiles(
     EEchoesSkirmishMapPreset Preset)
 {
-    switch (Preset)
-    {
-        case EEchoesSkirmishMapPreset::GlassScar:
-            // Dropoff 6,17 -> 6,14. The Barracks at 14,10 is 4x4
-            // (SPEC-STR-003), so 14,12 and 16,10 are inside its footprint and
-            // 8,8 is inside the 5x5 Core; the worker, Soldier and route scout
-            // that used those tiles now stand one tile clear of them.
-            return {{10, 10}, {14, 10}, {6, 14}, {8, 13}, {11, 14},
-                    {14, 13}, {6, 8}, {12, 7}, {17, 10}, {7, 6},
-                    {15, 6}, {6, 11}};
-        case EEchoesSkirmishMapPreset::CrownfallBasin:
-            // Dropoff 6,45 -> 3,47.
-            return {{10, 52}, {14, 52}, {3, 47}, {8, 49}, {11, 48},
-                    {14, 49}, {8, 55}, {12, 57}, {17, 54}, {7, 58},
-                    {15, 58}, {6, 53}};
-        case EEchoesSkirmishMapPreset::SorynConfluence:
-            // Dropoff 13,38 -> 10,38.
-            return {{8, 32}, {8, 21}, {10, 38}, {11, 30}, {12, 34},
-                    {15, 32}, {6, 29}, {6, 35}, {12, 40}, {5, 38},
-                    {15, 42}, {13, 24}};
-    }
-    return {};
+    return ToTileArray(
+        echoes::sim::SkirmishLocalSpawnTiles(ToCorePreset(Preset)));
 }
 
 TArray<FIntPoint> FEchoesSkirmishSetupModel::OpponentSpawnTiles(
     EEchoesSkirmishMapPreset Preset)
 {
-    switch (Preset)
-    {
-        case EEchoesSkirmishMapPreset::GlassScar:
-            // Dropoff 58,48 -> 58,50. Workers stand clear of the 4x4
-            // Barracks at 50,54 and the 2x2 Aegis Post at 58,53
-            // (SPEC-STR-003/004 footprints, SPEC-MOV-006 standing room).
-            return {{54, 54}, {50, 54}, {58, 50}, {51, 51}, {54, 50},
-                    {56, 51}, {50, 57}, {54, 58}, {57, 58},
-                    {49, 58}, {58, 53}};
-        case EEchoesSkirmishMapPreset::CrownfallBasin:
-            // Dropoff 58,19 -> 61,17.
-            return {{54, 12}, {50, 12}, {61, 17}, {49, 15}, {54, 16},
-                    {57, 14}, {50, 9}, {54, 6}, {57, 6},
-                    {49, 6}, {58, 11}};
-        case EEchoesSkirmishMapPreset::SorynConfluence:
-            // Dropoff 51,26 -> 54,26.
-            return {{56, 32}, {56, 43}, {54, 26}, {53, 34}, {52, 30},
-                    {49, 32}, {58, 35}, {58, 29}, {59, 26},
-                    {49, 22}, {51, 40}};
-    }
-    return {};
+    return ToTileArray(
+        echoes::sim::SkirmishOpponentSpawnTiles(ToCorePreset(Preset)));
 }
 
 TArray<FIntPoint> FEchoesSkirmishSetupModel::ResourceNodeTiles(
     EEchoesSkirmishMapPreset Preset)
 {
-    switch (Preset)
-    {
-        // MAP-001 fairness correction, derived by breadth-first search over the
-        // shipping terrain rather than by eye. Each deposit is placed so the
-        // eight tiles form four swap-matched pairs: for every deposit A that is
-        // n tiles from one force and m from the other, its partner B is m from
-        // the first and n from the second. That makes the two forces' sorted
-        // distance ladders identical - 0% apart at every rank, not merely
-        // inside MAP-001's 5% ceiling - without requiring the terrain itself to
-        // be symmetric, which on these three battlefields it is not.
-        //
-        // Glass Scar moved four deposits by 1, 3, 4 and 1 tiles; Crownfall
-        // Basin moved two, one by 1 tile and one by 9; Soryn Confluence needed
-        // no deposit moved. Measured worst-case disparity after the change, on
-        // all three maps and from both the Command Core and the worker haul
-        // anchor: 0.0%.
-        case EEchoesSkirmishMapPreset::GlassScar:
-            // 47,50 -> 46,50   52,45 -> 49,45
-            // 43,36 -> 39,36   31,43 -> 30,43
-            return {{16, 16}, {21, 13}, {25, 28}, {33, 22},
-                    {30, 43}, {39, 36}, {46, 50}, {49, 45}};
-        case EEchoesSkirmishMapPreset::CrownfallBasin:
-            // 32,27 -> 32,18 (kept in the central corridor between the ridges)
-            // 56,22 -> 55,22
-            return {{15, 46}, {20, 53}, {20, 34}, {32, 18},
-                    {34, 48}, {44, 30}, {48, 17}, {55, 22}};
-        case EEchoesSkirmishMapPreset::SorynConfluence:
-            return {{15, 18}, {17, 47}, {26, 27}, {27, 37},
-                    {37, 27}, {38, 37}, {47, 17}, {49, 46}};
-    }
-    return {};
+    return ToTileArray(
+        echoes::sim::SkirmishResourceNodeTiles(ToCorePreset(Preset)));
 }

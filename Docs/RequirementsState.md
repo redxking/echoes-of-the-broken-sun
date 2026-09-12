@@ -6,6 +6,70 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## The balance harness measured the shipping maps for the first time — 2026-09-12, 13:05Z
+
+Owner direction: a self-learning opponent that understands each faction on each map, tuned until every
+faction sits near 50% against the others everywhere. That target is already written as SPEC-BAL-003 and
+REL-AI-042 (40-60% band, 1,000 matches per cell, spawn advantage under 5%), and SPEC-BAL-008 already
+says the instrument must be competent first. The first step is therefore the measurement grid, and this
+slice built it. Evidence: `/Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/balance-grid-20260912T120939Z`.
+
+**The harness had never measured a shipping battlefield, and said so in every matrix it wrote:**
+"synthetic single-map fixture is not the three shipping maps". The geometry lived in
+`FEchoesSkirmishSetupModel` inside the Unreal module, unreachable from a headless build. The synthetic
+fixture it used instead has **no blocked terrain at all** — no ridges, gates or crossings, which is most
+of what makes these maps different from each other.
+
+**Extracted rather than transcribed.** `EchoesSimCore/SkirmishMapPresets.h` now holds the geometry in
+plain C++ and the Unreal model reads it too: one definition, two consumers. A copy in the harness would
+have been free to drift. The extraction is verified faithful by tests that already existed — the MAP-001
+fairness tests check Well equidistance and deposit distance-ladder symmetry against exactly these
+tables, and the suite passes 139/139. The MAP-001 derivations moved with the data they justify, because
+a measured placement parted from its reasoning becomes a magic number at the first edit.
+
+**Map is a condition dimension, not a run setting**, since a faction can sit in band on one battlefield
+and fail on another, and averaging the three hides precisely that.
+
+**Result: the owner's target is not currently measurable, and now visibly so per map.** 2,808 matches,
+13 seeds per condition, ~104 per cell. 179 of 216 conditions degenerate (2,327 matches carrying 179
+observations), across all three maps. **0 of 18 non-mirror cells reach 30 decisive matches**, so the
+grid quotes no rate for any of them rather than inventing one. Per map, decisive against excluded:
+Crownfall Basin 78/468, Glass Scar 74/494, Soryn Confluence 32/572 — the ring geometry repeats most.
+
+**Five cells report zero decisive matches, and not because they stall.** Each shows `unresolved: 0`
+with all 104 matches excluded as replays. A stall and a replay need different fixes; reporting them
+together would have pointed the next lane at the wrong one.
+
+**Spawn asymmetry is the finding that would corrupt everything else: seat 0 wins 77.9%** (N=272) against
+SPEC-BAL-004's 5% ceiling, and 212 to 60 across counted rows. The old synthetic fixture read 62.7%, so
+real terrain makes it worse, not better. SPEC-BAL-004 → OPEN with this measurement.
+
+**The legacy per-faction lines are not balance facts.** "Meridian vs Choir 95.0%", "Kharuun vs Choir
+93.9%" are computed over the same degenerate rows. They are what the old averaged single-map view would
+have reported, and they are exactly what this grid replaces.
+
+**A determinism violation was raised and it was mine.** The first run printed `DETERMINISM VIOLATION on
+seed 151845015998047`. The rerun check called `RunMatch` without the layout, replaying the sampled seed
+on the synthetic fixture rather than the map it was played on. **The harness already carried this lesson
+in a comment** — a rerun assuming default personalities "replays a DIFFERENT condition and reports a
+determinism violation that is not one" — and adding the map reopened the same hole on a new axis. Every
+dimension a condition varies must travel with the record. Fixed; 10/10 reruns then matched. The
+simulation is deterministic; the instrument was not.
+
+**Ranked blockers to the 40-60% target**, which is also the order any learner needs:
+1. **Variance (TBR-STR-009).** 179/216 degenerate. More seeds provably will not help. Owner's separate
+   point that 64x64 is too small plausibly feeds the same cause: a 5x5 Core on a 64-tile map leaves
+   little room for play to diverge. Amending SPEC-SKM-011..013 is an owner decision.
+2. **Spawn bias at 77.9%**, which contaminates every faction number regardless of variance.
+3. **SPEC-BAL-008 competence, 1 of 4 checks.** Until the battery is complete no number here qualifies
+   as balance evidence; it measures the AI rather than the game.
+
+**Recorded for the world lane, not deepened:** Glass Scar has a registered pack under
+`Content/World/Source`; Crownfall Basin and Soryn Confluence have none, so for those two the new header
+IS the source rather than a generated output, against the source-before-output rule.
+
+Native 153/153 in three configurations. Unreal 139/139.
+
 ## A skirmish quicksave would not load while a mineral cover stood — 2026-09-12, 11:40Z
 
 Found by exposure, while implementing something else. `ValidateSkirmishSnapshotBinding` required a
@@ -590,13 +654,17 @@ defaults and any dated entry below. This table is a view of decisions, not a new
 | `REL-AI-022` | IN PROGRESS | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-8.json | bd3215c | 2026-09-11 | 807/1000 after the retreat fix; mirror win rates unusable until the harness alternates planning order, since seat 0 plans first every tick |
 | `REL-AI-024` | IN PROGRESS | SRC | BuildArtifacts/Evidence/rel-ai-024-denial-20260912T104957Z | 24d7055 | 2026-09-12 | Denial play implemented and measured A/B against HEAD on two maps. Undecided: 58/72 Glass Scar conditions are degenerate, so the 936-match aggregate is replays; the 14 comparable conditions reverse the sign with no consistent direction. Not a regression, not a demonstrated gain. |
 | `REL-AI-031` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-well-contest | b62f426 | 2026-09-11 | Opponent contests a Well claimed by another player; CompleteSkirmishDefeat finishes at tick 9824 after failing in every suite |
+| `REL-AI-042` | BLOCKED | SRC | /Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/balance-grid-20260912T120939Z | 0ff2e65 | 2026-09-12 | Same blockers as SPEC-BAL-003; the 1,000-matches-per-cell run cannot qualify while SPEC-BAL-008 competence is 1 of 4. |
 | `REL-ECO-010` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | [INSUFFICIENT_DAWN]/[INSUFFICIENT_MATTER] refusals name unit, price, holding and source; Gameplay.ProductionRefusalText |
 | `REL-ECO-011` | AGENT VERIFIED | SRC | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z | 34ca1a0 | 2026-09-11 | Ceiling 120 and committed band implemented (schema 33); native committed-band test; HUD label compiled natively, editor rerun owed |
 | `REL-FAC-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z | ec62a5a | 2026-09-11 | REL-FAC-002.PROD authored and implemented: Foundry produces only while network-powered; replay schema 32; native+Unreal+rendered green; uncommitted |
 | `REL-FAC-028` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/d3-meridian-20260911T161144Z | 34ca1a0 | 2026-09-11 | Authored optic mesh generated via asset pipeline and integrated in C++ in place of placeholder cube |
-| `REL-SAV-005` | IMPLEMENTED | SRC | BuildArtifacts/Evidence/rel-ai-024-denial-20260912T104957Z | 24d7055 | 2026-09-12 | Defect found and fixed: ValidateSkirmishSnapshotBinding required checkpoint blocked tiles to equal the authored preset, so any skirmish save taken while a Kharuun mineral cover stood refused to load. Narrow cover exemption added; the ResolveExpiredReshapes reopen case stays unhandled and is documented in code. No regression test covers the fix directly. |
+| `REL-SAV-005` | IMPLEMENTED | EDT | /Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/checkpoint-cover-20260912 | 0ff2e65 | 2026-09-12 | Live mineral-cover command/save/load regression passed on 0ff2e65 plus preserved dirty work and new test; exact tick, checksum, cover and blocked tile restored. Mac UE 5.8.2 editor build and 13/13 Persistence automation passed under save sandbox. Coverage item verified; parent remains IMPLEMENTED because Reshape reopen terrain case remains unresolved; no packaged, physical-input or owner acceptance. |
 | `REL-UI-002` | AWAITING HUMAN ACCEPTANCE | PKG-REND | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/review-1280x720 | ec62a5a | 2026-09-11 | Deck tiles carry roster names, prices and symbol bindings (capture 07); REL-UI-002.AUTH slot positions still wait on TBR-UX-001 |
 | `REL-UI-003` | IMPLEMENTED | PKG-AUTO | BuildArtifacts/Evidence/build-owner-findings-20260911T150015Z/automation-C | ec62a5a | 2026-09-11 | ARMOR field removed (no armor statistic in the model); mixed selection still per-entity (REL-UI-003.AUTH open) |
+| `SPEC-BAL-001` | IN PROGRESS | SRC | /Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/balance-grid-20260912T120939Z | 0ff2e65 | 2026-09-12 | Harness now measures the three shipping maps via shared SkirmishMapPresets.h, with real blocked terrain and map as a condition dimension. Its standing limitation 'synthetic single-map fixture is not the three shipping maps' is closed. |
+| `SPEC-BAL-003` | BLOCKED | SRC | /Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/balance-grid-20260912T120939Z | 0ff2e65 | 2026-09-12 | Not measurable as it stands: 179/216 conditions degenerate, 0/18 non-mirror cells reach 30 decisive matches, so no cell can be judged against the 40-60 band. Blocked on TBR-STR-009 variance, spawn bias, and SPEC-BAL-008 competence. |
+| `SPEC-BAL-004` | OPEN | SRC | /Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/balance-grid-20260912T120939Z | 0ff2e65 | 2026-09-12 | Spawn asymmetry measured at 77.9% for seat 0 (N=272) on the shipping maps against a 5% ceiling; 62.7% on the old synthetic fixture. Contaminates every faction number until repaired. |
 | `SPEC-BAL-009` | AGENT VERIFIED | SRC | — | 85eaf3c | 2026-09-11 | Re-measured on schema 36 (85eaf3c): unchanged, 60/60 vs 7/60 control; harness units all carry explicit orders so idle return fire does not apply |
 | `SPEC-BAL-011` | AGENT VERIFIED | PKG-AUTO | BuildArtifacts/Evidence/firing-lanes-20260911T182737Z/automation-glassscar | 46f1c14 | 2026-09-11 | BAL-STR-3 native blind 30/30, scouted 0/30, flat 0/30; Glass Scar wiring verified in Unreal 138/139 |
 | `SPEC-CMB-007` | AGENT VERIFIED | PKG-AUTO | — | 2bd56de | 2026-09-11 | Idle return fire (D3 lane, schema 36) fixes the acquisition defect; full Unreal suite 139 passed, only CompleteSkirmishDefeat failing |
@@ -7407,3 +7475,8 @@ evidence, commit, note. Dated narrative sections above remain the place for reas
 - 2026-09-12T11:36Z — `SPEC-WELLP-002` → **AGENT VERIFIED**; class SRC; evidence BuildArtifacts/Evidence/rel-ai-024-denial-20260912T104957Z; commit 24d7055; Preserve contestability proven by test: a hostile body inside the capture radius stops the income, the Well is neither captured nor damaged, and the income resumes when the body leaves. Native 152/152 in three configurations.
 - 2026-09-12T11:36Z — `REL-SAV-005` → **IMPLEMENTED**; class SRC; evidence BuildArtifacts/Evidence/rel-ai-024-denial-20260912T104957Z; commit 24d7055; Defect found and fixed: ValidateSkirmishSnapshotBinding required checkpoint blocked tiles to equal the authored preset, so any skirmish save taken while a Kharuun mineral cover stood refused to load. Narrow cover exemption added; the ResolveExpiredReshapes reopen case stays unhandled and is documented in code. No regression test covers the fix directly.
 - 2026-09-12T11:36Z — `REL-AI-024` → **IN PROGRESS**; class SRC; evidence BuildArtifacts/Evidence/rel-ai-024-denial-20260912T104957Z; commit 24d7055; Denial play implemented and measured A/B against HEAD on two maps. Undecided: 58/72 Glass Scar conditions are degenerate, so the 936-match aggregate is replays; the 14 comparable conditions reverse the sign with no consistent direction. Not a regression, not a demonstrated gain.
+- 2026-09-12T12:23Z — `REL-SAV-005` → **IMPLEMENTED**; class EDT; evidence /Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/checkpoint-cover-20260912; commit 0ff2e65; Live mineral-cover command/save/load regression passed on 0ff2e65 plus preserved dirty work and new test; exact tick, checksum, cover and blocked tile restored. Mac UE 5.8.2 editor build and 13/13 Persistence automation passed under save sandbox. Coverage item verified; parent remains IMPLEMENTED because Reshape reopen terrain case remains unresolved; no packaged, physical-input or owner acceptance.
+- 2026-09-12T12:50Z — `SPEC-BAL-001` → **IN PROGRESS**; class SRC; evidence /Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/balance-grid-20260912T120939Z; commit 0ff2e65; Harness now measures the three shipping maps via shared SkirmishMapPresets.h, with real blocked terrain and map as a condition dimension. Its standing limitation 'synthetic single-map fixture is not the three shipping maps' is closed.
+- 2026-09-12T12:50Z — `SPEC-BAL-003` → **BLOCKED**; class SRC; evidence /Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/balance-grid-20260912T120939Z; commit 0ff2e65; Not measurable as it stands: 179/216 conditions degenerate, 0/18 non-mirror cells reach 30 decisive matches, so no cell can be judged against the 40-60 band. Blocked on TBR-STR-009 variance, spawn bias, and SPEC-BAL-008 competence.
+- 2026-09-12T12:50Z — `SPEC-BAL-004` → **OPEN**; class SRC; evidence /Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/balance-grid-20260912T120939Z; commit 0ff2e65; Spawn asymmetry measured at 77.9% for seat 0 (N=272) on the shipping maps against a 5% ceiling; 62.7% on the old synthetic fixture. Contaminates every faction number until repaired.
+- 2026-09-12T12:50Z — `REL-AI-042` → **BLOCKED**; class SRC; evidence /Volumes/Seagate Game Archive/EchoesOfTheBrokenSun/Project/BuildArtifacts/Evidence/balance-grid-20260912T120939Z; commit 0ff2e65; Same blockers as SPEC-BAL-003; the 1,000-matches-per-cell run cannot qualify while SPEC-BAL-008 competence is 1 of 4.

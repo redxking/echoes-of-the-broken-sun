@@ -1,4 +1,5 @@
 #include "EchoesSimCore/Simulation.h"
+#include "EchoesSimCore/SkirmishMapPresets.h"
 
 #include <algorithm>
 #include <array>
@@ -353,6 +354,47 @@ const ContentRuleLoad& AuthoredRules() {
     return loaded;
 }
 
+// Map identity for a measured match. `TournamentSymmetric` is the legacy
+// synthetic fixture this harness has always used; the other three are the
+// shipping battlefields of SPEC-SKM-011..013, read from
+// EchoesSimCore/SkirmishMapPresets.h so there is no second copy to drift.
+//
+// The harness could not reach the shipping maps before, because their geometry
+// lived in the Unreal module. It reported that itself, in every matrix it ever
+// wrote: "synthetic single-map fixture is not the three shipping maps". Balance
+// numbers taken on a map the game does not ship cannot discharge SPEC-BAL-003,
+// whose own VERIF clause asks for the shipping set.
+enum class MapLayout {
+    TournamentSymmetric,
+    GlassScar,
+    CrownfallBasin,
+    SorynConfluence,
+};
+
+const char* MapLayoutId(MapLayout layout) {
+    switch (layout) {
+        case MapLayout::GlassScar: return "GlassScar";
+        case MapLayout::CrownfallBasin: return "CrownfallBasin";
+        case MapLayout::SorynConfluence: return "SorynConfluence";
+        case MapLayout::TournamentSymmetric: break;
+    }
+    return "TournamentSymmetric64";
+}
+
+[[nodiscard]] bool IsShippingMap(MapLayout layout) {
+    return layout != MapLayout::TournamentSymmetric;
+}
+
+[[nodiscard]] SkirmishMapPreset ToPreset(MapLayout layout) {
+    switch (layout) {
+        case MapLayout::CrownfallBasin: return SkirmishMapPreset::CrownfallBasin;
+        case MapLayout::SorynConfluence: return SkirmishMapPreset::SorynConfluence;
+        case MapLayout::GlassScar:
+        case MapLayout::TournamentSymmetric: break;
+    }
+    return SkirmishMapPreset::GlassScar;
+}
+
 struct MatchRecord {
     std::uint64_t seed = 0;
     std::string mapId = "TournamentSymmetric64";
@@ -389,6 +431,16 @@ struct MatchRecord {
     // only by seed, so a condition whose finishing ticks are all identical is
     // one match replayed and carries the information of one observation.
     std::string conditionId;
+    std::string mapLayoutId;
+    // The rerun check must reproduce the sampled match, not a default one.
+    // The harness already learned this for personalities: a rerun that assumed
+    // Adaptive/seat-0-first replayed a DIFFERENT condition and reported a
+    // determinism violation that was not one. Adding the map as a dimension
+    // reopened exactly that hole in a new place - the first grid run over the
+    // shipping maps reported a false violation because the rerun replayed the
+    // seed on the synthetic fixture. Same lesson, new axis: every dimension a
+    // condition varies must travel with the record.
+    MapLayout layout = MapLayout::TournamentSymmetric;
     // REL-AI-024. Counted apart on purpose: "never reachable" and "reachable
     // and declined" are indistinguishable in outcomes, and reading an
     // unchanged matrix as a clean null is the error this measurement exists
@@ -519,23 +571,6 @@ inline std::string PersonalityToString(AiPersonality p) {
     }
 }
 
-// REL-AI-024. The denial play needs a seat that holds no Well while its
-// opponent holds one that pays, and `SetupTournamentMap` cannot produce that
-// state: it gives each seat its own Well five tiles from its Core, so the
-// precondition "this seat has no Well income" was measured at zero occurrences
-// across three pairings while the planner branch itself was reached 13,289 to
-// 27,370 times per seat (evidence
-// d3-meridian-20260911T161144Z/denial-play-unmeasurable).
-//
-// Glass Scar authors ONE Future Well, at the centre of the map. That is the
-// contested-Well layout the measurement needs, and it is an authored shipping
-// map rather than a fixture invented to make a rule fire.
-enum class MapLayout { TournamentSymmetric, GlassScar };
-
-const char* MapLayoutId(MapLayout layout) {
-    return layout == MapLayout::GlassScar ? "GlassScar64" : "TournamentSymmetric64";
-}
-
 void SetupTournamentMap(Simulation& sim, Faction f0, Faction f1) {
     sim.AddPlayer(0, f0, ResourcePool{800, 350});
     sim.AddPlayer(1, f1, ResourcePool{800, 350});
@@ -566,51 +601,53 @@ void SetupTournamentMap(Simulation& sim, Faction f0, Faction f1) {
     sim.SpawnResourceNode(Vec2::FromTiles(32, 36), 6000);
 }
 
-// Transcribed from Content/World/Source/GlassScar/glass_scar_map_pack_v1.json
-// (deployment.local_spawns / opponent_spawns, resources.matter_deposits,
-// objectives.future_well) and from the force the runtime actually spawns for
-// this map in EchoesSimulationSubsystem::StartScenario, including the node
-// amount (1500) and starting pools (500 material, 30 Dawn). Kept in that order
-// so a divergence from the shipping scenario is a readable diff, not a hunt.
-void SetupGlassScarMap(Simulation& sim, Faction f0, Faction f1) {
-    sim.AddPlayer(0, f0, ResourcePool{500, 30});
-    sim.AddPlayer(1, f1, ResourcePool{500, 30});
+// One shipping battlefield, assembled from the shared preset tables: blocked
+// ground, both forces in spawn-tile order, the authored deposits and the Well.
+// Nothing here is transcribed - every figure is read from
+// SkirmishMapPresets.h, which the Unreal skirmish model now also reads, so the
+// harness and the game cannot disagree about what a map is.
+void SetupShippingMap(Simulation& sim,
+                      MapLayout layout,
+                      Faction f0,
+                      Faction f1) {
+    const SkirmishMapPreset preset = ToPreset(layout);
 
-    sim.SpawnEntity(0, f0, EntityType::CommandCore, Vec2::FromTiles(10, 10));
-    sim.SpawnEntity(0, f0, EntityType::Barracks, Vec2::FromTiles(14, 10));
-    sim.SpawnEntity(0, f0, EntityType::Dropoff, Vec2::FromTiles(6, 17));
-    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(8, 13));
-    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(11, 14));
-    sim.SpawnEntity(0, f0, EntityType::Worker, Vec2::FromTiles(14, 13));
-    sim.SpawnEntity(0, f0, EntityType::Soldier, Vec2::FromTiles(6, 8));
-    sim.SpawnEntity(0, f0, EntityType::Soldier, Vec2::FromTiles(12, 7));
-    sim.SpawnEntity(0, f0, EntityType::Soldier, Vec2::FromTiles(16, 10));
-    sim.SpawnEntity(0, f0, EntityType::HeavyUnit, Vec2::FromTiles(7, 6));
-    sim.SpawnEntity(0, f0, EntityType::ScoutUnit, Vec2::FromTiles(15, 6));
-    sim.SpawnEntity(0, f0, EntityType::UtilityStructure, Vec2::FromTiles(6, 11));
-
-    sim.SpawnEntity(1, f1, EntityType::CommandCore, Vec2::FromTiles(54, 54));
-    sim.SpawnEntity(1, f1, EntityType::Barracks, Vec2::FromTiles(50, 54));
-    sim.SpawnEntity(1, f1, EntityType::Dropoff, Vec2::FromTiles(58, 48));
-    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(51, 51));
-    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(54, 50));
-    sim.SpawnEntity(1, f1, EntityType::Worker, Vec2::FromTiles(56, 51));
-    sim.SpawnEntity(1, f1, EntityType::Soldier, Vec2::FromTiles(50, 57));
-    sim.SpawnEntity(1, f1, EntityType::Soldier, Vec2::FromTiles(54, 58));
-    sim.SpawnEntity(1, f1, EntityType::HeavyUnit, Vec2::FromTiles(57, 58));
-    sim.SpawnEntity(1, f1, EntityType::ScoutUnit, Vec2::FromTiles(49, 58));
-    sim.SpawnEntity(1, f1, EntityType::UtilityStructure, Vec2::FromTiles(58, 53));
-
-    static constexpr std::array<std::pair<std::int32_t, std::int32_t>, 8>
-        kMatterDeposits = {{{16, 16}, {21, 13}, {25, 28}, {33, 22},
-                            {31, 43}, {43, 36}, {47, 50}, {52, 45}}};
-    for (const auto& deposit : kMatterDeposits) {
-        sim.SpawnResourceNode(
-            Vec2::FromTiles(deposit.first, deposit.second), 1500);
+    // Terrain first: a force spawned before the ground exists can land inside
+    // a ridge. The synthetic fixture has no blocked ground at all, which is a
+    // second reason its numbers never described a shipping match - routes,
+    // gates and chokes are most of what these maps are.
+    for (std::int32_t tileY = 0; tileY < kSkirmishMapHeightTiles; ++tileY) {
+        for (std::int32_t tileX = 0; tileX < kSkirmishMapWidthTiles; ++tileX) {
+            if (IsSkirmishBlockedTile(preset, tileX, tileY)) {
+                (void)sim.SetTerrainTile(tileX, tileY, Terrain::Blocked);
+            }
+        }
     }
 
-    // objectives.future_well — the single contested Well this measurement needs.
-    sim.SpawnFutureWell(Vec2::FromTiles(32, 32));
+    sim.AddPlayer(0, f0, ResourcePool{kSkirmishStandardMaterial,
+                                      kSkirmishStandardDawn});
+    sim.AddPlayer(1, f1, ResourcePool{kSkirmishStandardMaterial,
+                                      kSkirmishStandardDawn});
+
+    const auto localTiles = SkirmishLocalSpawnTiles(preset);
+    for (std::size_t index = 0; index < localTiles.size(); ++index) {
+        sim.SpawnEntity(0, f0, kSkirmishLocalForce[index],
+                        Vec2::FromTiles(localTiles[index].x,
+                                        localTiles[index].y));
+    }
+    const auto opponentTiles = SkirmishOpponentSpawnTiles(preset);
+    for (std::size_t index = 0; index < opponentTiles.size(); ++index) {
+        sim.SpawnEntity(1, f1, kSkirmishOpponentForce[index],
+                        Vec2::FromTiles(opponentTiles[index].x,
+                                        opponentTiles[index].y));
+    }
+
+    for (const SkirmishTile& deposit : SkirmishResourceNodeTiles(preset)) {
+        sim.SpawnResourceNode(Vec2::FromTiles(deposit.x, deposit.y),
+                              kSkirmishDepositAmount);
+    }
+    const SkirmishTile well = SkirmishFutureWellTile(preset);
+    sim.SpawnFutureWell(Vec2::FromTiles(well.x, well.y));
 }
 
 // REL-AI-024 measurement, taken from simulation state rather than from planner
@@ -674,14 +711,16 @@ MatchRecord RunMatch(std::uint64_t seed,
     SimulationConfig config{64, 64, 20, seed};
     config.rules = AuthoredRules().rules;
     Simulation sim(config);
-    if (layout == MapLayout::GlassScar) {
-        SetupGlassScarMap(sim, f0, f1);
+    if (IsShippingMap(layout)) {
+        SetupShippingMap(sim, layout, f0, f1);
     } else {
         SetupTournamentMap(sim, f0, f1);
     }
 
     MatchRecord record{};
     record.mapId = MapLayoutId(layout);
+    record.mapLayoutId = MapLayoutId(layout);
+    record.layout = layout;
     record.seed = seed;
     record.seat1PlannedFirst = seat1PlansFirst;
     record.faction0 = FactionToString(f0);
@@ -816,7 +855,12 @@ int main(int argc, char* argv[]) {
     std::uint64_t baseSeed = 0x8A1A2C3D4E5FULL;
     int requestedThreads = static_cast<int>(std::thread::hardware_concurrency());
     if (requestedThreads <= 0) requestedThreads = 4;
-    MapLayout layout = MapLayout::TournamentSymmetric;
+    // SPEC-BAL-003's verification asks for the shipping set, so that is the
+    // default. The synthetic fixture stays reachable for continuity with the
+    // matrices recorded before the shipping maps were usable here.
+    std::vector<MapLayout> layouts = {MapLayout::GlassScar,
+                                      MapLayout::CrownfallBasin,
+                                      MapLayout::SorynConfluence};
 
     for (int i = 1; i < argc; ++i) {
         std::string_view arg(argv[i]);
@@ -830,13 +874,21 @@ int main(int argc, char* argv[]) {
             requestedThreads = std::max(1, std::stoi(argv[++i]));
         } else if (arg == "--map" && i + 1 < argc) {
             const std::string_view requested(argv[++i]);
-            if (requested == "glass-scar") {
-                layout = MapLayout::GlassScar;
+            if (requested == "shipping") {
+                layouts = {MapLayout::GlassScar, MapLayout::CrownfallBasin,
+                           MapLayout::SorynConfluence};
+            } else if (requested == "glass-scar") {
+                layouts = {MapLayout::GlassScar};
+            } else if (requested == "crownfall") {
+                layouts = {MapLayout::CrownfallBasin};
+            } else if (requested == "soryn") {
+                layouts = {MapLayout::SorynConfluence};
             } else if (requested == "tournament") {
-                layout = MapLayout::TournamentSymmetric;
+                layouts = {MapLayout::TournamentSymmetric};
             } else {
                 std::cerr << "Unknown --map " << requested
-                          << " (expected tournament or glass-scar)\n";
+                          << " (expected shipping, glass-scar, crownfall, "
+                             "soryn or tournament)\n";
                 return 2;
             }
         }
@@ -847,7 +899,11 @@ int main(int argc, char* argv[]) {
     std::cout << "SPEC-BAL-001..008 Automated 1,000-Match Validation Matrix\n";
     std::cout << "========================================================\n";
     std::cout << "Target Matches: " << totalMatches << " | Threads: " << requestedThreads
-              << " | Map: " << MapLayoutId(layout) << "\n";
+              << " | Maps: ";
+    for (std::size_t index = 0; index < layouts.size(); ++index) {
+        std::cout << (index == 0 ? "" : ", ") << MapLayoutId(layouts[index]);
+    }
+    std::cout << "\n";
 
     const auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -864,6 +920,7 @@ int main(int argc, char* argv[]) {
         AiPersonality p0;
         AiPersonality p1;
         bool seat1PlansFirst;
+        MapLayout layout;
         std::string conditionId;
     };
 
@@ -893,26 +950,34 @@ int main(int argc, char* argv[]) {
     std::vector<MatchTask> tasks;
     tasks.reserve(totalMatches);
 
-    const int conditionCount =
-        9 * static_cast<int>(kPersonalityPairs.size()) * 2;
+    // The map is a condition dimension, not a run-level setting. SPEC-BAL-003
+    // is a claim about every shipping battlefield, and a faction can sit inside
+    // the band on one map while failing on another; averaging the three would
+    // hide exactly that.
+    const int conditionCount = 9 * static_cast<int>(kPersonalityPairs.size()) *
+                               2 * static_cast<int>(layouts.size());
     const int seedsPerCondition = std::max(1, totalMatches / conditionCount);
 
     std::uint64_t seedCursor = 0;
-    for (int matchup = 0; matchup < 9; ++matchup) {
-        const Faction f0 = kFactions[matchup / 3];
-        const Faction f1 = kFactions[matchup % 3];
-        for (const PersonalityPair& pair : kPersonalityPairs) {
-            for (int order = 0; order < 2; ++order) {
-                const bool seat1First = order == 1;
-                std::string conditionId =
-                    FactionToString(f0) + "-v-" + FactionToString(f1) + "|" +
-                    PersonalityToString(pair.p0) + "-v-" +
-                    PersonalityToString(pair.p1) + "|" +
-                    (seat1First ? "seat1-first" : "seat0-first");
-                for (int s = 0; s < seedsPerCondition; ++s) {
-                    tasks.push_back({
-                        baseSeed + (seedCursor++) * 10007ULL,
-                        f0, f1, pair.p0, pair.p1, seat1First, conditionId});
+    for (const MapLayout layout : layouts) {
+        for (int matchup = 0; matchup < 9; ++matchup) {
+            const Faction f0 = kFactions[matchup / 3];
+            const Faction f1 = kFactions[matchup % 3];
+            for (const PersonalityPair& pair : kPersonalityPairs) {
+                for (int order = 0; order < 2; ++order) {
+                    const bool seat1First = order == 1;
+                    std::string conditionId =
+                        std::string(MapLayoutId(layout)) + "|" +
+                        FactionToString(f0) + "-v-" + FactionToString(f1) + "|" +
+                        PersonalityToString(pair.p0) + "-v-" +
+                        PersonalityToString(pair.p1) + "|" +
+                        (seat1First ? "seat1-first" : "seat0-first");
+                    for (int s = 0; s < seedsPerCondition; ++s) {
+                        tasks.push_back({
+                            baseSeed + (seedCursor++) * 10007ULL,
+                            f0, f1, pair.p0, pair.p1, seat1First, layout,
+                            conditionId});
+                    }
                 }
             }
         }
@@ -930,7 +995,7 @@ int main(int argc, char* argv[]) {
             const auto& task = tasks[idx];
             MatchRecord rec = RunMatch(task.seed, task.f0, task.f1, task.p0,
                                        task.p1, 12000, task.seat1PlansFirst,
-                                       layout);
+                                       task.layout);
             rec.conditionId = task.conditionId;
             results[idx] = rec;
             const int finished = ++completedTasks;
@@ -975,6 +1040,31 @@ int main(int argc, char* argv[]) {
               << " samples); achieved in " << denialAchievedMatches << " matches ("
               << denialAchievedSamples << " samples)\n";
 
+    // SPEC-BAL-003 / REL-AI-042 measurement grid: one cell per faction pairing
+    // per shipping map, which is the claim those requirements actually make.
+    // A faction can sit inside the 40-60% band on one battlefield and fail on
+    // another, so the three maps are never averaged together.
+    //
+    // Degenerate conditions are excluded here for the same reason they are
+    // excluded from every other rate in this report: a condition whose matches
+    // all finish on the same tick is one observation replayed, and counting its
+    // 13 copies as 13 wins manufactures confidence that does not exist. The
+    // excluded totals are reported beside each cell rather than dropped
+    // silently, so a cell that is mostly replays is visible as such.
+    struct BalanceCell {
+        std::string map;
+        std::string pairing;
+        bool mirror = false;
+        int decisive = 0;      // counted, non-degenerate, a side won
+        int faction0Wins = 0;
+        int draws = 0;
+        int unresolved = 0;
+        int excludedDegenerate = 0;
+        int seat0Wins = 0;
+        int seat1Wins = 0;
+    };
+    std::map<std::string, BalanceCell> balanceCells;
+    // Built after `conditions` so degeneracy is known; see below.
     // 0. Condition summary, and the degeneracy screen that must run FIRST.
     // A condition is a faction pair, a personality pair and a planning order;
     // its matches differ only by seed. If every match in a condition finishes
@@ -1025,6 +1115,62 @@ int main(int argc, char* argv[]) {
         std::cout << "Degenerate conditions are excluded from every rate and "
                      "interval below.\n";
     }
+
+    // Populate the SPEC-BAL-003 grid now that degeneracy is known.
+    for (const MatchRecord& r : results) {
+        const std::string key = r.mapLayoutId + "|" + r.faction0 + "-v-" + r.faction1;
+        BalanceCell& cell = balanceCells[key];
+        cell.map = r.mapLayoutId;
+        cell.pairing = r.faction0 + "-v-" + r.faction1;
+        cell.mirror = r.faction0 == r.faction1;
+        if (!Sampled(r)) {
+            ++cell.excludedDegenerate;
+            continue;
+        }
+        if (r.winnerPlayer == 0) {
+            ++cell.decisive; ++cell.faction0Wins; ++cell.seat0Wins;
+        } else if (r.winnerPlayer == 1) {
+            ++cell.decisive; ++cell.seat1Wins;
+        } else if (r.winnerPlayer == -1) {
+            ++cell.draws;
+        } else {
+            ++cell.unresolved;
+        }
+    }
+
+    // SPEC-BAL-003 is a claim about NON-MIRROR pairings; a mirror is 50% by
+    // construction and is reported only as a control that the instrument is
+    // not seat-biased into nonsense.
+    int cellsInBand = 0;
+    int cellsOutOfBand = 0;
+    int cellsUnderpowered = 0;
+    for (const auto& [key, cell] : balanceCells) {
+        if (cell.mirror) continue;
+        if (cell.decisive < 30) { ++cellsUnderpowered; continue; }
+        const double rate = static_cast<double>(cell.faction0Wins) / cell.decisive;
+        if (rate < 0.40 || rate > 0.60) ++cellsOutOfBand; else ++cellsInBand;
+    }
+    std::cout << "\nSPEC-BAL-003 grid (faction pairing x shipping map), "
+                 "degenerate conditions excluded:\n";
+    for (const auto& [key, cell] : balanceCells) {
+        if (cell.mirror) continue;
+        std::cout << "  " << std::left << std::setw(52) << key << std::right;
+        if (cell.decisive < 30) {
+            std::cout << "  decisive=" << std::setw(4) << cell.decisive
+                      << "  (too few to judge; " << cell.excludedDegenerate
+                      << " excluded as replays)\n";
+            continue;
+        }
+        const double rate =
+            static_cast<double>(cell.faction0Wins) / cell.decisive;
+        std::cout << "  decisive=" << std::setw(4) << cell.decisive
+                  << "  rate=" << std::fixed << std::setprecision(3) << rate
+                  << (rate < 0.40 || rate > 0.60 ? "  OUT OF BAND" : "  in band")
+                  << "  (excluded replays " << cell.excludedDegenerate << ")\n";
+    }
+    std::cout << "  cells in band: " << cellsInBand << " | out of band: "
+              << cellsOutOfBand << " | too few decisive matches: "
+              << cellsUnderpowered << "\n";
 
     // 1. Evaluate Spawn Slot Fairness (SPEC-BAL-004)
     int slot0Wins = 0;
@@ -1128,7 +1274,7 @@ int main(int argc, char* argv[]) {
             const MatchRecord replay =
                 RunMatch(sample.seed, f0, f1, sample.personality0Enum,
                          sample.personality1Enum, 12000,
-                         sample.seat1PlannedFirst);
+                         sample.seat1PlannedFirst, sample.layout);
             if (replay.durationTicks != sample.durationTicks ||
                 replay.finalChecksum != sample.finalChecksum ||
                 replay.winnerPlayer != sample.winnerPlayer ||
@@ -1253,7 +1399,52 @@ int main(int argc, char* argv[]) {
             << static_cast<std::uint64_t>(AuthoredRules().lancerCooldownTicks)
             << "},\n";
         out << "  \"map_grid_tiles\": 64,\n";
-        out << "  \"map_layout\": \"" << MapLayoutId(layout) << "\",\n";
+        out << "  \"map_layouts\": [";
+        for (std::size_t index = 0; index < layouts.size(); ++index) {
+            out << (index == 0 ? "" : ", ") << "\""
+                << MapLayoutId(layouts[index]) << "\"";
+        }
+        out << "],\n";
+        out << "  \"spec_bal_003_grid\": {\n";
+        out << "    \"band\": [0.40, 0.60],\n";
+        out << "    \"note\": \"One cell per non-mirror faction pairing per "
+               "shipping map. Degenerate conditions (all matches finishing on "
+               "the same tick) are excluded and counted separately; a cell with "
+               "fewer than 30 decisive matches is reported as too few to judge "
+               "rather than given a rate.\",\n";
+        out << "    \"cells_in_band\": " << cellsInBand << ",\n";
+        out << "    \"cells_out_of_band\": " << cellsOutOfBand << ",\n";
+        out << "    \"cells_too_few_decisive\": " << cellsUnderpowered << ",\n";
+        out << "    \"rows\": [\n";
+        {
+            std::size_t emittedCells = 0;
+            for (const auto& [key, cell] : balanceCells) {
+                const bool judged = !cell.mirror && cell.decisive >= 30;
+                const double rate =
+                    cell.decisive > 0
+                        ? static_cast<double>(cell.faction0Wins) / cell.decisive
+                        : 0.0;
+                out << "      {\"map\": \"" << cell.map
+                    << "\", \"pairing\": \"" << cell.pairing
+                    << "\", \"mirror\": " << (cell.mirror ? "true" : "false")
+                    << ", \"decisive\": " << cell.decisive
+                    << ", \"faction_0_wins\": " << cell.faction0Wins
+                    << ", \"draws\": " << cell.draws
+                    << ", \"unresolved\": " << cell.unresolved
+                    << ", \"excluded_degenerate\": " << cell.excludedDegenerate
+                    << ", \"seat_0_wins\": " << cell.seat0Wins
+                    << ", \"seat_1_wins\": " << cell.seat1Wins
+                    << ", \"judged\": " << (judged ? "true" : "false");
+                if (judged) {
+                    out << ", \"faction_0_win_rate\": " << rate
+                        << ", \"in_band\": "
+                        << ((rate >= 0.40 && rate <= 0.60) ? "true" : "false");
+                }
+                out << "}"
+                    << (++emittedCells == balanceCells.size() ? "\n" : ",\n");
+            }
+        }
+        out << "    ]\n  },\n";
         out << "  \"total_matches\": " << totalMatches << ",\n";
         out << "  \"authoritative_terminal_matches\": "
             << (totalMatches - unresolved) << ",\n";
