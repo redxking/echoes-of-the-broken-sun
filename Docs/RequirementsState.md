@@ -6,6 +6,36 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## Open finding: CanonicalRulesPack is unbound, unlike the build identity beside it — 2026-09-12, 03:10Z
+
+Found while checking what obligations a content edit would carry, before proposing the (subsequently
+withdrawn) Aegis change. Recorded because the gap outlives that proposal.
+
+`EchoesNetworkSession.cpp` declares `CanonicalRulesPack` as a 32-byte digest and hands it to
+`manifest.rulesPackSha256` whenever no simulation is attached. It is the content pack's SHA-256: its bytes
+begin `04 60 f5 e2 ...` and `Content/Data/Generated/EchoesContentPack.json.sha256` currently reads
+`0460f5e2fc180238fc71364af138cce3fe1943ef2942af19a66eb2cc1de356e1`. They match today.
+
+**Nothing enforces that they keep matching.** `BuildId`, four lines above it in the same anonymous
+namespace, is bound by `Tests/Content/test_build_identity.py`, which recomputes the SHA-256 of the identity
+material and asserts the declared bytes equal it. No equivalent test binds `CanonicalRulesPack` to the
+generated pack: greps across `Tests/` and `Scripts/` for the symbol return nothing outside the source file
+itself. So anyone who edits `Content/Data/Source/*.json` and regenerates the pack — which
+`Scripts/compile_content.py` does unconditionally, rewriting both the pack and its `.sha256` — leaves that
+constant silently stale, and a build carrying a stale rules digest is exactly what the manifest exists to
+prevent: two builds with different rules negotiating compatibility.
+
+**Why this is worth a test rather than vigilance.** Tonight the build-identity gate caught precisely this
+class of omission for the snapshot schema, before a single file compiled, which is the cheapest place to
+find it. The rules pack has the same hazard and no such gate. The fix is small: extend
+`test_build_identity.py`, or add a sibling, to read `Content/Data/Generated/EchoesContentPack.json.sha256`
+and assert the declared `CanonicalRulesPack` bytes equal it.
+
+**Not implemented here.** `EchoesNetworkSession.cpp` is the network lane's file and adding a gate to another
+lane's constant unannounced is the same discourtesy the D3 lane declined when it found my stale build
+identity and left it for me. Flagged to that lane; recorded for the owner. No behavioural defect exists
+today — the digests agree — so this is a missing guard rather than a bug.
+
 ## TBR-STR-007 measured: no single authored field fixes prepared ground — 2026-09-12, 02:55Z
 
 Owner granted this decision to this lane with authority to act. **I am not making the change**, because the
