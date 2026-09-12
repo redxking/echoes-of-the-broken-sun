@@ -6337,8 +6337,19 @@ and the branch instrumented. An unfired branch and a correctly declining branch 
 
 **What measuring it would need.** A map with one contested Well, which is Glass Scar rather than the
 synthetic harness, so the measurement is an Unreal scenario rather than a native matrix. Recorded as the
-prerequisite for any future attempt; the scratch implementation is kept as evidence rather than as a
-pending change.
+prerequisite for any future attempt. The implementation is written to
+`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/denial-play-unmeasurable/` as a patch against the
+commit it was written on, with the instrumentation probe and a README carrying the reach and no-income
+counts above, beside the matrix it refers to. It is not version-controlled: `.gitignore` excludes
+`BuildArtifacts/*` wholesale, which is why every evidence path cited in this record is a citation rather
+than a tracked file.
+
+**Correction to the line above.** It previously read that the scratch implementation was "kept as evidence",
+while it existed only in a session-local scratch directory that would not outlive the session — the claim
+described an intention, not a state. The wording is corrected rather than made true by `git add -f`: the
+precedent for forcing that ignore rule is `resume-preservation-20260910/`, salvage patches that were the
+only surviving copy of otherwise-lost work. Documentary evidence for a decision, reproducible from this
+record, is not that case.
 
 **Method correction from this slice.** An earlier baseline comparison here set 916 of 936 against the older
 807 of 1,000 as though it were an improvement. It is not comparable: the older figure came from the
