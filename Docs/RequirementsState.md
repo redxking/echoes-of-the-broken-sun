@@ -6183,16 +6183,28 @@ never produced a result now finish: Meridian 112 of 112, Kharuun 111 of 111. Rea
 claiming that as balance, on the strategy-validation lane's advice, and it says something else. In four
 pairings (both metal mirrors, Meridian vs Kharuun both ways) **every match ends on exactly the same tick**
 (Kharuun mirror 7,953; Meridian vs Kharuun 8,644; Meridian mirror 10,194) **and seat 0 wins 100% of them**.
-The matches are not duplicates: all 111 seeds and all 111 final checksums per pairing are distinct, so the
-seed perturbs the state without moving the timeline. The likely cause is the harness rather than the game:
-`RunMatch` generates and queues seat 0's commands before seat 1's on every planning tick, so a symmetric
-race is decided by planning order. That also puts the report's own Spawn Symmetry check (60.1% slot-0) in
-doubt as a measure of the game. Choir is the counter-example and behaves like a real distribution: the
-Choir mirror spreads 8,619 to 11,984 with a 66% seat-0 rate, and converts only 29 of 111. Two open
-asymmetries: Kharuun in seat 0 against Meridian still never converts (0 of 111) while Meridian in seat 0
-against Kharuun always does, and Choir in seat 0 loses every decided match against both metal factions.
-The retreat fix is real and the mirrors resolving is real; the win rates are not yet evidence about
-faction balance, and should not be quoted as such until the harness alternates planning order.
+**Correction, after the strategy-validation lane's diagnosis.** This lane first argued the matches were
+not duplicates because all 111 seeds and all 111 final checksums per pairing differ. That argument is void.
+`StateChecksum` serialises the RNG state, which still holds the raw seed; the simulation has exactly two
+RNG consumers, both inside the Reshape commit branch of `ProcessFutureWellLifecycles`; and
+`SetupTournamentMap` spawns from fixed literals and takes no seed at all. With no Reshape commit the RNG is
+never advanced, so distinct checksums are guaranteed by construction and prove nothing about divergence.
+Those four pairings are one deterministic match replayed 111 times, and identical finishing ticks are the
+only possible result rather than a suspicious coincidence. Planning order explains only who wins it:
+`RunMatch` queues seat 0's commands before seat 1's on every planning tick, so the single asymmetry in a
+symmetric race is queue order and seat 0 takes it every time. Choir is the confirming control rather than a
+counter-example: it is the Reshape faction and therefore the only one whose play reaches the simulation's
+only RNG consumer, which is exactly why it is the one pairing with a real spread (8,619 to 11,984, 66%
+seat-0, 29 of 111 converting). Consequences for how this report may be quoted: the asymmetries above are
+single outcomes and not rates, so "Kharuun in seat 0 converts 0 of 111 against Meridian" is one lost match
+replayed and carries no balance story; the Wilson intervals are computed on n=111 where the effective n is
+1 and must not be cited for those pairings; and SPEC-BAL-006 cannot catch this, because replaying one seed
+and expecting identical results is what a degenerate harness produces by definition. The retreat fix and
+the elimination of the stalls stand on their own and are untouched by this. The order of repair matters:
+genuine per-seed variation in `SetupTournamentMap` first, seat alternation only after, since alternating
+first would turn 100% seat-0 into roughly 50/50 by construction and make SPEC-BAL-004 green over a sample
+whose effective size is one. The harness belongs to the strategy-validation lane, which is making both
+changes; this lane is not touching it.
 
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
