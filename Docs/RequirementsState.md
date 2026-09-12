@@ -72,7 +72,7 @@ behavioural defect existed — the digests agreed — so this was a missing guar
 ## TBR-STR-007 measured: no single authored field fixes prepared ground — 2026-09-12, 02:55Z
 
 Owner granted this decision to this lane with authority to act. **I am not making the change**, because the
-measurement does not support one. Evidence in `scratchpad/str007` (sweep, gradient, damage sweep, mirror).
+measurement does not support one. Evidence retained at `BuildArtifacts/Evidence/tbr-str-007-prepared-ground-20260912T014521Z` (sweep, diagnostic, gradient on both rulesets, damage sweep, mirror).
 
 **First, the recorded BAL-STR-2 result was measured on the wrong ruleset.** `rush2.cpp` and its mirror build
 `SimulationConfig` from `DefaultSimulationRules`, never loading `AuthoredRules`. The default soldier reloads
