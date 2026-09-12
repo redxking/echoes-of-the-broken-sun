@@ -9143,6 +9143,81 @@ std::vector<Command> Simulation::GenerateAiCommands(
                 commands.push_back(command);
                 continue;
             }
+            // A Well 31 tiles from either Core is never lit while the worker
+            // that could take it stands at home, and both the capture command
+            // and the scan above require CURRENT visibility, so a seat can only
+            // act on a Well it happens to be looking at. Glass Scar's long run
+            // showed the cost: wellCheckpoint=missing, no Dawn earned in 60,000
+            // ticks, and once both armies destroyed each other neither could
+            // rebuild, leaving a board with every deposit mined out and nothing
+            // that could change. A seat that owns no Well walks one worker to a
+            // remembered one, exactly as it walks to a remembered deposit;
+            // arriving lights the tile and the capture validates on a later
+            // pass. Bounded to the case the evidence shows: no Well of its own,
+            // one walker at a time, and only when no visible Well qualifies.
+            if (nearestWell == nullptr) {
+                bool seatOwnsAWell = false;
+                for (const Entity& owned : entities_) {
+                    if (owned.owner == player && owned.hitPoints > 0 &&
+                        owned.type == EntityType::FutureWell) {
+                        seatOwnsAWell = true;
+                        break;
+                    }
+                }
+                const RememberedObject* rememberedWell = nullptr;
+                std::uint64_t rememberedWellDistance =
+                    std::numeric_limits<std::uint64_t>::max();
+                if (!seatOwnsAWell) {
+                    for (const RememberedObject& memory : view.RememberedObjects()) {
+                        if (memory.type != EntityType::FutureWell ||
+                            wellsAssignedThisBatch.count(memory.id)) {
+                            continue;
+                        }
+                        const bool dormant =
+                            memory.wellChoice == FutureWellChoice::Dormant;
+                        const bool heldByFoe =
+                            memory.wellChoice == FutureWellChoice::Preserve &&
+                            config_.IsHostile(player, memory.owner);
+                        if (!dormant && !heldByFoe) {
+                            continue;
+                        }
+                        const std::uint64_t distance =
+                            DistanceSquaredRaw(actor.position, memory.position);
+                        if (rememberedWell == nullptr ||
+                            distance < rememberedWellDistance ||
+                            (distance == rememberedWellDistance &&
+                             memory.id < rememberedWell->id)) {
+                            rememberedWell = &memory;
+                            rememberedWellDistance = distance;
+                        }
+                    }
+                }
+                if (rememberedWell != nullptr && actor.order.type != OrderType::Move) {
+                    bool anotherWorkerWalking = false;
+                    for (const Entity& other : entities_) {
+                        if (other.owner != player || other.id == actor.id ||
+                            other.type != EntityType::Worker ||
+                            other.hitPoints <= 0 ||
+                            other.order.type != OrderType::Move) {
+                            continue;
+                        }
+                        if (DistanceSquaredRaw(other.order.destination,
+                                               rememberedWell->position) <=
+                            static_cast<std::uint64_t>(kFixedScale) * kFixedScale) {
+                            anotherWorkerWalking = true;
+                            break;
+                        }
+                    }
+                    if (!anotherWorkerWalking) {
+                        command.type = CommandType::Move;
+                        command.target = 0;
+                        command.position = rememberedWell->position;
+                        wellsAssignedThisBatch.insert(rememberedWell->id);
+                        commands.push_back(command);
+                        continue;
+                    }
+                }
+            }
             // Leave a worker that is already working a live node alone.
             // Re-ordering it calls BeginGather, which clears the harvest
             // state, and the extraction timer restarts from zero. At the
