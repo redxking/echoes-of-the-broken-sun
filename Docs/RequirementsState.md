@@ -6,6 +6,47 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## TBR-STR-007 measured: no single authored field fixes prepared ground — 2026-09-12, 02:55Z
+
+Owner granted this decision to this lane with authority to act. **I am not making the change**, because the
+measurement does not support one. Evidence in `scratchpad/str007` (sweep, gradient, damage sweep, mirror).
+
+**First, the recorded BAL-STR-2 result was measured on the wrong ruleset.** `rush2.cpp` and its mirror build
+`SimulationConfig` from `DefaultSimulationRules`, never loading `AuthoredRules`. The default soldier reloads
+in **12** ticks; the authored Lancer reloads in **30** and carries 145 HP against 120. Attackers in that
+harness therefore kill roughly 2.5x faster than in the shipped game, which biases every prepared-ground row
+against defence. The entry "prepared ground does not beat a blind rush" must be read with that caveat.
+
+**On authored rules the authored Aegis is not inert.** 8 defenders vs 8 Kharuun attackers, 30 seeds: the
+shipped 28-damage Aegis holds **12/30** (default rules: 0/30), and its link-cut arm stays 0/30. Sweeping
+only `damage` at the authored 20-tick cadence: 42 → 24/30, 56 → 30/30, all with link cut at 0/30, and all
+losing every seed at 8v10 except 84+ which is an 8x turret. 42 looked like the answer: holds parity, loses
+to a 25% larger force, still dies to a cut link.
+
+**The mirror refutes it.** Same authored rules, Meridian attackers instead of Kharuun, 8v8: 28 → **0/30**,
+42 → **0/30**, 56 → **0/30**. The parity win was a property of the *matchup*, not of prepared ground. The
+plausible driver is attacker toughness (authored Lancer 145 HP against Riftstalker 125, so a Meridian
+attacking force is about 16% tankier), and that margin is enough to flip 24/30 to 0/30. A single damage
+value cannot satisfy Rule D across matchups, and one tuned against Kharuun would silently be a different
+rule against Meridian.
+
+**So the honest position.** Rule D's claim, that an unscouted rush into prepared ground should lose, is not
+reachable by tuning one structure's gun. What *is* established: the Aegis contributes materially on authored
+rules, cutting its Link removes that contribution completely in every configuration tested (0/30 across the
+board, so the counterplay is real and robust), and no configuration lets a defender ignore a 50% larger
+force. Prepared ground is a **delay and a tax on the unscouted**, which is what the design document already
+says after its earlier correction, and it is consistent rather than broken.
+
+**What an owner decision now looks like**, since it is a design question rather than a number: accept
+prepared ground as delay (change nothing, and amend Rule D's wording), or make it a mechanic rather than a
+statistic (several cheap structures, terrain interaction, or a slow that multiplies with the chokepoint and
+height-band results that *did* hold). The second is a scope decision, not a tuning pass.
+
+**Method note.** The acceptance bar (powered >= 75%, link cut <= 25%, extra unit <= 40%) was fixed in the
+harness comment *before* any result was read, so no row could be selected after the fact. A cosmetic defect
+remains in the scratch harness: the "attacker pool HP" label hardcodes 125 per attacker and misreports the
+Meridian mirror's pool. Labels only; the win and HP-remaining columns are measured.
+
 ## The schema bump broke the content gate, and the gate was right — 2026-09-12, 02:35Z
 
 `0b3a68d` moved the snapshot schema 31 to 32 without moving the build identity that binds it.

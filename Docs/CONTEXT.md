@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-12 01:35 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-12 01:38 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `94df75d` (upstream `14dc8ca`); 359 dirty paths, of which non-asset: `Docs/RequirementsState.md`, `Scripts/run_ai_balance_matrix.py`, `Source/EchoesOfTheBrokenSun/Private/EchoesNetworkSession.cpp`.
+- Branch `main` at `b53db3c` (upstream `14dc8ca`); 358 dirty paths, of which non-asset: `Docs/RequirementsState.md`, `Scripts/run_ai_balance_matrix.py`, `Source/EchoesSimCore/Private/Simulation.cpp`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -25,10 +25,10 @@ Read this, then fetch only the requirement records you touch:
 
 ## Newest RequirementsState entries
 
+- TBR-STR-007 measured: no single authored field fixes prepared ground — 2026-09-12, 02:55Z
 - The schema bump broke the content gate, and the gate was right — 2026-09-12, 02:35Z
 - Authored Well capture geometry now reaches the simulation (snapshot 32 / replay 37) — 2026-09-12, 02:10Z
 - Open finding: authored Well capture geometry is inert — 2026-09-12, 01:05Z (folded)
-- Retraction: the degenerate-sample reading was right; my diagnosis of it was wrong four times — 2026-09-12, 00:45Z
 
 ## Recently recorded state rows
 
