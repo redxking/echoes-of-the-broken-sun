@@ -6,32 +6,22 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
-## Open finding: two authored Future Well numbers are parsed, validated, and then ignored — 2026-09-12, 01:05Z
+## Open finding: authored Well capture geometry is inert — 2026-09-12, 01:05Z (folded)
 
-Found while reviewing `6d1d1d1`, which moved `kFutureWellCaptureRadiusRaw` into the public header so the
-bridge could tell an approach from an ordinary Move. That move is sound and behaviour-neutral. The review
-turned up a different duplicate underneath it: **content against code, not header against cpp.**
+Reported by this lane; the D3 lane then verified it independently from its own reading and recorded the
+canonical entry, **"Authored Well capture geometry is inert (verified here, reported by the
+strategy-validation lane)"**. Read that one — it carries everything this entry had (`capture_radius_cm`
+and `capture_ticks` validated into the catalog at `EchoesContentSubsystem.cpp:1142-1143` and never copied
+into `OutRules.futureWell` by the block at 728-736, so the simulation uses 4.2 tiles and 300 ticks whatever
+the JSON says) plus two things this entry lacked: that capture radius is *also* the radius at which
+presence contests a Well, which is the counterplay the Dawn economy rests on, and the conclusion that
+`kFutureWellCaptureRadiusRaw` should stay a constant rather than become an accessor.
 
-`Content/Data/Source/future_wells.json` authors `capture_radius_cm: 420` and `capture_ticks: 300`.
-`Scripts/compile_content.py` validates both (lines 506-507), and `EchoesContentSubsystem.cpp:1142-1143`
-reads them into `OutCatalog.FutureWell.CaptureRadiusCentimeters` and `.CaptureTicks`. They then stop: the
-copy block at `EchoesContentSubsystem.cpp:728-737` wires `harvest`, `preserve` and `reshape` into
-`OutRules.futureWell` and **skips capture entirely**, so the simulation uses the hardcoded
-`kFutureWellCaptureRadiusRaw` (4.2 tiles) and `kFutureWellCaptureRequiredTicks` (300, Simulation.cpp:70).
-Five of the seven authored Well numbers reach the simulation; these two do not.
-
-**No behavioural defect today.** 420 cm equals `21 * kFixedScale / 5` and 300 equals 300, so code and
-content agree by coincidence of maintenance rather than by construction. The exposure is silent: an owner
-widening the capture radius in the authored file would see no change and no error, and the two values can
-drift apart with nothing to catch it. The precedent for wiring it sits one line away —
-`preserve.vision_radius_cm` becomes `preserveVisionTiles` by `DivideAndRoundUp` at line 731.
-
-**Why this is not fixed here.** `preserveVisionTiles` is serialised into the snapshot payload
-(Simulation.cpp:10067, read back at 10561), so promoting capture radius and ticks into `FutureWellRules`
-changes the snapshot and replay schema and needs a version bump with the `legacy*ReplaySemantics_` pattern
-the other schemas use. That is this lane's work and it is a decision rather than a tidy-up: it is only worth
-a schema version if authored capture geometry is something the owner wants to tune. Recorded so the
-divergence is not lost; not started.
+Duplicated here first, so this entry is folded to a pointer rather than left standing as a second voice on
+the same finding. What remains this lane's to answer: wiring the two fields into `FutureWellRules` is a
+replay schema bump, because `preserveVisionTiles` is serialised at Simulation.cpp:10067 and read back at
+10561, so it needs the `legacy*ReplaySemantics_` pattern. Not started; it is an owner decision about
+whether authored capture geometry is worth a schema version, not a cleanup.
 
 ## Retraction: the degenerate-sample reading was right; my diagnosis of it was wrong four times — 2026-09-12, 00:45Z
 
