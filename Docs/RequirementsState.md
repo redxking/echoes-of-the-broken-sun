@@ -6220,6 +6220,26 @@ first would turn 100% seat-0 into roughly 50/50 by construction and make SPEC-BA
 whose effective size is one. The harness belongs to the strategy-validation lane, which is making both
 changes; this lane is not touching it.
 
+**Open regression from this lane's retreat fix: `AI.StandardLongRunCorefall` stalls on Glass Scar.** The
+full Unreal suite on 61e6df1 is 139 of 140 (`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-retreat-fix`), and the
+attribution is grounded rather than assumed: the same test passed in `automation-schema36` and in
+`automation-full-wellfix`, and the only planner change since is the retreat fix. An enriched diagnostic
+(this lane's edit, adding both players' matter and Dawn and the map's remaining deposits) gives the whole
+mechanism at the 60,000-tick budget: `matter=5230/3760 dawn=0/10 depositsRemaining=0 combat=0/1
+producers=2/2 workers=12/18`, both Cores untouched, no material progress for 26,252 ticks. Every deposit on
+the map is mined out, both seats are rich in matter they cannot spend, and Dawn is 0 and 10 against
+fighters costing 25 to 30. The upstream cause is that neither seat ever commits the Well on this map:
+`wellCheckpoint=missing` for `glass_meridian_kharuun`, against `wellCheckpoint=restored` for the two
+scenarios that resolved (Crownfall at tick 4,336, Soryn at 14,382). So no Dawn is ever earned, and once the
+retreat fix let both armies actually fight to destruction instead of oscillating home, neither could
+rebuild and the board became terminal. The fix did not create the dead end; it removed the churn that was
+registering as progress and hiding it. Reverting is the wrong answer, since it would restore the mirror
+stalls the fix removed. The next slice is the Well itself: a seat with no Dawn income must get eyes on the
+map's Well and hold it, and the capture scan requires visibility (`IsEntityVisibleTo`), so on a map whose
+single Well sits 31 tiles from either Core the question is whether anyone ever sees it. That needs evidence
+before code, and none is written here on a guess. Until it lands the tree carries one known failing Unreal
+test, and this record says so rather than reporting the suite as green.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's

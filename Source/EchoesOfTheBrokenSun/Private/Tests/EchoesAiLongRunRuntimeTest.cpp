@@ -319,7 +319,7 @@ struct FCheckpointCoverage final
             ? TEXT("scouting_never_established_target_memory")
             : TEXT("legal_commands_failed_to_convert_into_corefall");
     return FString::Printf(
-        TEXT("tick=%llu lastProgress=%llu noProgressTicks=%llu coreHp=%lld/%lld workers=%d/%d combat=%d/%d producers=%d/%d generated=%llu/%llu visibleHostiles=%llu/%llu rememberedHostiles=%llu/%llu pending=%llu minCombatDistanceSq=%llu action=%s"),
+        TEXT("tick=%llu lastProgress=%llu noProgressTicks=%llu coreHp=%lld/%lld workers=%d/%d combat=%d/%d producers=%d/%d generated=%llu/%llu visibleHostiles=%llu/%llu rememberedHostiles=%llu/%llu pending=%llu minCombatDistanceSq=%llu action=%s matter=%lld/%lld dawn=%lld/%lld depositsRemaining=%lld"),
         static_cast<unsigned long long>(Simulation.CurrentTick()),
         static_cast<unsigned long long>(LastProgressTick),
         static_cast<unsigned long long>(Simulation.CurrentTick() - LastProgressTick),
@@ -336,7 +336,12 @@ struct FCheckpointCoverage final
         static_cast<unsigned long long>(RememberedHostiles[1]),
         static_cast<unsigned long long>(Simulation.PendingCommands().size()),
         static_cast<unsigned long long>(State.MinimumCombatDistanceSquared),
-        Action);
+        Action,
+        static_cast<long long>(State.Resources[0].material),
+        static_cast<long long>(State.Resources[1].material),
+        static_cast<long long>(State.Resources[0].dawnshards),
+        static_cast<long long>(State.Resources[1].dawnshards),
+        static_cast<long long>(State.ResourceRemaining));
 }
 } // namespace EchoesAiLongRun
 
