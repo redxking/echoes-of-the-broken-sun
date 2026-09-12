@@ -6081,6 +6081,21 @@ left implicit, with the ones this lane may not decide alone named as such.
   threshold version is measured as changing 114 matches and converting none), then the unimplemented Well
   denial play, then the Choir Dawn economy.
 
+**What the blanket grant is not read as authorising.** Recorded because "all is granted" is easy to
+over-read later, and the simulation lane drew the same line independently.
+- **Not a licence for irreversible destructive acts with an ambiguous target.** `stash@{0}` stays. It holds
+  other lanes' asset work, including the `M_EchoesWorldSurface` deletion, dropping it cannot be undone, and
+  a general approval of a list of decisions is not a decision about that specific act. The same applies to
+  the outside agent's 352 dirty or untracked Content entries: left in place, unstaged, for whoever owns
+  them.
+- **The Future Well ruling is the status quo standing, not a new direction chosen.** Wells remain
+  fog-hidden discoveries, which is what they already were; the AI reaches them through its own scoped
+  memory (cff9ba3). Publishing them as known map objectives remains genuinely open and is a design
+  direction for the owner, not something settled here by implication.
+- **Push authority is not a reason to publish unverified work.** The muster (41a62eb) is committed and
+  native-verified but deliberately unpushed until it has an Unreal suite, because two regressions tonight
+  were caught by full suites that narrow reruns had passed.
+
 ## D3 Meridian slice — fifth slice: the opponent finds and spreads over deposits — 2026-09-11
 
 Owner order: "proceed as you see fit"; then, mid-task: "the AI should be playing like a human as much as
