@@ -93,6 +93,31 @@ class BuildIdentityTests(unittest.TestCase):
         self.assertEqual(len(digest_bytes), 32)
         self.assertEqual(digest_bytes, hashlib.sha256(material.encode()).digest())
 
+    def test_canonical_rules_pack_tracks_the_generated_content_pack(self) -> None:
+        # CanonicalRulesPack is the compatibility fallback for a session with no
+        # live simulation, so a stale value negotiates compatibility against a
+        # content pack that no longer exists. Unlike BuildId nothing bound it,
+        # meaning anyone editing Content/Data/Source and regenerating would
+        # leave it silently wrong. Found by the strategy-validation lane while
+        # fixing the build identity, which is the same failure this catches.
+        network_source = NETWORK_SOURCE.read_text(encoding="utf-8")
+        pack_match = re.search(
+            r"constexpr sim::net::Digest256 CanonicalRulesPack\{([^}]+)\};",
+            network_source,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(pack_match)
+        pack_bytes = bytes(
+            int(value, 16)
+            for value in re.findall(r"0x([0-9a-fA-F]{2})", pack_match.group(1))
+        )
+        self.assertEqual(len(pack_bytes), 32)
+        generated = (
+            PROJECT_ROOT / "Content" / "Data" / "Generated" / "EchoesContentPack.json.sha256"
+        )
+        self.assertTrue(generated.is_file())
+        self.assertEqual(pack_bytes.hex(), generated.read_text(encoding="utf-8").strip())
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
