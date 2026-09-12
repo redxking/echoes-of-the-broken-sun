@@ -6264,19 +6264,26 @@ counter-example: it is the Reshape faction and therefore the only one whose play
 only RNG consumer, which is exactly why it is the one pairing with a real spread (8,619 to 11,984, 66%
 seat-0, 29 of 111 converting).
 
-> **Disputed, 2026-09-11, retraction pending from the strategy-validation lane.** Do not cite the Choir
-> sentence above. It is wrong on its own terms: the planner routes Choir to Preserve explicitly and
-> Reshape is reachable only under the Raider personality, which this matrix never uses, so no seat reaches
-> the RNG and Choir cannot be "the faction that does". The wider degenerate-sample reading is also in
-> question: that lane's probe, replicating `RunMatch` and hashing state per tick, reports two seeds
-> diverging at tick 1 in every pairing including the metal mirrors, with a Meridian mirror running to
-> 8,371 on one seed and 10,038 on the other with different winners. That cannot be a hashing artifact.
-> Two facts survive and are not disputed: the RNG is genuinely unconsumed (zero Reshape commits observed),
-> so this lane's original "distinct checksums prove divergence" argument still fails as stated; and
-> `balance-matrix-8` really does show a single distinct finishing tick across 111 seeds in four pairings.
-> Those are in direct conflict, and the difference between that probe and `RunMatch` is the live question
-> (the leading candidate is the authored ruleset, which `RunMatch` installs and the probe did not). That
-> lane owns the retraction and is writing it; this note exists so nobody quotes the sentence meanwhile. Consequences for how this report may be quoted: the asymmetries above are
+> **Resolved 2026-09-12; the strategy-validation lane's retraction is committed.** The Choir sentence above
+> is withdrawn and must not be cited: the planner routes Choir to Preserve and Reshape is reachable only
+> under the Raider personality, which this matrix never uses, so no seat reaches the RNG and Choir cannot
+> be "the faction that does". The wider degenerate reading, which this note previously questioned, is
+> **confirmed** rather than doubted: that doubt rested on a probe whose author has since withdrawn it (it
+> compared state checksums that serialise the seed being varied, so two seeds differed at tick 1 by
+> construction), and pairing tables built at both trees reproduce this matrix exactly, including the four
+> flat finishing ticks. Two instruments now agree on the mechanism. A counter placed at the wander site
+> itself (this lane) reports zero wander executions in both metal pairings and 21 against 20 in the Choir
+> mirror, all idle workers and no fighters; the other lane's independent probe, once scout-target moves
+> were split out of its classifier, reports zero for fighters in all three mirrors. So the seed reaches
+> play only through the wander fallback, which fighters never reach because the march target falls back to
+> the mirror of the seat's own Core. A rule-group bisect then named the Worker archetype alone as what
+> drives the difference: reverting authored worker economics starves seats into idleness and pushes
+> matches into the tick cap, while every other group stays flat. The direction that follows is the
+> opposite of what was first supposed here and elsewhere: the authored ruleset is the healthier one, it
+> keeps units tasked, and a fully tasked deterministic simulation replays identically. **Apparent sample
+> diversity in this harness is idleness, not health**, so planner improvements will keep shrinking it and a
+> report quoting Wilson intervals over replays will read rising competence as falling confidence. The
+> defect is the matrix treating replays as samples, not the rules and not the fixture.
 single outcomes and not rates, so "Kharuun in seat 0 converts 0 of 111 against Meridian" is one lost match
 replayed and carries no balance story; the Wilson intervals are computed on n=111 where the effective n is
 1 and must not be cited for those pairings; and SPEC-BAL-006 cannot catch this, because replaying one seed
