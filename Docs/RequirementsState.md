@@ -6240,6 +6240,23 @@ single Well sits 31 tiles from either Core the question is whether anyone ever s
 before code, and none is written here on a guess. Until it lands the tree carries one known failing Unreal
 test, and this record says so rather than reporting the suite as green.
 
+**Regression closed: the long-run test passes and every scenario now reaches its Well.**
+`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/automation-wellwalk` on cff9ba3: `AI.StandardLongRunCorefall` succeeds, and all
+three scenarios report `wellCheckpoint=restored` where `glass_meridian_kharuun` had reported
+`wellCheckpoint=missing`. The diagnosis held: both the planner's Well scan and the simulation's Future Well
+command require the target to be lit at that moment, and the strategy-validation lane's sight table makes
+the arithmetic exact. Glass Scar authors its single Well at (32,32) with Cores at (10,10) and (54,54), 31
+tiles diagonally, against the longest authored sight in the game, 15 tiles for the Relay Skiff and 9 to 10
+for workers. No unit at home or on the near deposits can ever see it, so no seat ever began a capture and
+no Dawn was ever earned. The retreat fix did not cause that; it removed the oscillation whose changing hit
+points registered as progress and hid a board that was already terminal. The repair reuses existing
+machinery: Future Wells are rememberable objects, that memory carries the Well's protocol and is corrected
+only by looking at the tile again, so a seat owning no Well walks one worker to a remembered Well and the
+capture validates once the tile is lit. Scope is the evidenced case and the harness map confirms it is
+inert there: `SetupTournamentMap` gives each seat a Well about five tiles from its own Core against 9 to 10
+tiles of worker sight, so a visible Well always qualifies and the walker never fires. A full Unreal suite on
+this commit is running; until it reports, this slice's Unreal standing is the long-run test alone.
+
 **Concurrent lane.** The session "Echoes of the Broken Sun strategy validation" was editing the same tree
 during this slice (firing lanes, replay schema 33, Docs/StrategicDepthDesign.md); its uncommitted hunks
 were left untouched and it was told which hunks are this slice's. Its schema bump is why this slice's
