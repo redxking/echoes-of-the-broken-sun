@@ -6018,6 +6018,40 @@ Status: D2 stays the first unfinished package; these five are the next repairs; 
 below as they land.
 
 
+## REL-AI-006: a muster with a synchronised release — 2026-09-12
+
+Owner: "All is granted. You continue with all your recommendations." Second attempt at cohesion, after the
+first was recorded here as a measured negative (114 of 1,000 matches changed, none converted).
+
+**What changed (41a62eb).** The threshold counted every fit unit anywhere and told a unit to hold where it
+stood, so a saturated seat already exceeded it and a seat with no population headroom bypassed it. The
+muster counts only units that have actually gathered at a point, and walks them there rather than freezing
+them: a tile a short way out from the Core toward the mirror of it, deterministic and map agnostic, falling
+back toward home on blocked ground. Release is one pass for everyone once four have assembled. A wave
+already out is joined without waiting, and a seat with no surviving producer commits what it has.
+Population headroom is deliberately not a valve, because it sits at zero or one for most of a match and is
+exactly how the first attempt was bypassed.
+
+**The release works, measured rather than inferred.** A counter at the muster branch (worker/fighter split,
+same method that settled the wander question) over one seed per pairing: Meridian mirror walk 9 and 163,
+held 1 and 4, release passes 4 and 4, wave joins 8 and 6, maximum assembled 6 and 5; Kharuun mirror release
+4 and 2 with maximum assembled 5 and 4; Kharuun versus Meridian release 4 and 3. No seat ever lacked a
+muster point or a producer. So units gather and are released; "mustering for ever" does not happen. This
+lane's first reading of the position dumps, seeing units on Hold at the muster tile and inferring a
+deadlock, was wrong and is corrected here.
+
+**What these probes do not show.** They use one seed across all pairings while the matrix uses per-pairing
+seeds, so the Meridian mirror ending at 16,925 and the other two running to budget are not comparable with
+matrix rows and are not evidence of better or worse. A 1,000-match matrix built from the committed muster
+alone is the measurement, and it is running; the working tree also carries the simulation lane's in-flight
+capture-geometry edit, so the harness for it was compiled from an export of this lane's committed state to
+keep the provenance clean.
+
+**Verification standing.** Native 150/150 on the committed hunk in isolation. No Unreal suite yet: an editor
+build compiles the working tree, which currently includes the other lane's uncommitted work, so the suite
+is held until that lands rather than producing a verdict of mixed provenance. The muster commit is
+deliberately not pushed until it has one.
+
 ## Owner rulings, 2026-09-12: all outstanding decisions granted
 
 Owner: "All is granted. You continue with all your recommendations." Recorded as decisions rather than
