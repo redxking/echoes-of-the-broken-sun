@@ -66,7 +66,6 @@ constexpr std::size_t kSerializedCommandBytes = 39;
 constexpr std::size_t kSerializedCommandResolutionReceiptBytes = 19;
 constexpr std::size_t kSerializedFutureWellLifecycleBytes = 16;
 constexpr std::size_t kSnapshotFixedBytesAfterConfig = 132;
-constexpr std::int32_t kFutureWellCaptureRadiusRaw = 21 * kFixedScale / 5;
 constexpr std::int32_t kFutureWellScarRadiusRaw = 6 * kFixedScale;
 constexpr std::uint16_t kFutureWellCaptureRequiredTicks = 300;
 constexpr Tick kHarvestTelegraphTicks = 180;

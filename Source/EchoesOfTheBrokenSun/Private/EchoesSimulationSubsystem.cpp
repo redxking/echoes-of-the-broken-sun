@@ -17697,6 +17697,49 @@ void UEchoesSimulationSubsystem::QueueOpponentCommands()
             }
             continue;
         }
+        // Presence is not capture. IsFutureWellContested returns true for any
+        // hostile body inside the same radius, so a worker merely walking to a
+        // recorded Well stops its income and breaks the protocol a mission
+        // asserts; withholding only the Future Well command let the planner's
+        // remembered-Well walk do exactly that and failed Mission 11 in
+        // Campaign.FreshJourney and Campaign.NoNeutralLedger. In an authored
+        // operation the approach is withheld with the capture.
+        if (bAuthoredOperation && Command.type == echoes::sim::CommandType::Move)
+        {
+            bool bApproachesAuthoredWell = false;
+            for (const echoes::sim::Entity& Entity : Simulation->Entities())
+            {
+                if (Entity.type != echoes::sim::EntityType::FutureWell ||
+                    Entity.hitPoints <= 0)
+                {
+                    continue;
+                }
+                const int64 DeltaX =
+                    static_cast<int64>(Command.position.x.Raw()) -
+                    static_cast<int64>(Entity.position.x.Raw());
+                const int64 DeltaY =
+                    static_cast<int64>(Command.position.y.Raw()) -
+                    static_cast<int64>(Entity.position.y.Raw());
+                const int64 Radius =
+                    static_cast<int64>(echoes::sim::kFutureWellCaptureRadiusRaw);
+                if (DeltaX * DeltaX + DeltaY * DeltaY <= Radius * Radius)
+                {
+                    bApproachesAuthoredWell = true;
+                    break;
+                }
+            }
+            if (bApproachesAuthoredWell)
+            {
+                if (!bLoggedOpponentWellDoctrine)
+                {
+                    UE_LOG(LogEchoes, Display,
+                        TEXT("[ECHOES_AI_WELL_DOCTRINE] operation=%s mission=%u actor=%u well=0 withheld=true reason=authored-operation-approach"),
+                        *GetOperationLabel(), static_cast<uint8>(DoctrineMission), Command.actor);
+                    bLoggedOpponentWellDoctrine = true;
+                }
+                continue;
+            }
+        }
         std::string Rejection;
         if (Simulation->QueueCommand(Command, &Rejection))
         {

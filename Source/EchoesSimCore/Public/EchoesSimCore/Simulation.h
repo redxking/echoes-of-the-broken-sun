@@ -103,6 +103,14 @@ inline constexpr std::uint32_t kRoleBodyReplayVersion = 35;
 // Older recordings keep the silent idle units they were made with.
 inline constexpr std::uint32_t kIdleDefensiveFireReplayVersion = 36;
 inline constexpr std::uint32_t kReplayVersion = kIdleDefensiveFireReplayVersion;
+
+// The radius at which a worker captures a Future Well, and at which any
+// hostile body contests one. Exposed because the campaign Well doctrine in the
+// bridge must tell an approach from an ordinary Move: capture is withheld in
+// authored operations, but presence alone contests a Well and stops its income,
+// so withholding the command without withholding the walk left Mission 11's
+// recorded protocol broken. The definition is single-sourced here.
+inline constexpr std::int32_t kFutureWellCaptureRadiusRaw = 21 * kFixedScale / 5;
 // SPEC-UNIT-003/REL-FAC-005 fixed-step commitments, independent of render rate.
 inline constexpr Tick kBulwarkDeployTicks = 20;
 inline constexpr Tick kBulwarkPackTicks = 15;
