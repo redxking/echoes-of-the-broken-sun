@@ -316,11 +316,12 @@ bool FEchoesNoNeutralLedgerMissionTest::RunTest(const FString& Parameters)
         TEXT("Campaign persistence uses the current schema"),
         FEchoesCampaignProgress::SchemaVersion,
         static_cast<uint16>(2));
-    // Schema 30 extends schema 29 with Link repair/construction identity.
+    // Schema 32 carries the authored Future Well capture geometry in the rules
+    // block. This pins the native snapshot schema only.
     TestEqual(
-        TEXT("Simulation snapshot schema advances to thirty"),
+        TEXT("Simulation snapshot schema is the current native schema"),
         echoes::sim::kSnapshotVersion,
-        static_cast<uint32>(31));
+        static_cast<uint32>(32));
 
     const FString CampaignPath =
         FEchoesCampaignProgressStore::GetDefaultPath();

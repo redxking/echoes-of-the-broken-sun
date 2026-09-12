@@ -133,7 +133,8 @@ void TestGameplayFeedbackExecutionHorizon() {
         Vec2::FromTiles(4, 4));
     REQUIRE(worker != 0);
 
-    constexpr std::size_t kSnapshotCurrentTickOffset = 2407;
+    constexpr std::size_t kSnapshotCurrentTickOffset =
+        kSnapshotCurrentTickAbsoluteOffset;
     constexpr Tick kTerminalTick =
         std::numeric_limits<Tick>::max() / 2;
     std::vector<std::uint8_t> nearHorizon = source.SaveSnapshot();

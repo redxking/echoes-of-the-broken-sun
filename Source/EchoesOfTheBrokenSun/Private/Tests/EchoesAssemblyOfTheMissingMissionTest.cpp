@@ -250,11 +250,11 @@ bool FEchoesAssemblyOfTheMissingMissionTest::RunTest(
     TestEqual(TEXT("Mission 13 uses the current campaign schema"),
               FEchoesCampaignProgress::SchemaVersion,
               static_cast<uint16>(2));
-    // Schema 30 extends production/rally state with Link repair and
-    // construction identity. This assertion pins the native schema only.
+    // Schema 32 carries the authored Future Well capture geometry in the rules
+    // block. This assertion pins the native schema only.
     TestEqual(TEXT("Mission 13 accepts the current native snapshot schema"),
               echoes::sim::kSnapshotVersion,
-              static_cast<uint32>(31));
+              static_cast<uint32>(32));
 
     FString Feedback;
     FEchoesCampaignProgress TwelveRecords = MakeAssemblyPrerequisites(

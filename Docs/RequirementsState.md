@@ -6,6 +6,390 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## Main published: 20 commits pushed under the granted authority — 2026-09-12, 09:10Z
+
+`14dc8ca..840f8c3` pushed to `origin/main`; the checkout is now 0 ahead, 0 behind. This discharges the
+owner's 2026-09-12 push ruling and the one reservation recorded beside it.
+
+**Why the reservation no longer applies.** The bound on that ruling was explicit: "push authority is not a
+reason to publish unverified work", naming the muster (`41a62eb`) as committed, native-verified and
+deliberately unpushed until it had an Unreal suite. It never needed one — the muster was measured as a
+regression (576 decisive against 807) and reverted in `17ed997`, so nothing in the pushed range carries an
+unverified planner change.
+
+**What verifies the pushed code.** `BuildArtifacts/Evidence/combined-suite-20260912T025358Z` at `21ee8e7`:
+editor build `Result: Succeeded`, Unreal automation **139 Echoes tests, 0 warnings, 0 errors**, save
+isolation boundary passed, content pack validated (SHA-256 `0460f5e2…`), 12 soak-wrapper tests OK. The two
+commits after it (`840f8c3` and the record edits) touch `Docs/` only — checked with `git diff --stat
+21ee8e7 840f8c3`, not assumed from the subject lines.
+
+**What the suite verdict covers, stated the way the previous correction requires.** The run's own
+`dirty-tracked-at-launch.txt` records 9 modified `Content/Art/Generated/Materials` assets, and the tree also
+carried 345 untracked files (343 narrative audio). The verdict is therefore "`21ee8e7` plus that asset
+churn", not the commit alone. Nothing in that churn compiles into the module, but the distinction is the one
+this lane got wrong earlier today and it is not restated loosely here.
+
+**Consequence.** The packaging route is unblocked: `package_macos.sh` requires a detached clean worktree at
+a pushed `origin/main`, which now exists at `840f8c3`.
+
+**Not done, deliberately.** The outside agent's 352 dirty or untracked `Content` entries and the two stray
+`patch_sh_*.py` scripts are untouched and unstaged, per the owner's bound on the blanket grant. `stash@{0}`
+is untouched. Nothing was swept into the pushed range: the push moved existing commits only.
+
+## Splicing a signed buffer invalidates its signature — 2026-09-12, 05:55Z
+
+**Both campaign tests pass. 3 succeeded, 0 failed**, including
+`TheBrokenSunAlternateResolutionPersistence`, with every diagnostic scaffold removed and zero `DIAG`
+residue in the log.
+
+**Correction: "a clean tree" was wrong, and the error is instructive.** Every tree check in this slice ran
+`git status --short | grep -v Content/`. That filter answers "is any of MY work uncommitted", and I reported
+its output as "what a build from this working tree picks up" — a different question the filter structurally
+cannot answer. Unfiltered, the tree carries **9 modified tracked assets** (all
+`Content/Art/Generated/Materials`) and **345 untracked files**, 343 of them narrative audio under
+`Content/Audio/Source/Narrative`. That churn is the art and audio lane's and nothing compiles it into the
+module, but the run verified `21ee8e7` **plus** those asset changes, not the commit alone, and the D3 lane is
+right to record its combined-suite verdict that way. Caught by that lane, not by me; I had stated the
+filtered view as a verification, including the phrase "checked rather than asserted". Evidence: `BuildArtifacts/Evidence/schema32-clean-20260912T025003Z`.
+Artefact currency checked rather than argued: sources 22:48:45, `Binaries/Mac/libUnrealEditor-
+EchoesOfTheBrokenSun.dylib` linked 22:50:03.
+
+**The defect.** A snapshot ends with an eight-byte FNV-1a trailer computed over everything before it.
+`ProjectSnapshotBufferToV31` removed the twelve capture-geometry bytes and restamped the version but left
+the pre-splice signature in place, so the projected buffer was correct in every payload byte and wrong only
+in its own checksum. The round-trip comparison in `ConvertEmbeddedSnapshotV31ToV30` was doing its job
+exactly. The projector now re-signs with the same basis and prime as `SnapshotIntegrity`.
+
+**How it was found, after four wrong causes.** A byte probe reported `first=51000 ofDiffs=8` against a
+payload length of 51008 — the trailer, with the preceding 51,000 bytes identical. That single number
+refuted both live hypotheses at once: not a misplaced splice (which would differ at or near offset 1985) and
+not a field normalising on load (which would differ in the entity region). **Splicing a signed buffer
+invalidates its signature by construction**, and it is the most obvious consequence of the operation; both
+lanes reasoned past it for several cycles.
+
+**The version-aware prefix is kept, and here is the assumption it replaces.**
+`EmbeddedSnapshotTerrainGridOffset` measures the header-and-rules prefix from a probe snapshot rather than
+hardcoding it, defending correctly against the rules table gaining a field. It silently assumed something
+else: **that one measured prefix serves every schema version** — true only while schemas append at the tail,
+as 22 through 31 all did. Schema 32 is the first to grow the prefix, so the measured figure is right for 32
+and twelve bytes too large for every payload below it, including the schema-31 the downgrade produces.
+`ResolveEmbeddedSnapshotMemoryLedger` now reads the payload's own version and subtracts accordingly.
+
+**Not reverted, and not proven by reverting.** The retained probe shows `inspect=1` with a coherent layout
+(`appendOffset=50979 appendSize=407 snapOff=386 snapLen=51008`) on a schema-31 payload, which is precisely
+what this fix enables; without it the memory-ledger walk reads a schema-32 prefix and fails the grid-length
+check. That is positive causal evidence rather than an absence. Recorded at the D3 lane's suggestion,
+because **a change that prevents a defect looks identical to a change that does nothing** until someone
+reverts it as speculative.
+
+**Method note, and it is the durable one.** Five attempts. The first three were reasoned causes, each a real
+defect, none sufficient — and each time the tests failed with *byte-identical* text. Identical output across
+three independent changes is the code saying the edited path is not the executed one, and I ignored it three
+times. A stepwise diagnostic located the failing step in one run; a byte-level probe named the field in the
+next. Both cost less than any single reasoning cycle. **When the symptom does not move, stop refining the
+theory and instrument the path.**
+
+**Attribution.** The D3 lane caught three of my errors by reading code with no stake in my hypothesis: that
+`ConvertEmbeddedSnapshotToV22` copies into `Source` and never writes back on failure (dissolving a
+"discrepancy" I was about to chase), that my stale-binary argument proved only that an earlier *commit* was
+present, and the region-based discriminator that made the byte offset readable in one pass.
+
+## The one-measured-prefix invariant, and why my twelve-byte terms could not have worked — 2026-09-12, 05:10Z
+
+`8511adb` fixed the chain head — both missions now enter the chain at schema 32 — and the two campaign tests
+still failed, on the arithmetic exactly as predicted. The arithmetic was not the defect.
+
+**`EmbeddedSnapshotTerrainGridOffset()` measures the header-and-rules prefix once**, from a snapshot this
+build writes, and every walk of every payload version uses that single figure. That was sound for ten
+schemas because **22 through 31 only ever appended at the tail**, leaving the prefix identical for all of
+them — the unstated invariant that made one measurement sufficient. Schema 32 is the first to grow the
+prefix itself, so the measured value is right for 32 and **twelve bytes too large for every payload below
+it**, including the schema-31 that this slice's own downgrade splice produces.
+
+So every layout measured on a downgraded payload landed twelve bytes off, and the sums the failing
+assertions check are built from those layout figures. **Correcting the sums could not have helped: I was
+fixing arithmetic downstream of a bad measurement.** Measured rather than reasoned: the fields occupy
+`I32 + U64` = 12 bytes at payload offset 1985, and a 2x2 probe snapshot is 2,740 bytes at schema 32.
+
+**Fixed** by making the prefix version-aware — `ResolveEmbeddedSnapshotMemoryLedger` now reads the payload's
+own version at `SnapshotOffset + 4` and subtracts the capture-geometry size below 32 — and by giving the
+splice and the adjustment **one shared named constant**, `kSnapshotCaptureGeometryBytes`, so they cannot
+drift apart.
+
+**The part worth keeping.** I had already solved this exact hazard on the native side hours earlier:
+`SnapshotRulesGrowthFor(bytes)` in `SimCoreTests.cpp` reads the payload's own version for precisely this
+reason, and that suite has been green throughout. I then wrote the Unreal equivalent version-blind. Same
+hazard, same session, recognised once and not transferred. When a change breaks an offset walker in one test
+layer, **the other layers' walkers have the same problem and should be fixed in the same pass**, not when
+their suite gets around to failing.
+
+There is also a general lesson about the defensive helper: measuring instead of hardcoding protected that
+function against a rules field being *added to the tail of the rules*, which is what its comment anticipates.
+It could not protect against the prefix itself changing size per version, because nothing expressed that
+"the prefix is one constant" was an assumption rather than a fact.
+
+**Editor builds and links** (`Result: Succeeded`, 33s). **The run disagreed, so the hedge above was right
+and this entry was wrong to imply a fix.** The version-aware prefix is necessary and was not sufficient: the
+same nine assertions failed unchanged after it. See "Splicing a signed buffer invalidates its signature".
+What this change does defend is real and is recorded there.
+
+## Snapshot 32, second pass: the mission tests assemble their own chains — 2026-09-12, 04:40Z
+
+`5dbb87e` took the combined suite from 133 of 140 to **138 of 140**. Both remaining failures were mine, in
+`Campaign.SeveralVoicesOneCommand` and `Campaign.TheBrokenSun`, and they were one defect wearing two names.
+
+**The shared driver is not the only chain.** I fixed `ConvertEmbeddedSnapshotToV22` and assumed that was the
+migration path. Both mission tests also **hand-assemble a chain of their own**, starting at
+`ConvertEmbeddedSnapshotV31ToV30` and fed a `NativeCheckpoint` that is now schema 32. That step inspects at
+31 and refuses a 32 payload outright, so the "production state is losslessly representable by schema 28"
+assertion failed on its very first call. The D3 lane guessed the production-state path was implicated, which
+was a fair reading of the assertion's name — but the assertion never reached representability, it died on
+the chain head. Both sites now prepend `ConvertEmbeddedSnapshotV32ToV31`.
+
+**Three byte-delta sums, and I had fixed one.** `ExpectedNativeToV22Shrink` got its twelve-byte term in the
+first pass; the zero-receipt sum **four lines away in the same file** did not, and neither did the two
+projection deltas, which now shed the interior bytes because their chain starts a step earlier. All three
+carry the term. Confirmed by enumeration rather than assumed symmetry: `BrokenSun` has **no** zero-receipt
+path at all, so there is no fourth site to patch.
+
+**The refusal risk was checked before building, not discovered by the suite.** The V32 step refuses when
+authored geometry differs from the historical constants — a guard that would have failed both tests by
+design. Authored `capture_radius_cm` 420 converts as `420 * 1024 / 100 = 4300`, and
+`kFutureWellCaptureRadiusRaw` is `21 * 1024 / 5 = 4300`: exact, because both express 4.2 tiles. Ticks are 300
+on both sides. The step proceeds.
+
+**Verified: the editor builds and links** (`Result: Succeeded`, 31.5s). **The three `+12` terms are
+arithmetic and a compile cannot check them** — only the combined suite can, and it is owed.
+
+**Method note, because this was the third incomplete sweep of the night.** Twice before I fixed *a* cause and
+stopped: a grep that missed a two-line pin form, and the shared driver without its hand-rolled siblings. The
+cheap discipline is to enumerate every call site and every byte-delta assertion first — one `grep` for
+`.Num() - ` across both files produced the complete list in a single command, after two suite cycles had
+already been spent finding them one at a time.
+
+## Snapshot 32 fallout in the Unreal suite: seven pins and one shared payload walk — 2026-09-12, 04:05Z
+
+The combined suite came back 133 of 140 after `0b3a68d`. All seven failures were downstream of the schema
+bump, and the shape of them is the part worth keeping.
+
+**The tripwires fired correctly and pointed at the wrong place.** The D3 lane proposed a split from the
+failure names, which was the reasonable inference, and it would have left five tests red. Two of the failing
+campaign tests, `FutureThatWon` and `NoNeutralLedger`, do contain literal pins — I first reported they did
+not, having trusted a grep pattern that missed a two-line form, and **absence of grep hits is not absence** —
+but the pins were not why the other three failed. `EchoesSnapshotMigrationTestHelpers.h` walks the payload
+and ends on `if (Cursor != PayloadEnd) return false`, and `ResolveEmbeddedSnapshotSchema26Append` refused any
+version above 31 outright. The D3 lane's formulation is the one to remember: **a loud version pin tells you a
+version moved, not what that version is load-bearing for.**
+
+**What landed.**
+- The append walk accepts schema 32. Schema 32 appends nothing — its two fields are interior to the rules
+  block — so the 26..31 append structure is byte-identical and only the upper bound moves.
+- `ConvertEmbeddedSnapshotV32ToV31` heads the downgrade chain. **It is an interior splice, and the precedent
+  is already in the file**: `ConvertEmbeddedSnapshotToV22` removes the memory ledger from the middle, and
+  `ConvertEmbeddedSnapshotV23ToV22` removes one interior byte at a fixed offset. Recorded explicitly at the
+  D3 lane's request, because the next person will otherwise assume a trailing append is the only safe shape.
+  It **refuses** conversion when the authored geometry differs from the historical constants rather than
+  silently downgrading to them, matching how the schema-31 step refuses a live Bulwark commitment.
+- The splice offset is **measured, not hardcoded**, by a probe that stamps sentinels and finds them —
+  following `EmbeddedSnapshotTerrainGridOffset`, whose own comment says a literal "would silently rot the
+  next time the rules table gains a field". That is exactly what this change was, and it is why **no offset
+  needed changing anywhere**: the helper self-corrected. Verified map-independent across 2x2, 16x16, 48x32
+  and 64x64 before writing the splice, since 1985 had been measured on one map only.
+- A twelve-byte term in `ExpectedNativeToV22Shrink` in both mission tests.
+- Seven literal pins moved across six files, and the `ProtocolAdmission` digest recomputed by reading the
+  same sources the content test reads. `NoNeutralLedger`'s assertion was already stale before this bump,
+  labelled "advances to thirty" while asserting 31, so it had rotted through an earlier bump unnoticed; the
+  spelled-out number is gone.
+
+**Stated explicitly rather than left implied, because someone will otherwise "fix" them:**
+`EchoesMatchReplayTest` is symbolic against `kReplayVersion`/`kLegacyReplayVersion` and needs nothing;
+`FutureThatWon`'s `kSnapshotVersion + 1` rejection case stays correct because 33 remains unsupported; and
+the second `Memcmp` in both mission tests compares the envelope ledger *before* the snapshot, which the
+interior splice sits after.
+
+**A schema bump has at least four binding classes beyond the loader and its legacy flag**, all four found the
+hard way tonight: (1) the build identity material **and** its SHA-256 digest, (2) native offset walkers in
+`SimCoreTests.cpp`, (3) Unreal literal version pins, and (4) **shared test helpers that parse the payload by
+construction** — the fourth is the D3 lane's addition and the one that actually caused the surprise. The next
+bump should start from this list.
+
+**Verified: the editor builds and links.** `Result: Succeeded`, 64 seconds; the adaptive build excluded all
+seven touched test files from the unity blob, so each compiled individually. **This is a compile, not a
+suite.** The D3 lane runs the combined suite over both lanes next, and until it reports, the Unreal standing
+of this work is unproven.
+
+## The balance matrix samples conditions instead of replays — 2026-09-12, 03:20Z
+
+Repairs the defect recorded in the degeneracy retraction: the matrix treated 1,000 runs of a deterministic
+function as 1,000 samples and reported Wilson intervals over replays.
+
+**Conditions are now the sampling unit.** A condition is a faction pair, a personality pair and a planning
+order: 9 x 4 x 2 = 72. Matches within one differ only by seed. Personality pairings vary deliberately
+(the D3 lane's ranking, adopted as theirs) rather than every seat running Adaptive, and **Raider is included
+on purpose** — it is the only personality that commits Reshape, so without it no seat ever exercises the
+Well's third protocol or the simulation's only RNG consumer.
+
+**A degeneracy screen runs before any statistic.** If every match in a condition finishes on the same tick,
+the seed changed nothing and the condition is one observation replayed; those rows are excluded from every
+rate and interval, and the exclusion is counted in the report. Measured on 216 matches: **72 conditions, 64
+degenerate, 192 matches carrying 64 observations.** The pathology is now visible in the output rather than
+inferred from a probe.
+
+**Planning order is reported, not smoothed.** `RunMatch` queued seat 0 first on every planning tick, and in
+a symmetric race that alone decided the winner. The order now alternates across conditions and appears as a
+dimension in the report, because it is a finding about the game rather than noise to average away.
+
+**Two defects of my own, found by running the thing.** The duplicate-rerun check (`SPEC-BAL-006`) hardcoded
+Adaptive and seat-0-first, so once conditions varied it replayed a *different* condition and reported
+`DETERMINISM VIOLATION` on a seed where none existed; it now carries the sampled match's own inputs and
+reads **10/10 matched**. And excluding degenerate rows made an empty sample reachable, which the summary
+rendered as `0.0% ± 0.0% [FAIL]` — asserting a measurement never taken. Empty samples now read `NO SAMPLE`,
+in the spawn line, the three matchup lines and the strategy-primacy line.
+
+**Verified:** builds under `-Wall -Wextra -Werror`, 216-match run, 216/216 terminal, determinism 10/10.
+The harness remains diagnostic (`overall_passed` stays false): one synthetic map, one of four competence
+checks implemented. This repair makes its numbers honest, not sufficient.
+
+## Open finding: CanonicalRulesPack is unbound, unlike the build identity beside it — 2026-09-12, 03:10Z
+
+Found while checking what obligations a content edit would carry, before proposing the (subsequently
+withdrawn) Aegis change. Recorded because the gap outlives that proposal.
+
+`EchoesNetworkSession.cpp` declares `CanonicalRulesPack` as a 32-byte digest and hands it to
+`manifest.rulesPackSha256` whenever no simulation is attached. It is the content pack's SHA-256: its bytes
+begin `04 60 f5 e2 ...` and `Content/Data/Generated/EchoesContentPack.json.sha256` currently reads
+`0460f5e2fc180238fc71364af138cce3fe1943ef2942af19a66eb2cc1de356e1`. They match today.
+
+**Nothing enforces that they keep matching.** `BuildId`, four lines above it in the same anonymous
+namespace, is bound by `Tests/Content/test_build_identity.py`, which recomputes the SHA-256 of the identity
+material and asserts the declared bytes equal it. No equivalent test binds `CanonicalRulesPack` to the
+generated pack: greps across `Tests/` and `Scripts/` for the symbol return nothing outside the source file
+itself. So anyone who edits `Content/Data/Source/*.json` and regenerates the pack — which
+`Scripts/compile_content.py` does unconditionally, rewriting both the pack and its `.sha256` — leaves that
+constant silently stale, and a build carrying a stale rules digest is exactly what the manifest exists to
+prevent: two builds with different rules negotiating compatibility.
+
+**Why this is worth a test rather than vigilance.** Tonight the build-identity gate caught precisely this
+class of omission for the snapshot schema, before a single file compiled, which is the cheapest place to
+find it. The rules pack has the same hazard and no such gate. The fix is small: extend
+`test_build_identity.py`, or add a sibling, to read `Content/Data/Generated/EchoesContentPack.json.sha256`
+and assert the declared `CanonicalRulesPack` bytes equal it.
+
+**Not implemented here**, and closed by the D3 lane within the hour as `0002f72`, which adds the binding to
+`test_build_identity.py` and shows it falsifiable: it passes on the tree, and a single perturbed nibble of
+the generated hash makes it fail. Left for that lane deliberately, since adding a gate to another lane's
+constant unannounced is the same discourtesy it declined when it found my stale build identity. No
+behavioural defect existed — the digests agreed — so this was a missing guard rather than a bug.
+
+## TBR-STR-007 measured: no single authored field fixes prepared ground — 2026-09-12, 02:55Z
+
+Owner granted this decision to this lane with authority to act. **I am not making the change**, because the
+measurement does not support one. Evidence retained at `BuildArtifacts/Evidence/tbr-str-007-prepared-ground-20260912T014521Z` (sweep, diagnostic, gradient on both rulesets, damage sweep, mirror).
+
+**First, the recorded BAL-STR-2 result was measured on the wrong ruleset.** `rush2.cpp` and its mirror build
+`SimulationConfig` from `DefaultSimulationRules`, never loading `AuthoredRules`. The default soldier reloads
+in **12** ticks; the authored Lancer reloads in **30** and carries 145 HP against 120. Attackers in that
+harness therefore kill roughly 2.5x faster than in the shipped game, which biases every prepared-ground row
+against defence. The entry "prepared ground does not beat a blind rush" must be read with that caveat.
+
+**On authored rules the authored Aegis is not inert.** 8 defenders vs 8 Kharuun attackers, 30 seeds: the
+shipped 28-damage Aegis holds **12/30** (default rules: 0/30), and its link-cut arm stays 0/30. Sweeping
+only `damage` at the authored 20-tick cadence: 42 → 24/30, 56 → 30/30, all with link cut at 0/30, and all
+losing every seed at 8v10 except 84+ which is an 8x turret. 42 looked like the answer: holds parity, loses
+to a 25% larger force, still dies to a cut link.
+
+**The mirror refutes it.** Same authored rules, Meridian attackers instead of Kharuun, 8v8: 28 → **0/30**,
+42 → **0/30**, 56 → **0/30**. The parity win was a property of the *matchup*, not of prepared ground. The
+plausible driver is attacker toughness (authored Lancer 145 HP against Riftstalker 125, so a Meridian
+attacking force is about 16% tankier), and that margin is enough to flip 24/30 to 0/30. A single damage
+value cannot satisfy Rule D across matchups, and one tuned against Kharuun would silently be a different
+rule against Meridian.
+
+**So the honest position.** Rule D's claim, that an unscouted rush into prepared ground should lose, is not
+reachable by tuning one structure's gun. What *is* established: the Aegis contributes materially on authored
+rules, cutting its Link removes that contribution completely in every configuration tested (0/30 across the
+board, so the counterplay is real and robust), and no configuration lets a defender ignore a 50% larger
+force. Prepared ground is a **delay and a tax on the unscouted**, which is what the design document already
+says after its earlier correction, and it is consistent rather than broken.
+
+**What an owner decision now looks like**, since it is a design question rather than a number: accept
+prepared ground as delay (change nothing, and amend Rule D's wording), or make it a mechanic rather than a
+statistic (several cheap structures, terrain interaction, or a slow that multiplies with the chokepoint and
+height-band results that *did* hold). The second is a scope decision, not a tuning pass.
+
+**Method note.** The acceptance bar (powered >= 75%, link cut <= 25%, extra unit <= 40%) was fixed in the
+harness comment *before* any result was read, so no row could be selected after the fact. A cosmetic defect
+remains in the scratch harness: the "attacker pool HP" label hardcodes 125 per attacker and misreports the
+Meridian mirror's pool. Labels only; the win and HP-remaining columns are measured.
+
+## The schema bump broke the content gate, and the gate was right — 2026-09-12, 02:35Z
+
+`0b3a68d` moved the snapshot schema 31 to 32 without moving the build identity that binds it.
+`Scripts/build_editor.sh` runs `Scripts/test_content.sh` first and exits under `set -e`, so
+`Tests/Content/test_build_identity.py` failing meant **no compiler ran at all** and neither lane had an
+Unreal verdict. The D3 lane found it, declined to patch it, and was right to: silently recomputing another
+lane's build digest is not something to do without its owner knowing.
+
+**Two faults, both mine.** `EchoesNetworkSession.cpp` still declared `BuildIdentityMaterial` as
+`...:snapshot-31:view-3`, and the same test binds its SHA-256 in `BuildId`, so material and digest move
+together. Separately the test resolved the schema with `kSnapshotVersion\s*=\s*(\d+)\s*;`, which returned
+`None` once my declaration aliased `kSnapshotVersion` to `kFutureWellCaptureGeometrySnapshotVersion` across
+two lines — so it failed before the equality was ever evaluated.
+
+**Fixed by teaching the test, not by bending the source.** The header already aliases `kReplayVersion` to a
+named era constant, so aliasing is the house style and naming the era is more readable than a bare literal.
+The test now resolves one level of aliasing. Material is `snapshot-32` and the digest is recomputed to
+`e4cfbafff0459d84adccb7a5f78f6a13ae10cfbddbe9970c8fa6a46706d9f3ba`; both were composed by reading the same
+sources the test reads, so the material is right by construction rather than by transcription.
+
+**Verified:** `zsh Scripts/test_content.sh` exits 0, twelve suites pass, content SHA-256
+`0460f5e2fc180238fc71364af138cce3fe1943ef2942af19a66eb2cc1de356e1`. Note for the next person: that script is
+zsh (`${0:A:h:h}`); invoking it with bash fails on an unbound variable that has nothing to do with content.
+
+**Worth keeping.** A schema bump has a fourth obligation beyond the loader, the tests and the legacy flag:
+the build identity that stops mismatched builds negotiating compatibility. The content gate caught it before
+a single file compiled, which is the cheapest possible place to find it.
+
+## Authored Well capture geometry now reaches the simulation (snapshot 32 / replay 37) — 2026-09-12, 02:10Z
+
+Closes the open finding recorded earlier tonight. `capture_radius_cm` and `capture_ticks` were validated by
+the content compiler and read into the catalog, then dropped before the rules copy, so the simulation used
+its own constants whatever `future_wells.json` said. They now reach it.
+
+**What landed.** `FutureWellRules` gains `captureRadiusRaw` and `captureRequiredTicks`, defaulting to the
+constants they replace (4.2 tiles, 300 ticks) so nothing moves where nothing authors them. Snapshot schema
+**32** and replay schema **37**, with `legacyWellCaptureGeometrySemantics_` wired at the three usual sites and
+guarded read/write so pre-32 recordings replay against their historical constants. Validator bounds added.
+All four consumers redirected (the contest radius and three capture-progress comparisons), and
+`EchoesContentSubsystem` now copies both authored values through with the cm-to-raw conversion its
+neighbours already use. `kFutureWellCaptureRadiusRaw` stays a constant, per the D3 lane's call: one SimCore
+use, one bridge use, no serialisation, and the bridge doctrine is about the shipped default rather than
+whatever a loaded recording carried.
+
+**The hazard, which is the part worth keeping.** The rules block is written *before* the terrain and fog
+grids, so two inserted fields shifted every later offset by exactly twelve bytes and broke **fourteen**
+native tests. The drift detector in `SnapshotV25EntityCountOffset` caught it precisely as its comment
+promises. Three classes of repair:
+
+1. **The growth belongs at the byte-walking layer, not in the arithmetic helpers.** My first attempt added it
+   inside `SnapshotV24EntityCountOffset`, which over-shifted every *downgraded* payload, because the
+   `Convert*` steps hand back v31-and-older bytes that must be walked without it. It now comes from
+   `SnapshotRulesGrowthFor(bytes)`, which reads the payload's own version.
+2. **Two absolute offsets moved:** `currentTick_` 2407 → 2419, and `nextEntityId_` with it, now named
+   constants rather than literals. The research offsets at 2354/2406 do **not** move: that converter asserts
+   version 22 on entry, so it predates schema 32. Checked, not assumed.
+3. **A new `ConvertSnapshotV32ToV31`** splices the twelve interior bytes out — unlike the v31 step, this
+   insert is mid-payload rather than appended — chained ahead of it at five call sites.
+
+**Located by construction, not arithmetic.** The fields were found by setting sentinel values and searching
+the payload: offset 1985 on a 16x16 map, well ahead of that map's v22 base of 3878. After a night of
+instrument errors, computing the offset by hand was not worth the risk.
+
+**Verified: 150/150 native, all three configurations** (optimized, debug, address+UB sanitizers), on a tree
+whose base includes the D3 lane's committed muster `41a62eb`. **The bridge half is not yet verified**: 
+`EchoesContentSubsystem.cpp` needs an editor build, which the D3 lane will cover in one combined full suite
+over both lanes, read against its 140/140 baseline. Until that runs, this slice's Unreal standing is unproven.
+
 ## Open finding: authored Well capture geometry is inert — 2026-09-12, 01:05Z (folded)
 
 Reported by this lane; the D3 lane then verified it independently from its own reading and recorded the
@@ -6018,6 +6402,133 @@ Status: D2 stays the first unfinished package; these five are the next repairs; 
 below as they land.
 
 
+## REL-AI-024 denial play: written, unmeasurable here, not committed — 2026-09-12
+
+The cheap counterplay the rules already allow: a Preserve Well pays its holder only while no hostile body
+stands inside the capture radius, so presence stops the income outright, with no capture, no 300-tick timer
+and no need to break 100,000 hit points. Written in a scratch export of HEAD, compiled clean under
+warnings-as-errors, and deliberately kept out of the working tree while the simulation lane held
+uncommitted migration work there. **Not committed**, because it cannot be measured with the tooling that
+exists.
+
+**Why it cannot be measured natively.** `SetupTournamentMap` gives each seat its own Well about five tiles
+from its Core, and an Adaptive seat commits it to Preserve long before any fighter exists, so the rule's
+precondition (this seat has no Well income) never holds. Established rather than assumed: a counter at the
+top of the block reports it reached 13,289 and 7,649 times per seat in the Meridian mirror, 20,156 and
+23,438 in Kharuun versus Meridian, 24,524 and 27,370 in the Choir mirror, while the no-income counter stays
+at zero in every pairing. The branch runs constantly and correctly declines. A 1,000-match matrix
+(`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-11-denial.json`) is accordingly identical to the baseline in
+every condition, 188, 182, 182 and 156 terminal, same 20 stalls, same rules digest.
+
+**The near miss worth recording.** That identical result was first read as "the rule is inert, which is
+fine". It is the same shape as a stale binary or a build with the assertion missing, both of which bit this
+session earlier, and the only reason it was not reported as a clean null is that the binaries were compared
+and the branch instrumented. An unfired branch and a correctly declining branch produce the same numbers.
+
+**What measuring it would need.** A map with one contested Well, which is Glass Scar rather than the
+synthetic harness, so the measurement is an Unreal scenario rather than a native matrix. Recorded as the
+prerequisite for any future attempt. The implementation is written to
+`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/denial-play-unmeasurable/` as a patch against the
+commit it was written on, with the instrumentation probe and a README carrying the reach and no-income
+counts above, beside the matrix it refers to. It is not version-controlled: `.gitignore` excludes
+`BuildArtifacts/*` wholesale, which is why every evidence path cited in this record is a citation rather
+than a tracked file.
+
+**Correction to the line above.** It previously read that the scratch implementation was "kept as evidence",
+while it existed only in a session-local scratch directory that would not outlive the session — the claim
+described an intention, not a state. The wording is corrected rather than made true by `git add -f`: the
+precedent for forcing that ignore rule is `resume-preservation-20260910/`, salvage patches that were the
+only surviving copy of otherwise-lost work. Documentary evidence for a decision, reproducible from this
+record, is not that case.
+
+**Method correction from this slice.** An earlier baseline comparison here set 916 of 936 against the older
+807 of 1,000 as though it were an improvement. It is not comparable: the older figure came from the
+pre-repair harness sampling Adaptive only with seat 0 always planning first, while the current harness
+samples conditions across four personality pairings and both planning orders. Any future planner change is
+to be judged against a baseline taken with the same harness, broken out by condition.
+
+## REL-AI-006 measured: the muster is a regression — 2026-09-12
+
+`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-9.json`, built from an export of this lane's committed state
+(41a62eb) so the simulation lane's in-flight edit could not reach the numbers. The comparison against
+`balance-matrix-8.json` is clean: identical seed sets (1,000 of 1,000 overlapping), identical rules digest
+`0ef62b746c9e149c` and `content-data` source. It is a regression and this record says so plainly.
+
+**576 of 1,000 terminal, against 807 before the muster.** The damage is surgical rather than diffuse:
+
+| pairing | pre-muster | with muster | delta |
+|---|---|---|---|
+| Meridian mirror | 112 | 0 | -112 |
+| Kharuun mirror | 111 | 0 | -111 |
+| Choir mirror | 29 | 21 | -8 |
+| every other pairing | 111 | 111 | unchanged |
+
+So the muster destroyed exactly the two pairings the retreat fix had rescued, and touched nothing that was
+already decisive. On a matrix Meridian-mirror seed (151845015998047) the branch counters show the rule
+working as designed and the army not advancing: six units assembled, four release passes, eight wave
+joins, and seat 0's closest approach to the enemy Core going 65, 58, 58 tiles across 12,000 ticks with the
+enemy Core untouched. Releasing and advancing are evidently not the same thing.
+
+**Correcting this lane's earlier probe.** The single-seed run reporting the Meridian mirror ending at
+16,925 was cited here as encouraging. The matrix says that pairing now ends in none of 112 seeds, so that
+probe was misleading and should not have been given weight; it used one seed shared across all pairings
+while the matrix uses per-pairing seeds. The instrumentation result stands (the release does fire) but
+"the release fires" was never evidence that the rule helps.
+
+**Reverted.** 41a62eb is reverted rather than iterated on: a rule that has now failed twice should not sit
+committed on main while a third version is attempted. Native 150/150 after the revert, with the simulation
+lane's capture-geometry work untouched.
+
+**The mechanism, from unit dumps rather than from the counters.** The muster recalls forward units. On the
+matrix mirror seed, three of seat 1's units at full 260 health stood at (22,23), (29,25) and (30,26) with
+Move orders to (48,48), their own muster tile six tiles from their Core: they had advanced to mid-map and
+were walking home. A unit finishes an advance, becomes order-less while forward, fails the assembled test,
+and is sent all the way back. It is a treadmill, and the same defect class as the retreat oscillation fixed
+earlier in this slice, a homeward order issued to units that are already far forward.
+
+**The instrumentation lesson is the durable part.** The branch counters said the rule worked, six assembled,
+four release passes, eight wave joins, and they were accurate and useless: releasing is not advancing. This
+lane nearly reported those counters as success, and it took position dumps to see the treadmill. A counter
+at a branch proves the branch runs; it says nothing about whether running it helps.
+
+**What a third attempt needs.** A gate so a forward unit never walks back, on the same principle as the
+retreat fix (a unit closer to the enemy than to its own Core fights where it stands), and a matrix in a
+scratch build that beats 807 before anything is committed.
+
+## REL-AI-006: a muster with a synchronised release — 2026-09-12
+
+Owner: "All is granted. You continue with all your recommendations." Second attempt at cohesion, after the
+first was recorded here as a measured negative (114 of 1,000 matches changed, none converted).
+
+**What changed (41a62eb).** The threshold counted every fit unit anywhere and told a unit to hold where it
+stood, so a saturated seat already exceeded it and a seat with no population headroom bypassed it. The
+muster counts only units that have actually gathered at a point, and walks them there rather than freezing
+them: a tile a short way out from the Core toward the mirror of it, deterministic and map agnostic, falling
+back toward home on blocked ground. Release is one pass for everyone once four have assembled. A wave
+already out is joined without waiting, and a seat with no surviving producer commits what it has.
+Population headroom is deliberately not a valve, because it sits at zero or one for most of a match and is
+exactly how the first attempt was bypassed.
+
+**The release works, measured rather than inferred.** A counter at the muster branch (worker/fighter split,
+same method that settled the wander question) over one seed per pairing: Meridian mirror walk 9 and 163,
+held 1 and 4, release passes 4 and 4, wave joins 8 and 6, maximum assembled 6 and 5; Kharuun mirror release
+4 and 2 with maximum assembled 5 and 4; Kharuun versus Meridian release 4 and 3. No seat ever lacked a
+muster point or a producer. So units gather and are released; "mustering for ever" does not happen. This
+lane's first reading of the position dumps, seeing units on Hold at the muster tile and inferring a
+deadlock, was wrong and is corrected here.
+
+**What these probes do not show.** They use one seed across all pairings while the matrix uses per-pairing
+seeds, so the Meridian mirror ending at 16,925 and the other two running to budget are not comparable with
+matrix rows and are not evidence of better or worse. A 1,000-match matrix built from the committed muster
+alone is the measurement, and it is running; the working tree also carries the simulation lane's in-flight
+capture-geometry edit, so the harness for it was compiled from an export of this lane's committed state to
+keep the provenance clean.
+
+**Verification standing.** Native 150/150 on the committed hunk in isolation. No Unreal suite yet: an editor
+build compiles the working tree, which currently includes the other lane's uncommitted work, so the suite
+is held until that lands rather than producing a verdict of mixed provenance. The muster commit is
+deliberately not pushed until it has one.
+
 ## Owner rulings, 2026-09-12: all outstanding decisions granted
 
 Owner: "All is granted. You continue with all your recommendations." Recorded as decisions rather than
@@ -6046,6 +6557,21 @@ left implicit, with the ones this lane may not decide alone named as such.
 - **Continuing work, in order:** REL-AI-006 cohesion as a real muster with a synchronised release (the
   threshold version is measured as changing 114 matches and converting none), then the unimplemented Well
   denial play, then the Choir Dawn economy.
+
+**What the blanket grant is not read as authorising.** Recorded because "all is granted" is easy to
+over-read later, and the simulation lane drew the same line independently.
+- **Not a licence for irreversible destructive acts with an ambiguous target.** `stash@{0}` stays. It holds
+  other lanes' asset work, including the `M_EchoesWorldSurface` deletion, dropping it cannot be undone, and
+  a general approval of a list of decisions is not a decision about that specific act. The same applies to
+  the outside agent's 352 dirty or untracked Content entries: left in place, unstaged, for whoever owns
+  them.
+- **The Future Well ruling is the status quo standing, not a new direction chosen.** Wells remain
+  fog-hidden discoveries, which is what they already were; the AI reaches them through its own scoped
+  memory (cff9ba3). Publishing them as known map objectives remains genuinely open and is a design
+  direction for the owner, not something settled here by implication.
+- **Push authority is not a reason to publish unverified work.** The muster (41a62eb) is committed and
+  native-verified but deliberately unpushed until it has an Unreal suite, because two regressions tonight
+  were caught by full suites that narrow reruns had passed.
 
 ## D3 Meridian slice — fifth slice: the opponent finds and spreads over deposits — 2026-09-11
 

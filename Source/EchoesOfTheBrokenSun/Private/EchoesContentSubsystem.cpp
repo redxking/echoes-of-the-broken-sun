@@ -725,6 +725,14 @@ bool FEchoesContentCatalog::BuildSimulationRules(
         OutError = TEXT("SIM_RULES_WELL_TELEGRAPH_UNSUPPORTED");
         return false;
     }
+    // capture_radius_cm and capture_ticks were validated into the catalog and
+    // then dropped here, so the simulation used its own constants whatever the
+    // authored file said. Wired through as of snapshot schema 32.
+    OutRules.futureWell.captureRadiusRaw = static_cast<int32>(
+        (static_cast<int64>(FutureWell.CaptureRadiusCentimeters) *
+         echoes::sim::kFixedScale) / 100);
+    OutRules.futureWell.captureRequiredTicks =
+        static_cast<echoes::sim::Tick>(FutureWell.CaptureTicks);
     OutRules.futureWell.harvestImmediateDawn = FutureWell.HarvestImmediateDawn;
     OutRules.futureWell.preserveDawnPerInterval = FutureWell.PreserveDawnPerInterval;
     OutRules.futureWell.preserveIntervalTicks = FutureWell.PreserveIntervalTicks;

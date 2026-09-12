@@ -13,6 +13,9 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <cstdio>
+#include <map>
+#include <set>
 #include <thread>
 #include <vector>
 
@@ -370,6 +373,22 @@ struct MatchRecord {
     std::int32_t player1CoreHitPoints = 0;
     std::string termination = "tick_budget_actionable_stall";
     std::string stallReason;
+    // Which seat's commands were queued first this match. Seat 0 was always
+    // first, and in a symmetric race that alone decided the winner, so the
+    // order is now varied and REPORTED as a dimension rather than averaged
+    // away: it is a finding about the game, not noise.
+    bool seat1PlannedFirst = false;
+    // The rerun check must reproduce the sampled match, not a default one.
+    // Personalities were stored only as display strings, and with every match
+    // Adaptive that was harmless; conditions now vary personality and planning
+    // order, so a rerun that assumes Adaptive/seat-0-first replays a DIFFERENT
+    // condition and reports a determinism violation that is not one.
+    AiPersonality personality0Enum = AiPersonality::Adaptive;
+    AiPersonality personality1Enum = AiPersonality::Adaptive;
+    // Conditions are the unit of sampling. Matches sharing a condition differ
+    // only by seed, so a condition whose finishing ticks are all identical is
+    // one match replayed and carries the information of one observation.
+    std::string conditionId;
 };
 
 struct MaterialProgressState {
@@ -529,7 +548,8 @@ MatchRecord RunMatch(std::uint64_t seed,
                      Faction f1,
                      AiPersonality p0,
                      AiPersonality p1,
-                     Tick maxTicks = 12000) {
+                     Tick maxTicks = 12000,
+                     bool seat1PlansFirst = false) {
     // 64x64 matches every shipped preset; the synthetic 48x48 matched none.
     SimulationConfig config{64, 64, 20, seed};
     config.rules = AuthoredRules().rules;
@@ -538,22 +558,29 @@ MatchRecord RunMatch(std::uint64_t seed,
 
     MatchRecord record{};
     record.seed = seed;
+    record.seat1PlannedFirst = seat1PlansFirst;
     record.faction0 = FactionToString(f0);
     record.faction1 = FactionToString(f1);
     record.personality0 = PersonalityToString(p0);
     record.personality1 = PersonalityToString(p1);
+    record.personality0Enum = p0;
+    record.personality1Enum = p1;
 
     Tick ticks = 0;
     MaterialProgressState priorProgress = CaptureMaterialProgress(sim);
     Tick lastMaterialProgressTick = 0;
     while (sim.Outcome() == MatchOutcome::Ongoing && ticks < maxTicks) {
         if (ticks % 4 == 0) {
-            const auto cmds0 = sim.GenerateAiCommands(0, p0);
-            for (const auto& c : cmds0) {
+            // Queue order is the only asymmetry in a mirror, so it decides the
+            // race. Alternating it does not remove that; it exposes it.
+            const PlayerId firstSeat = seat1PlansFirst ? 1 : 0;
+            const PlayerId secondSeat = seat1PlansFirst ? 0 : 1;
+            for (const auto& c : sim.GenerateAiCommands(
+                     firstSeat, firstSeat == 0 ? p0 : p1)) {
                 sim.QueueCommand(c);
             }
-            const auto cmds1 = sim.GenerateAiCommands(1, p1);
-            for (const auto& c : cmds1) {
+            for (const auto& c : sim.GenerateAiCommands(
+                     secondSeat, secondSeat == 0 ? p0 : p1)) {
                 sim.QueueCommand(c);
             }
         }
@@ -608,6 +635,23 @@ struct ConfidenceInterval {
     double upper = 0.0;
     double marginOfError = 0.0;
 };
+
+[[nodiscard]] std::string Pct(double fraction) {
+    char buffer[32];
+    std::snprintf(buffer, sizeof(buffer), "%.1f", fraction * 100.0);
+    return std::string(buffer);
+}
+
+// A window verdict is only meaningful over a non-empty sample. Rendering an
+// empty sample as 0.0% FAIL states a measurement that was never taken, which is
+// the same false precision as an interval over replays, pointed the other way.
+[[nodiscard]] const char* WindowVerdict(int total, double rate, double low,
+                                        double high) {
+    if (total <= 0) {
+        return "NO SAMPLE";
+    }
+    return (rate >= low && rate <= high) ? "PASS" : "FAIL";
+}
 
 ConfidenceInterval ComputeConfidenceInterval(int successes, int total) {
     if (total <= 0) {
@@ -676,23 +720,63 @@ int main(int argc, char* argv[]) {
         Faction f1;
         AiPersonality p0;
         AiPersonality p1;
+        bool seat1PlansFirst;
+        std::string conditionId;
     };
+
+    // Every match ran Adaptive against Adaptive with seat 0 always planning
+    // first, so 1,000 matches sampled ONE condition per faction pair. Four of
+    // the nine pairings then returned a single finishing tick across 111 seeds
+    // (evidence authored-rules-degeneracy-20260912T002357Z): the seed reaches
+    // play only through the wander fallback, which a tasked planner never
+    // reaches, so those rows were one match replayed. Conditions are varied
+    // deliberately instead of injecting noise, which would only manufacture
+    // the appearance of diversity.
+    //
+    // Raider earns its place: it is the only personality that commits Reshape,
+    // so without it no seat ever exercises the Well's third protocol or the
+    // simulation's only RNG consumer.
+    struct PersonalityPair {
+        AiPersonality p0;
+        AiPersonality p1;
+    };
+    static const std::array<PersonalityPair, 4> kPersonalityPairs = {{
+        {AiPersonality::Adaptive, AiPersonality::Adaptive},
+        {AiPersonality::Balanced, AiPersonality::Balanced},
+        {AiPersonality::Raider, AiPersonality::Defensive},
+        {AiPersonality::Economic, AiPersonality::Expansionist},
+    }};
 
     std::vector<MatchTask> tasks;
     tasks.reserve(totalMatches);
 
-    for (int i = 0; i < totalMatches; ++i) {
-        const int matchupIndex = i % 9;
-        const Faction f0 = kFactions[matchupIndex / 3];
-        const Faction f1 = kFactions[matchupIndex % 3];
-        tasks.push_back({
-            baseSeed + static_cast<std::uint64_t>(i) * 10007ULL,
-            f0,
-            f1,
-            AiPersonality::Adaptive,
-            AiPersonality::Adaptive,
-        });
+    const int conditionCount =
+        9 * static_cast<int>(kPersonalityPairs.size()) * 2;
+    const int seedsPerCondition = std::max(1, totalMatches / conditionCount);
+
+    std::uint64_t seedCursor = 0;
+    for (int matchup = 0; matchup < 9; ++matchup) {
+        const Faction f0 = kFactions[matchup / 3];
+        const Faction f1 = kFactions[matchup % 3];
+        for (const PersonalityPair& pair : kPersonalityPairs) {
+            for (int order = 0; order < 2; ++order) {
+                const bool seat1First = order == 1;
+                std::string conditionId =
+                    FactionToString(f0) + "-v-" + FactionToString(f1) + "|" +
+                    PersonalityToString(pair.p0) + "-v-" +
+                    PersonalityToString(pair.p1) + "|" +
+                    (seat1First ? "seat1-first" : "seat0-first");
+                for (int s = 0; s < seedsPerCondition; ++s) {
+                    tasks.push_back({
+                        baseSeed + (seedCursor++) * 10007ULL,
+                        f0, f1, pair.p0, pair.p1, seat1First, conditionId});
+                }
+            }
+        }
     }
+    totalMatches = static_cast<int>(tasks.size());
+    std::cout << "Conditions: " << conditionCount << " | seeds per condition: "
+              << seedsPerCondition << " | matches: " << totalMatches << "\n";
 
     std::vector<MatchRecord> results(totalMatches);
     std::mutex progressMutex;
@@ -701,7 +785,9 @@ int main(int argc, char* argv[]) {
     auto worker = [&](int threadId) {
         for (int idx = threadId; idx < totalMatches; idx += requestedThreads) {
             const auto& task = tasks[idx];
-            MatchRecord rec = RunMatch(task.seed, task.f0, task.f1, task.p0, task.p1);
+            MatchRecord rec = RunMatch(task.seed, task.f0, task.f1, task.p0,
+                                       task.p1, 12000, task.seat1PlansFirst);
+            rec.conditionId = task.conditionId;
             results[idx] = rec;
             const int finished = ++completedTasks;
             if (finished % 100 == 0 || finished == totalMatches) {
@@ -728,12 +814,64 @@ int main(int argc, char* argv[]) {
     std::cout << "\nBatch simulation completed in " << std::fixed << std::setprecision(2)
               << elapsedSec << "s (" << matchesPerSec << " matches/sec)\n";
 
+    // 0. Condition summary, and the degeneracy screen that must run FIRST.
+    // A condition is a faction pair, a personality pair and a planning order;
+    // its matches differ only by seed. If every match in a condition finishes
+    // on the same tick, the seed changed nothing and the condition is one
+    // observation replayed, whatever its match count says. Statistics computed
+    // over such rows are not measurements, and the previous harness had no way
+    // to notice: it reported Wilson intervals over 111 replays.
+    struct ConditionSummary {
+        std::string id;
+        int matches = 0;
+        int seat0Wins = 0;
+        int seat1Wins = 0;
+        int draws = 0;
+        int unresolved = 0;
+        std::set<Tick> distinctTicks;
+        [[nodiscard]] bool Degenerate() const {
+            return matches > 1 && distinctTicks.size() == 1;
+        }
+    };
+    std::map<std::string, ConditionSummary> conditions;
+    for (const auto& r : results) {
+        ConditionSummary& c = conditions[r.conditionId];
+        c.id = r.conditionId;
+        ++c.matches;
+        c.distinctTicks.insert(r.durationTicks);
+        if (r.winnerPlayer == 0) ++c.seat0Wins;
+        else if (r.winnerPlayer == 1) ++c.seat1Wins;
+        else if (r.winnerPlayer == -1) ++c.draws;
+        else ++c.unresolved;
+    }
+    int degenerateConditions = 0;
+    int degenerateMatches = 0;
+    for (const auto& [id, c] : conditions) {
+        if (c.Degenerate()) {
+            ++degenerateConditions;
+            degenerateMatches += c.matches;
+        }
+    }
+    const auto Sampled = [&conditions](const MatchRecord& r) {
+        const auto it = conditions.find(r.conditionId);
+        return it != conditions.end() && !it->second.Degenerate();
+    };
+    std::cout << "\nConditions: " << conditions.size() << " | degenerate: "
+              << degenerateConditions << " (" << degenerateMatches
+              << " matches carrying " << degenerateConditions
+              << " observations)\n";
+    if (degenerateConditions > 0) {
+        std::cout << "Degenerate conditions are excluded from every rate and "
+                     "interval below.\n";
+    }
+
     // 1. Evaluate Spawn Slot Fairness (SPEC-BAL-004)
     int slot0Wins = 0;
     int slot1Wins = 0;
     int draws = 0;
     int unresolved = 0;
     for (const auto& r : results) {
+        if (!Sampled(r)) continue;
         if (r.winnerPlayer == 0) slot0Wins++;
         else if (r.winnerPlayer == 1) slot1Wins++;
         else if (r.winnerPlayer == -1) draws++;
@@ -741,7 +879,8 @@ int main(int argc, char* argv[]) {
     }
     const int decisiveMatches = slot0Wins + slot1Wins;
     const auto spawnCI = ComputeConfidenceInterval(slot0Wins, decisiveMatches);
-    const bool spawnFairnessPassed = (spawnCI.rate >= 0.45 && spawnCI.rate <= 0.55);
+    const bool spawnFairnessPassed =
+        decisiveMatches > 0 && spawnCI.rate >= 0.45 && spawnCI.rate <= 0.55;
 
     // 2. Evaluate Non-Mirror Pairings Balance Band (SPEC-BAL-003)
     struct PairStats {
@@ -752,6 +891,7 @@ int main(int argc, char* argv[]) {
     std::array<PairStats, 3> nonMirrorPairs; // 0: M vs K, 1: M vs C, 2: K vs C
 
     for (const auto& r : results) {
+        if (!Sampled(r)) continue;
         if (r.faction0 == "MeridianCompact" && r.faction1 == "KharuunAssemblies") {
             if (r.winnerPlayer == 0) nonMirrorPairs[0].winsA++;
             else if (r.winnerPlayer == 1) nonMirrorPairs[0].winsB++;
@@ -783,9 +923,15 @@ int main(int argc, char* argv[]) {
     const auto mcCI = ComputeConfidenceInterval(nonMirrorPairs[1].winsA, nonMirrorPairs[1].winsA + nonMirrorPairs[1].winsB);
     const auto kcCI = ComputeConfidenceInterval(nonMirrorPairs[2].winsA, nonMirrorPairs[2].winsA + nonMirrorPairs[2].winsB);
 
-    const bool mkPassed = (mkCI.rate >= 0.40 && mkCI.rate <= 0.60);
-    const bool mcPassed = (mcCI.rate >= 0.40 && mcCI.rate <= 0.60);
-    const bool kcPassed = (kcCI.rate >= 0.40 && kcCI.rate <= 0.60);
+    const auto InBand = [](const ConfidenceInterval& ci, int total) {
+        return total > 0 && ci.rate >= 0.40 && ci.rate <= 0.60;
+    };
+    const int mkTotal = nonMirrorPairs[0].winsA + nonMirrorPairs[0].winsB;
+    const int mcTotal = nonMirrorPairs[1].winsA + nonMirrorPairs[1].winsB;
+    const int kcTotal = nonMirrorPairs[2].winsA + nonMirrorPairs[2].winsB;
+    const bool mkPassed = InBand(mkCI, mkTotal);
+    const bool mcPassed = InBand(mcCI, mcTotal);
+    const bool kcPassed = InBand(kcCI, kcTotal);
     const bool balanceBandPassed = mkPassed && mcPassed && kcPassed;
 
     // 3. Strategy Primacy Validation (SPEC-BAL-005)
@@ -818,7 +964,10 @@ int main(int argc, char* argv[]) {
                 if (FactionToString(f) == sample.faction0) f0 = f;
                 if (FactionToString(f) == sample.faction1) f1 = f;
             }
-            const MatchRecord replay = RunMatch(sample.seed, f0, f1, AiPersonality::Adaptive, AiPersonality::Adaptive);
+            const MatchRecord replay =
+                RunMatch(sample.seed, f0, f1, sample.personality0Enum,
+                         sample.personality1Enum, 12000,
+                         sample.seat1PlannedFirst);
             if (replay.durationTicks != sample.durationTicks ||
                 replay.finalChecksum != sample.finalChecksum ||
                 replay.winnerPlayer != sample.winnerPlayer ||
@@ -865,25 +1014,55 @@ int main(int argc, char* argv[]) {
 
     std::cout << "\n================ Balance Summary ================\n";
     std::cout << "Spawn Symmetry (Slot 0 win rate): "
-              << std::fixed << std::setprecision(1) << (spawnCI.rate * 100.0) << "% ± "
-              << (spawnCI.marginOfError * 100.0) << "% (N=" << decisiveMatches << ") "
-              << (spawnFairnessPassed ? "[PASS]" : "[FAIL]") << "\n";
-    std::cout << "Meridian vs Kharuun:              "
-              << (mkCI.rate * 100.0) << "% ± " << (mkCI.marginOfError * 100.0)
-              << "% (N=" << (nonMirrorPairs[0].winsA + nonMirrorPairs[0].winsB) << ") "
-              << (mkPassed ? "[PASS]" : "[FAIL]") << "\n";
-    std::cout << "Meridian vs Hollow Choir:         "
-              << (mcCI.rate * 100.0) << "% ± " << (mcCI.marginOfError * 100.0)
-              << "% (N=" << (nonMirrorPairs[1].winsA + nonMirrorPairs[1].winsB) << ") "
-              << (mcPassed ? "[PASS]" : "[FAIL]") << "\n";
-    std::cout << "Kharuun vs Hollow Choir:          "
-              << (kcCI.rate * 100.0) << "% ± " << (kcCI.marginOfError * 100.0)
-              << "% (N=" << (nonMirrorPairs[2].winsA + nonMirrorPairs[2].winsB) << ") "
-              << (kcPassed ? "[PASS]" : "[FAIL]") << "\n";
-    std::cout << "Strategy Primacy (Adaptive vs Econ): "
-              << (primacyCI.rate * 100.0) << "% ± " << (primacyCI.marginOfError * 100.0)
-              << "% (N=" << (primacyHighWins + primacyFlawedWins) << ") "
-              << (primacyPassed ? "[PASS]" : "[FAIL]") << "\n";
+              << (decisiveMatches == 0
+                      ? std::string("NO SAMPLE (every contributing condition was degenerate)")
+                      : Pct(spawnCI.rate) + "% (N=" +
+                            std::to_string(decisiveMatches) + ") [" +
+                            WindowVerdict(decisiveMatches, spawnCI.rate, 0.45, 0.55) + "]")
+              << "\n";
+    {
+        const int total = nonMirrorPairs[0].winsA + nonMirrorPairs[0].winsB;
+        std::cout << "Meridian vs Kharuun:              "
+                  << (total == 0
+                          ? std::string("NO SAMPLE (all contributing conditions degenerate)")
+                          : Pct(mkCI.rate) + "% ± " +
+                                Pct(mkCI.marginOfError) + "% (N=" +
+                                std::to_string(total) + ") [" +
+                                WindowVerdict(total, mkCI.rate, 0.40, 0.60) + "]")
+                  << "\n";
+    }
+    {
+        const int total = nonMirrorPairs[1].winsA + nonMirrorPairs[1].winsB;
+        std::cout << "Meridian vs Hollow Choir:         "
+                  << (total == 0
+                          ? std::string("NO SAMPLE (all contributing conditions degenerate)")
+                          : Pct(mcCI.rate) + "% ± " +
+                                Pct(mcCI.marginOfError) + "% (N=" +
+                                std::to_string(total) + ") [" +
+                                WindowVerdict(total, mcCI.rate, 0.40, 0.60) + "]")
+                  << "\n";
+    }
+    {
+        const int total = nonMirrorPairs[2].winsA + nonMirrorPairs[2].winsB;
+        std::cout << "Kharuun vs Hollow Choir:          "
+                  << (total == 0
+                          ? std::string("NO SAMPLE (all contributing conditions degenerate)")
+                          : Pct(kcCI.rate) + "% ± " +
+                                Pct(kcCI.marginOfError) + "% (N=" +
+                                std::to_string(total) + ") [" +
+                                WindowVerdict(total, kcCI.rate, 0.40, 0.60) + "]")
+                  << "\n";
+    }
+    {
+        const int primacyTotal = primacyHighWins + primacyFlawedWins;
+        std::cout << "Strategy Primacy (Adaptive vs Econ): "
+                  << (primacyTotal == 0
+                          ? std::string("NO SAMPLE (no primacy match reached a decision)")
+                          : Pct(primacyCI.rate) + "% ± " + Pct(primacyCI.marginOfError) +
+                                "% (N=" + std::to_string(primacyTotal) + ") [" +
+                                (primacyPassed ? "PASS" : "FAIL") + "]")
+                  << "\n";
+    }
     std::cout << "Duplicate deterministic rerun:    "
               << (determinismPassed
                       ? "10/10 final states matched [PASS]"
@@ -948,6 +1127,30 @@ int main(int argc, char* argv[]) {
             << requiredBatteryChecks << ", \"implemented_checks_passed\": "
             << (batteryPassed ? "true" : "false")
             << ", \"qualified\": false},\n";
+        out << "  \"condition_sampling\": {\n";
+        out << "    \"conditions\": " << conditions.size() << ",\n";
+        out << "    \"degenerate_conditions\": " << degenerateConditions << ",\n";
+        out << "    \"degenerate_matches\": " << degenerateMatches << ",\n";
+        out << "    \"effective_observations\": "
+            << (static_cast<int>(conditions.size()) - degenerateConditions)
+            << ",\n";
+        out << "    \"note\": \"A condition whose matches all finish on the "
+               "same tick is one match replayed; its rows are excluded from "
+               "every rate and interval in this report.\",\n";
+        out << "    \"rows\": [\n";
+        std::size_t emitted = 0;
+        for (const auto& [id, c] : conditions) {
+            out << "      {\"condition\": \"" << c.id
+                << "\", \"matches\": " << c.matches
+                << ", \"distinct_finishing_ticks\": " << c.distinctTicks.size()
+                << ", \"seat0_wins\": " << c.seat0Wins
+                << ", \"seat1_wins\": " << c.seat1Wins
+                << ", \"draws\": " << c.draws
+                << ", \"unresolved\": " << c.unresolved
+                << ", \"degenerate\": " << (c.Degenerate() ? "true" : "false")
+                << "}" << (++emitted == conditions.size() ? "\n" : ",\n");
+        }
+        out << "    ]\n  },\n";
         out << "  \"matches\": [\n";
         for (std::size_t index = 0; index < results.size(); ++index) {
             const MatchRecord& r = results[index];
@@ -968,7 +1171,10 @@ int main(int argc, char* argv[]) {
                 << r.lastMaterialProgressTick
                 << ", \"core_hp\": [" << r.player0CoreHitPoints
                 << ", " << r.player1CoreHitPoints << "]"
-                << ", \"stall_reason\": \"" << r.stallReason << "\"}"
+                << ", \"seat1_planned_first\": "
+                << (r.seat1PlannedFirst ? "true" : "false")
+                << ", \"condition\": \"" << r.conditionId
+                << "\", \"stall_reason\": \"" << r.stallReason << "\"}"
                 << (index + 1 == results.size() ? "\n" : ",\n");
         }
         out << "  ],\n";

@@ -47,7 +47,13 @@ inline constexpr Tick kCommandResolutionReceiptRetentionTicks = 1200;
 // Schema 30 appends Link repair/network authority and stable production item
 // identities. Replay v26 remains the fixed production-queue cutoff; replay
 // v27 selects Link mechanics and identity-checked cancellation.
-inline constexpr std::uint32_t kSnapshotVersion = 31;
+// Schema 32 (2026-09-12): the Future Well capture radius and capture duration
+// are carried in the rules instead of being file-local constants, so the
+// authored values in future_wells.json finally reach the simulation. Older
+// snapshots do not carry the two fields and keep the historical constants.
+inline constexpr std::uint32_t kFutureWellCaptureGeometrySnapshotVersion = 32;
+inline constexpr std::uint32_t kSnapshotVersion =
+    kFutureWellCaptureGeometrySnapshotVersion;
 inline constexpr std::uint32_t kLegacyReplayVersion = 24;
 inline constexpr std::uint32_t kForfeitReplayVersion = 25;
 inline constexpr std::uint32_t kProductionReplayVersion = 26;
@@ -102,7 +108,13 @@ inline constexpr std::uint32_t kRoleBodyReplayVersion = 35;
 // Pursuit stays at zero here; SPEC-STANCE-002's 400 cm chase is not built.
 // Older recordings keep the silent idle units they were made with.
 inline constexpr std::uint32_t kIdleDefensiveFireReplayVersion = 36;
-inline constexpr std::uint32_t kReplayVersion = kIdleDefensiveFireReplayVersion;
+// Schema 37 (2026-09-12): pairs with snapshot schema 32. A replay embeds a
+// snapshot, so carrying authored capture geometry changes the recorded bytes
+// and the state checksum; older recordings replay against the constants they
+// were made with.
+inline constexpr std::uint32_t kFutureWellCaptureGeometryReplayVersion = 37;
+inline constexpr std::uint32_t kReplayVersion =
+    kFutureWellCaptureGeometryReplayVersion;
 
 // The radius at which a worker captures a Future Well, and at which any
 // hostile body contests one. Exposed because the campaign Well doctrine in the
@@ -110,6 +122,12 @@ inline constexpr std::uint32_t kReplayVersion = kIdleDefensiveFireReplayVersion;
 // authored operations, but presence alone contests a Well and stops its income,
 // so withholding the command without withholding the walk left Mission 11's
 // recorded protocol broken. The definition is single-sourced here.
+//
+// Since snapshot schema 32 the live value comes from
+// `SimulationConfig::rules.futureWell.captureRadiusRaw`; this constant remains
+// the default and the value pre-32 recordings replay against. The bridge reads
+// it directly because an authored operation's doctrine is about the shipped
+// default, not about whatever a loaded recording carried.
 inline constexpr std::int32_t kFutureWellCaptureRadiusRaw = 21 * kFixedScale / 5;
 // SPEC-UNIT-003/REL-FAC-005 fixed-step commitments, independent of render rate.
 inline constexpr Tick kBulwarkDeployTicks = 20;
@@ -521,6 +539,16 @@ struct EntityArchetypeRules final {
 
 /** Deterministic Future Well economy and active-duration rules. */
 struct FutureWellRules final {
+    // Authored in Content/Data/Source/future_wells.json as capture_radius_cm
+    // and capture_ticks. Both were validated by the content compiler and read
+    // into the catalog, then dropped before reaching the simulation, which
+    // used its own constants regardless: editing the authored file changed
+    // nothing and warned nobody. Defaults equal the constants they replace
+    // (4.2 tiles, 300 ticks) so behaviour is unchanged where nothing authors
+    // them. Capture radius is also the radius at which any hostile body
+    // contests a Well, so it governs the Dawn counterplay as well as capture.
+    std::int32_t captureRadiusRaw = 21 * kFixedScale / 5;
+    Tick captureRequiredTicks = 300;
     std::int32_t harvestImmediateDawn = 500;
     std::int32_t preserveDawnPerInterval = 15;
     Tick preserveIntervalTicks = 300;
@@ -1844,6 +1872,7 @@ private:
     bool legacyUnreachableSlotReplaySemantics_ = false;
     bool legacyRoleBodyReplaySemantics_ = false;
     bool legacyIdleDefensiveFireSemantics_ = false;
+    bool legacyWellCaptureGeometrySemantics_ = false;
     bool legacyBulwarkReplaySemantics_ = false;
     bool legacyConstructionAssistReplaySemantics_ = false;
     void UpdateProjectiles();
