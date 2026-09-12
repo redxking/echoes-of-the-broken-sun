@@ -757,6 +757,11 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
     TArray<uint8> LosslessV28Projection = NativeCheckpoint;
     TestTrue(
         TEXT("Mission 14 production state is losslessly representable by schema 28"),
+        // NativeCheckpoint is schema 32, so the hand-assembled chain starts a
+        // step earlier than it used to; the V31 step inspects at 31 and would
+        // refuse a 32 payload outright.
+        EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV32ToV31(
+            LosslessV28Projection, 19, 11, 15) &&
         EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV31ToV30(
             LosslessV28Projection, 19, 11, 15) &&
         EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV30ToV29(
@@ -772,6 +777,9 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
                 NativeLayout.Schema29AppendSize +
                     NativeLayout.Schema30AppendSize +
                     NativeLayout.Schema31AppendSize +
+                    // Schema 32's twelve interior capture-geometry bytes go
+                    // with the projection now that it starts at 32.
+                    12 +
                     static_cast<int32>(NativeLayout.PendingCommandCount));
     // The projection is proven; the shipped opponent resumes for the rest of
     // the mission so later assertions see the ordinary doctrine.
@@ -1087,7 +1095,9 @@ bool FEchoesSeveralVoicesOneCommandMissionTest::RunTest(
         EchoesSnapshotMigrationTestHelpers::
                 ConvertMission14EnvelopeSnapshotToV22(ZeroReceiptV22) &&
             ZeroReceiptNative.Num() - ZeroReceiptV22.Num() ==
-                5 + NativeLayout.MemoryLedgerSize +
+                // Includes schema 32's twelve interior capture-geometry bytes,
+                // spliced out at the head of the shared chain.
+                5 + 12 + NativeLayout.MemoryLedgerSize +
                     NativeLayout.Schema26AppendSize +
                     NativeLayout.Schema27AppendSize +
                     NativeLayout.Schema28AppendSize +

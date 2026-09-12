@@ -2127,6 +2127,11 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
     TArray<uint8> LosslessV28Projection = NativeCheckpoint;
     TestTrue(
         TEXT("Mission 15 production state is losslessly representable by schema 28"),
+        // NativeCheckpoint is schema 32, so the hand-assembled chain starts a
+        // step earlier than it used to; the V31 step inspects at 31 and would
+        // refuse a 32 payload outright.
+        EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV32ToV31(
+            LosslessV28Projection, 38, 30, 34, EchoesSnapshotMigrationTestHelpers::Mission15HostilityMasks) &&
         EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV31ToV30(
             LosslessV28Projection, 38, 30, 34, EchoesSnapshotMigrationTestHelpers::Mission15HostilityMasks) &&
         EchoesSnapshotMigrationTestHelpers::ConvertEmbeddedSnapshotV30ToV29(
@@ -2143,6 +2148,9 @@ bool FEchoesBrokenSunMissionTest::RunTest(const FString& Parameters)
                 NativeLayout.Schema29AppendSize +
                     NativeLayout.Schema30AppendSize +
                     NativeLayout.Schema31AppendSize +
+                    // Schema 32's twelve interior capture-geometry bytes go
+                    // with the projection now that it starts at 32.
+                    12 +
                     static_cast<int32>(NativeLayout.PendingCommandCount));
     // The projection is proven; the shipped opponent resumes for the rest of
     // the mission so later assertions see the ordinary doctrine.

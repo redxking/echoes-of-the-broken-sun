@@ -6,6 +6,40 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## Snapshot 32, second pass: the mission tests assemble their own chains — 2026-09-12, 04:40Z
+
+`5dbb87e` took the combined suite from 133 of 140 to **138 of 140**. Both remaining failures were mine, in
+`Campaign.SeveralVoicesOneCommand` and `Campaign.TheBrokenSun`, and they were one defect wearing two names.
+
+**The shared driver is not the only chain.** I fixed `ConvertEmbeddedSnapshotToV22` and assumed that was the
+migration path. Both mission tests also **hand-assemble a chain of their own**, starting at
+`ConvertEmbeddedSnapshotV31ToV30` and fed a `NativeCheckpoint` that is now schema 32. That step inspects at
+31 and refuses a 32 payload outright, so the "production state is losslessly representable by schema 28"
+assertion failed on its very first call. The D3 lane guessed the production-state path was implicated, which
+was a fair reading of the assertion's name — but the assertion never reached representability, it died on
+the chain head. Both sites now prepend `ConvertEmbeddedSnapshotV32ToV31`.
+
+**Three byte-delta sums, and I had fixed one.** `ExpectedNativeToV22Shrink` got its twelve-byte term in the
+first pass; the zero-receipt sum **four lines away in the same file** did not, and neither did the two
+projection deltas, which now shed the interior bytes because their chain starts a step earlier. All three
+carry the term. Confirmed by enumeration rather than assumed symmetry: `BrokenSun` has **no** zero-receipt
+path at all, so there is no fourth site to patch.
+
+**The refusal risk was checked before building, not discovered by the suite.** The V32 step refuses when
+authored geometry differs from the historical constants — a guard that would have failed both tests by
+design. Authored `capture_radius_cm` 420 converts as `420 * 1024 / 100 = 4300`, and
+`kFutureWellCaptureRadiusRaw` is `21 * 1024 / 5 = 4300`: exact, because both express 4.2 tiles. Ticks are 300
+on both sides. The step proceeds.
+
+**Verified: the editor builds and links** (`Result: Succeeded`, 31.5s). **The three `+12` terms are
+arithmetic and a compile cannot check them** — only the combined suite can, and it is owed.
+
+**Method note, because this was the third incomplete sweep of the night.** Twice before I fixed *a* cause and
+stopped: a grep that missed a two-line pin form, and the shared driver without its hand-rolled siblings. The
+cheap discipline is to enumerate every call site and every byte-delta assertion first — one `grep` for
+`.Num() - ` across both files produced the complete list in a single command, after two suite cycles had
+already been spent finding them one at a time.
+
 ## Snapshot 32 fallout in the Unreal suite: seven pins and one shared payload walk — 2026-09-12, 04:05Z
 
 The combined suite came back 133 of 140 after `0b3a68d`. All seven failures were downstream of the schema
