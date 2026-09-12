@@ -9947,11 +9947,53 @@ std::vector<Command> Simulation::GenerateAiCommands(
             // Two valves keep it from waiting forever: a unit joins a wave
             // that is already out without any threshold, and a seat that
             // cannot train another fighter commits what it has.
-            std::int32_t fitStrikeUnits = 0;
+            // Second attempt at cohesion. The first counted every fit unit
+            // anywhere and told a unit to hold where it stood: a saturated seat
+            // already held more than the threshold and a seat with no
+            // population headroom bypassed it, so the rule was satisfied or
+            // skipped at all times. Measured at 114 of 1,000 matches changed
+            // and none converted. A muster is different in the two ways that
+            // matter: it counts only units that have actually gathered at a
+            // point, and it moves them there rather than freezing them in
+            // place, so the force arrives together instead of in a queue.
+            constexpr std::int32_t kStrikeForceSize = 4;
+            constexpr std::int64_t kMusterAssemblyRaw = 4 * kFixedScale;
+            constexpr std::uint64_t kMusterAssemblySquared =
+                static_cast<std::uint64_t>(kMusterAssemblyRaw) * kMusterAssemblyRaw;
+            // The muster tile stands a short way out from the Core on the line
+            // toward the mirror of it, which is where this planner already
+            // marches when it has seen nothing better. Deterministic, map
+            // agnostic, and it falls back toward home if the ground is blocked.
+            Vec2 musterPoint{};
+            bool haveMusterPoint = false;
+            if (commandCore != nullptr) {
+                const std::int32_t coreX = commandCore->position.x.FloorToInt();
+                const std::int32_t coreY = commandCore->position.y.FloorToInt();
+                const std::int32_t stepX =
+                    config_.mapWidthTiles - coreX > coreX ? 1 : -1;
+                const std::int32_t stepY =
+                    config_.mapHeightTiles - coreY > coreY ? 1 : -1;
+                for (std::int32_t reach = 6; reach >= 2 && !haveMusterPoint; --reach) {
+                    const Vec2 candidate = Vec2::FromTiles(
+                        std::clamp(coreX + stepX * reach, 1, config_.mapWidthTiles - 2),
+                        std::clamp(coreY + stepY * reach, 1, config_.mapHeightTiles - 2));
+                    if (IsPositionPassable(candidate)) {
+                        musterPoint = candidate;
+                        haveMusterPoint = true;
+                    }
+                }
+            }
+            std::int32_t assembledStrikeUnits = 0;
             std::int32_t committedStrikeUnits = 0;
+            bool seatHasAProducer = false;
             for (const Entity& mate : entities_) {
-                if (mate.owner != player || mate.hitPoints <= 0 ||
-                    !IsBarracksUnitType(mate.type) || mate.id == scoutActor) {
+                if (mate.owner != player || mate.hitPoints <= 0) {
+                    continue;
+                }
+                if (mate.type == EntityType::Barracks && mate.completed) {
+                    seatHasAProducer = true;
+                }
+                if (!IsBarracksUnitType(mate.type) || mate.id == scoutActor) {
                     continue;
                 }
                 if (mate.maxHitPoints > 0 &&
@@ -9960,18 +10002,44 @@ std::vector<Command> Simulation::GenerateAiCommands(
                             retreatHealthPercent) {
                     continue;
                 }
-                ++fitStrikeUnits;
                 if (mate.order.type == OrderType::AttackMove) {
                     ++committedStrikeUnits;
+                    continue;
+                }
+                if (haveMusterPoint &&
+                    DistanceSquaredRaw(mate.position, musterPoint) <=
+                        kMusterAssemblySquared) {
+                    ++assembledStrikeUnits;
                 }
             }
-            constexpr std::int32_t kStrikeForceSize = 4;
-            const bool canStillReinforce =
-                PopulationCapacity(player) - PopulationUsed(player) >= 3;
-            if (committedStrikeUnits == 0 &&
-                fitStrikeUnits < kStrikeForceSize && canStillReinforce) {
-                command.type = CommandType::Hold;
-                commands.push_back(command);
+            // Release in one pass when the force has gathered. A wave already
+            // out is joined without waiting, so reinforcements reach a fight in
+            // progress. A seat with no producer left cannot grow a force, so it
+            // commits what it has rather than mustering for ever. Population
+            // headroom is deliberately NOT a valve: it sits at zero or one for
+            // most of a match, which is precisely how the first attempt got
+            // bypassed.
+            const bool waveIsOut = committedStrikeUnits > 0;
+            const bool forceHasGathered = assembledStrikeUnits >= kStrikeForceSize;
+            if (haveMusterPoint && !waveIsOut && !forceHasGathered &&
+                seatHasAProducer) {
+                if (DistanceSquaredRaw(actor.position, musterPoint) <=
+                    kMusterAssemblySquared) {
+                    if (actor.order.type != OrderType::Hold) {
+                        command.type = CommandType::Hold;
+                        commands.push_back(command);
+                    }
+                    continue;
+                }
+                const bool alreadyWalkingToMuster =
+                    actor.order.type == OrderType::Move &&
+                    DistanceSquaredRaw(actor.order.destination, musterPoint) <=
+                        kMusterAssemblySquared;
+                if (!alreadyWalkingToMuster) {
+                    command.type = CommandType::Move;
+                    command.position = musterPoint;
+                    commands.push_back(command);
+                }
                 continue;
             }
             Vec2 marchTarget{};
