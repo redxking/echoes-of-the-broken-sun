@@ -6195,7 +6195,21 @@ only possible result rather than a suspicious coincidence. Planning order explai
 symmetric race is queue order and seat 0 takes it every time. Choir is the confirming control rather than a
 counter-example: it is the Reshape faction and therefore the only one whose play reaches the simulation's
 only RNG consumer, which is exactly why it is the one pairing with a real spread (8,619 to 11,984, 66%
-seat-0, 29 of 111 converting). Consequences for how this report may be quoted: the asymmetries above are
+seat-0, 29 of 111 converting).
+
+> **Disputed, 2026-09-11, retraction pending from the strategy-validation lane.** Do not cite the Choir
+> sentence above. It is wrong on its own terms: the planner routes Choir to Preserve explicitly and
+> Reshape is reachable only under the Raider personality, which this matrix never uses, so no seat reaches
+> the RNG and Choir cannot be "the faction that does". The wider degenerate-sample reading is also in
+> question: that lane's probe, replicating `RunMatch` and hashing state per tick, reports two seeds
+> diverging at tick 1 in every pairing including the metal mirrors, with a Meridian mirror running to
+> 8,371 on one seed and 10,038 on the other with different winners. That cannot be a hashing artifact.
+> Two facts survive and are not disputed: the RNG is genuinely unconsumed (zero Reshape commits observed),
+> so this lane's original "distinct checksums prove divergence" argument still fails as stated; and
+> `balance-matrix-8` really does show a single distinct finishing tick across 111 seeds in four pairings.
+> Those are in direct conflict, and the difference between that probe and `RunMatch` is the live question
+> (the leading candidate is the authored ruleset, which `RunMatch` installs and the probe did not). That
+> lane owns the retraction and is writing it; this note exists so nobody quotes the sentence meanwhile. Consequences for how this report may be quoted: the asymmetries above are
 single outcomes and not rates, so "Kharuun in seat 0 converts 0 of 111 against Meridian" is one lost match
 replayed and carries no balance story; the Wilson intervals are computed on n=111 where the effective n is
 1 and must not be cited for those pairings; and SPEC-BAL-006 cannot catch this, because replaying one seed
