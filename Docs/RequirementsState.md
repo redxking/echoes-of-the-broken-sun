@@ -6,6 +6,54 @@
 
 Requirement bodies live in **[`Requirements.md`](Requirements.md)** and are never restated here.
 
+## Splicing a signed buffer invalidates its signature — 2026-09-12, 05:55Z
+
+**Both campaign tests pass. 3 succeeded, 0 failed**, including
+`TheBrokenSunAlternateResolutionPersistence`, on a clean tree with every diagnostic scaffold removed and
+zero `DIAG` residue in the log. Evidence: `BuildArtifacts/Evidence/schema32-clean-20260912T025003Z`.
+Artefact currency checked rather than argued: sources 22:48:45, `Binaries/Mac/libUnrealEditor-
+EchoesOfTheBrokenSun.dylib` linked 22:50:03.
+
+**The defect.** A snapshot ends with an eight-byte FNV-1a trailer computed over everything before it.
+`ProjectSnapshotBufferToV31` removed the twelve capture-geometry bytes and restamped the version but left
+the pre-splice signature in place, so the projected buffer was correct in every payload byte and wrong only
+in its own checksum. The round-trip comparison in `ConvertEmbeddedSnapshotV31ToV30` was doing its job
+exactly. The projector now re-signs with the same basis and prime as `SnapshotIntegrity`.
+
+**How it was found, after four wrong causes.** A byte probe reported `first=51000 ofDiffs=8` against a
+payload length of 51008 — the trailer, with the preceding 51,000 bytes identical. That single number
+refuted both live hypotheses at once: not a misplaced splice (which would differ at or near offset 1985) and
+not a field normalising on load (which would differ in the entity region). **Splicing a signed buffer
+invalidates its signature by construction**, and it is the most obvious consequence of the operation; both
+lanes reasoned past it for several cycles.
+
+**The version-aware prefix is kept, and here is the assumption it replaces.**
+`EmbeddedSnapshotTerrainGridOffset` measures the header-and-rules prefix from a probe snapshot rather than
+hardcoding it, defending correctly against the rules table gaining a field. It silently assumed something
+else: **that one measured prefix serves every schema version** — true only while schemas append at the tail,
+as 22 through 31 all did. Schema 32 is the first to grow the prefix, so the measured figure is right for 32
+and twelve bytes too large for every payload below it, including the schema-31 the downgrade produces.
+`ResolveEmbeddedSnapshotMemoryLedger` now reads the payload's own version and subtracts accordingly.
+
+**Not reverted, and not proven by reverting.** The retained probe shows `inspect=1` with a coherent layout
+(`appendOffset=50979 appendSize=407 snapOff=386 snapLen=51008`) on a schema-31 payload, which is precisely
+what this fix enables; without it the memory-ledger walk reads a schema-32 prefix and fails the grid-length
+check. That is positive causal evidence rather than an absence. Recorded at the D3 lane's suggestion,
+because **a change that prevents a defect looks identical to a change that does nothing** until someone
+reverts it as speculative.
+
+**Method note, and it is the durable one.** Five attempts. The first three were reasoned causes, each a real
+defect, none sufficient — and each time the tests failed with *byte-identical* text. Identical output across
+three independent changes is the code saying the edited path is not the executed one, and I ignored it three
+times. A stepwise diagnostic located the failing step in one run; a byte-level probe named the field in the
+next. Both cost less than any single reasoning cycle. **When the symptom does not move, stop refining the
+theory and instrument the path.**
+
+**Attribution.** The D3 lane caught three of my errors by reading code with no stake in my hypothesis: that
+`ConvertEmbeddedSnapshotToV22` copies into `Source` and never writes back on failure (dissolving a
+"discrepancy" I was about to chase), that my stale-binary argument proved only that an earlier *commit* was
+present, and the region-based discriminator that made the byte offset readable in one pass.
+
 ## The one-measured-prefix invariant, and why my twelve-byte terms could not have worked — 2026-09-12, 05:10Z
 
 `8511adb` fixed the chain head — both missions now enter the chain at schema 32 — and the two campaign tests
@@ -40,8 +88,10 @@ function against a rules field being *added to the tail of the rules*, which is 
 It could not protect against the prefix itself changing size per version, because nothing expressed that
 "the prefix is one constant" was an assumption rather than a fact.
 
-**Editor builds and links** (`Result: Succeeded`, 33s). A targeted run of the two campaign tests follows;
-this entry will be wrong about being fixed if that run disagrees.
+**Editor builds and links** (`Result: Succeeded`, 33s). **The run disagreed, so the hedge above was right
+and this entry was wrong to imply a fix.** The version-aware prefix is necessary and was not sufficient: the
+same nine assertions failed unchanged after it. See "Splicing a signed buffer invalidates its signature".
+What this change does defend is real and is recorded there.
 
 ## Snapshot 32, second pass: the mission tests assemble their own chains — 2026-09-12, 04:40Z
 

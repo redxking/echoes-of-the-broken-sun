@@ -1,14 +1,14 @@
 # Session context packet
 
 **Author and owner:** Angelis Pseftis
-**Generated:** 2026-09-12 02:23 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
+**Generated:** 2026-09-12 02:52 UTC by `Scripts/build_context.py`. Do not edit; regenerate.
 
 Read this, then fetch only the requirement records you touch:
 `python3 Scripts/req.py both <ID> [<ID>...]` · `req.py family <FAM>` · `req.py search "<text>"` · `req.py section "<heading>"`. Do not open Requirements.md or RequirementsState.md whole. Record outcomes with `python3 Scripts/record_state.py --id <ID> --state <STATE> --class <CLASS> --evidence <path> --note "<what>"` and rerun this script before handing off. Rules: [AGENTS.md](../AGENTS.md); authority map: [Docs/README.md](README.md); skills: [AgentSkillRouting.md](AgentSkillRouting.md).
 
 ## Checkout
 
-- Branch `main` at `f686c44` (upstream `14dc8ca`); 356 dirty paths, of which non-asset: `Docs/RequirementsState.md`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesSnapshotMigrationTestHelpers.h`.
+- Branch `main` at `9cc21e3` (upstream `14dc8ca`); 356 dirty paths, of which non-asset: `Docs/RequirementsState.md`, `Source/EchoesOfTheBrokenSun/Private/Tests/EchoesSnapshotMigrationTestHelpers.h`.
 - Another lane may own the dirty paths. Preserve them; stage only your own files by path.
 
 ## Active execution state (from DeliveryPlan.md)
@@ -25,10 +25,10 @@ Read this, then fetch only the requirement records you touch:
 
 ## Newest RequirementsState entries
 
+- Splicing a signed buffer invalidates its signature — 2026-09-12, 05:55Z
 - The one-measured-prefix invariant, and why my twelve-byte terms could not have worked — 2026-09-12, 05:10Z
 - Snapshot 32, second pass: the mission tests assemble their own chains — 2026-09-12, 04:40Z
 - Snapshot 32 fallout in the Unreal suite: seven pins and one shared payload walk — 2026-09-12, 04:05Z
-- The balance matrix samples conditions instead of replays — 2026-09-12, 03:20Z
 
 ## Recently recorded state rows
 

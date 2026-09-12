@@ -263,6 +263,67 @@ inline int32 EmbeddedSnapshotCaptureGeometryOffset()
     return Measured;
 }
 
+// Project a raw current-schema snapshot buffer down to its schema-31 shape by
+// removing the capture-geometry fields. The downgrade steps need this because
+// Simulation::SaveSnapshot always writes kSnapshotVersion (its only parameter
+// is an optional checksum out-pointer), so a round-trip check that holds a
+// resave against a pre-32 input is comparing a 32-shaped layout with a
+// 31-shaped one and can never match. Measured offset, shared size.
+inline bool ProjectSnapshotBufferToV31(std::vector<std::uint8_t>& Snapshot)
+{
+    constexpr int32 SnapshotVersionOffset = 4;
+    const int32 GeometryOffset = EmbeddedSnapshotCaptureGeometryOffset();
+    if (GeometryOffset == INDEX_NONE ||
+        Snapshot.size() <= static_cast<std::size_t>(
+            GeometryOffset + kSnapshotCaptureGeometryBytes))
+    {
+        return false;
+    }
+    const std::uint32_t Version =
+        static_cast<std::uint32_t>(Snapshot[SnapshotVersionOffset]) |
+        (static_cast<std::uint32_t>(Snapshot[SnapshotVersionOffset + 1]) << 8) |
+        (static_cast<std::uint32_t>(Snapshot[SnapshotVersionOffset + 2]) << 16) |
+        (static_cast<std::uint32_t>(Snapshot[SnapshotVersionOffset + 3]) << 24);
+    if (Version != 32U)
+    {
+        return false;
+    }
+    Snapshot.erase(
+        Snapshot.begin() + GeometryOffset,
+        Snapshot.begin() + GeometryOffset + kSnapshotCaptureGeometryBytes);
+    Snapshot[SnapshotVersionOffset] = 31;
+    Snapshot[SnapshotVersionOffset + 1] = 0;
+    Snapshot[SnapshotVersionOffset + 2] = 0;
+    Snapshot[SnapshotVersionOffset + 3] = 0;
+    // A snapshot carries an eight-byte FNV-1a trailer over everything before
+    // it, written by SaveSnapshot. Removing bytes and restamping the version
+    // invalidates it, so the projected buffer must be re-signed or it differs
+    // from a genuine schema-31 payload in exactly those last eight bytes and
+    // nowhere else. Measured: a byte probe put the only difference at the
+    // trailer, with the preceding 51,000 bytes identical. Same basis and prime
+    // as SnapshotIntegrity/ResignEmbeddedSnapshot, inlined because those take
+    // a TArray and this operates on the bare buffer SaveSnapshot returns.
+    constexpr std::size_t SnapshotSignatureSize = 8;
+    if (Snapshot.size() <= SnapshotSignatureSize)
+    {
+        return false;
+    }
+    const std::size_t PayloadLength = Snapshot.size() - SnapshotSignatureSize;
+    std::uint64_t Hash = 14695981039346656037ULL;
+    for (std::size_t Index = 0; Index < PayloadLength; ++Index)
+    {
+        Hash ^= Snapshot[Index];
+        Hash *= 1099511628211ULL;
+    }
+    for (std::size_t Byte = 0; Byte < SnapshotSignatureSize; ++Byte)
+    {
+        Snapshot[PayloadLength + Byte] =
+            static_cast<std::uint8_t>((Hash >> (Byte * 8)) & 0xFFU);
+    }
+    return true;
+}
+
+
 // Walks the fog and memory grids of one embedded snapshot and records where the
 // schema-25 memory ledgers live. The walk asserts that every grid declares
 // exactly the map's tile count, so a layout drift fails here rather than
@@ -946,9 +1007,13 @@ inline bool ConvertEmbeddedSnapshotV31ToV30(
         std::span<const uint8>(Working.GetData() + Layout.SnapshotOffset, Length),
         &Error, LegacyHostilityMasks);
     if (!Migrated.has_value() || !Error.empty()) return false;
-    const auto Resaved = Migrated->SaveSnapshot();
-    if (Resaved.size() != Layout.SnapshotLength ||
-        FMemory::Memcmp(Resaved.data(), Envelope.GetData() + Layout.SnapshotOffset,
+    // SaveSnapshot always writes kSnapshotVersion, so the resave is schema 32
+    // while the input it must reproduce is schema 31. Project it down first;
+    // the invariant being asserted (the downgrade lost nothing) is unchanged.
+    std::vector<std::uint8_t> Resaved = Migrated->SaveSnapshot();
+    if (!ProjectSnapshotBufferToV31(Resaved)) return false;
+    if (Resaved.size() != Layout.SnapshotLength) return false;
+    if (FMemory::Memcmp(Resaved.data(), Envelope.GetData() + Layout.SnapshotOffset,
             Layout.SnapshotLength) != 0) return false;
     Envelope = MoveTemp(Working);
     return true;
@@ -995,18 +1060,31 @@ inline bool ConvertEmbeddedSnapshotV30ToV29(
         std::span<const uint8>(Working.GetData() + Layout.SnapshotOffset, Length),
         &Error, LegacyHostilityMasks);
     if (!Migrated.has_value() || !Error.empty()) return false;
-    const auto Resaved = Migrated->SaveSnapshot();
+    const auto ResavedCurrent = Migrated->SaveSnapshot();
     const int32 PrefixLength = Layout.Schema30AppendOffset - Layout.SnapshotOffset;
     // Every pre-Link field must survive; new default state and synthesized IDs
-    // must also survive a current-schema reload byte for byte.
-    const auto Reloaded = echoes::sim::Simulation::LoadSnapshot(Resaved, &Error, LegacyHostilityMasks);
+    // must also survive a current-schema reload byte for byte. That identity
+    // check stays against the CURRENT-schema save.
+    const auto Reloaded = echoes::sim::Simulation::LoadSnapshot(
+        ResavedCurrent, &Error, LegacyHostilityMasks);
+    // The rest of this check compares against bytes copied from the schema-30
+    // original, and schema 32 inserts its capture-geometry fields INSIDE the
+    // compared prefix, ahead of the terrain grid rather than at the tail. So a
+    // current-schema resave differs from that prefix in the middle and not only
+    // in length; adjusting the length alone would pass the size test and fail
+    // the memcmp on the next line. Project the resave to 31 and keep every
+    // expectation below at one schema.
+    std::vector<std::uint8_t> Resaved = ResavedCurrent;
+    if (!ProjectSnapshotBufferToV31(Resaved)) return false;
     TArray<uint8> ExpectedPrefix;
     ExpectedPrefix.Append(Envelope.GetData() + Layout.SnapshotOffset, PrefixLength);
-    WriteUint32(ExpectedPrefix, 4, echoes::sim::kSnapshotVersion);
-    const size_t ExpectedLength = Layout.SnapshotLength + 4U + Original->Entities().size() * 13U;
+    WriteUint32(ExpectedPrefix, 4, 31U);
+    const size_t ExpectedLength =
+        Layout.SnapshotLength + 4U + Original->Entities().size() * 13U;
     if (Resaved.size() != ExpectedLength ||
         FMemory::Memcmp(Resaved.data(), ExpectedPrefix.GetData(), PrefixLength) != 0 ||
-        !Reloaded.has_value() || !Error.empty() || Reloaded->SaveSnapshot() != Resaved) return false;
+        !Reloaded.has_value() || !Error.empty() ||
+        Reloaded->SaveSnapshot() != ResavedCurrent) return false;
     Envelope = MoveTemp(Working);
     return true;
 }
