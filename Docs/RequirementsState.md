@@ -6058,6 +6058,34 @@ Status: D2 stays the first unfinished package; these five are the next repairs; 
 below as they land.
 
 
+## REL-AI-006 measured: the muster is a regression — 2026-09-12
+
+`BuildArtifacts/Evidence/d3-meridian-20260911T161144Z/balance-matrix-9.json`, built from an export of this lane's committed state
+(41a62eb) so the simulation lane's in-flight edit could not reach the numbers. The comparison against
+`balance-matrix-8.json` is clean: identical seed sets (1,000 of 1,000 overlapping), identical rules digest
+`0ef62b746c9e149c` and `content-data` source. It is a regression and this record says so plainly.
+
+**576 of 1,000 terminal, against 807 before the muster.** The damage is surgical rather than diffuse:
+
+| pairing | pre-muster | with muster | delta |
+|---|---|---|---|
+| Meridian mirror | 112 | 0 | -112 |
+| Kharuun mirror | 111 | 0 | -111 |
+| Choir mirror | 29 | 21 | -8 |
+| every other pairing | 111 | 111 | unchanged |
+
+So the muster destroyed exactly the two pairings the retreat fix had rescued, and touched nothing that was
+already decisive. On a matrix Meridian-mirror seed (151845015998047) the branch counters show the rule
+working as designed and the army not advancing: six units assembled, four release passes, eight wave
+joins, and seat 0's closest approach to the enemy Core going 65, 58, 58 tiles across 12,000 ticks with the
+enemy Core untouched. Releasing and advancing are evidently not the same thing.
+
+**Correcting this lane's earlier probe.** The single-seed run reporting the Meridian mirror ending at
+16,925 was cited here as encouraging. The matrix says that pairing now ends in none of 112 seeds, so that
+probe was misleading and should not have been given weight; it used one seed shared across all pairings
+while the matrix uses per-pairing seeds. The instrumentation result stands (the release does fire) but
+"the release fires" was never evidence that the rule helps.
+
 ## REL-AI-006: a muster with a synchronised release — 2026-09-12
 
 Owner: "All is granted. You continue with all your recommendations." Second attempt at cohesion, after the
